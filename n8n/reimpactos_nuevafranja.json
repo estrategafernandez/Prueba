@@ -6,9 +6,9 @@
         "width": 1180,
         "height": 620,
         "color": 4,
-        "content": "## reimpactos_nuevafranja — secuencia de reimpactos por etiquetas (Chatwoot + WhatsApp)\n\nCada hora busca en Chatwoot las conversaciones que siguen en la secuencia de reimpactos y, si ya han\ncumplido los días que le tocan a su fase, envía la siguiente plantilla y avanza la etiqueta.\n\n### Calendario (días contados desde el Día 1 = plantilla inicial)\n\n| Fase actual | Día | Espera | Se envía | Etiqueta que queda |\n|---|---|---|---|---|\n| `z_plantilla_enviada_meta` | 1 | 1 día | **R1** | `z_reimpacto1_meta` |\n| `z_reimpacto1_meta` | 2 | 2 días | **R2** | `z_reimpacto2_meta` |\n| `z_reimpacto2_meta` | 4 | 3 días | **R3** | `z_reimpacto3_meta` |\n| `z_reimpacto3_meta` | 7 | 3 días | **R4** | `z_reimpacto4_meta` |\n| `z_reimpacto4_meta` | 10 | 4 días | **R5** | `z_reimpacto5_meta` |\n| `z_reimpacto5_meta` | 14 | 6 días | **R6 · cierre** | `z_reimpacto6_meta` |\n| `z_reimpacto6_meta` | 20 | — | nada, fin de secuencia | — |\n\nTodo el calendario vive en el nodo **CalcularFaseYDiasEspera** (mapa `DIA_DE_LA_FASE`): cambiando ahí\nlos números se cambia la cadencia entera. Ahí mismo están la franja horaria de envío y el resto de ajustes.\n\n### Reglas de seguridad\n- **No se reimpacta** a quien tenga `z_respuesta_cliente_plantilla`, `cuestionario_completado` o `descartado`.\n- **No se reimpacta** si el lead ha escrito algo después de nuestro último impacto (ha respondido).\n- El reloj se ancla en el **mensaje de actividad de Chatwoot** que añadió la etiqueta de la fase actual,\n  no en el último mensaje: así una nota interna de un comercial no retrasa la secuencia.\n- La búsqueda **pagina**: recorre todas las páginas de resultados, no solo las 25 primeras.\n- `SoloPruebas_UnNumero` está **desactivado**. Actívalo para probar contra un único teléfono."
+        "content": "## reimpactos_nuevafranja — secuencia de reimpactos por etiquetas (Chatwoot + WhatsApp)\n\nCada hora busca en Chatwoot las conversaciones que siguen en la secuencia de reimpactos y, si ya han\ncumplido los días que le tocan a su fase, envía la siguiente plantilla y avanza la etiqueta.\n\n### Calendario (días contados desde el Día 1 = plantilla inicial)\n\n| Fase actual | Día | Espera | Se envía | Etiqueta que queda |\n|---|---|---|---|---|\n| `z_plantilla_enviada_meta` | 1 | 1 día | **R1** | `z_reimpacto1_meta` |\n| `z_reimpacto1_meta` | 2 | 2 días | **R2** | `z_reimpacto2_meta` |\n| `z_reimpacto2_meta` | 4 | 3 días | **R3** | `z_reimpacto3_meta` |\n| `z_reimpacto3_meta` | 7 | 3 días | **R4** | `z_reimpacto4_meta` |\n| `z_reimpacto4_meta` | 10 | 4 días | **R5** | `z_reimpacto5_meta` |\n| `z_reimpacto5_meta` | 14 | 6 días | **R6 · cierre** | `z_reimpacto6_meta` |\n| `z_reimpacto6_meta` | 20 | — | nada, fin de secuencia | — |\n\nTodo el calendario vive en el nodo **CalcularFaseYDiasEspera** (mapa `DIA_DE_LA_FASE`): cambiando ahí\nlos números se cambia la cadencia entera. Ahí mismo están la franja horaria de envío y el resto de ajustes.\n\n### Reglas de seguridad\n- **No se reimpacta** a quien tenga `z_respuesta_cliente_plantilla`, `cuestionario_completado` o `descartado`.\n- **No se reimpacta** si el lead ha escrito algo después de nuestro último impacto (ha respondido).\n- El reloj se ancla en el **mensaje de actividad de Chatwoot** que añadió la etiqueta de la fase actual,\n  no en el último mensaje: así una nota interna de un comercial no retrasa la secuencia.\n- La búsqueda **pagina**: recorre todas las páginas de resultados, no solo las 25 primeras.\n- La nota interna que queda en Chatwoot va titulada **SEGUIMIENTO N** (N = número de reimpacto).\n- `SoloPruebas_UnNumero` está **desactivado**. Actívalo para probar contra un único teléfono."
       },
-      "id": "8870042a-d4a6-4d25-a787-434afcecd88b",
+      "id": "656fced6-35ef-4db0-9f9f-d5c6c9942c4b",
       "name": "Sticky Note",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
@@ -27,7 +27,7 @@
           ]
         }
       },
-      "id": "e77ecfdd-694d-4d8c-9148-5672df821300",
+      "id": "3b2af7cf-115f-4f46-8c48-b0d368b63a9d",
       "name": "Programador Horario",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.3,
@@ -77,7 +77,7 @@
           }
         }
       },
-      "id": "9baeb41f-fb69-4614-9fee-ac7d475d7a76",
+      "id": "b3d67ed1-6ea1-4c03-9f72-883b1cd93dc9",
       "name": "BuscarConversacionesReimpacto",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
@@ -91,7 +91,7 @@
         "fieldToSplitOut": "payload",
         "options": {}
       },
-      "id": "f350ae2a-b148-49e8-8ba0-74c8046a9593",
+      "id": "c9675938-ed89-4091-8956-5dd15ec1ea4f",
       "name": "SepararConversaciones",
       "type": "n8n-nodes-base.splitOut",
       "typeVersion": 1,
@@ -111,7 +111,7 @@
           },
           "conditions": [
             {
-              "id": "d8284ea8-e79c-48d1-9515-b2a00f0b05bb",
+              "id": "84b44adb-2fcd-4a8a-8a4c-8fb684311f7d",
               "leftValue": "={{ [\"z_respuesta_cliente_plantilla\", \"cuestionario_completado\", \"descartado\"].every(e => !($json.labels || []).includes(e)) }}",
               "rightValue": "",
               "operator": {
@@ -125,7 +125,7 @@
         },
         "options": {}
       },
-      "id": "039a0e42-3618-45ff-a566-a6d51e8f3178",
+      "id": "9a28f297-a014-476f-8656-e9050e9ce30f",
       "name": "ExcluirNoReimpactables",
       "type": "n8n-nodes-base.filter",
       "typeVersion": 2.3,
@@ -145,7 +145,7 @@
           },
           "conditions": [
             {
-              "id": "08a3da50-2e9b-4b81-ad08-fc4995b52823",
+              "id": "39803140-6df2-4ba4-9e0b-b8832a82351a",
               "leftValue": "={{ $json.meta.sender.identifier }}",
               "rightValue": "34660460470",
               "operator": {
@@ -158,7 +158,7 @@
         },
         "options": {}
       },
-      "id": "4e194a30-08b0-4de1-bda5-e62d991e877b",
+      "id": "6ae0ec12-7481-49c7-b70b-02d1a0b2ceb1",
       "name": "SoloPruebas_UnNumero",
       "type": "n8n-nodes-base.filter",
       "typeVersion": 2.3,
@@ -173,7 +173,7 @@
       "parameters": {
         "options": {}
       },
-      "id": "961ad390-faa6-4fa1-acde-daa2584e38a7",
+      "id": "5042ba0e-b966-4c3e-96bc-8dbc522a5f25",
       "name": "Por Cada Conversacion",
       "type": "n8n-nodes-base.splitInBatches",
       "typeVersion": 3,
@@ -184,7 +184,7 @@
     },
     {
       "parameters": {},
-      "id": "d141e490-6c91-4be3-8dea-0885df637532",
+      "id": "302da297-5b73-47d8-be6c-d4731fd1ac10",
       "name": "Fin",
       "type": "n8n-nodes-base.noOp",
       "typeVersion": 1,
@@ -211,7 +211,7 @@
         },
         "options": {}
       },
-      "id": "eb6c3e24-bbeb-4df8-8ee5-ac77ac8b3e4e",
+      "id": "7163c711-301f-4b24-895c-da7043ae893c",
       "name": "RecogerEtiquetasExistentes",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
@@ -238,7 +238,7 @@
         },
         "options": {}
       },
-      "id": "5a7241dd-46ad-4efd-9740-6160b8068896",
+      "id": "91c59610-f64b-4eac-b837-2b19f9780be9",
       "name": "RecogerMensajesConversacion",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
@@ -251,7 +251,7 @@
       "parameters": {
         "jsCode": "// ===================================================================\n//  CADENCIA \"NUEVA FRANJA\"\n//  Dias contados desde el Dia 1 (envio de la plantilla inicial).\n//    Dia 1  -> z_plantilla_enviada_meta   (la envia otro workflow)\n//    Dia 2  -> R1 -> z_reimpacto1_meta\n//    Dia 4  -> R2 -> z_reimpacto2_meta\n//    Dia 7  -> R3 -> z_reimpacto3_meta\n//    Dia 10 -> R4 -> z_reimpacto4_meta\n//    Dia 14 -> R5 -> z_reimpacto5_meta\n//    Dia 20 -> R6 -> z_reimpacto6_meta    (cierre, no hay mas reimpactos)\n//  La espera de cada paso se deduce restando los dias de dos fases\n//  consecutivas, asi que para cambiar la cadencia basta con tocar\n//  los numeros de este mapa.\n// ===================================================================\nconst DIA_DE_LA_FASE = {\n  'z_plantilla_enviada_meta': 1,\n  'z_reimpacto1_meta': 2,\n  'z_reimpacto2_meta': 4,\n  'z_reimpacto3_meta': 7,\n  'z_reimpacto4_meta': 10,\n  'z_reimpacto5_meta': 14,\n  'z_reimpacto6_meta': 20,\n};\n\n// Franja horaria en la que se permite enviar plantillas (hora local de Espana).\n// Pon FRANJA_ACTIVA en false para enviar a cualquier hora del dia.\nconst FRANJA_ACTIVA  = true;\nconst FRANJA_INICIO  = 9;   // incluida\nconst FRANJA_FIN     = 21;  // excluida\nconst ZONA_HORARIA   = 'Europe/Madrid';\n\n// Si el lead ha escrito despues de nuestro ultimo impacto, se detiene la secuencia.\nconst PARAR_SI_EL_LEAD_RESPONDE = true;\n\nconst SECUENCIA = Object.keys(DIA_DE_LA_FASE);\n\nconst conversacion = $('Por Cada Conversacion').first().json;\nconst etiquetas    = $('RecogerEtiquetasExistentes').first().json.payload || [];\nconst mensajes     = $input.first().json.payload || [];\n\nconst base = {\n  conversation_id: conversacion.id,\n  account_id: conversacion.account_id,\n  telefono: conversacion.meta?.sender?.phone_number ?? null,\n  etiquetas_actuales: etiquetas,\n};\nconst salida = (enviar, motivo, extra) => [{ json: { ...base, enviar, motivo, ...(extra || {}) } }];\n\n// --- 1. Fase actual: la etiqueta mas avanzada de la secuencia que tiene ahora mismo.\nconst faseActual = [...SECUENCIA].reverse().find(l => etiquetas.includes(l));\nif (!faseActual) {\n  return salida(false, 'La conversacion ya no tiene ninguna etiqueta de la secuencia.');\n}\n\n// --- 2. Siguiente fase. Si no hay, la secuencia esta cerrada (ya tiene z_reimpacto6_meta).\nconst siguienteFase = SECUENCIA[SECUENCIA.indexOf(faseActual) + 1];\nif (!siguienteFase) {\n  return salida(false, `Secuencia terminada: ya se envio el ultimo reimpacto (${faseActual}).`);\n}\n\n// --- 3. Momento en que entro en la fase actual.\n// Chatwoot deja un mensaje de actividad (message_type 2) cada vez que se anade una etiqueta;\n// ese es el sello de tiempo exacto del cambio de fase y no lo alteran las notas internas.\nconst actividadesDeLaFase = mensajes.filter(m =>\n  m.message_type === 2 && typeof m.content === 'string' && m.content.includes(faseActual)\n);\nlet inicioFase = actividadesDeLaFase.length\n  ? Math.max(...actividadesDeLaFase.map(m => m.created_at))\n  : null;\nlet origenDelReloj = 'actividad de la etiqueta';\n\n// Reserva: si la actividad ya no esta en el historial reciente, usamos el ultimo mensaje real.\nif (!inicioFase) {\n  inicioFase = conversacion.last_non_activity_message?.created_at\n            ?? conversacion.last_activity_at;\n  origenDelReloj = 'ultimo mensaje de la conversacion (no se encontro la actividad de la etiqueta)';\n}\nif (!inicioFase) {\n  return salida(false, 'No se ha podido determinar desde cuando esta el lead en esta fase.');\n}\n\n// --- 4. El lead ha respondido despues de nuestro ultimo impacto?\nconst respondio = mensajes.some(m =>\n  m.message_type === 0 && m.private !== true && m.created_at > inicioFase\n);\n\n// --- 5. Cuentas de tiempo (un unico instante para todo el calculo).\nconst ahoraMs         = Date.now();\nconst ahora           = Math.floor(ahoraMs / 1000);\nconst horasEnFase     = (ahora - inicioFase) / 3600;\nconst diasDeEspera    = DIA_DE_LA_FASE[siguienteFase] - DIA_DE_LA_FASE[faseActual];\nconst horasNecesarias = diasDeEspera * 24;\n\n// --- 6. Franja horaria.\nconst horaLocal = Number(new Intl.DateTimeFormat('en-GB', {\n  timeZone: ZONA_HORARIA, hour: '2-digit', hourCycle: 'h23',\n}).format(new Date(ahoraMs)));\nconst dentroDeFranja = !FRANJA_ACTIVA || (horaLocal >= FRANJA_INICIO && horaLocal < FRANJA_FIN);\n\n// --- 7. Etiquetas que quedarian tras el envio.\nconst nuevasEtiquetas = etiquetas.filter(l => l !== faseActual).concat(siguienteFase);\n\nconst detalle = {\n  fase_actual: faseActual,\n  fase_reimpacto: siguienteFase,\n  dias_de_espera: diasDeEspera,\n  dias_en_fase: Number((horasEnFase / 24).toFixed(2)),\n  horas_en_fase: Math.floor(horasEnFase),\n  horas_necesarias: horasNecesarias,\n  inicio_fase: new Date(inicioFase * 1000).toISOString(),\n  origen_del_reloj: origenDelReloj,\n  hora_local: horaLocal,\n  nuevas_etiquetas: nuevasEtiquetas,\n  body_labels: JSON.stringify({ labels: nuevasEtiquetas }),\n};\n\nif (PARAR_SI_EL_LEAD_RESPONDE && respondio) {\n  return salida(false, 'El lead ha respondido despues del ultimo impacto: no se reimpacta.', detalle);\n}\nif (horasEnFase < horasNecesarias) {\n  const restan = ((horasNecesarias - horasEnFase) / 24).toFixed(2);\n  return salida(false, `Todavia no toca: lleva ${detalle.dias_en_fase} de ${diasDeEspera} dias (faltan ${restan}).`, detalle);\n}\nif (!dentroDeFranja) {\n  return salida(false, `Fuera de la franja de envio (${FRANJA_INICIO}:00-${FRANJA_FIN}:00, son las ${horaLocal}:00).`, detalle);\n}\n\nreturn salida(true, `Toca ${siguienteFase} tras ${detalle.dias_en_fase} dias en ${faseActual}.`, detalle);\n"
       },
-      "id": "b7f9d782-4d0d-4e12-aad3-28722b5ceea4",
+      "id": "ca724de5-4a5a-43a7-b5dd-5e05822c491b",
       "name": "CalcularFaseYDiasEspera",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -271,7 +271,7 @@
           },
           "conditions": [
             {
-              "id": "f1144211-bcb7-40f9-827a-74cc093dc5b5",
+              "id": "8e8b92a6-90b1-4ae3-b1ca-f21c5d69e1cc",
               "leftValue": "={{ $json.enviar }}",
               "rightValue": "",
               "operator": {
@@ -285,7 +285,7 @@
         },
         "options": {}
       },
-      "id": "e6fdc879-2ec0-46f1-b4f3-6bc0df3ecdd2",
+      "id": "42e89d14-e6a1-452c-b202-d8ec120f1ba4",
       "name": "TocaReimpacto",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3,
@@ -298,7 +298,7 @@
       "parameters": {
         "jsCode": "// Recursos de cada plantilla de reimpacto.\n// video vacio = la plantilla es solo texto y se envia sin cabecera.\nconst VIDEOS = {\n  1: 'https://drive.google.com/uc?export=download&id=1XBoN9Vd8YwK9-ZL140qa3aQTqhVekE78',\n  2: 'https://drive.google.com/uc?export=download&id=1ek3jKFkkPdDDQMUloD83YQ0tnvhR7K08',\n  3: 'https://drive.google.com/uc?export=download&id=1jWkhDgl3gva1W6n0IxzeGZsH089NX6bW',\n  4: 'https://drive.google.com/uc?export=download&id=1A63jZDo1ZqIkHJ6rnUoFUHhww6sc_Uv3',\n  5: 'https://drive.google.com/uc?export=download&id=1TomqEHWP-hjCBPn1MJlO3b2hS-OwynXP',\n  6: '',\n};\n\nconst IDIOMAS = {\n  1: 'es',\n  2: 'es',\n  3: 'es',\n  4: 'en', // TEMPORAL: reimpacto4 esta registrada en Meta como ingles, pendiente de correccion.\n  5: 'es',\n  6: 'es',\n};\n\nconst items = $input.all();\n\nfor (const item of items) {\n  const encontrado = String(item.json.fase_reimpacto || '').match(/z_reimpacto(\\d)_meta/);\n  const n = encontrado ? Number(encontrado[1]) : null;\n\n  item.json.numero_reimpacto = n;\n  item.json.nombre_plantilla = 'reimpacto' + n;\n  item.json.video_drive_url  = VIDEOS[n] || '';\n  item.json.idioma           = IDIOMAS[n] || 'es';\n}\n\nreturn items;\n"
       },
-      "id": "74321e13-6c68-4cc1-9107-4fc89b301429",
+      "id": "b985719a-a313-4880-812a-4417b93fd546",
       "name": "PrepararEnvioReimpacto",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -318,7 +318,7 @@
           },
           "conditions": [
             {
-              "id": "9a9b4989-a269-4c3e-88ab-32596b2dcf2d",
+              "id": "552166ea-2b4c-4da3-8ac6-20000c96b6f3",
               "leftValue": "={{ $json.video_drive_url }}",
               "rightValue": "",
               "operator": {
@@ -332,7 +332,7 @@
         },
         "options": {}
       },
-      "id": "e47edb7f-3770-4733-9caa-50411b11bd07",
+      "id": "9bb83386-8473-4b71-b091-f0201e475c3f",
       "name": "TienePlantillaConVideo",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3,
@@ -352,7 +352,7 @@
           }
         }
       },
-      "id": "b43a07bd-d6fb-4e0a-bda3-c4cea39c3d39",
+      "id": "d003adeb-b83b-44b8-904d-6e987b3a3095",
       "name": "DescargarVideoDrive",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
@@ -395,7 +395,7 @@
         },
         "options": {}
       },
-      "id": "b554ae25-88af-4598-95b4-a08a7c581993",
+      "id": "0caa1ded-4d74-48c8-9eb1-cbc521f361ce",
       "name": "SubirVideoaMeta",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
@@ -426,7 +426,7 @@
         "jsonBody": "={\n  \"messaging_product\": \"whatsapp\",\n  \"to\": \"{{ $('Por Cada Conversacion').item.json.meta.sender.phone_number }}\",\n  \"type\": \"template\",\n  \"template\": {\n    \"name\": \"{{ $('PrepararEnvioReimpacto').item.json.nombre_plantilla }}\",\n    \"language\": { \"code\": \"{{ $('PrepararEnvioReimpacto').item.json.idioma }}\" },\n    \"components\": [\n      {\n        \"type\": \"header\",\n        \"parameters\": [\n          { \"type\": \"video\", \"video\": { \"id\": \"{{ $('SubirVideoaMeta').item.json.id }}\" } }\n        ]\n      }\n    ]\n  }\n}",
         "options": {}
       },
-      "id": "356b2e9e-bfa2-4825-8ea5-70dc3df95857",
+      "id": "09bb5762-d188-4629-8914-88754ca232ec",
       "name": "EnviarPlantillaConVideo",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
@@ -457,7 +457,7 @@
         "jsonBody": "={\n  \"messaging_product\": \"whatsapp\",\n  \"to\": \"{{ $('Por Cada Conversacion').item.json.meta.sender.phone_number }}\",\n  \"type\": \"template\",\n  \"template\": {\n    \"name\": \"{{ $('PrepararEnvioReimpacto').item.json.nombre_plantilla }}\",\n    \"language\": { \"code\": \"{{ $('PrepararEnvioReimpacto').item.json.idioma }}\" }\n  }\n}",
         "options": {}
       },
-      "id": "7f081d37-4f1e-46a8-9656-e8aaadcde113",
+      "id": "e00d317d-83d2-4811-9357-dea53f6c0113",
       "name": "EnviarPlantillaSinVideo",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
@@ -493,7 +493,7 @@
         },
         "options": {}
       },
-      "id": "1fa52677-992e-48c5-8094-6789aa73b179",
+      "id": "71e50d74-5ffa-49b6-8d83-0237a83a7f07",
       "name": "RecogerContenidoPlantilla",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
@@ -506,7 +506,7 @@
       "parameters": {
         "jsCode": "// Texto real que ha recibido el lead, para dejarlo como nota interna en Chatwoot.\nconst respuesta = $input.first().json;\nconst nombre    = $('PrepararEnvioReimpacto').first().json.nombre_plantilla;\n\nconst plantillas = respuesta.data || [];\nconst plantilla  = plantillas.find(p => p.name === nombre) || plantillas[0];\nconst cuerpo     = plantilla?.components?.find(c => c.type === 'BODY')?.text || '';\n\nreturn [{ json: { nombre_plantilla: nombre, textoPlantilla: cuerpo } }];\n"
       },
-      "id": "09fc0d99-36df-4760-9eab-d254abbb93e6",
+      "id": "2f7ead5a-5ea5-4481-b1d5-afff18efe902",
       "name": "ExtraerTextoPlantilla",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -517,9 +517,9 @@
     },
     {
       "parameters": {
-        "jsCode": "const conversacion = $('Por Cada Conversacion').first().json;\nconst calculo      = $('CalcularFaseYDiasEspera').first().json;\nconst inboxId      = conversacion.inbox_id ?? conversacion.messages?.[0]?.inbox_id;\n\nconst items = $input.all();\n\nfor (const item of items) {\n  item.json.body_mensaje = JSON.stringify({\n    content: item.json.textoPlantilla,\n    message_type: 'outgoing',\n    private: true,\n    inbox_id: inboxId,\n  });\n  item.json.fase_reimpacto = calculo.fase_reimpacto;\n}\n\nreturn items;\n"
+        "jsCode": "const conversacion = $('Por Cada Conversacion').first().json;\nconst envio        = $('PrepararEnvioReimpacto').first().json;\nconst inboxId      = conversacion.inbox_id ?? conversacion.messages?.[0]?.inbox_id;\n\n// Titulo de la nota interna: \"SEGUIMIENTO 1\" para R1, \"SEGUIMIENTO 2\" para R2...\n// En negrita, porque Chatwoot interpreta markdown en las notas.\nconst titulo = '**SEGUIMIENTO ' + envio.numero_reimpacto + '**';\n\nconst items = $input.all();\n\nfor (const item of items) {\n  item.json.titulo_nota    = titulo;\n  item.json.fase_reimpacto = envio.fase_reimpacto;\n  item.json.body_mensaje   = JSON.stringify({\n    content: titulo + '\\n\\n' + item.json.textoPlantilla,\n    message_type: 'outgoing',\n    private: true,\n    inbox_id: inboxId,\n  });\n}\n\nreturn items;\n"
       },
-      "id": "ff1972ea-7472-46ed-911c-4c853758a03e",
+      "id": "bb002286-7d53-40c7-830c-00e8239b1b22",
       "name": "PrepararNotaInterna",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -550,7 +550,7 @@
         "jsonBody": "={{ $json.body_mensaje }}",
         "options": {}
       },
-      "id": "e130da1f-f173-44c5-b487-8be7aaa1efc1",
+      "id": "2008d201-9841-44d4-a325-a5a8023fcc70",
       "name": "NotaInternaChatwoot",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
@@ -575,7 +575,7 @@
         "columns": {
           "mappingMode": "defineBelow",
           "value": {
-            "message": "={{ JSON.stringify({\n  type: \"ai\",\n  content: $json.content,\n  tool_calls: [],\n  additional_kwargs: {},\n  response_metadata: {},\n  invalid_tool_calls: []\n}) }}",
+            "message": "={{ JSON.stringify({\n  type: \"ai\",\n  content: $('ExtraerTextoPlantilla').item.json.textoPlantilla,\n  tool_calls: [],\n  additional_kwargs: {},\n  response_metadata: {},\n  invalid_tool_calls: []\n}) }}",
             "session_id": "={{ $('Por Cada Conversacion').item.json.meta.sender.phone_number }}"
           },
           "matchingColumns": [
@@ -616,7 +616,7 @@
         },
         "options": {}
       },
-      "id": "75637e22-8914-4767-899b-aef59634b4c8",
+      "id": "cf4e225e-6e99-4c37-85e1-d6f40d0e21b1",
       "name": "GuardarHistorialPostgres",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
@@ -653,7 +653,7 @@
         "jsonBody": "={{ $('CalcularFaseYDiasEspera').item.json.body_labels }}",
         "options": {}
       },
-      "id": "86ad44dd-6e5f-479b-be9e-6ea875806c25",
+      "id": "94daad1c-b51e-44f3-b72d-870dfde097db",
       "name": "ActualizarEtiquetas",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,

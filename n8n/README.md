@@ -74,6 +74,25 @@ Programador Horario (cada hora)
 - **Paginación:** la búsqueda recorre todas las páginas de resultados. El
   endpoint de Chatwoot devuelve 25 conversaciones por página.
 
+## Nota interna en Chatwoot
+
+Tras cada envío se deja en la conversación una nota privada con el texto real
+que ha recibido el lead, encabezada por el número de seguimiento:
+
+```
+**SEGUIMIENTO 3**
+
+<texto de la plantilla reimpacto3>
+```
+
+El título lo compone el nodo `PrepararNotaInterna` a partir de
+`numero_reimpacto`, así que se mantiene solo si algún día cambian los nombres
+de las plantillas. Va en negrita porque Chatwoot interpreta markdown.
+
+El historial de `n8n_chat_histories_franquicias` guarda **solo el texto de la
+plantilla**, sin el título: ese registro es la memoria del asistente y debe
+reflejar lo que el lead vio, no la anotación interna.
+
 ## Diferencias frente al workflow `Reimpacto` original
 
 | | `Reimpacto` | `reimpactos_nuevafranja` |
