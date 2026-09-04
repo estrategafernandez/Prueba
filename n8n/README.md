@@ -68,9 +68,11 @@ Programador Horario (cada hora)
   etiqueta de la fase actual, no en el último mensaje de la conversación. Así
   una nota interna de un comercial no retrasa la secuencia. Si esa actividad ya
   no está en el historial reciente, se usa como reserva el último mensaje real.
-- **Franja horaria de envío:** 09:00–21:00 (Europe/Madrid). Fuera de la franja
-  la conversación simplemente espera al siguiente ciclo del mismo día; no se
-  salta ningún reimpacto. Se desactiva poniendo `FRANJA_ACTIVA = false`.
+- **Franja horaria de envío: 09:00–20:00 (Europe/Madrid), ambas horas
+  incluidas.** Nunca se envía de noche. Como el disparador es horario, el
+  último envío real de cada día cae a las 20:00. Fuera de franja la
+  conversación no se salta: espera al siguiente ciclo dentro del horario. Se
+  quita la restricción con `FRANJA_ACTIVA = false`.
 - **Paginación:** la búsqueda recorre todas las páginas de resultados. El
   endpoint de Chatwoot devuelve 25 conversaciones por página.
 
