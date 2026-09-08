@@ -5,6 +5,9 @@ PrestaShop, crea un cupón de 5 € (mínimo de compra 30 €) y envía a su mad
 padre la plantilla de WhatsApp `descuento_2` con la imagen, el código y el botón
 de copiar código.
 
+**Horario:** los envíos salen **todos los días a las 13:30** (Europe/Madrid) y el
+informe para la clienta se manda **a las 21:00**.
+
 - **n8n:** `https://n8n-rincondelosgenios.serversvisionarius.com`
 - **Chatwoot:** `https://chatwoot-rincondelosgenios.serversvisionarius.com` (v4.16.1, cuenta 1, inbox 1 `whatsapp_cloud`)
 - **Tienda:** `https://elrincondelosgenios.com` (PrestaShop)
@@ -15,7 +18,7 @@ de copiar código.
 |---|---|---|---|
 | Envío de Plantillas | `GZLn2dFb0CAXwWRP` | **ACTIVO** | El de producción, ya con los cambios |
 | Envío de Plantillas — ORIGINAL (copia de seguridad 2026-09-08) | `Gd249dBM4YDhzTSb` | parado | Copia intacta de la versión anterior, para revertir |
-| Informe diario de cumpleaños | `CbGZ0vP7icXNmNVH` | parado | Informe por email. **Falta la credencial de Gmail** |
+| Informe diario de cumpleaños | `CbGZ0vP7icXNmNVH` | parado | Informe por email con Resend. **Falta la API key** |
 
 ## Qué se ha cambiado
 
@@ -108,6 +111,13 @@ devuelta al bucle. Si una clienta falla, se salta esa y sigue con las demás.
 También se ha fijado `timezone: Europe/Madrid` en los ajustes del workflow, que
 antes dependía del valor por defecto de la instancia.
 
+### 3-bis. La hora de envío pasa de 10:00 a 13:30
+
+A petición de la clienta. El disparador es
+`{"triggerAtHour": 13, "triggerAtMinute": 30}` y el nodo se renombró a
+`Ejecución todos los días a las 13:30`. Ninguna expresión referenciaba a ese
+nodo, así que el renombrado es seguro.
+
 ### 4. Hermanos que cumplen el mismo día
 
 **Sin cambios, a propósito.** Si una clienta tiene dos hijos que cumplen el
@@ -128,9 +138,26 @@ autorespuestas) y la incidencia si no se pudo enviar. Arriba, cinco totales.
 
 `ejemplo_informe.html` es una muestra del correo con datos de ejemplo.
 
-> **PENDIENTE:** el nodo `Enviar informe por email` está **desactivado** porque
-> en esta instancia de n8n no hay ninguna credencial de correo. Hay que crear la
-> credencial de Gmail, asignarla al nodo, activar el nodo y activar el workflow.
+El envío se hace con **Resend**: el nodo `Enviar informe por email` es un HTTP
+Request a `https://api.resend.com/emails` que manda el objeto `resend_body` que
+prepara el nodo anterior. n8n llama a Resend directamente, sin pasar por Vercel.
+
+> **PENDIENTE (2 cosas):** el nodo está **desactivado** porque faltan la
+> credencial `httpHeaderAuth` con `Authorization: Bearer re_…` y el remitente
+> real (en `Construye el informe` pone `__TU_DOMINIO__`). Está todo detallado en
+> `PROMPT_correo.md`.
+
+### Probado (2026-09-08)
+
+Clonado en un workflow temporal con webhook, sustituyendo solo MySQL y PrestaShop:
+
+| Caso | Resultado |
+|---|---|
+| Una clienta con envío hecho | detecta el mensaje, `Enviado` / `Entregado` / sin respuesta |
+| Día sin ningún cumpleaños | no revienta: informa «Hoy no había ningún cumpleaños que felicitar» |
+
+Comprueba también que una **nota privada no cuenta como envío**, así que si algún
+día se volviera al método antiguo el informe lo marcaría como no enviado.
 
 ## Cómo revertir
 
