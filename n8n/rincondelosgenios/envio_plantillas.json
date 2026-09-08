@@ -355,8 +355,7 @@
         "rule": {
           "interval": [
             {
-              "triggerAtHour": 13,
-              "triggerAtMinute": 30
+              "triggerAtHour": 10
             }
           ]
         }
@@ -368,7 +367,7 @@
         1008
       ],
       "id": "60cb7b21-e5a7-494b-92f3-7cb3078ada2c",
-      "name": "Ejecución todos los días a las 13:30"
+      "name": "Ejecución todos los días a las 10 am"
     },
     {
       "parameters": {
@@ -1291,7 +1290,7 @@
         ]
       ]
     },
-    "Ejecución todos los días a las 13:30": {
+    "Ejecución todos los días a las 10 am": {
       "main": [
         [
           {

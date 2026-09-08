@@ -18,7 +18,7 @@ remitente.
 - **Destinatario:** `elrincondelosgenios31@gmail.com`
 - Cliente: El Rincón de los Genios, juguetería de Valencia.
 
-El workflow se dispara a las 21:00 (Europe/Madrid), consulta los cumpleaños en
+El workflow se dispara a las 13:30 (Europe/Madrid), consulta los cumpleaños en
 MySQL, comprueba en Chatwoot qué se envió hoy por WhatsApp, si se entregó, si se
 leyó y si la clienta ha contestado, y compone el correo. Todo eso ya funciona:
 está probado con datos reales, tanto el caso con cumpleaños como el día sin
@@ -88,7 +88,7 @@ Quita el `"disabled": true` del nodo de envío y activa el workflow:
 
 ## Cómo probarlo antes de darlo por bueno
 
-No esperes a las 21:00. Duplica el workflow en uno temporal, cámbiale el
+No esperes a las 13:30. Duplica el workflow en uno temporal, cámbiale el
 disparador por un nodo **Webhook**, actívalo y llámalo con un POST. Revisa la
 ejecución por API (`/api/v1/executions/<id>?includeData=true`) y comprueba:
 
@@ -109,7 +109,7 @@ Haz un `GET` primero, modifica y devuelve el objeto recortado a esos cuatro camp
 ## Lo que NO debes tocar
 
 - `Envío de Plantillas` (`GZLn2dFb0CAXwWRP`): está **activo** y manda WhatsApp
-  reales a clientas todos los días a las 13:30.
+  reales a clientas todos los días a las 10:00.
 - `Envío de Plantillas — ORIGINAL (copia de seguridad 2026-09-08)`
   (`Gd249dBM4YDhzTSb`): es la copia para revertir, debe seguir parada.
 - El resto de nodos del workflow del informe. La lógica ya está probada y

@@ -5,8 +5,8 @@ PrestaShop, crea un cupón de 5 € (mínimo de compra 30 €) y envía a su mad
 padre la plantilla de WhatsApp `descuento_2` con la imagen, el código y el botón
 de copiar código.
 
-**Horario:** los envíos salen **todos los días a las 13:30** (Europe/Madrid) y el
-informe para la clienta se manda **a las 21:00**.
+**Horario:** los envíos salen **todos los días a las 10:00** (Europe/Madrid) y el
+informe para la clienta se manda **a las 13:30**.
 
 - **n8n:** `https://n8n-rincondelosgenios.serversvisionarius.com`
 - **Chatwoot:** `https://chatwoot-rincondelosgenios.serversvisionarius.com` (v4.16.1, cuenta 1, inbox 1 `whatsapp_cloud`)
@@ -111,13 +111,6 @@ devuelta al bucle. Si una clienta falla, se salta esa y sigue con las demás.
 También se ha fijado `timezone: Europe/Madrid` en los ajustes del workflow, que
 antes dependía del valor por defecto de la instancia.
 
-### 3-bis. La hora de envío pasa de 10:00 a 13:30
-
-A petición de la clienta. El disparador es
-`{"triggerAtHour": 13, "triggerAtMinute": 30}` y el nodo se renombró a
-`Ejecución todos los días a las 13:30`. Ninguna expresión referenciaba a ese
-nodo, así que el renombrado es seguro.
-
 ### 4. Hermanos que cumplen el mismo día
 
 **Sin cambios, a propósito.** Si una clienta tiene dos hijos que cumplen el
@@ -125,7 +118,7 @@ mismo día recibe dos mensajes y dos cupones, que es lo que se quiere.
 
 ## Informe diario por email
 
-`Informe diario de cumpleaños` (`CbGZ0vP7icXNmNVH`) se ejecuta **a las 21:00**,
+`Informe diario de cumpleaños` (`CbGZ0vP7icXNmNVH`) se ejecuta **a las 13:30**,
 repite la misma consulta de cumpleaños que el workflow de envío y comprueba en
 Chatwoot qué pasó realmente con cada uno. Es un **auditor independiente**: no
 lee el estado interno del otro workflow, así que también detecta a quien se
@@ -175,7 +168,7 @@ es el mismo contenido en fichero.
   mano en las cabeceras de más de diez nodos en vez de estar en credenciales de
   n8n, y quedan expuestos en el JSON y en los datos de cada ejecución.
 - **No hay workflow de error** configurado: si el envío revienta, nadie se entera
-  hasta el informe de las 21:00.
+  hasta el informe de las 13:30.
 - Quedan 8 nodos activos pero inalcanzables y 11 desactivados, herencia de otro
   cliente (los nombres «Cintia» y «Adolfo»). No estorban, pero son ruido.
 - La imagen de la plantilla se sirve desde `elrincondelosgenios.com`; si la web

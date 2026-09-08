@@ -6,7 +6,8 @@
         "rule": {
           "interval": [
             {
-              "triggerAtHour": 21
+              "triggerAtHour": 13,
+              "triggerAtMinute": 30
             }
           ]
         }
@@ -18,7 +19,7 @@
         300
       ],
       "id": "trigger",
-      "name": "Todos los días a las 21:00"
+      "name": "Todos los días a las 13:30"
     },
     {
       "parameters": {
@@ -278,7 +279,7 @@
     }
   ],
   "connections": {
-    "Todos los días a las 21:00": {
+    "Todos los días a las 13:30": {
       "main": [
         [
           {
