@@ -54,12 +54,27 @@ El formato de `processed_params` es el "enhanced" de Chatwoot 4.x:
 > botón: sin ese hueco el `copy_code` iría al índice 0 y Meta lo rechazaría.
 > El hueco se descarta solo (no es `url` y no tiene `parameter`).
 
-**Verificado de extremo a extremo** el 2026-09-08 contra `+447700900123` (rango
-que Ofcom reserva para pruebas y nunca asigna a nadie). Meta devolvió un
-`wamid`, es decir **aceptó la estructura completa** — cabecera de imagen, tres
-parámetros de cuerpo y botón `copy_code` en el índice 1 — y después informó por
-webhook de `131026: Message undeliverable`, que es el error de *destinatario no
-es usuario de WhatsApp*, no de formato. El contacto de prueba se borró.
+### Pruebas hechas antes de dar el cambio por bueno (2026-09-08)
+
+Se clonó el workflow en uno temporal disparado por webhook, sustituyendo **solo**
+las fuentes de datos (la consulta MySQL y las dos llamadas a PrestaShop) por
+datos de prueba. Los **24 nodos restantes se compararon uno a uno con los de
+producción y eran idénticos**, así que lo que se ejecutó es exactamente la
+cadena real, incluidas las expresiones de n8n.
+
+| Prueba | Rama | Teléfono | Resultado |
+|---|---|---|---|
+| 1 | contacto ya existente | `608563923` | normalizado a `34608563923`, mensaje 5827 en la conversación 970, **`delivered`** |
+| 2 | contacto nuevo | `00447700900123` | normalizado a `447700900123`, contacto y conversación creados, mensaje 5828 enviado |
+
+La prueba 2 reproduce **el caso exacto que tumbó la ejecución del 5 de
+septiembre**: antes se le añadía `+34` a un número británico y Chatwoot lo
+rechazaba, abortando el resto de la lista. Ahora se resuelve bien y sigue.
+
+Ambas ejecuciones terminaron en `success`, sin un solo nodo en error. Los
+artefactos de prueba (workflow temporal y contacto del número Ofcom) se
+borraron; el mensaje de la prueba 1 se dejó a propósito para poder verlo en el
+panel.
 
 ### 2. Los teléfonos extranjeros ya no paran la ejecución
 
