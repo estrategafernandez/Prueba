@@ -1,0 +1,3483 @@
+{
+  "updatedAt": "2026-06-25T11:08:41.247Z",
+  "createdAt": "2025-06-20T15:59:31.269Z",
+  "id": "GZLn2dFb0CAXwWRP",
+  "name": "Envío de Plantillas",
+  "description": "",
+  "active": true,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Función para generar un código aleatorio como los de PrestaShop\nfunction generarCodigoDescuento(longitud = 6) {\n  const caracteres = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';\n  let codigo = '';\n  for (let i = 0; i < longitud; i++) {\n    codigo += caracteres.charAt(Math.floor(Math.random() * caracteres.length));\n  }\n  return codigo;\n}\n\n// Generar un cupón por cada input recibido\n\n  return {\n    json: {\n      codigo_generado: generarCodigoDescuento()\n    }\n  };"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2288,
+        1120
+      ],
+      "id": "688f0114-9cd3-4ee9-8cc7-bdc9e4e5dd33",
+      "name": "Genera Cupón Aleatorio"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        2688,
+        1472
+      ],
+      "id": "cbb3689d-bcd5-484e-94be-ee56f67432d0",
+      "name": "When clicking ‘Test workflow’",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT nombre.*\nFROM ps_fmm_registration_userdata AS fecha\nJOIN ps_fmm_registration_userdata AS nombre\n  ON fecha.id_customer = nombre.id_customer\n  AND nombre.id_fmm_registration_fields = fecha.id_fmm_registration_fields - 1\nWHERE fecha.value LIKE '%{{ $json.dentroDe10Dias }}';",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.4,
+      "position": [
+        -656,
+        1024
+      ],
+      "id": "ac6d2e94-8ca1-472a-acd7-f941460886c8",
+      "name": "Búsqueda por fecha",
+      "alwaysOutputData": false,
+      "retryOnFail": true,
+      "waitBetweenTries": 3000,
+      "credentials": {
+        "mySql": {
+          "id": "vn8lfyNZOMkRPCrk",
+          "name": "Nuevo Servidor"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT nombre.*\nFROM n8n_children AS fecha\nJOIN n8n_children AS nombre\n  ON fecha.id_customer = nombre.id_customer\n  AND nombre.id_fmm_registration_fields = fecha.id_fmm_registration_fields - 1\nWHERE fecha.value LIKE '%{{ $('Code').item.json.dentroDe5Dias }}';",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -128,
+        1664
+      ],
+      "id": "4f62af6c-d0bf-4b38-9f71-f2995c591c35",
+      "name": "Postgres1",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "url": "=https://elrincondelosgenios.com/api/customers/{{ $json.id_customer }}?output_format=JSON",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "sendHeaders": true,
+        "specifyHeaders": "json",
+        "jsonHeaders": "{\n  \"Accept\": \"application/json\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -48,
+        752
+      ],
+      "id": "402c0148-fa13-4528-b8ee-76767a94310e",
+      "name": "Recoger datos de los padres",
+      "retryOnFail": true,
+      "waitBetweenTries": 3000,
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "vENpn7PKtkMu6KDC",
+          "name": "Unnamed credential"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "url": "=https://elrincondelosgenios.com/api/customers/{{ $json.id_customer }}?output_format=JSON",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "sendHeaders": true,
+        "specifyHeaders": "json",
+        "jsonHeaders": "{\n  \"Accept\": \"application/json\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        160,
+        1664
+      ],
+      "id": "b4e84051-5320-467e-b1cb-f7336457d12a",
+      "name": "recoger datos de los padres 2",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Función para generar un código aleatorio como los de PrestaShop\nfunction generarCodigoDescuento(longitud = 8) {\n  const caracteres = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';\n  let codigo = '';\n  for (let i = 0; i < longitud; i++) {\n    codigo += caracteres.charAt(Math.floor(Math.random() * caracteres.length));\n  }\n  return codigo;\n}\n\n// Devolver el código como nuevo campo\nreturn [\n  {\n    json: {\n      codigo_generado: generarCodigoDescuento()\n    }\n  }\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        512,
+        1664
+      ],
+      "id": "86e216bd-3fa5-4e0a-8dab-ce576ad61745",
+      "name": "Genera Cupón Aleatorio1",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "phoneNumberId": "715421488312920",
+        "recipientPhoneNumber": "+36665807425",
+        "template": "descuento1|es",
+        "components": {
+          "component": [
+            {
+              "bodyParameters": {
+                "parameter": [
+                  {
+                    "text": "yago"
+                  },
+                  {
+                    "text": "xd"
+                  },
+                  {
+                    "text": "cumple"
+                  }
+                ]
+              }
+            },
+            {
+              "type": "header",
+              "headerParameters": {
+                "parameter": [
+                  {
+                    "type": "image",
+                    "imageLink": "https://elrincondelosgenios.com/img/cms/erdlg_logo.png"
+                  }
+                ]
+              }
+            },
+            {
+              "type": "button",
+              "sub_type": "url",
+              "buttonParameters": {
+                "parameter": {
+                  "payload": "https://elrincondelosgenios.com"
+                }
+              }
+            },
+            {
+              "type": "button",
+              "index": 1,
+              "buttonParameters": {
+                "parameter": {
+                  "payload": "cumple"
+                }
+              }
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1,
+      "position": [
+        80,
+        -64
+      ],
+      "id": "24c0751c-d051-4336-a8e0-adbd05f806ad",
+      "name": "WhatsApp Business Cloud",
+      "webhookId": "7729b8e0-7fbd-4e86-ad47-241905935191",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "phoneNumberId": "715421488312920",
+        "recipientPhoneNumber": "‪+34633765351‬",
+        "template": "descuento_prueba|es",
+        "components": {
+          "component": [
+            {
+              "type": "button",
+              "sub_type": "url",
+              "buttonParameters": {
+                "parameter": {
+                  "type": "text",
+                  "text": "elrincondelosgenios.com"
+                }
+              }
+            },
+            {
+              "type": "button",
+              "index": 1,
+              "buttonParameters": {
+                "parameter": {
+                  "type": "text",
+                  "text": "kjnkjn"
+                }
+              }
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1,
+      "position": [
+        -864,
+        -96
+      ],
+      "id": "10d88e73-9cb9-493c-bd59-7163f2b66cab",
+      "name": "WhatsApp Business Cloud1",
+      "webhookId": "7729b8e0-7fbd-4e86-ad47-241905935191",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "url": "https://elrincondelosgenios.com/api/cart_rules/",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        384,
+        -64
+      ],
+      "id": "5ffbf708-33a9-402f-99ec-dc69c999c515",
+      "name": "HTTP Request2",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const xmlData = items[0].json.data;\n\n// Extraemos los IDs de los cart_rule mediante expresión regular\nconst regex = /<cart_rule id=\"(\\d+)\"/g;\nlet match;\nconst ids = [];\n\nwhile ((match = regex.exec(xmlData)) !== null) {\n  ids.push(match[1]);\n}\n\nreturn [{ json: { ids } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        688,
+        -64
+      ],
+      "id": "edb68174-abef-4d35-8e23-7beb645264ec",
+      "name": "Code1",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const ids = $json.ids;\nlet xml = '<cart_rule_restriction>\\n  <cart_rules>\\n';\n\nids.forEach(id => {\n  xml += `    <cart_rule>\\n      <id><![CDATA[${id}]]></id>\\n    </cart_rule>\\n`;\n});\n\nxml += '  </cart_rules>\\n</cart_rule_restriction>';\n\nreturn [{ json: { restriccionCupones: xml } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        944,
+        -64
+      ],
+      "id": "fc2e2594-0c66-47e4-ac3d-a5f8e8c2fe2f",
+      "name": "Code2",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        -224,
+        704
+      ],
+      "id": "3b05035b-cbeb-48a6-ac7e-0220cb0fd604",
+      "name": "Loop Over Items"
+    },
+    {
+      "parameters": {
+        "content": "Cuidado, la Fecha para caducidad del cupón está en FECHA1 Y FECHA2",
+        "width": 260
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -608,
+        -16
+      ],
+      "id": "29ba5181-bdcb-417f-9469-795b7c3cc43e",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Fecha actual\nconst hoy = new Date();\n\n// Fecha + 5 días\nconst fechaMas5 = new Date(hoy);\nfechaMas5.setDate(hoy.getDate() + 10);\n\n// Fecha + 15 días\nconst fechaMas15 = new Date(hoy);\nfechaMas15.setDate(hoy.getDate() + 40);\n\n// Función para formatear como YYYY-MM-DD\nconst formatearCompleta = (fecha) => {\n  const y = fecha.getFullYear();\n  const m = String(fecha.getMonth() + 1).padStart(2, '0');\n  const d = String(fecha.getDate()).padStart(2, '0');\n  return `${y}-${m}-${d}`;\n};\n\n// Función para formatear como MM-DD\nconst formatearMesDia = (fecha) => {\n  const m = String(fecha.getMonth() + 1).padStart(2, '0');\n  const d = String(fecha.getDate()).padStart(2, '0');\n  return `${m}-${d}`;\n};\n\n// Resultado\nreturn [\n  {\n    json: {\n      hoy: formatearCompleta(hoy),\n      dentroDe10Dias: formatearMesDia(fechaMas5),\n      dentroDe15Dias: formatearCompleta(fechaMas15)\n    }\n  }\n];\n\n\n\n\n\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -896,
+        1024
+      ],
+      "id": "88692d76-b4a2-470c-ab3d-4a8d55cb7390",
+      "name": "Fechas"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Fecha actual\nconst hoy = new Date();\n\n// Fecha + 5 días\nconst fechaMas5 = new Date(hoy);\nfechaMas5.setDate(hoy.getDate() + 10);\n\n// Fecha + 15 días\nconst fechaMas15 = new Date(hoy);\nfechaMas15.setDate(hoy.getDate() + 40);\n\n// Función para formatear como YYYY-MM-DD\nconst formatearCompleta = (fecha) => {\n  const y = fecha.getFullYear();\n  const m = String(fecha.getMonth() + 1).padStart(2, '0');\n  const d = String(fecha.getDate()).padStart(2, '0');\n  return `${y}-${m}-${d}`;\n};\n\n// Función para formatear como MM-DD\nconst formatearMesDia = (fecha) => {\n  const m = String(fecha.getMonth() + 1).padStart(2, '0');\n  const d = String(fecha.getDate()).padStart(2, '0');\n  return `${m}-${d}`;\n};\n\n// Resultado\nreturn [\n  {\n    json: {\n      hoy: formatearCompleta(hoy),\n      dentroDe5Dias: formatearMesDia(fechaMas5),\n      dentroDe15Dias: formatearCompleta(fechaMas15)\n    }\n  }\n];\n\n\n\n\n\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2592,
+        1120
+      ],
+      "id": "b211cd19-b049-4a04-84f3-63cba27971ed",
+      "name": "Fechas1"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        160,
+        400
+      ],
+      "id": "4a048bb0-140e-427b-8137-9f59ae53f588",
+      "name": "Gmail",
+      "webhookId": "03898a14-b57f-4e89-99fd-197b8ff6c0fb",
+      "disabled": true,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 10
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -1248,
+        1008
+      ],
+      "id": "60cb7b21-e5a7-494b-92f3-7cb3078ada2c",
+      "name": "Ejecución todos los días a las 10 am"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://elrincondelosgenios.com/api/cart_rules/?output_format=JSON",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/xml",
+        "body": "=<prestashop xmlns:xlink=\"http://www.w3.org/1999/xlink\">\n  <cart_rule>\n    <id_customer><![CDATA[{{ $('Loop Over Items').item.json.id_customer }}]]></id_customer>\n\n    <name>\n      <language id=\"1\"><![CDATA[{{ $('Recoger datos de los padres').item.json.customer.firstname  }} {{ $('Recoger datos de los padres').item.json.customer.lastname }} {{ $('Loop Over Items').item.json.value }}]]></language>\n    </name>\n\n    <date_from><![CDATA[{{ $json.hoy }} 00:00:00]]></date_from>\n    <date_to><![CDATA[{{ $json.dentroDe15Dias }} 00:00:00]]></date_to>\n\n    <description><![CDATA[Descuento por cumpleaños {{ $('Recoger datos de los padres').item.json.customer.firstname }} {{ $('Recoger datos de los padres').item.json.customer.lastname }} {{ $('Loop Over Items').item.json.value }}]]></description>\n\n    <quantity><![CDATA[1]]></quantity>\n    <quantity_per_user><![CDATA[1]]></quantity_per_user>\n    <priority><![CDATA[1]]></priority>\n    <partial_use><![CDATA[0]]></partial_use>\n    <highlight><![CDATA[0]]></highlight>\n    <active><![CDATA[1]]></active>\n\n    <code><![CDATA[{{ $('Genera Cupón Aleatorio').item.json.codigo_generado }}]]></code>\n\n    <minimum_amount><![CDATA[30.00]]></minimum_amount>\n    <minimum_amount_tax><![CDATA[1]]></minimum_amount_tax>\n    <minimum_amount_currency><![CDATA[1]]></minimum_amount_currency>\n    <minimum_amount_shipping><![CDATA[0]]></minimum_amount_shipping>\n\n    <free_shipping><![CDATA[0]]></free_shipping>\n\n    <reduction_percent><![CDATA[0.000]]></reduction_percent>\n    <reduction_amount><![CDATA[5.00]]></reduction_amount>\n    <reduction_tax><![CDATA[1]]></reduction_tax>\n    <reduction_currency><![CDATA[1]]></reduction_currency>\n    <reduction_product><![CDATA[0]]></reduction_product>\n    <reduction_exclude_special><![CDATA[0]]></reduction_exclude_special>\n\n    <gift_product><![CDATA[0]]></gift_product>\n    <gift_product_attribute><![CDATA[0]]></gift_product_attribute>\n    <cart_rule_restriction><![CDATA[1]]></cart_rule_restriction>\n  </cart_rule>\n\n</prestashop>",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3008,
+        1120
+      ],
+      "id": "467db112-17ef-4b90-ba3c-379dd3e19e99",
+      "name": "Crear descuentos",
+      "retryOnFail": true,
+      "waitBetweenTries": 3000,
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "vENpn7PKtkMu6KDC",
+          "name": "Unnamed credential"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "url": "=https://chatwoot-rincondelosgenios.serversvisionarius.com/api/v1/accounts/1/conversations",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "api_access_token",
+              "value": "__CHATWOOT_API_ACCESS_TOKEN__"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"source_id\": \"{{ $('GET CONTACT Cintia').item.json.payload[0].contact_inboxes[0].source_id }}\"\n} ",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1440,
+        528
+      ],
+      "id": "4e22c981-0e2e-4e5e-bf1c-7fd497b54cc8",
+      "name": "Coger Id conversations",
+      "retryOnFail": true,
+      "waitBetweenTries": 3000,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Normaliza a E.164 sin \"+\" (formato source_id de Chatwoot).\n// Nunca lanza y nunca descarta en silencio: siempre devuelve un motivo.\nfunction normalizaTelefono(raw) {\n  const original = String(raw ?? '').trim();\n  if (!original) return { ok: false, motivo: 'sin teléfono en PrestaShop' };\n\n  const teniaMas = original.startsWith('+');\n  let s = original.replace(/\\D/g, '');\n  if (!s) return { ok: false, motivo: 'teléfono sin dígitos' };\n\n  if (s.startsWith('00')) {\n    s = s.slice(2);                        // 00447969110220 -> 447969110220\n  } else if (!teniaMas && s.length === 9) {\n    s = '34' + s;                          // 603487083 -> 34603487083\n  }\n\n  if (s.length < 8 || s.length > 15) {\n    return { ok: false, motivo: 'longitud no válida (' + s.length + ' dígitos)' };\n  }\n  return { ok: true, e164: s, es_movil_es: /^34[67]/.test(s) };\n}\n\nconst salida = [];\nfor (const item of $input.all()) {\n  const c = item.json.customer || {};\n  const bruto = c.phone_mobile || c.phone || '';\n  const r = normalizaTelefono(bruto);\n  salida.push({ json: Object.assign({}, item.json, {\n    telefono_bruto:  bruto,\n    telefono_e164:   r.ok ? r.e164 : null,\n    telefono_ok:     r.ok,\n    motivo_descarte: r.ok ? null : r.motivo,\n    es_movil_es:     r.ok ? r.es_movil_es : false,\n  })});\n}\nreturn salida;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        160,
+        752
+      ],
+      "id": "20eff489-30e9-447b-b7fd-650cc278c0a4",
+      "name": "Formateamos Número"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c072ad80-1948-4c04-afaa-827d250d0412",
+              "leftValue": "={{ $json.payload?.[0]?.contact_inboxes?.[0]?.source_id ?? '' }}",
+              "rightValue": "={{ $('Formateamos Número').item.json.telefono_e164 }}",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1248,
+        720
+      ],
+      "id": "18faffb0-cc47-47ea-aa77-81cb185f565b",
+      "name": "Si Contacto Existe1"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://chatwoot-rincondelosgenios.serversvisionarius.com/api/v1/accounts/1/conversations",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "api_access_token",
+              "value": "__CHATWOOT_API_ACCESS_TOKEN__"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"source_id\": \"{{ $json.payload.contact.contact_inboxes[0].source_id }}\",\n\"inbox_id\": \"1\"\n}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2000,
+        1120
+      ],
+      "id": "78f80bfe-62bd-44a3-83ef-383e545d4934",
+      "name": "Crear Conversación",
+      "retryOnFail": true,
+      "waitBetweenTries": 3000,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Función para generar un código aleatorio como los de PrestaShop\nfunction generarCodigoDescuento(longitud = 6) {\n  const caracteres = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';\n  let codigo = '';\n  for (let i = 0; i < longitud; i++) {\n    codigo += caracteres.charAt(Math.floor(Math.random() * caracteres.length));\n  }\n  return codigo;\n}\n\n// Generar un cupón por cada input recibido\n\n  return {\n    json: {\n      codigo_generado: generarCodigoDescuento()\n    }\n  };"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1984,
+        528
+      ],
+      "id": "79416b59-929f-4159-a4a0-b4a092d29967",
+      "name": "Genera Cupón Aleatorio2"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Fecha actual\nconst hoy = new Date();\n\n// Fecha + 5 días\nconst fechaMas5 = new Date(hoy);\nfechaMas5.setDate(hoy.getDate() + 10);\n\n// Fecha + 15 días\nconst fechaMas15 = new Date(hoy);\nfechaMas15.setDate(hoy.getDate() + 40);\n\n// Función para formatear como YYYY-MM-DD\nconst formatearCompleta = (fecha) => {\n  const y = fecha.getFullYear();\n  const m = String(fecha.getMonth() + 1).padStart(2, '0');\n  const d = String(fecha.getDate()).padStart(2, '0');\n  return `${y}-${m}-${d}`;\n};\n\n// Función para formatear como MM-DD\nconst formatearMesDia = (fecha) => {\n  const m = String(fecha.getMonth() + 1).padStart(2, '0');\n  const d = String(fecha.getDate()).padStart(2, '0');\n  return `${m}-${d}`;\n};\n\n// Resultado\nreturn [\n  {\n    json: {\n      hoy: formatearCompleta(hoy),\n      dentroDe5Dias: formatearMesDia(fechaMas5),\n      dentroDe15Dias: formatearCompleta(fechaMas15)\n    }\n  }\n];\n\n\n\n\n\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2288,
+        528
+      ],
+      "id": "652da446-8606-40ea-89a5-51b58a3d4c49",
+      "name": "Fechas2"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://elrincondelosgenios.com/api/cart_rules/?output_format=JSON",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/xml",
+        "body": "=<prestashop xmlns:xlink=\"http://www.w3.org/1999/xlink\">\n  <cart_rule>\n    <id_customer><![CDATA[{{ $('Loop Over Items').item.json.id_customer }}]]></id_customer>\n\n    <name>\n      <language id=\"1\"><![CDATA[{{ $('Recoger datos de los padres').item.json.customer.firstname  }} {{ $('Recoger datos de los padres').item.json.customer.lastname }} {{ $('Loop Over Items').item.json.value }}]]></language>\n    </name>\n\n    <date_from><![CDATA[{{ $json.hoy }} 00:00:00]]></date_from>\n    <date_to><![CDATA[{{ $json.dentroDe15Dias }} 00:00:00]]></date_to>\n\n    <description><![CDATA[Descuento por cumpleaños {{ $('Recoger datos de los padres').item.json.customer.firstname }} {{ $('Recoger datos de los padres').item.json.customer.lastname }} {{ $('Loop Over Items').item.json.value }}]]></description>\n\n    <quantity><![CDATA[1]]></quantity>\n    <quantity_per_user><![CDATA[1]]></quantity_per_user>\n    <priority><![CDATA[1]]></priority>\n    <partial_use><![CDATA[0]]></partial_use>\n    <highlight><![CDATA[0]]></highlight>\n    <active><![CDATA[1]]></active>\n\n    <code><![CDATA[{{ $('Genera Cupón Aleatorio2').item.json.codigo_generado }}]]></code>\n\n    <minimum_amount><![CDATA[30.00]]></minimum_amount>\n    <minimum_amount_tax><![CDATA[1]]></minimum_amount_tax>\n    <minimum_amount_currency><![CDATA[1]]></minimum_amount_currency>\n    <minimum_amount_shipping><![CDATA[0]]></minimum_amount_shipping>\n\n    <free_shipping><![CDATA[0]]></free_shipping>\n\n    <reduction_percent><![CDATA[0.000]]></reduction_percent>\n    <reduction_amount><![CDATA[5.00]]></reduction_amount>\n    <reduction_tax><![CDATA[1]]></reduction_tax>\n    <reduction_currency><![CDATA[1]]></reduction_currency>\n    <reduction_product><![CDATA[0]]></reduction_product>\n    <reduction_exclude_special><![CDATA[0]]></reduction_exclude_special>\n\n    <gift_product><![CDATA[0]]></gift_product>\n    <gift_product_attribute><![CDATA[0]]></gift_product_attribute>\n    <cart_rule_restriction><![CDATA[1]]></cart_rule_restriction>\n  </cart_rule>\n\n</prestashop>",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2464,
+        624
+      ],
+      "id": "ab338280-ffd2-4e0e-b7d7-1df178469e9e",
+      "name": "Crear descuentos1",
+      "retryOnFail": true,
+      "waitBetweenTries": 3000,
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "vENpn7PKtkMu6KDC",
+          "name": "Unnamed credential"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://chatwoot-rincondelosgenios.serversvisionarius.com/api/v1/accounts/1/contacts",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "api_access_token",
+              "value": "__CHATWOOT_API_ACCESS_TOKEN__"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"name\": \"{{ $('Recoger datos de los padres').item.json.customer.firstname }} {{ $('Recoger datos de los padres').item.json.customer.lastname }}\",\n  \"phone_number\": \"+{{ $('Formateamos Número').item.json.telefono_e164 }}\",\n  \"identifier\": \"{{ $('Formateamos Número').item.json.telefono_e164 }}\",\n  \"inbox_id\": 1,\n  \"source_id\": \"{{ $('Formateamos Número').item.json.telefono_e164 }}\",\n \"custom_attributes\": {\n    \"bot\": \"On\"\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1440,
+        992
+      ],
+      "id": "5b953658-2a37-4e9b-95dd-444edcdf545c",
+      "name": "Crea Contacto Cintia",
+      "retryOnFail": true,
+      "waitBetweenTries": 3000,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT *\nFROM ps_fmm_registration_userdata\nWHERE fecha LIKE '%{{ $json.dentroDe10Dias }}';",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.4,
+      "position": [
+        -720,
+        1312
+      ],
+      "id": "79c8e33e-1c94-453c-ac4c-e853bea0101b",
+      "name": "Búsqueda por fecha1",
+      "alwaysOutputData": false,
+      "disabled": true,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://chatwoot-production-0546.up.railway.app/api/v1/accounts/2/conversations",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "api_access_token",
+              "value": "Zbz5A3ooGDxoU5yqwXNofPe8"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"source_id\": \"34658694636\",\n\"inbox_id\": \"1\"\n}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2944,
+        400
+      ],
+      "id": "c98b617a-7ef7-4973-8ba1-09d9cd3935a6",
+      "name": "Crear Conversación1"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://chatwoot-production-0546.up.railway.app/api/v1/accounts/2/conversations/60/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "api_access_token",
+              "value": "Zbz5A3ooGDxoU5yqwXNofPe8"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"content\" : \"¡FELICIDADES!🎊Se acerca el cumple de Blanca\\nPor eso me gustaría regalarte este cupón de descuento para tu próxima compra.🎁\\nCódigo de descuento:4Q70AR  hasta 30 días después del cumpleaños. No acumulable a otras ofertas o promociones. FABA y libros excluidos de los descuentos. Con un gasto mínimo de 30€.¡Que lo disfrutéis! 🚀\",\n  \"message_type\" : \"outgoing\",\n  \"private\" : true\n\n}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3184,
+        400
+      ],
+      "id": "dad11c86-9603-4bc9-a532-c8f3b7a2ad1e",
+      "name": "Mensaje Privado3"
+    },
+    {
+      "parameters": {
+        "url": "=https://chatwoot-production-0546.up.railway.app/api/v1/accounts/2/contacts/search?q=%2B34627912398",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "api_access_token",
+              "value": "Zbz5A3ooGDxoU5yqwXNofPe8"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        864,
+        512
+      ],
+      "id": "4fb64b66-2908-4e49-9e2b-124af4bce82d",
+      "name": "GET CONTACT Adolfo1"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://chatwoot-production-0546.up.railway.app/api/v1/accounts/2/conversations",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "api_access_token",
+              "value": "Zbz5A3ooGDxoU5yqwXNofPe8"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"source_id\": \"34627912398\",\n\"inbox_id\": \"1\"\n}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1712,
+        1408
+      ],
+      "id": "efdb6e33-d0da-4da7-b48d-2442a0f70ba1",
+      "name": "Crear Conversación2"
+    },
+    {
+      "parameters": {
+        "amount": 8
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        592,
+        720
+      ],
+      "id": "a17d1585-b280-4c34-ad42-33d27ed42825",
+      "name": "Wait",
+      "webhookId": "e4cf9036-ffdb-4a2c-a538-45a4c3f0d5b1"
+    },
+    {
+      "parameters": {
+        "amount": 8
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        1088,
+        720
+      ],
+      "id": "790689ad-934b-432c-866a-2062f239f9d3",
+      "name": "Wait1",
+      "webhookId": "e4cf9036-ffdb-4a2c-a538-45a4c3f0d5b1"
+    },
+    {
+      "parameters": {
+        "amount": 8
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        1680,
+        528
+      ],
+      "id": "dca6c59e-f36a-469d-b1ad-2b643b7c64da",
+      "name": "Wait2",
+      "webhookId": "e4cf9036-ffdb-4a2c-a538-45a4c3f0d5b1"
+    },
+    {
+      "parameters": {
+        "amount": 8
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        2672,
+        688
+      ],
+      "id": "61e10898-359f-4789-bc6f-f4e9b4c0d42d",
+      "name": "Wait3",
+      "webhookId": "e4cf9036-ffdb-4a2c-a538-45a4c3f0d5b1"
+    },
+    {
+      "parameters": {
+        "amount": 8
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        1712,
+        1120
+      ],
+      "id": "7ae88028-6fc0-46e4-8a27-5b473c94ede4",
+      "name": "Wait5",
+      "webhookId": "e4cf9036-ffdb-4a2c-a538-45a4c3f0d5b1"
+    },
+    {
+      "parameters": {
+        "amount": 8
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        2832,
+        1120
+      ],
+      "id": "a6da5777-0300-484e-9235-4c74c5096fd2",
+      "name": "Wait6",
+      "webhookId": "e4cf9036-ffdb-4a2c-a538-45a4c3f0d5b1"
+    },
+    {
+      "parameters": {
+        "amount": 8
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        3200,
+        1120
+      ],
+      "id": "d8dfa217-34c3-441c-9ea5-7ba91eb4b91d",
+      "name": "Wait7",
+      "webhookId": "e4cf9036-ffdb-4a2c-a538-45a4c3f0d5b1"
+    },
+    {
+      "parameters": {
+        "url": "=https://chatwoot-rincondelosgenios.serversvisionarius.com/api/v1/accounts/1/contacts/search?q=%2B{{ $json.telefono_e164 }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "api_access_token",
+              "value": "__CHATWOOT_API_ACCESS_TOKEN__"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        928,
+        720
+      ],
+      "id": "33e70290-33af-40ec-a795-7748f8b5ab06",
+      "name": "GET CONTACT Cintia",
+      "retryOnFail": true,
+      "waitBetweenTries": 3000,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT nombre.*\nFROM ps_fmm_registration_userdata AS fecha\nJOIN ps_fmm_registration_userdata AS nombre\n  ON fecha.id_customer = nombre.id_customer\n  AND nombre.id_fmm_registration_fields = fecha.id_fmm_registration_fields - 1\nWHERE fecha.value LIKE '%08-11';",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.4,
+      "position": [
+        -1136,
+        -80
+      ],
+      "id": "0f003f50-8215-401e-8e8c-55dad338bb0f",
+      "name": "Búsqueda por fecha2",
+      "alwaysOutputData": false,
+      "retryOnFail": true,
+      "waitBetweenTries": 3000,
+      "credentials": {
+        "mySql": {
+          "id": "vn8lfyNZOMkRPCrk",
+          "name": "Nuevo Servidor"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://graph.facebook.com/v17.0/715421488312920/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer __META_GRAPH_ACCESS_TOKEN__"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"messaging_product\": \"whatsapp\",\n  \"to\": \"+34685059849\",\n  \"type\": \"template\",\n  \"template\": {\n    \"name\": \"descuento_2\",\n    \"language\": {\n      \"code\": \"es\"\n    },\n    \"components\": [\n      {\n        \"type\": \"header\",\n        \"parameters\": [\n          {\n            \"type\": \"image\",\n            \"image\": {\n              \"link\": \"https://elrincondelosgenios.com/img/cms/cumple.jpeg\"\n            }\n          }\n        ]\n      },\n      {\n        \"type\": \"body\",\n        \"parameters\": [\n          {\n            \"type\": \"text\",\n            \"text\": \"Alessandra\"\n          },\n          {\n            \"type\": \"text\",\n            \"text\": \"Xavi\"\n          },\n          {\n            \"type\": \"text\",\n            \"text\": \"OXQIKS\"\n          }\n        ]\n      },\n      \n      {\n        \"type\": \"button\",\n        \"sub_type\": \"COPY_CODE\",\n        \"index\": \"1\",\n        \"parameters\": [\n          {\n            \"type\": \"payload\",\n            \"payload\": \"OXQIKS\"\n          }\n        ]\n      }\n    ]\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3024,
+        1472
+      ],
+      "id": "4aa9ada9-142f-4c86-a1ee-2bdca0a8f511",
+      "name": "Enviar template Whatsapp2",
+      "retryOnFail": true,
+      "waitBetweenTries": 3000
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://chatwoot-rincondelosgenios.serversvisionarius.com/api/v1/accounts/1/conversations/939/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "api_access_token",
+              "value": "__CHATWOOT_API_ACCESS_TOKEN__"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"content\" : \"¡FELICIDADES!🎊Se acerca el cumple de Xavi\\nPor eso me gustaría regalarte este cupón de descuento para tu próxima compra.🎁\\nCódigo de descuento: 02D1ET hasta 30 días después del cumpleaños. No acumulable a otras ofertas o promociones. FABA y libros excluidos de los descuentos. Con un gasto mínimo de 30€.¡Que lo disfrutéis! 🚀\",\n  \"message_type\" : \"outgoing\",\n  \"private\" : true\n\n}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3296,
+        1472
+      ],
+      "id": "c5c46490-d9ef-4991-bd68-77fb0c221708",
+      "name": "Mensaje Privado4",
+      "retryOnFail": true,
+      "waitBetweenTries": 3000
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://graph.facebook.com/v17.0/715421488312920/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer __META_GRAPH_ACCESS_TOKEN__"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"messaging_product\": \"whatsapp\",\n  \"to\": \"34685059849\",\n  \"type\": \"template\",\n  \"template\": {\n    \"name\": \"descuento_2\",\n    \"language\": {\n      \"code\": \"es\"\n    },\n    \"components\": [\n      {\n        \"type\": \"header\",\n        \"parameters\": [\n          {\n            \"type\": \"image\",\n            \"image\": {\n              \"link\": \"https://elrincondelosgenios.com/img/cms/cumple.jpeg\"\n            }\n          }\n        ]\n      },\n      {\n        \"type\": \"body\",\n        \"parameters\": [\n          {\n            \"type\": \"text\",\n            \"text\": \"Alexandra\"\n          },\n          {\n            \"type\": \"text\",\n            \"text\": \"Marco\"\n          },\n          {\n            \"type\": \"text\",\n            \"text\": \"KF5Y8B\"\n          }\n        ]\n      },\n      \n      {\n        \"type\": \"button\",\n        \"sub_type\": \"COPY_CODE\",\n        \"index\": \"1\",\n        \"parameters\": [\n          {\n            \"type\": \"payload\",\n            \"payload\": \"KF5Y8B\"\n          }\n        ]\n      }\n    ]\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3120,
+        144
+      ],
+      "id": "8430fc88-cfbf-4444-9ff1-76587c96da98",
+      "name": "Enviar template Whatsapp3",
+      "retryOnFail": true,
+      "waitBetweenTries": 3000
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://chatwoot-rincondelosgenios.serversvisionarius.com/api/v1/accounts/1/conversations/939/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "api_access_token",
+              "value": "__CHATWOOT_API_ACCESS_TOKEN__"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"content\" : \"¡FELICIDADES!🎊Se acerca el cumple de Marco\\nPor eso me gustaría regalarte este cupón de descuento para tu próxima compra.🎁\\nCódigo de descuento: KF5Y8B hasta 30 días después del cumpleaños. No acumulable a otras ofertas o promociones. FABA y libros excluidos de los descuentos. Con un gasto mínimo de 30€.¡Que lo disfrutéis! 🚀\",\n  \"message_type\" : \"outgoing\",\n  \"private\" : true\n\n}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3392,
+        144
+      ],
+      "id": "4118f324-2360-42f5-adf0-da3e341ef85b",
+      "name": "Mensaje Privado5",
+      "retryOnFail": true,
+      "waitBetweenTries": 3000
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "tel-ok",
+              "leftValue": "={{ $json.telefono_ok }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        368,
+        752
+      ],
+      "id": "telefono-valido",
+      "name": "¿Teléfono válido?"
+    },
+    {
+      "parameters": {
+        "jsCode": "const cupon  = $('Genera Cupón Aleatorio').first().json.codigo_generado;\nconst padre  = String($('Recoger datos de los padres').first().json.customer.firstname || '').trim();\nconst hijo   = String($('Loop Over Items').first().json.value || '').trim();\nconst convId = $('Crear Conversación').first().json.id;\n\nif (!convId) throw new Error('No se ha podido determinar la conversación de Chatwoot');\n\n// Mismo texto que la plantilla descuento_2, ya interpolado, para que la agente\n// vea en el panel exactamente lo que ha recibido la clienta.\nconst contenido =\n  'Hola ' + padre + ',\\n\\n' +\n  '¡FELICIDADES!🎊Se acerca el cumple de ' + hijo + '\\n' +\n  'Por eso me gustaría regalarte este cupón de descuento para tu próxima compra.🎁\\n' +\n  'Código de descuento: ' + cupon + '\\n\\n' +\n  'Válido hasta 30 días después del cumpleaños. Con un gasto mínimo de 30€.\\n\\n' +\n  '¡Que lo disfrutéis! 🚀\\n\\n' +\n  'No acumulable a otros descuentos. FABA y libros excluido.';\n\n// Estructura \"enhanced\" de Chatwoot 4.x (Whatsapp::TemplateProcessorService).\n// buttons[0] es el botón URL fijo de la plantilla, que no lleva variable:\n// se deja un hueco sin 'parameter' para que Chatwoot lo salte y el COPY_CODE\n// conserve el índice 1 que Meta espera.\nconst cw_body = {\n  content: contenido,\n  message_type: 'outgoing',\n  private: false,\n  template_params: {\n    name: 'descuento_2',\n    language: 'es',\n    processed_params: {\n      header:  { media_url: 'https://elrincondelosgenios.com/img/cms/cumple.jpeg', media_type: 'image' },\n      body:    { '1': padre, '2': hijo, '3': cupon },\n      buttons: [ { type: 'hueco' }, { type: 'copy_code', parameter: cupon } ]\n    }\n  }\n};\n\nreturn [{ json: { conversation_id: convId, cupon, padre, hijo, cw_body } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3392,
+        1120
+      ],
+      "id": "prepara-plantilla",
+      "name": "Prepara Plantilla"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://chatwoot-rincondelosgenios.serversvisionarius.com/api/v1/accounts/1/conversations/{{ $json.conversation_id }}/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "api_access_token",
+              "value": "__CHATWOOT_API_ACCESS_TOKEN__"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.cw_body) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3648,
+        1120
+      ],
+      "id": "enviar-plantilla-chatwoot",
+      "name": "Enviar plantilla Chatwoot",
+      "retryOnFail": true,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const cupon  = $('Genera Cupón Aleatorio2').first().json.codigo_generado;\nconst padre  = String($('Recoger datos de los padres').first().json.customer.firstname || '').trim();\nconst hijo   = String($('Loop Over Items').first().json.value || '').trim();\nconst convId = $('Coger Id conversations').first().json.data.payload[0].messages[0].conversation_id;\n\nif (!convId) throw new Error('No se ha podido determinar la conversación de Chatwoot');\n\n// Mismo texto que la plantilla descuento_2, ya interpolado, para que la agente\n// vea en el panel exactamente lo que ha recibido la clienta.\nconst contenido =\n  'Hola ' + padre + ',\\n\\n' +\n  '¡FELICIDADES!🎊Se acerca el cumple de ' + hijo + '\\n' +\n  'Por eso me gustaría regalarte este cupón de descuento para tu próxima compra.🎁\\n' +\n  'Código de descuento: ' + cupon + '\\n\\n' +\n  'Válido hasta 30 días después del cumpleaños. Con un gasto mínimo de 30€.\\n\\n' +\n  '¡Que lo disfrutéis! 🚀\\n\\n' +\n  'No acumulable a otros descuentos. FABA y libros excluido.';\n\n// Estructura \"enhanced\" de Chatwoot 4.x (Whatsapp::TemplateProcessorService).\n// buttons[0] es el botón URL fijo de la plantilla, que no lleva variable:\n// se deja un hueco sin 'parameter' para que Chatwoot lo salte y el COPY_CODE\n// conserve el índice 1 que Meta espera.\nconst cw_body = {\n  content: contenido,\n  message_type: 'outgoing',\n  private: false,\n  template_params: {\n    name: 'descuento_2',\n    language: 'es',\n    processed_params: {\n      header:  { media_url: 'https://elrincondelosgenios.com/img/cms/cumple.jpeg', media_type: 'image' },\n      body:    { '1': padre, '2': hijo, '3': cupon },\n      buttons: [ { type: 'hueco' }, { type: 'copy_code', parameter: cupon } ]\n    }\n  }\n};\n\nreturn [{ json: { conversation_id: convId, cupon, padre, hijo, cw_body } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2880,
+        720
+      ],
+      "id": "prepara-plantilla1",
+      "name": "Prepara Plantilla1"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://chatwoot-rincondelosgenios.serversvisionarius.com/api/v1/accounts/1/conversations/{{ $json.conversation_id }}/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "api_access_token",
+              "value": "__CHATWOOT_API_ACCESS_TOKEN__"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.cw_body) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3136,
+        720
+      ],
+      "id": "enviar-plantilla-chatwoot1",
+      "name": "Enviar plantilla Chatwoot1",
+      "retryOnFail": true,
+      "onError": "continueErrorOutput"
+    }
+  ],
+  "connections": {
+    "Genera Cupón Aleatorio": {
+      "main": [
+        [
+          {
+            "node": "Fechas1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Búsqueda por fecha": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Postgres1": {
+      "main": [
+        [
+          {
+            "node": "recoger datos de los padres 2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Recoger datos de los padres": {
+      "main": [
+        [
+          {
+            "node": "Formateamos Número",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "recoger datos de los padres 2": {
+      "main": [
+        [
+          {
+            "node": "Genera Cupón Aleatorio1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "WhatsApp Business Cloud": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request2": {
+      "main": [
+        [
+          {
+            "node": "Code1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code1": {
+      "main": [
+        [
+          {
+            "node": "Code2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items": {
+      "main": [
+        [
+          {
+            "node": "Gmail",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Recoger datos de los padres",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fechas": {
+      "main": [
+        [
+          {
+            "node": "Búsqueda por fecha",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fechas1": {
+      "main": [
+        [
+          {
+            "node": "Wait6",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ejecución todos los días a las 10 am": {
+      "main": [
+        [
+          {
+            "node": "Fechas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Crear descuentos": {
+      "main": [
+        [
+          {
+            "node": "Wait7",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Coger Id conversations": {
+      "main": [
+        [
+          {
+            "node": "Wait2",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Formateamos Número": {
+      "main": [
+        [
+          {
+            "node": "¿Teléfono válido?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Si Contacto Existe1": {
+      "main": [
+        [
+          {
+            "node": "Coger Id conversations",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Crea Contacto Cintia",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Crear Conversación": {
+      "main": [
+        [
+          {
+            "node": "Genera Cupón Aleatorio",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Genera Cupón Aleatorio2": {
+      "main": [
+        [
+          {
+            "node": "Fechas2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fechas2": {
+      "main": [
+        [
+          {
+            "node": "Crear descuentos1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Crear descuentos1": {
+      "main": [
+        [
+          {
+            "node": "Wait3",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Crea Contacto Cintia": {
+      "main": [
+        [
+          {
+            "node": "Wait5",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When clicking ‘Test workflow’": {
+      "main": [
+        [
+          {
+            "node": "Enviar template Whatsapp2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait": {
+      "main": [
+        [
+          {
+            "node": "GET CONTACT Cintia",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait1": {
+      "main": [
+        [
+          {
+            "node": "Si Contacto Existe1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait2": {
+      "main": [
+        [
+          {
+            "node": "Genera Cupón Aleatorio2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait3": {
+      "main": [
+        [
+          {
+            "node": "Prepara Plantilla1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait5": {
+      "main": [
+        [
+          {
+            "node": "Crear Conversación",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait6": {
+      "main": [
+        [
+          {
+            "node": "Crear descuentos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait7": {
+      "main": [
+        [
+          {
+            "node": "Prepara Plantilla",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GET CONTACT Cintia": {
+      "main": [
+        [
+          {
+            "node": "Wait1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Búsqueda por fecha2": {
+      "main": [
+        []
+      ]
+    },
+    "Enviar template Whatsapp2": {
+      "main": [
+        []
+      ]
+    },
+    "¿Teléfono válido?": {
+      "main": [
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepara Plantilla1": {
+      "main": [
+        [
+          {
+            "node": "Enviar plantilla Chatwoot1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enviar plantilla Chatwoot1": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepara Plantilla": {
+      "main": [
+        [
+          {
+            "node": "Enviar plantilla Chatwoot",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enviar plantilla Chatwoot": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Europe/Madrid"
+  },
+  "staticData": {
+    "node:Ejecución todos los días a las 10 am": {
+      "recurrenceRules": []
+    }
+  },
+  "meta": null,
+  "pinData": {
+    "Code2": [
+      {
+        "json": {
+          "restriccionCupones": "<cart_rule_restriction>\n  <cart_rules>\n    <cart_rule>\n      <id><![CDATA[3]]></id>\n    </cart_rules>\n</cart_rule_restriction>"
+        }
+      }
+    ],
+    "Búsqueda por fecha": [
+      {
+        "json": {
+          "value_id": 100619,
+          "id_fmm_registration_fields": 2,
+          "id_customer": 1947,
+          "id_guest": 0,
+          "field_value_id": "0",
+          "value": "Guillem"
+        }
+      },
+      {
+        "json": {
+          "value_id": 109443,
+          "id_fmm_registration_fields": 2,
+          "id_customer": 2076,
+          "id_guest": 0,
+          "field_value_id": "0",
+          "value": "Greta"
+        }
+      },
+      {
+        "json": {
+          "value_id": 114506,
+          "id_fmm_registration_fields": 4,
+          "id_customer": 2140,
+          "id_guest": 0,
+          "field_value_id": "0",
+          "value": "Sofia raducan "
+        }
+      },
+      {
+        "json": {
+          "value_id": 120639,
+          "id_fmm_registration_fields": 2,
+          "id_customer": 2263,
+          "id_guest": 0,
+          "field_value_id": "0",
+          "value": "Cesc"
+        }
+      },
+      {
+        "json": {
+          "value_id": 129021,
+          "id_fmm_registration_fields": 4,
+          "id_customer": 2601,
+          "id_guest": 0,
+          "field_value_id": "0",
+          "value": "Inés"
+        }
+      },
+      {
+        "json": {
+          "value_id": 129023,
+          "id_fmm_registration_fields": 6,
+          "id_customer": 2601,
+          "id_guest": 0,
+          "field_value_id": "0",
+          "value": "Ignacio"
+        }
+      }
+    ]
+  },
+  "versionId": "14dd0b89-7fc4-42a0-8686-8a10240afcdd",
+  "activeVersionId": "14dd0b89-7fc4-42a0-8686-8a10240afcdd",
+  "versionCounter": 147,
+  "triggerCount": 1,
+  "shared": [
+    {
+      "updatedAt": "2025-06-20T15:59:31.272Z",
+      "createdAt": "2025-06-20T15:59:31.272Z",
+      "role": "workflow:owner",
+      "workflowId": "GZLn2dFb0CAXwWRP",
+      "projectId": "Vwa9NhrzDV2nItio",
+      "project": {
+        "updatedAt": "2025-06-20T15:55:15.388Z",
+        "createdAt": "2025-06-20T15:53:04.440Z",
+        "id": "Vwa9NhrzDV2nItio",
+        "name": "Rincon De los Genios <elrincondelosgeniosclub@gmail.com>",
+        "type": "personal",
+        "icon": null,
+        "description": null,
+        "creatorId": "cdc1f0d2-0f75-446a-8264-89847a82b838"
+      }
+    }
+  ],
+  "tags": [],
+  "activeVersion": {
+    "updatedAt": "2026-06-25T11:03:21.000Z",
+    "createdAt": "2026-06-25T11:03:15.155Z",
+    "versionId": "14dd0b89-7fc4-42a0-8686-8a10240afcdd",
+    "workflowId": "GZLn2dFb0CAXwWRP",
+    "nodes": [
+      {
+        "parameters": {
+          "mode": "runOnceForEachItem",
+          "jsCode": "// Función para generar un código aleatorio como los de PrestaShop\nfunction generarCodigoDescuento(longitud = 6) {\n  const caracteres = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';\n  let codigo = '';\n  for (let i = 0; i < longitud; i++) {\n    codigo += caracteres.charAt(Math.floor(Math.random() * caracteres.length));\n  }\n  return codigo;\n}\n\n// Generar un cupón por cada input recibido\n\n  return {\n    json: {\n      codigo_generado: generarCodigoDescuento()\n    }\n  };"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          2288,
+          1120
+        ],
+        "id": "688f0114-9cd3-4ee9-8cc7-bdc9e4e5dd33",
+        "name": "Genera Cupón Aleatorio"
+      },
+      {
+        "parameters": {},
+        "type": "n8n-nodes-base.manualTrigger",
+        "typeVersion": 1,
+        "position": [
+          2688,
+          1472
+        ],
+        "id": "cbb3689d-bcd5-484e-94be-ee56f67432d0",
+        "name": "When clicking ‘Test workflow’",
+        "disabled": true
+      },
+      {
+        "parameters": {
+          "operation": "executeQuery",
+          "query": "SELECT nombre.*\nFROM ps_fmm_registration_userdata AS fecha\nJOIN ps_fmm_registration_userdata AS nombre\n  ON fecha.id_customer = nombre.id_customer\n  AND nombre.id_fmm_registration_fields = fecha.id_fmm_registration_fields - 1\nWHERE fecha.value LIKE '%{{ $json.dentroDe10Dias }}';",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.mySql",
+        "typeVersion": 2.4,
+        "position": [
+          -656,
+          1024
+        ],
+        "id": "ac6d2e94-8ca1-472a-acd7-f941460886c8",
+        "name": "Búsqueda por fecha",
+        "alwaysOutputData": false,
+        "retryOnFail": true,
+        "waitBetweenTries": 3000,
+        "credentials": {
+          "mySql": {
+            "id": "vn8lfyNZOMkRPCrk",
+            "name": "Nuevo Servidor"
+          }
+        },
+        "onError": "continueErrorOutput"
+      },
+      {
+        "parameters": {
+          "operation": "executeQuery",
+          "query": "SELECT nombre.*\nFROM n8n_children AS fecha\nJOIN n8n_children AS nombre\n  ON fecha.id_customer = nombre.id_customer\n  AND nombre.id_fmm_registration_fields = fecha.id_fmm_registration_fields - 1\nWHERE fecha.value LIKE '%{{ $('Code').item.json.dentroDe5Dias }}';",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.postgres",
+        "typeVersion": 2.6,
+        "position": [
+          -128,
+          1664
+        ],
+        "id": "4f62af6c-d0bf-4b38-9f71-f2995c591c35",
+        "name": "Postgres1",
+        "disabled": true
+      },
+      {
+        "parameters": {
+          "url": "=https://elrincondelosgenios.com/api/customers/{{ $json.id_customer }}?output_format=JSON",
+          "authentication": "genericCredentialType",
+          "genericAuthType": "httpBasicAuth",
+          "sendHeaders": true,
+          "specifyHeaders": "json",
+          "jsonHeaders": "{\n  \"Accept\": \"application/json\"\n}",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          -48,
+          752
+        ],
+        "id": "402c0148-fa13-4528-b8ee-76767a94310e",
+        "name": "Recoger datos de los padres",
+        "retryOnFail": true,
+        "waitBetweenTries": 3000,
+        "credentials": {
+          "httpBasicAuth": {
+            "id": "vENpn7PKtkMu6KDC",
+            "name": "Unnamed credential"
+          }
+        },
+        "onError": "continueErrorOutput"
+      },
+      {
+        "parameters": {
+          "url": "=https://elrincondelosgenios.com/api/customers/{{ $json.id_customer }}?output_format=JSON",
+          "authentication": "genericCredentialType",
+          "genericAuthType": "httpBasicAuth",
+          "sendHeaders": true,
+          "specifyHeaders": "json",
+          "jsonHeaders": "{\n  \"Accept\": \"application/json\"\n}",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          160,
+          1664
+        ],
+        "id": "b4e84051-5320-467e-b1cb-f7336457d12a",
+        "name": "recoger datos de los padres 2",
+        "disabled": true
+      },
+      {
+        "parameters": {
+          "jsCode": "// Función para generar un código aleatorio como los de PrestaShop\nfunction generarCodigoDescuento(longitud = 8) {\n  const caracteres = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';\n  let codigo = '';\n  for (let i = 0; i < longitud; i++) {\n    codigo += caracteres.charAt(Math.floor(Math.random() * caracteres.length));\n  }\n  return codigo;\n}\n\n// Devolver el código como nuevo campo\nreturn [\n  {\n    json: {\n      codigo_generado: generarCodigoDescuento()\n    }\n  }\n];\n"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          512,
+          1664
+        ],
+        "id": "86e216bd-3fa5-4e0a-8dab-ce576ad61745",
+        "name": "Genera Cupón Aleatorio1",
+        "disabled": true
+      },
+      {
+        "parameters": {
+          "phoneNumberId": "715421488312920",
+          "recipientPhoneNumber": "+36665807425",
+          "template": "descuento1|es",
+          "components": {
+            "component": [
+              {
+                "bodyParameters": {
+                  "parameter": [
+                    {
+                      "text": "yago"
+                    },
+                    {
+                      "text": "xd"
+                    },
+                    {
+                      "text": "cumple"
+                    }
+                  ]
+                }
+              },
+              {
+                "type": "header",
+                "headerParameters": {
+                  "parameter": [
+                    {
+                      "type": "image",
+                      "imageLink": "https://elrincondelosgenios.com/img/cms/erdlg_logo.png"
+                    }
+                  ]
+                }
+              },
+              {
+                "type": "button",
+                "sub_type": "url",
+                "buttonParameters": {
+                  "parameter": {
+                    "payload": "https://elrincondelosgenios.com"
+                  }
+                }
+              },
+              {
+                "type": "button",
+                "index": 1,
+                "buttonParameters": {
+                  "parameter": {
+                    "payload": "cumple"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        "type": "n8n-nodes-base.whatsApp",
+        "typeVersion": 1,
+        "position": [
+          80,
+          -64
+        ],
+        "id": "24c0751c-d051-4336-a8e0-adbd05f806ad",
+        "name": "WhatsApp Business Cloud",
+        "webhookId": "7729b8e0-7fbd-4e86-ad47-241905935191",
+        "disabled": true
+      },
+      {
+        "parameters": {
+          "phoneNumberId": "715421488312920",
+          "recipientPhoneNumber": "‪+34633765351‬",
+          "template": "descuento_prueba|es",
+          "components": {
+            "component": [
+              {
+                "type": "button",
+                "sub_type": "url",
+                "buttonParameters": {
+                  "parameter": {
+                    "type": "text",
+                    "text": "elrincondelosgenios.com"
+                  }
+                }
+              },
+              {
+                "type": "button",
+                "index": 1,
+                "buttonParameters": {
+                  "parameter": {
+                    "type": "text",
+                    "text": "kjnkjn"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        "type": "n8n-nodes-base.whatsApp",
+        "typeVersion": 1,
+        "position": [
+          -864,
+          -96
+        ],
+        "id": "10d88e73-9cb9-493c-bd59-7163f2b66cab",
+        "name": "WhatsApp Business Cloud1",
+        "webhookId": "7729b8e0-7fbd-4e86-ad47-241905935191",
+        "disabled": true
+      },
+      {
+        "parameters": {
+          "url": "https://elrincondelosgenios.com/api/cart_rules/",
+          "authentication": "genericCredentialType",
+          "genericAuthType": "httpBasicAuth",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          384,
+          -64
+        ],
+        "id": "5ffbf708-33a9-402f-99ec-dc69c999c515",
+        "name": "HTTP Request2",
+        "disabled": true
+      },
+      {
+        "parameters": {
+          "jsCode": "const xmlData = items[0].json.data;\n\n// Extraemos los IDs de los cart_rule mediante expresión regular\nconst regex = /<cart_rule id=\"(\\d+)\"/g;\nlet match;\nconst ids = [];\n\nwhile ((match = regex.exec(xmlData)) !== null) {\n  ids.push(match[1]);\n}\n\nreturn [{ json: { ids } }];"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          688,
+          -64
+        ],
+        "id": "edb68174-abef-4d35-8e23-7beb645264ec",
+        "name": "Code1",
+        "disabled": true
+      },
+      {
+        "parameters": {
+          "jsCode": "const ids = $json.ids;\nlet xml = '<cart_rule_restriction>\\n  <cart_rules>\\n';\n\nids.forEach(id => {\n  xml += `    <cart_rule>\\n      <id><![CDATA[${id}]]></id>\\n    </cart_rule>\\n`;\n});\n\nxml += '  </cart_rules>\\n</cart_rule_restriction>';\n\nreturn [{ json: { restriccionCupones: xml } }];"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          944,
+          -64
+        ],
+        "id": "fc2e2594-0c66-47e4-ac3d-a5f8e8c2fe2f",
+        "name": "Code2",
+        "disabled": true
+      },
+      {
+        "parameters": {
+          "options": {}
+        },
+        "type": "n8n-nodes-base.splitInBatches",
+        "typeVersion": 3,
+        "position": [
+          -224,
+          704
+        ],
+        "id": "3b05035b-cbeb-48a6-ac7e-0220cb0fd604",
+        "name": "Loop Over Items"
+      },
+      {
+        "parameters": {
+          "content": "Cuidado, la Fecha para caducidad del cupón está en FECHA1 Y FECHA2",
+          "width": 260
+        },
+        "type": "n8n-nodes-base.stickyNote",
+        "typeVersion": 1,
+        "position": [
+          -608,
+          -16
+        ],
+        "id": "29ba5181-bdcb-417f-9469-795b7c3cc43e",
+        "name": "Sticky Note"
+      },
+      {
+        "parameters": {
+          "jsCode": "// Fecha actual\nconst hoy = new Date();\n\n// Fecha + 5 días\nconst fechaMas5 = new Date(hoy);\nfechaMas5.setDate(hoy.getDate() + 10);\n\n// Fecha + 15 días\nconst fechaMas15 = new Date(hoy);\nfechaMas15.setDate(hoy.getDate() + 40);\n\n// Función para formatear como YYYY-MM-DD\nconst formatearCompleta = (fecha) => {\n  const y = fecha.getFullYear();\n  const m = String(fecha.getMonth() + 1).padStart(2, '0');\n  const d = String(fecha.getDate()).padStart(2, '0');\n  return `${y}-${m}-${d}`;\n};\n\n// Función para formatear como MM-DD\nconst formatearMesDia = (fecha) => {\n  const m = String(fecha.getMonth() + 1).padStart(2, '0');\n  const d = String(fecha.getDate()).padStart(2, '0');\n  return `${m}-${d}`;\n};\n\n// Resultado\nreturn [\n  {\n    json: {\n      hoy: formatearCompleta(hoy),\n      dentroDe10Dias: formatearMesDia(fechaMas5),\n      dentroDe15Dias: formatearCompleta(fechaMas15)\n    }\n  }\n];\n\n\n\n\n\n"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          -896,
+          1024
+        ],
+        "id": "88692d76-b4a2-470c-ab3d-4a8d55cb7390",
+        "name": "Fechas"
+      },
+      {
+        "parameters": {
+          "jsCode": "// Fecha actual\nconst hoy = new Date();\n\n// Fecha + 5 días\nconst fechaMas5 = new Date(hoy);\nfechaMas5.setDate(hoy.getDate() + 10);\n\n// Fecha + 15 días\nconst fechaMas15 = new Date(hoy);\nfechaMas15.setDate(hoy.getDate() + 40);\n\n// Función para formatear como YYYY-MM-DD\nconst formatearCompleta = (fecha) => {\n  const y = fecha.getFullYear();\n  const m = String(fecha.getMonth() + 1).padStart(2, '0');\n  const d = String(fecha.getDate()).padStart(2, '0');\n  return `${y}-${m}-${d}`;\n};\n\n// Función para formatear como MM-DD\nconst formatearMesDia = (fecha) => {\n  const m = String(fecha.getMonth() + 1).padStart(2, '0');\n  const d = String(fecha.getDate()).padStart(2, '0');\n  return `${m}-${d}`;\n};\n\n// Resultado\nreturn [\n  {\n    json: {\n      hoy: formatearCompleta(hoy),\n      dentroDe5Dias: formatearMesDia(fechaMas5),\n      dentroDe15Dias: formatearCompleta(fechaMas15)\n    }\n  }\n];\n\n\n\n\n\n"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          2592,
+          1120
+        ],
+        "id": "b211cd19-b049-4a04-84f3-63cba27971ed",
+        "name": "Fechas1"
+      },
+      {
+        "parameters": {
+          "options": {}
+        },
+        "type": "n8n-nodes-base.gmail",
+        "typeVersion": 2.1,
+        "position": [
+          160,
+          400
+        ],
+        "id": "4a048bb0-140e-427b-8137-9f59ae53f588",
+        "name": "Gmail",
+        "webhookId": "03898a14-b57f-4e89-99fd-197b8ff6c0fb",
+        "disabled": true,
+        "onError": "continueErrorOutput"
+      },
+      {
+        "parameters": {
+          "rule": {
+            "interval": [
+              {
+                "triggerAtHour": 10
+              }
+            ]
+          }
+        },
+        "type": "n8n-nodes-base.scheduleTrigger",
+        "typeVersion": 1.2,
+        "position": [
+          -1248,
+          1008
+        ],
+        "id": "60cb7b21-e5a7-494b-92f3-7cb3078ada2c",
+        "name": "Ejecución todos los días a las 10 am"
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": "https://elrincondelosgenios.com/api/cart_rules/?output_format=JSON",
+          "authentication": "genericCredentialType",
+          "genericAuthType": "httpBasicAuth",
+          "sendBody": true,
+          "contentType": "raw",
+          "rawContentType": "application/xml",
+          "body": "=<prestashop xmlns:xlink=\"http://www.w3.org/1999/xlink\">\n  <cart_rule>\n    <id_customer><![CDATA[{{ $('Loop Over Items').item.json.id_customer }}]]></id_customer>\n\n    <name>\n      <language id=\"1\"><![CDATA[{{ $('Recoger datos de los padres').item.json.customer.firstname  }} {{ $('Recoger datos de los padres').item.json.customer.lastname }} {{ $('Loop Over Items').item.json.value }}]]></language>\n    </name>\n\n    <date_from><![CDATA[{{ $json.hoy }} 00:00:00]]></date_from>\n    <date_to><![CDATA[{{ $json.dentroDe15Dias }} 00:00:00]]></date_to>\n\n    <description><![CDATA[Descuento por cumpleaños {{ $('Recoger datos de los padres').item.json.customer.firstname }} {{ $('Recoger datos de los padres').item.json.customer.lastname }} {{ $('Loop Over Items').item.json.value }}]]></description>\n\n    <quantity><![CDATA[1]]></quantity>\n    <quantity_per_user><![CDATA[1]]></quantity_per_user>\n    <priority><![CDATA[1]]></priority>\n    <partial_use><![CDATA[0]]></partial_use>\n    <highlight><![CDATA[0]]></highlight>\n    <active><![CDATA[1]]></active>\n\n    <code><![CDATA[{{ $('Genera Cupón Aleatorio').item.json.codigo_generado }}]]></code>\n\n    <minimum_amount><![CDATA[30.00]]></minimum_amount>\n    <minimum_amount_tax><![CDATA[1]]></minimum_amount_tax>\n    <minimum_amount_currency><![CDATA[1]]></minimum_amount_currency>\n    <minimum_amount_shipping><![CDATA[0]]></minimum_amount_shipping>\n\n    <free_shipping><![CDATA[0]]></free_shipping>\n\n    <reduction_percent><![CDATA[0.000]]></reduction_percent>\n    <reduction_amount><![CDATA[5.00]]></reduction_amount>\n    <reduction_tax><![CDATA[1]]></reduction_tax>\n    <reduction_currency><![CDATA[1]]></reduction_currency>\n    <reduction_product><![CDATA[0]]></reduction_product>\n    <reduction_exclude_special><![CDATA[0]]></reduction_exclude_special>\n\n    <gift_product><![CDATA[0]]></gift_product>\n    <gift_product_attribute><![CDATA[0]]></gift_product_attribute>\n    <cart_rule_restriction><![CDATA[1]]></cart_rule_restriction>\n  </cart_rule>\n\n</prestashop>",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          3008,
+          1120
+        ],
+        "id": "467db112-17ef-4b90-ba3c-379dd3e19e99",
+        "name": "Crear descuentos",
+        "retryOnFail": true,
+        "waitBetweenTries": 3000,
+        "credentials": {
+          "httpBasicAuth": {
+            "id": "vENpn7PKtkMu6KDC",
+            "name": "Unnamed credential"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": "https://graph.facebook.com/v17.0/715421488312920/messages",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "Bearer __META_GRAPH_ACCESS_TOKEN__"
+              },
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={\n  \"messaging_product\": \"whatsapp\",\n  \"to\": \"+34{{ $('Recoger datos de los padres').item.json.customer.phone_mobile }}\",\n  \"type\": \"template\",\n  \"template\": {\n    \"name\": \"descuento_2\",\n    \"language\": {\n      \"code\": \"es\"\n    },\n    \"components\": [\n      {\n        \"type\": \"header\",\n        \"parameters\": [\n          {\n            \"type\": \"image\",\n            \"image\": {\n              \"link\": \"https://elrincondelosgenios.com/img/cms/cumple.jpeg\"\n            }\n          }\n        ]\n      },\n      {\n        \"type\": \"body\",\n        \"parameters\": [\n          {\n            \"type\": \"text\",\n            \"text\": \"{{ $('Recoger datos de los padres').item.json.customer.firstname }}\"\n          },\n          {\n            \"type\": \"text\",\n            \"text\": \"{{ $('Loop Over Items').item.json.value }}\"\n          },\n          {\n            \"type\": \"text\",\n            \"text\": \"{{ $('Genera Cupón Aleatorio').item.json.codigo_generado }}\"\n          }\n        ]\n      },\n      \n      {\n        \"type\": \"button\",\n        \"sub_type\": \"COPY_CODE\",\n        \"index\": \"1\",\n        \"parameters\": [\n          {\n            \"type\": \"payload\",\n            \"payload\": \"{{ $('Genera Cupón Aleatorio').item.json.codigo_generado }}\"\n          }\n        ]\n      }\n    ]\n  }\n}",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          3440,
+          1120
+        ],
+        "id": "11059102-4d98-4bb6-a507-7121482a05a5",
+        "name": "Enviar template Whatsapp",
+        "retryOnFail": true,
+        "waitBetweenTries": 3000
+      },
+      {
+        "parameters": {
+          "url": "=https://chatwoot-rincondelosgenios.serversvisionarius.com/api/v1/accounts/1/conversations",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "api_access_token",
+                "value": "__CHATWOOT_API_ACCESS_TOKEN__"
+              },
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={\n  \"source_id\": \"{{ $('GET CONTACT Cintia').item.json.payload[0].contact_inboxes[0].source_id }}\"\n} ",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          1440,
+          528
+        ],
+        "id": "4e22c981-0e2e-4e5e-bf1c-7fd497b54cc8",
+        "name": "Coger Id conversations",
+        "retryOnFail": true,
+        "waitBetweenTries": 3000
+      },
+      {
+        "parameters": {
+          "jsCode": "for (const item of $input.all()) {\n  // Obtener el número de teléfono móvil desde customer\n  let wa_id = item.json.customer.phone_mobile || '';\n\n  // Eliminar espacios y guiones\n  wa_id = String(wa_id).replace(/[\\s-]/g, '');\n\n  // Agregar el número formateado al JSON de salida\n  item.json.processed_wa_id = wa_id;\n}\n\nreturn $input.all();"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          752,
+          720
+        ],
+        "id": "20eff489-30e9-447b-b7fd-650cc278c0a4",
+        "name": "Formateamos Número"
+      },
+      {
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict",
+              "version": 2
+            },
+            "conditions": [
+              {
+                "id": "c072ad80-1948-4c04-afaa-827d250d0412",
+                "leftValue": "={{ $json.payload[0].contact_inboxes[0].source_id }}",
+                "rightValue": "=34{{ $('Formateamos Número').item.json.processed_wa_id }}",
+                "operator": {
+                  "type": "string",
+                  "operation": "equals",
+                  "name": "filter.operator.equals"
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2.2,
+        "position": [
+          1248,
+          720
+        ],
+        "id": "18faffb0-cc47-47ea-aa77-81cb185f565b",
+        "name": "Si Contacto Existe1"
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": "=https://chatwoot-rincondelosgenios.serversvisionarius.com/api/v1/accounts/1/conversations",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "api_access_token",
+                "value": "__CHATWOOT_API_ACCESS_TOKEN__"
+              },
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={\n  \"source_id\": \"{{ $json.payload.contact.contact_inboxes[0].source_id }}\",\n\"inbox_id\": \"1\"\n}\n",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          2000,
+          1120
+        ],
+        "id": "78f80bfe-62bd-44a3-83ef-383e545d4934",
+        "name": "Crear Conversación",
+        "retryOnFail": true,
+        "waitBetweenTries": 3000
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": "=https://chatwoot-rincondelosgenios.serversvisionarius.com/api/v1/accounts/1/conversations/{{ $('Crear Conversación').item.json.id }}/messages",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "api_access_token",
+                "value": "__CHATWOOT_API_ACCESS_TOKEN__"
+              },
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={\n  \"content\" : \"¡FELICIDADES!🎊Se acerca el cumple de {{ $('Loop Over Items').item.json.value }}\\nPor eso me gustaría regalarte este cupón de descuento para tu próxima compra.🎁\\nCódigo de descuento:{{ $('Genera Cupón Aleatorio').item.json.codigo_generado }}  hasta 30 días después del cumpleaños. No acumulable a otras ofertas o promociones. FABA y libros excluidos de los descuentos. Con un gasto mínimo de 30€.¡Que lo disfrutéis! 🚀\",\n  \"message_type\" : \"outgoing\",\n  \"private\" : true\n\n}\n",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          3968,
+          1120
+        ],
+        "id": "28262c35-b8eb-4cb1-b216-291a340a8383",
+        "name": "Mensaje Privado",
+        "retryOnFail": true,
+        "waitBetweenTries": 3000
+      },
+      {
+        "parameters": {
+          "mode": "runOnceForEachItem",
+          "jsCode": "// Función para generar un código aleatorio como los de PrestaShop\nfunction generarCodigoDescuento(longitud = 6) {\n  const caracteres = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';\n  let codigo = '';\n  for (let i = 0; i < longitud; i++) {\n    codigo += caracteres.charAt(Math.floor(Math.random() * caracteres.length));\n  }\n  return codigo;\n}\n\n// Generar un cupón por cada input recibido\n\n  return {\n    json: {\n      codigo_generado: generarCodigoDescuento()\n    }\n  };"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          1984,
+          528
+        ],
+        "id": "79416b59-929f-4159-a4a0-b4a092d29967",
+        "name": "Genera Cupón Aleatorio2"
+      },
+      {
+        "parameters": {
+          "jsCode": "// Fecha actual\nconst hoy = new Date();\n\n// Fecha + 5 días\nconst fechaMas5 = new Date(hoy);\nfechaMas5.setDate(hoy.getDate() + 10);\n\n// Fecha + 15 días\nconst fechaMas15 = new Date(hoy);\nfechaMas15.setDate(hoy.getDate() + 40);\n\n// Función para formatear como YYYY-MM-DD\nconst formatearCompleta = (fecha) => {\n  const y = fecha.getFullYear();\n  const m = String(fecha.getMonth() + 1).padStart(2, '0');\n  const d = String(fecha.getDate()).padStart(2, '0');\n  return `${y}-${m}-${d}`;\n};\n\n// Función para formatear como MM-DD\nconst formatearMesDia = (fecha) => {\n  const m = String(fecha.getMonth() + 1).padStart(2, '0');\n  const d = String(fecha.getDate()).padStart(2, '0');\n  return `${m}-${d}`;\n};\n\n// Resultado\nreturn [\n  {\n    json: {\n      hoy: formatearCompleta(hoy),\n      dentroDe5Dias: formatearMesDia(fechaMas5),\n      dentroDe15Dias: formatearCompleta(fechaMas15)\n    }\n  }\n];\n\n\n\n\n\n"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          2288,
+          528
+        ],
+        "id": "652da446-8606-40ea-89a5-51b58a3d4c49",
+        "name": "Fechas2"
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": "https://elrincondelosgenios.com/api/cart_rules/?output_format=JSON",
+          "authentication": "genericCredentialType",
+          "genericAuthType": "httpBasicAuth",
+          "sendBody": true,
+          "contentType": "raw",
+          "rawContentType": "application/xml",
+          "body": "=<prestashop xmlns:xlink=\"http://www.w3.org/1999/xlink\">\n  <cart_rule>\n    <id_customer><![CDATA[{{ $('Loop Over Items').item.json.id_customer }}]]></id_customer>\n\n    <name>\n      <language id=\"1\"><![CDATA[{{ $('Recoger datos de los padres').item.json.customer.firstname  }} {{ $('Recoger datos de los padres').item.json.customer.lastname }} {{ $('Loop Over Items').item.json.value }}]]></language>\n    </name>\n\n    <date_from><![CDATA[{{ $json.hoy }} 00:00:00]]></date_from>\n    <date_to><![CDATA[{{ $json.dentroDe15Dias }} 00:00:00]]></date_to>\n\n    <description><![CDATA[Descuento por cumpleaños {{ $('Recoger datos de los padres').item.json.customer.firstname }} {{ $('Recoger datos de los padres').item.json.customer.lastname }} {{ $('Loop Over Items').item.json.value }}]]></description>\n\n    <quantity><![CDATA[1]]></quantity>\n    <quantity_per_user><![CDATA[1]]></quantity_per_user>\n    <priority><![CDATA[1]]></priority>\n    <partial_use><![CDATA[0]]></partial_use>\n    <highlight><![CDATA[0]]></highlight>\n    <active><![CDATA[1]]></active>\n\n    <code><![CDATA[{{ $('Genera Cupón Aleatorio2').item.json.codigo_generado }}]]></code>\n\n    <minimum_amount><![CDATA[30.00]]></minimum_amount>\n    <minimum_amount_tax><![CDATA[1]]></minimum_amount_tax>\n    <minimum_amount_currency><![CDATA[1]]></minimum_amount_currency>\n    <minimum_amount_shipping><![CDATA[0]]></minimum_amount_shipping>\n\n    <free_shipping><![CDATA[0]]></free_shipping>\n\n    <reduction_percent><![CDATA[0.000]]></reduction_percent>\n    <reduction_amount><![CDATA[5.00]]></reduction_amount>\n    <reduction_tax><![CDATA[1]]></reduction_tax>\n    <reduction_currency><![CDATA[1]]></reduction_currency>\n    <reduction_product><![CDATA[0]]></reduction_product>\n    <reduction_exclude_special><![CDATA[0]]></reduction_exclude_special>\n\n    <gift_product><![CDATA[0]]></gift_product>\n    <gift_product_attribute><![CDATA[0]]></gift_product_attribute>\n    <cart_rule_restriction><![CDATA[1]]></cart_rule_restriction>\n  </cart_rule>\n\n</prestashop>",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          2464,
+          624
+        ],
+        "id": "ab338280-ffd2-4e0e-b7d7-1df178469e9e",
+        "name": "Crear descuentos1",
+        "retryOnFail": true,
+        "waitBetweenTries": 3000,
+        "credentials": {
+          "httpBasicAuth": {
+            "id": "vENpn7PKtkMu6KDC",
+            "name": "Unnamed credential"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": "https://graph.facebook.com/v17.0/715421488312920/messages",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "Bearer __META_GRAPH_ACCESS_TOKEN__"
+              },
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={\n  \"messaging_product\": \"whatsapp\",\n  \"to\": \"+34{{ $('Recoger datos de los padres').item.json.customer.phone_mobile }}\",\n  \"type\": \"template\",\n  \"template\": {\n    \"name\": \"descuento_2\",\n    \"language\": {\n      \"code\": \"es\"\n    },\n    \"components\": [\n      {\n        \"type\": \"header\",\n        \"parameters\": [\n          {\n            \"type\": \"image\",\n            \"image\": {\n              \"link\": \"https://elrincondelosgenios.com/img/cms/cumple.jpeg\"\n            }\n          }\n        ]\n      },\n      {\n        \"type\": \"body\",\n        \"parameters\": [\n          {\n            \"type\": \"text\",\n            \"text\": \"{{ $('Recoger datos de los padres').item.json.customer.firstname }}\"\n          },\n          {\n            \"type\": \"text\",\n            \"text\": \"{{ $('Loop Over Items').item.json.value }}\"\n          },\n          {\n            \"type\": \"text\",\n            \"text\": \"{{ $('Genera Cupón Aleatorio2').item.json.codigo_generado }}\"\n          }\n        ]\n      },\n      \n      {\n        \"type\": \"button\",\n        \"sub_type\": \"COPY_CODE\",\n        \"index\": \"1\",\n        \"parameters\": [\n          {\n            \"type\": \"payload\",\n            \"payload\": \"{{ $('Genera Cupón Aleatorio2').item.json.codigo_generado }}\"\n          }\n        ]\n      }\n    ]\n  }\n}",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          2928,
+          720
+        ],
+        "id": "0a55c24c-8c99-4bfe-83aa-7dd7d3fbe16d",
+        "name": "Enviar template Whatsapp1",
+        "retryOnFail": true,
+        "waitBetweenTries": 3000
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": "=https://chatwoot-rincondelosgenios.serversvisionarius.com/api/v1/accounts/1/contacts",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "api_access_token",
+                "value": "__CHATWOOT_API_ACCESS_TOKEN__"
+              },
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={\n  \"name\": \"{{ $('Recoger datos de los padres').item.json.customer.firstname }} {{ $('Recoger datos de los padres').item.json.customer.lastname }}\",\n  \"phone_number\": \"+34{{ $('Formateamos Número').item.json.processed_wa_id }}\",\n  \"identifier\": \"34{{ $('Formateamos Número').item.json.processed_wa_id }}\",\n  \"inbox_id\": 1,\n  \"source_id\": \"34{{ $('Formateamos Número').item.json.processed_wa_id }}\",\n \"custom_attributes\": {\n    \"bot\": \"On\"\n  }\n}",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          1440,
+          992
+        ],
+        "id": "5b953658-2a37-4e9b-95dd-444edcdf545c",
+        "name": "Crea Contacto Cintia",
+        "retryOnFail": true,
+        "waitBetweenTries": 3000
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": "=https://chatwoot-rincondelosgenios.serversvisionarius.com/api/v1/accounts/1/conversations/{{ $('Coger Id conversations').item.json.data.payload[0].messages[0].conversation_id }}/messages",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "api_access_token",
+                "value": "__CHATWOOT_API_ACCESS_TOKEN__"
+              },
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={\n  \"content\" : \"¡FELICIDADES!🎊Se acerca el cumple de {{ $('Loop Over Items').item.json.value }}\\nPor eso me gustaría regalarte este cupón de descuento para tu próxima compra.🎁\\nCódigo de descuento: {{ $('Genera Cupón Aleatorio2').item.json.codigo_generado }} hasta 30 días después del cumpleaños. No acumulable a otras ofertas o promociones. FABA y libros excluidos de los descuentos. Con un gasto mínimo de 30€.¡Que lo disfrutéis! 🚀\",\n  \"message_type\" : \"outgoing\",\n  \"private\" : true\n\n}\n",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          3472,
+          736
+        ],
+        "id": "50e76f02-0aa9-402a-bffc-8b05e5f0944b",
+        "name": "Mensaje Privado2",
+        "retryOnFail": true,
+        "waitBetweenTries": 3000
+      },
+      {
+        "parameters": {
+          "operation": "executeQuery",
+          "query": "SELECT *\nFROM ps_fmm_registration_userdata\nWHERE fecha LIKE '%{{ $json.dentroDe10Dias }}';",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.mySql",
+        "typeVersion": 2.4,
+        "position": [
+          -720,
+          1312
+        ],
+        "id": "79c8e33e-1c94-453c-ac4c-e853bea0101b",
+        "name": "Búsqueda por fecha1",
+        "alwaysOutputData": false,
+        "disabled": true,
+        "onError": "continueErrorOutput"
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": "=https://chatwoot-production-0546.up.railway.app/api/v1/accounts/2/conversations",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "api_access_token",
+                "value": "Zbz5A3ooGDxoU5yqwXNofPe8"
+              },
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={\n  \"source_id\": \"34658694636\",\n\"inbox_id\": \"1\"\n}\n",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          2944,
+          400
+        ],
+        "id": "c98b617a-7ef7-4973-8ba1-09d9cd3935a6",
+        "name": "Crear Conversación1"
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": "=https://chatwoot-production-0546.up.railway.app/api/v1/accounts/2/conversations/60/messages",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "api_access_token",
+                "value": "Zbz5A3ooGDxoU5yqwXNofPe8"
+              },
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={\n  \"content\" : \"¡FELICIDADES!🎊Se acerca el cumple de Blanca\\nPor eso me gustaría regalarte este cupón de descuento para tu próxima compra.🎁\\nCódigo de descuento:4Q70AR  hasta 30 días después del cumpleaños. No acumulable a otras ofertas o promociones. FABA y libros excluidos de los descuentos. Con un gasto mínimo de 30€.¡Que lo disfrutéis! 🚀\",\n  \"message_type\" : \"outgoing\",\n  \"private\" : true\n\n}\n",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          3184,
+          400
+        ],
+        "id": "dad11c86-9603-4bc9-a532-c8f3b7a2ad1e",
+        "name": "Mensaje Privado3"
+      },
+      {
+        "parameters": {
+          "url": "=https://chatwoot-production-0546.up.railway.app/api/v1/accounts/2/contacts/search?q=%2B34627912398",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "api_access_token",
+                "value": "Zbz5A3ooGDxoU5yqwXNofPe8"
+              },
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          864,
+          512
+        ],
+        "id": "4fb64b66-2908-4e49-9e2b-124af4bce82d",
+        "name": "GET CONTACT Adolfo1"
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": "=https://chatwoot-production-0546.up.railway.app/api/v1/accounts/2/conversations",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "api_access_token",
+                "value": "Zbz5A3ooGDxoU5yqwXNofPe8"
+              },
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={\n  \"source_id\": \"34627912398\",\n\"inbox_id\": \"1\"\n}\n",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          1712,
+          1408
+        ],
+        "id": "efdb6e33-d0da-4da7-b48d-2442a0f70ba1",
+        "name": "Crear Conversación2"
+      },
+      {
+        "parameters": {
+          "amount": 8
+        },
+        "type": "n8n-nodes-base.wait",
+        "typeVersion": 1.1,
+        "position": [
+          592,
+          720
+        ],
+        "id": "a17d1585-b280-4c34-ad42-33d27ed42825",
+        "name": "Wait",
+        "webhookId": "e4cf9036-ffdb-4a2c-a538-45a4c3f0d5b1"
+      },
+      {
+        "parameters": {
+          "amount": 8
+        },
+        "type": "n8n-nodes-base.wait",
+        "typeVersion": 1.1,
+        "position": [
+          1088,
+          720
+        ],
+        "id": "790689ad-934b-432c-866a-2062f239f9d3",
+        "name": "Wait1",
+        "webhookId": "e4cf9036-ffdb-4a2c-a538-45a4c3f0d5b1"
+      },
+      {
+        "parameters": {
+          "amount": 8
+        },
+        "type": "n8n-nodes-base.wait",
+        "typeVersion": 1.1,
+        "position": [
+          1680,
+          528
+        ],
+        "id": "dca6c59e-f36a-469d-b1ad-2b643b7c64da",
+        "name": "Wait2",
+        "webhookId": "e4cf9036-ffdb-4a2c-a538-45a4c3f0d5b1"
+      },
+      {
+        "parameters": {
+          "amount": 8
+        },
+        "type": "n8n-nodes-base.wait",
+        "typeVersion": 1.1,
+        "position": [
+          2672,
+          688
+        ],
+        "id": "61e10898-359f-4789-bc6f-f4e9b4c0d42d",
+        "name": "Wait3",
+        "webhookId": "e4cf9036-ffdb-4a2c-a538-45a4c3f0d5b1"
+      },
+      {
+        "parameters": {
+          "amount": 8
+        },
+        "type": "n8n-nodes-base.wait",
+        "typeVersion": 1.1,
+        "position": [
+          3184,
+          720
+        ],
+        "id": "4ec3ca35-ca66-49e2-8649-d132d79880b0",
+        "name": "Wait4",
+        "webhookId": "e4cf9036-ffdb-4a2c-a538-45a4c3f0d5b1"
+      },
+      {
+        "parameters": {
+          "amount": 8
+        },
+        "type": "n8n-nodes-base.wait",
+        "typeVersion": 1.1,
+        "position": [
+          1712,
+          1120
+        ],
+        "id": "7ae88028-6fc0-46e4-8a27-5b473c94ede4",
+        "name": "Wait5",
+        "webhookId": "e4cf9036-ffdb-4a2c-a538-45a4c3f0d5b1"
+      },
+      {
+        "parameters": {
+          "amount": 8
+        },
+        "type": "n8n-nodes-base.wait",
+        "typeVersion": 1.1,
+        "position": [
+          2832,
+          1120
+        ],
+        "id": "a6da5777-0300-484e-9235-4c74c5096fd2",
+        "name": "Wait6",
+        "webhookId": "e4cf9036-ffdb-4a2c-a538-45a4c3f0d5b1"
+      },
+      {
+        "parameters": {
+          "amount": 8
+        },
+        "type": "n8n-nodes-base.wait",
+        "typeVersion": 1.1,
+        "position": [
+          3200,
+          1120
+        ],
+        "id": "d8dfa217-34c3-441c-9ea5-7ba91eb4b91d",
+        "name": "Wait7",
+        "webhookId": "e4cf9036-ffdb-4a2c-a538-45a4c3f0d5b1"
+      },
+      {
+        "parameters": {
+          "amount": 8
+        },
+        "type": "n8n-nodes-base.wait",
+        "typeVersion": 1.1,
+        "position": [
+          3712,
+          1120
+        ],
+        "id": "81c32b53-2fc8-40a7-a959-54563b6f5ed7",
+        "name": "Wait8",
+        "webhookId": "e4cf9036-ffdb-4a2c-a538-45a4c3f0d5b1"
+      },
+      {
+        "parameters": {
+          "url": "=https://chatwoot-rincondelosgenios.serversvisionarius.com/api/v1/accounts/1/contacts/search?q=%2B34{{ $json.processed_wa_id }}",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "api_access_token",
+                "value": "__CHATWOOT_API_ACCESS_TOKEN__"
+              },
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          928,
+          720
+        ],
+        "id": "33e70290-33af-40ec-a795-7748f8b5ab06",
+        "name": "GET CONTACT Cintia",
+        "retryOnFail": true,
+        "waitBetweenTries": 3000
+      },
+      {
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict",
+              "version": 2
+            },
+            "conditions": [
+              {
+                "id": "70f5d977-b62a-4d13-9109-567254af3eba",
+                "leftValue": "={{ $json.customer.phone_mobile }}",
+                "rightValue": "+",
+                "operator": {
+                  "type": "string",
+                  "operation": "notContains"
+                }
+              }
+            ],
+            "combinator": "or"
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2.2,
+        "position": [
+          160,
+          752
+        ],
+        "id": "3ad2c54e-7f15-4575-8687-3829a98f7fba",
+        "name": "If"
+      },
+      {
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict",
+              "version": 2
+            },
+            "conditions": [
+              {
+                "id": "70f5d977-b62a-4d13-9109-567254af3eba",
+                "leftValue": "={{ $json.customer.phone_mobile }}",
+                "rightValue": "+",
+                "operator": {
+                  "type": "string",
+                  "operation": "exists",
+                  "singleValue": true
+                }
+              }
+            ],
+            "combinator": "or"
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2.2,
+        "position": [
+          352,
+          720
+        ],
+        "id": "f1aac25c-7b6f-4031-ae8c-28d947859784",
+        "name": "If1"
+      },
+      {
+        "parameters": {
+          "operation": "executeQuery",
+          "query": "SELECT nombre.*\nFROM ps_fmm_registration_userdata AS fecha\nJOIN ps_fmm_registration_userdata AS nombre\n  ON fecha.id_customer = nombre.id_customer\n  AND nombre.id_fmm_registration_fields = fecha.id_fmm_registration_fields - 1\nWHERE fecha.value LIKE '%08-11';",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.mySql",
+        "typeVersion": 2.4,
+        "position": [
+          -1136,
+          -80
+        ],
+        "id": "0f003f50-8215-401e-8e8c-55dad338bb0f",
+        "name": "Búsqueda por fecha2",
+        "alwaysOutputData": false,
+        "retryOnFail": true,
+        "waitBetweenTries": 3000,
+        "credentials": {
+          "mySql": {
+            "id": "vn8lfyNZOMkRPCrk",
+            "name": "Nuevo Servidor"
+          }
+        },
+        "onError": "continueErrorOutput"
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": "https://graph.facebook.com/v17.0/715421488312920/messages",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "Bearer __META_GRAPH_ACCESS_TOKEN__"
+              },
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={\n  \"messaging_product\": \"whatsapp\",\n  \"to\": \"+34685059849\",\n  \"type\": \"template\",\n  \"template\": {\n    \"name\": \"descuento_2\",\n    \"language\": {\n      \"code\": \"es\"\n    },\n    \"components\": [\n      {\n        \"type\": \"header\",\n        \"parameters\": [\n          {\n            \"type\": \"image\",\n            \"image\": {\n              \"link\": \"https://elrincondelosgenios.com/img/cms/cumple.jpeg\"\n            }\n          }\n        ]\n      },\n      {\n        \"type\": \"body\",\n        \"parameters\": [\n          {\n            \"type\": \"text\",\n            \"text\": \"Alessandra\"\n          },\n          {\n            \"type\": \"text\",\n            \"text\": \"Xavi\"\n          },\n          {\n            \"type\": \"text\",\n            \"text\": \"OXQIKS\"\n          }\n        ]\n      },\n      \n      {\n        \"type\": \"button\",\n        \"sub_type\": \"COPY_CODE\",\n        \"index\": \"1\",\n        \"parameters\": [\n          {\n            \"type\": \"payload\",\n            \"payload\": \"OXQIKS\"\n          }\n        ]\n      }\n    ]\n  }\n}",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          3024,
+          1472
+        ],
+        "id": "4aa9ada9-142f-4c86-a1ee-2bdca0a8f511",
+        "name": "Enviar template Whatsapp2",
+        "retryOnFail": true,
+        "waitBetweenTries": 3000
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": "=https://chatwoot-rincondelosgenios.serversvisionarius.com/api/v1/accounts/1/conversations/939/messages",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "api_access_token",
+                "value": "__CHATWOOT_API_ACCESS_TOKEN__"
+              },
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={\n  \"content\" : \"¡FELICIDADES!🎊Se acerca el cumple de Xavi\\nPor eso me gustaría regalarte este cupón de descuento para tu próxima compra.🎁\\nCódigo de descuento: 02D1ET hasta 30 días después del cumpleaños. No acumulable a otras ofertas o promociones. FABA y libros excluidos de los descuentos. Con un gasto mínimo de 30€.¡Que lo disfrutéis! 🚀\",\n  \"message_type\" : \"outgoing\",\n  \"private\" : true\n\n}\n",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          3296,
+          1472
+        ],
+        "id": "c5c46490-d9ef-4991-bd68-77fb0c221708",
+        "name": "Mensaje Privado4",
+        "retryOnFail": true,
+        "waitBetweenTries": 3000
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": "https://graph.facebook.com/v17.0/715421488312920/messages",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "Bearer __META_GRAPH_ACCESS_TOKEN__"
+              },
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={\n  \"messaging_product\": \"whatsapp\",\n  \"to\": \"34685059849\",\n  \"type\": \"template\",\n  \"template\": {\n    \"name\": \"descuento_2\",\n    \"language\": {\n      \"code\": \"es\"\n    },\n    \"components\": [\n      {\n        \"type\": \"header\",\n        \"parameters\": [\n          {\n            \"type\": \"image\",\n            \"image\": {\n              \"link\": \"https://elrincondelosgenios.com/img/cms/cumple.jpeg\"\n            }\n          }\n        ]\n      },\n      {\n        \"type\": \"body\",\n        \"parameters\": [\n          {\n            \"type\": \"text\",\n            \"text\": \"Alexandra\"\n          },\n          {\n            \"type\": \"text\",\n            \"text\": \"Marco\"\n          },\n          {\n            \"type\": \"text\",\n            \"text\": \"KF5Y8B\"\n          }\n        ]\n      },\n      \n      {\n        \"type\": \"button\",\n        \"sub_type\": \"COPY_CODE\",\n        \"index\": \"1\",\n        \"parameters\": [\n          {\n            \"type\": \"payload\",\n            \"payload\": \"KF5Y8B\"\n          }\n        ]\n      }\n    ]\n  }\n}",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          3120,
+          144
+        ],
+        "id": "8430fc88-cfbf-4444-9ff1-76587c96da98",
+        "name": "Enviar template Whatsapp3",
+        "retryOnFail": true,
+        "waitBetweenTries": 3000
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": "=https://chatwoot-rincondelosgenios.serversvisionarius.com/api/v1/accounts/1/conversations/939/messages",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "api_access_token",
+                "value": "__CHATWOOT_API_ACCESS_TOKEN__"
+              },
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={\n  \"content\" : \"¡FELICIDADES!🎊Se acerca el cumple de Marco\\nPor eso me gustaría regalarte este cupón de descuento para tu próxima compra.🎁\\nCódigo de descuento: KF5Y8B hasta 30 días después del cumpleaños. No acumulable a otras ofertas o promociones. FABA y libros excluidos de los descuentos. Con un gasto mínimo de 30€.¡Que lo disfrutéis! 🚀\",\n  \"message_type\" : \"outgoing\",\n  \"private\" : true\n\n}\n",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          3392,
+          144
+        ],
+        "id": "4118f324-2360-42f5-adf0-da3e341ef85b",
+        "name": "Mensaje Privado5",
+        "retryOnFail": true,
+        "waitBetweenTries": 3000
+      }
+    ],
+    "connections": {
+      "Genera Cupón Aleatorio": {
+        "main": [
+          [
+            {
+              "node": "Fechas1",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Búsqueda por fecha": {
+        "main": [
+          [
+            {
+              "node": "Loop Over Items",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Postgres1": {
+        "main": [
+          [
+            {
+              "node": "recoger datos de los padres 2",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Recoger datos de los padres": {
+        "main": [
+          [
+            {
+              "node": "If",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Loop Over Items",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "recoger datos de los padres 2": {
+        "main": [
+          [
+            {
+              "node": "Genera Cupón Aleatorio1",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "WhatsApp Business Cloud": {
+        "main": [
+          [
+            {
+              "node": "HTTP Request2",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "HTTP Request2": {
+        "main": [
+          [
+            {
+              "node": "Code1",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Code1": {
+        "main": [
+          [
+            {
+              "node": "Code2",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Loop Over Items": {
+        "main": [
+          [
+            {
+              "node": "Gmail",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Recoger datos de los padres",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Fechas": {
+        "main": [
+          [
+            {
+              "node": "Búsqueda por fecha",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Fechas1": {
+        "main": [
+          [
+            {
+              "node": "Wait6",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Ejecución todos los días a las 10 am": {
+        "main": [
+          [
+            {
+              "node": "Fechas",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Crear descuentos": {
+        "main": [
+          [
+            {
+              "node": "Wait7",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Enviar template Whatsapp": {
+        "main": [
+          [
+            {
+              "node": "Wait8",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Coger Id conversations": {
+        "main": [
+          [
+            {
+              "node": "Wait2",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Formateamos Número": {
+        "main": [
+          [
+            {
+              "node": "GET CONTACT Cintia",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Si Contacto Existe1": {
+        "main": [
+          [
+            {
+              "node": "Coger Id conversations",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Crea Contacto Cintia",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Crear Conversación": {
+        "main": [
+          [
+            {
+              "node": "Genera Cupón Aleatorio",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Mensaje Privado": {
+        "main": [
+          [
+            {
+              "node": "Loop Over Items",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Genera Cupón Aleatorio2": {
+        "main": [
+          [
+            {
+              "node": "Fechas2",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Fechas2": {
+        "main": [
+          [
+            {
+              "node": "Crear descuentos1",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Crear descuentos1": {
+        "main": [
+          [
+            {
+              "node": "Wait3",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Enviar template Whatsapp1": {
+        "main": [
+          [
+            {
+              "node": "Wait4",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Crea Contacto Cintia": {
+        "main": [
+          [
+            {
+              "node": "Wait5",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Mensaje Privado2": {
+        "main": [
+          [
+            {
+              "node": "Loop Over Items",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "When clicking ‘Test workflow’": {
+        "main": [
+          [
+            {
+              "node": "Enviar template Whatsapp2",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Wait": {
+        "main": [
+          [
+            {
+              "node": "Formateamos Número",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Wait1": {
+        "main": [
+          [
+            {
+              "node": "Si Contacto Existe1",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Wait2": {
+        "main": [
+          [
+            {
+              "node": "Genera Cupón Aleatorio2",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Wait3": {
+        "main": [
+          [
+            {
+              "node": "Enviar template Whatsapp1",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Wait4": {
+        "main": [
+          [
+            {
+              "node": "Mensaje Privado2",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Wait5": {
+        "main": [
+          [
+            {
+              "node": "Crear Conversación",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Wait6": {
+        "main": [
+          [
+            {
+              "node": "Crear descuentos",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Wait7": {
+        "main": [
+          [
+            {
+              "node": "Enviar template Whatsapp",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Wait8": {
+        "main": [
+          [
+            {
+              "node": "Mensaje Privado",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "GET CONTACT Cintia": {
+        "main": [
+          [
+            {
+              "node": "Wait1",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "If": {
+        "main": [
+          [
+            {
+              "node": "If1",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Loop Over Items",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "If1": {
+        "main": [
+          [
+            {
+              "node": "Wait",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Loop Over Items",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Búsqueda por fecha2": {
+        "main": [
+          []
+        ]
+      },
+      "Enviar template Whatsapp2": {
+        "main": [
+          []
+        ]
+      }
+    },
+    "authors": "Rincon De los Genios",
+    "name": "Version 14dd0b89",
+    "description": "",
+    "autosaved": false,
+    "workflowPublishHistory": [
+      {
+        "createdAt": "2026-06-25T11:03:20.586Z",
+        "id": 13,
+        "workflowId": "GZLn2dFb0CAXwWRP",
+        "versionId": "14dd0b89-7fc4-42a0-8686-8a10240afcdd",
+        "event": "activated",
+        "userId": "cdc1f0d2-0f75-446a-8264-89847a82b838"
+      }
+    ]
+  }
+}

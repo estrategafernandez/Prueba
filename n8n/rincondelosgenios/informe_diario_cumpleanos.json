@@ -1,0 +1,400 @@
+{
+  "name": "Informe diario de cumpleaños",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 21
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -460,
+        300
+      ],
+      "id": "trigger",
+      "name": "Todos los días a las 21:00"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Mismo cálculo que el workflow de envío: los cumples de hoy son los que\n// caen dentro de 10 días. Así el informe audita exactamente la misma lista.\nconst hoy = new Date();\nconst objetivo = new Date(hoy);\nobjetivo.setDate(hoy.getDate() + 10);\n\nconst p = (n) => String(n).padStart(2, '0');\nconst mmdd = p(objetivo.getMonth() + 1) + '-' + p(objetivo.getDate());\nconst iso  = hoy.getFullYear() + '-' + p(hoy.getMonth() + 1) + '-' + p(hoy.getDate());\n\nreturn [{ json: {\n  hoy_iso: iso,\n  cumple_mmdd: mmdd,\n  cumple_texto: p(objetivo.getDate()) + '/' + p(objetivo.getMonth() + 1),\n  hoy_medianoche: Math.floor(new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate()).getTime() / 1000),\n}}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -260,
+        300
+      ],
+      "id": "fechas",
+      "name": "Fechas del informe"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT nombre.*\nFROM ps_fmm_registration_userdata AS fecha\nJOIN ps_fmm_registration_userdata AS nombre\n  ON fecha.id_customer = nombre.id_customer\n  AND nombre.id_fmm_registration_fields = fecha.id_fmm_registration_fields - 1\nWHERE fecha.value LIKE '%{{ $json.cumple_mmdd }}';",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.4,
+      "position": [
+        -60,
+        300
+      ],
+      "id": "sql",
+      "name": "Cumples de hoy",
+      "credentials": {
+        "mySql": {
+          "id": "vn8lfyNZOMkRPCrk",
+          "name": "Nuevo Servidor"
+        }
+      },
+      "retryOnFail": true,
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        160,
+        300
+      ],
+      "id": "loop",
+      "name": "Por Cada Cumple"
+    },
+    {
+      "parameters": {
+        "url": "=https://elrincondelosgenios.com/api/customers/{{ $json.id_customer }}?output_format=JSON",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "sendHeaders": true,
+        "specifyHeaders": "json",
+        "jsonHeaders": "{\n  \"Accept\": \"application/json\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        400,
+        400
+      ],
+      "id": "padre",
+      "name": "Datos del padre",
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "vENpn7PKtkMu6KDC",
+          "name": "Unnamed credential"
+        }
+      },
+      "retryOnFail": true,
+      "onError": "continueRegularOutput",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "jsCode": "function normalizaTelefono(raw) {\n  const original = String(raw ?? '').trim();\n  if (!original) return { ok: false, motivo: 'sin teléfono en PrestaShop' };\n  const teniaMas = original.startsWith('+');\n  let s = original.replace(/\\D/g, '');\n  if (!s) return { ok: false, motivo: 'teléfono sin dígitos' };\n  if (s.startsWith('00')) s = s.slice(2);\n  else if (!teniaMas && s.length === 9) s = '34' + s;\n  if (s.length < 8 || s.length > 15) return { ok: false, motivo: 'longitud no válida (' + s.length + ' dígitos)' };\n  return { ok: true, e164: s };\n}\n\nconst salida = [];\nfor (const item of $input.all()) {\n  const c = (item.json && item.json.customer) || {};\n  const bruto = c.phone_mobile || c.phone || '';\n  const r = normalizaTelefono(bruto);\n  salida.push({ json: {\n    nombre:  String(c.firstname || '').trim(),\n    apellidos: String(c.lastname || '').trim(),\n    email:   c.email || '',\n    telefono_bruto: bruto,\n    telefono_e164:  r.ok ? r.e164 : '',\n    telefono_ok:    r.ok,\n    motivo_descarte: r.ok ? '' : r.motivo,\n  }});\n}\nreturn salida;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        620,
+        400
+      ],
+      "id": "normaliza",
+      "name": "Normaliza Teléfono"
+    },
+    {
+      "parameters": {
+        "url": "=https://chatwoot-rincondelosgenios.serversvisionarius.com/api/v1/accounts/1/contacts/search?q=%2B{{ $json.telefono_e164 }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "api_access_token",
+              "value": "__CHATWOOT_API_ACCESS_TOKEN__"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        840,
+        400
+      ],
+      "id": "buscar",
+      "name": "Buscar contacto",
+      "retryOnFail": true,
+      "onError": "continueRegularOutput",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "url": "https://chatwoot-rincondelosgenios.serversvisionarius.com/api/v1/accounts/1/conversations",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "api_access_token",
+              "value": "__CHATWOOT_API_ACCESS_TOKEN__"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"source_id\": \"{{ $json.payload?.[0]?.contact_inboxes?.[0]?.source_id ?? 'ninguno' }}\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1060,
+        400
+      ],
+      "id": "convs",
+      "name": "Conversación del contacto",
+      "retryOnFail": true,
+      "onError": "continueRegularOutput",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "url": "=https://chatwoot-rincondelosgenios.serversvisionarius.com/api/v1/accounts/1/conversations/{{ $json.data?.payload?.[0]?.messages?.[0]?.conversation_id ?? 0 }}/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "api_access_token",
+              "value": "__CHATWOOT_API_ACCESS_TOKEN__"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1280,
+        400
+      ],
+      "id": "msgs",
+      "name": "Mensajes de la conversación",
+      "retryOnFail": true,
+      "onError": "continueRegularOutput",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const t0    = $('Fechas del informe').first().json.hoy_medianoche;\nconst hijo  = String($('Por Cada Cumple').first().json.value || '').trim();\nconst tel   = $('Normaliza Teléfono').first().json;\nconst msgs  = ($input.first().json || {}).payload || [];\n\nconst AUTO = /RESPUESTA\\s*AUTOM|𝑹𝑬𝑺𝑷𝑼𝑬𝑺𝑻𝑨/i;\n\n// El envío de hoy: mensaje saliente público creado hoy que menciona al niño.\nconst envio = msgs.filter(m =>\n  m.message_type === 1 && !m.private && m.created_at >= t0 &&\n  String(m.content || '').includes('Se acerca el cumple de')\n).sort((a, b) => b.created_at - a.created_at)[0];\n\nconst ESTADO = { read: 'Leído', delivered: 'Entregado', sent: 'Enviado', failed: 'FALLIDO' };\n\nlet estado, lectura, respuesta;\nif (!tel.telefono_ok) {\n  estado = 'NO ENVIADO'; lectura = '—'; respuesta = '—';\n} else if (!envio) {\n  estado = 'NO ENVIADO'; lectura = '—'; respuesta = '—';\n} else {\n  estado  = envio.status === 'failed' ? 'FALLIDO' : 'Enviado';\n  lectura = ESTADO[envio.status] || envio.status || 'Enviado';\n  const posteriores = msgs.filter(m => m.message_type === 0 && m.created_at > envio.created_at);\n  const reales = posteriores.filter(m => !AUTO.test(String(m.content || '')));\n  respuesta = reales.length ? 'Sí (' + reales.length + ')'\n            : (posteriores.length ? 'Solo autorespuesta' : 'No');\n}\n\nreturn [{ json: {\n  cliente: (tel.nombre + ' ' + tel.apellidos).trim() || '(sin nombre)',\n  hijo,\n  telefono: tel.telefono_ok ? '+' + tel.telefono_e164 : (tel.telefono_bruto || '—'),\n  estado,\n  lectura,\n  respuesta,\n  incidencia: tel.telefono_ok ? (envio ? '' : 'no se encontró el mensaje de hoy en Chatwoot') : tel.motivo_descarte,\n  ts: envio ? envio.created_at : 0,\n}}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1500,
+        400
+      ],
+      "id": "evalua",
+      "name": "Evalúa el envío"
+    },
+    {
+      "parameters": {
+        "jsCode": "const f = $('Fechas del informe').first().json;\nconst filas = $input.all().map(i => i.json)\n  .sort((a, b) => a.cliente.localeCompare(b.cliente));\n\nconst total      = filas.length;\nconst enviados   = filas.filter(r => r.estado === 'Enviado').length;\nconst fallidos   = filas.filter(r => r.estado === 'FALLIDO').length;\nconst noEnviados = filas.filter(r => r.estado === 'NO ENVIADO').length;\nconst leidos     = filas.filter(r => r.lectura === 'Leído').length;\nconst contestan  = filas.filter(r => String(r.respuesta).startsWith('Sí')).length;\n\nconst esc = (s) => String(s ?? '').replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));\nconst color = (r) => r.estado === 'Enviado' ? '#1a7f37' : (r.estado === 'FALLIDO' ? '#b42318' : '#a15c00');\n\nconst filasHtml = filas.map(r => `\n      <tr>\n        <td style=\"padding:8px 10px;border-bottom:1px solid #eee\">${esc(r.cliente)}</td>\n        <td style=\"padding:8px 10px;border-bottom:1px solid #eee\">${esc(r.hijo)}</td>\n        <td style=\"padding:8px 10px;border-bottom:1px solid #eee;white-space:nowrap\">${esc(r.telefono)}</td>\n        <td style=\"padding:8px 10px;border-bottom:1px solid #eee;color:${color(r)};font-weight:600\">${esc(r.estado)}</td>\n        <td style=\"padding:8px 10px;border-bottom:1px solid #eee\">${esc(r.lectura)}</td>\n        <td style=\"padding:8px 10px;border-bottom:1px solid #eee\">${esc(r.respuesta)}</td>\n        <td style=\"padding:8px 10px;border-bottom:1px solid #eee;color:#a15c00;font-size:12px\">${esc(r.incidencia)}</td>\n      </tr>`).join('');\n\nconst tarjeta = (n, t) => `<td style=\"padding:12px 16px;background:#f6f8fa;border-radius:8px;text-align:center\">\n        <div style=\"font-size:24px;font-weight:700;color:#111\">${n}</div>\n        <div style=\"font-size:12px;color:#555\">${t}</div></td>`;\n\nconst html = `<!doctype html><html><body style=\"margin:0;padding:24px;background:#fff;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:#111\">\n  <h2 style=\"margin:0 0 4px\">Felicitaciones de cumpleaños — ${esc(f.hoy_iso)}</h2>\n  <p style=\"margin:0 0 20px;color:#555;font-size:14px\">Cumpleaños del ${esc(f.cumple_texto)} (dentro de 10 días).</p>\n  <table style=\"border-collapse:separate;border-spacing:8px 0;margin-bottom:20px\"><tr>\n    ${tarjeta(total, 'cumples')}${tarjeta(enviados, 'enviados')}${tarjeta(leidos, 'leídos')}${tarjeta(contestan, 'han contestado')}${tarjeta(fallidos + noEnviados, 'sin enviar')}\n  </tr></table>\n  ${total === 0 ? '<p style=\"color:#555\">Hoy no había ningún cumpleaños que felicitar.</p>' : `\n  <table style=\"border-collapse:collapse;width:100%;font-size:14px\">\n    <thead><tr style=\"background:#f6f8fa;text-align:left\">\n      <th style=\"padding:8px 10px\">Clienta</th><th style=\"padding:8px 10px\">Peque</th>\n      <th style=\"padding:8px 10px\">Teléfono</th><th style=\"padding:8px 10px\">Envío</th>\n      <th style=\"padding:8px 10px\">Estado</th><th style=\"padding:8px 10px\">¿Ha contestado?</th>\n      <th style=\"padding:8px 10px\">Incidencia</th>\n    </tr></thead><tbody>${filasHtml}</tbody></table>`}\n  <p style=\"margin-top:24px;color:#888;font-size:12px\">Informe automático de n8n · El Rincón de los Genios</p>\n</body></html>`;\n\nconst pl = (n, s, p) => n + ' ' + (n === 1 ? s : p);\nconst asunto = `Cumpleaños ${f.hoy_iso} — ${pl(enviados, 'enviado', 'enviados')}, ` +\n               `${pl(leidos, 'leído', 'leídos')}, ${pl(contestan, 'respuesta', 'respuestas')}` +\n               ((fallidos + noEnviados) ? ` · ${fallidos + noEnviados} SIN ENVIAR` : '');\n\nreturn [{ json: { asunto, html, destino: 'elrincondelosgenios31@gmail.com', total, enviados, leidos, contestan, fallidos, noEnviados } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        400,
+        160
+      ],
+      "id": "informe",
+      "name": "Construye el informe"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.destino }}",
+        "subject": "={{ $json.asunto }}",
+        "message": "={{ $json.html }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        640,
+        160
+      ],
+      "id": "gmail",
+      "name": "Enviar informe por email",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "content": "## Informe diario de cumpleaños\n\nAudita el workflow **Envío de Plantillas**: repite la misma consulta de cumpleaños y comprueba en Chatwoot qué se envió, si se leyó y si contestaron.\n\n**PENDIENTE:** el nodo *Enviar informe por email* está desactivado porque falta la credencial de Gmail. Hay que crearla, asignarla al nodo, activarlo y activar el workflow.",
+        "height": 260,
+        "width": 420,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        380,
+        -140
+      ],
+      "id": "nota",
+      "name": "Nota"
+    }
+  ],
+  "connections": {
+    "Todos los días a las 21:00": {
+      "main": [
+        [
+          {
+            "node": "Fechas del informe",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fechas del informe": {
+      "main": [
+        [
+          {
+            "node": "Cumples de hoy",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cumples de hoy": {
+      "main": [
+        [
+          {
+            "node": "Por Cada Cumple",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Por Cada Cumple": {
+      "main": [
+        [
+          {
+            "node": "Construye el informe",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Datos del padre",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Datos del padre": {
+      "main": [
+        [
+          {
+            "node": "Normaliza Teléfono",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normaliza Teléfono": {
+      "main": [
+        [
+          {
+            "node": "Buscar contacto",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar contacto": {
+      "main": [
+        [
+          {
+            "node": "Conversación del contacto",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Conversación del contacto": {
+      "main": [
+        [
+          {
+            "node": "Mensajes de la conversación",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mensajes de la conversación": {
+      "main": [
+        [
+          {
+            "node": "Evalúa el envío",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Evalúa el envío": {
+      "main": [
+        [
+          {
+            "node": "Por Cada Cumple",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Construye el informe": {
+      "main": [
+        [
+          {
+            "node": "Enviar informe por email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Europe/Madrid"
+  }
+}
