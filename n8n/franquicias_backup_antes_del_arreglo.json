@@ -1,0 +1,5352 @@
+{
+  "name": "Asistente IA Citas Tendenze Franquicias",
+  "nodes": [
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserAutofixing",
+      "typeVersion": 1,
+      "position": [
+        7968,
+        624
+      ],
+      "id": "e6fc9575-b550-4005-ac8f-fa2329174260",
+      "name": "Auto-fixing Output Parser"
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n  \"response\": {\n    \"part_1\": \"Responde con la primera parte de la respuesta.\",\n    \"part_2\": \"Responde con la segunda parte de la respuesta.\",\n    \"part_3\": \"Responde con la tercera parte de la respuesta (opcional).\",\n    \"part_4\": \"Responde con la cuarta parte de la respuesta (opcional).\",\n    \"part_5\": \"Responde con la quinta parte de la respuesta (opcional).\"\n  }\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.2,
+      "position": [
+        8128,
+        832
+      ],
+      "id": "afa9e88f-2b80-4dca-a6c9-d566d275fb03",
+      "name": "Structured Output Parser"
+    },
+    {
+      "parameters": {
+        "amount": 2
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        8848,
+        112
+      ],
+      "id": "34605e91-1733-4fd0-9a06-611b735ae807",
+      "name": "Wait",
+      "webhookId": "01310ce5-4508-49a6-aeff-bcde7158eac5"
+    },
+    {
+      "parameters": {
+        "amount": 2
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        9648,
+        128
+      ],
+      "id": "e4ccf8a1-3cd7-4443-ab67-8c61a905e3c5",
+      "name": "Wait1",
+      "webhookId": "05b92eb5-29ce-481f-bb4c-18057a52930b"
+    },
+    {
+      "parameters": {
+        "amount": 2
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        10576,
+        176
+      ],
+      "id": "692f4e8a-ca32-4e3f-9ed1-9e3b8e5d4d08",
+      "name": "Wait2",
+      "webhookId": "ff23f2e5-a6bd-48de-b6fa-c622b1d690ad"
+    },
+    {
+      "parameters": {
+        "amount": 2
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        11456,
+        288
+      ],
+      "id": "4ea560ac-104c-4cf9-95bc-e6ce4abefde4",
+      "name": "Wait3",
+      "webhookId": "fcca42da-5932-473e-82d5-a66109353c26"
+    },
+    {
+      "parameters": {
+        "content": "## Llega el mensaje de WhatsApp",
+        "height": 520,
+        "width": 1452,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -2816,
+        336
+      ],
+      "typeVersion": 1,
+      "id": "93ed793a-64f3-44cb-a6e6-74ceee356187",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "8a313a41-eadc-4ada-bc2a-feff79845de9",
+              "leftValue": "={{ $json.message[0] }}",
+              "rightValue": "={{ $('Variable Mensaje').item.json.mensaje }}",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1712,
+        400
+      ],
+      "id": "f4e15694-2267-42af-85b2-ef319aff32e4",
+      "name": "If6"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.dateTime",
+      "typeVersion": 2,
+      "position": [
+        -96,
+        688
+      ],
+      "id": "13c8e639-42bf-41ad-80e5-d47ff691d07a",
+      "name": "Date & Time1"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $('Webhook').first().json.body.messages[0].attachments[0].file_type }}",
+                    "rightValue": "audio",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "864ac046-48fe-4582-b675-57689de0ea21"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "audio"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "f97f8b7d-9218-4ee9-b938-72a34a7544e7",
+                    "leftValue": "={{ $('Webhook').first().json.body.messages[0].attachments[0].file_type}}",
+                    "rightValue": "=image",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "image"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "f3c7dc40-708e-4541-88d8-04e128f7a490",
+                    "leftValue": "={{ $('Webhook').first().json.body.messages[0].content_type }}",
+                    "rightValue": "text",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "text"
+            }
+          ]
+        },
+        "options": {
+          "ignoreCase": false
+        }
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        -560,
+        384
+      ],
+      "id": "ab842fd0-5298-4619-9de4-ad327d2034d7",
+      "name": "Switch"
+    },
+    {
+      "parameters": {
+        "operation": "formatDate",
+        "date": "={{ $json.currentDate }}",
+        "outputFieldName": "fecha",
+        "options": {
+          "timezone": true
+        }
+      },
+      "type": "n8n-nodes-base.dateTime",
+      "typeVersion": 2,
+      "position": [
+        2640,
+        384
+      ],
+      "id": "5cdf4557-26bb-4e32-b5a8-4383a844bb65",
+      "name": "Date & Time2"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.dateTime",
+      "typeVersion": 2,
+      "position": [
+        2400,
+        384
+      ],
+      "id": "51169349-da00-4bfd-8685-bcf734c656c1",
+      "name": "Date & Time3"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4o",
+          "mode": "list",
+          "cachedResultName": "gpt-4o"
+        },
+        "options": {
+          "temperature": 0
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        7712,
+        688
+      ],
+      "id": "a3fdc2a4-6451-4e64-a8a6-5b7a520e342e",
+      "name": "OpenAI Chat Model1",
+      "credentials": {
+        "openAiApi": {
+          "id": "HhvU9GRRNUksfybw",
+          "name": "API TENDENZE"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4o-mini"
+        },
+        "options": {
+          "temperature": 0
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        7936,
+        832
+      ],
+      "id": "30ead771-c26f-476c-b5a1-c1dcbc2c38bc",
+      "name": "OpenAI Chat Model2",
+      "credentials": {
+        "openAiApi": {
+          "id": "HhvU9GRRNUksfybw",
+          "name": "API TENDENZE"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "## Se estructura y envia en varias partes",
+        "height": 940,
+        "width": 4360,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        7616,
+        80
+      ],
+      "typeVersion": 1,
+      "id": "2d23789c-c718-4569-85f7-0b9ba8b5ee45",
+      "name": "Sticky Note2"
+    },
+    {
+      "parameters": {
+        "content": "## Recolectar inputs\n",
+        "height": 700,
+        "width": 1780,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        1040,
+        128
+      ],
+      "typeVersion": 1,
+      "id": "b8d59e5e-426d-4eee-a029-b9bbeb2c19b7",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "content": "## Separar audio, texto e imagen",
+        "height": 920,
+        "width": 1600,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -608,
+        16
+      ],
+      "typeVersion": 1,
+      "id": "66a6f38d-15cb-4b7b-87d1-a25007f98e78",
+      "name": "Sticky Note5"
+    },
+    {
+      "parameters": {
+        "content": "## Generar repuesta del asistente",
+        "height": 1236,
+        "width": 1532,
+        "color": 2
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        3904,
+        16
+      ],
+      "typeVersion": 1,
+      "id": "52ca8b03-5624-430e-9977-4b84b77fa2d0",
+      "name": "Sticky Note4"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        -1824,
+        624
+      ],
+      "id": "d8e05fab-69f8-48da-b066-69d0f7ccab24",
+      "name": "No Operation, do nothing2"
+    },
+    {
+      "parameters": {
+        "content": "## Filtrar si el bot esta encendido o apagado\n",
+        "height": 520,
+        "width": 620
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -1296,
+        320
+      ],
+      "typeVersion": 1,
+      "id": "3c06f015-475d-4792-8da4-b17c56889e78",
+      "name": "Sticky Note8"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        -944,
+        576
+      ],
+      "id": "08205710-93d4-4a36-ac87-b06a26b5cfc8",
+      "name": "No Operation, do nothing3"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-5-mini",
+          "mode": "list",
+          "cachedResultName": "gpt-5-mini"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        4192,
+        464
+      ],
+      "id": "72689460-6d10-438f-8cd5-4825bf9695aa",
+      "name": "OpenAI Chat Model3",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "executeOnce": false,
+      "credentials": {
+        "openAiApi": {
+          "id": "HhvU9GRRNUksfybw",
+          "name": "API TENDENZE"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $('Webhook').first().json.body.messages[0].sender.phone_number }}",
+        "tableName": "n8n_chat_histories_franquicias",
+        "contextWindowLength": 40
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryPostgresChat",
+      "typeVersion": 1.3,
+      "position": [
+        4512,
+        512
+      ],
+      "id": "eab67cf0-2a4e-4fbf-b924-8f5f72181695",
+      "name": "Postgres Chat Memory1",
+      "retryOnFail": true,
+      "waitBetweenTries": 5000,
+      "credentials": {
+        "postgres": {
+          "id": "QbyHIcsNujkQEK2v",
+          "name": "Postgres account"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "73541b8d-e557-47ce-9e87-8a70d4665cb4",
+              "leftValue": "={{ $json.body.messages[0].content }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "e84633a0-b42c-4e20-9577-b6148d8a8131",
+              "leftValue": "={{ $json.webhookUrl }}",
+              "rightValue": "serversvisionarius",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -2048,
+        432
+      ],
+      "id": "e42a86ae-aa40-42e0-bb2b-895c8ea08e8c",
+      "name": "Contenido del mensaje",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "289b00ac-d1d9-458c-8e0e-9f44327f2708",
+              "name": "telefono",
+              "value": "={{ $json.body.messages[0].sender.phone_number }}",
+              "type": "string"
+            },
+            {
+              "id": "6aef9fa6-2963-421a-9cde-3078c5c7a69b",
+              "name": "mensaje",
+              "value": "={{ $json.body.messages[0].content }}",
+              "type": "string"
+            },
+            {
+              "id": "989b2053-224c-4fd1-8500-12d684a0b624",
+              "name": "",
+              "value": "",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -1648,
+        416
+      ],
+      "id": "efde1d59-c939-43b3-91f1-6ff336a7803e",
+      "name": "Variable Teléfono/Mensaje",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "531b8118-2092-4c8a-a013-d840b9da1d6b",
+              "leftValue": "={{ $('Bot on/off').item.json.body.conversation.messages[0].sender.custom_attributes.bot }}",
+              "rightValue": "Off",
+              "operator": {
+                "type": "string",
+                "operation": "notEquals"
+              }
+            },
+            {
+              "id": "5cf44eae-54f7-43c7-a90c-2dd0e5c60c2d",
+              "leftValue": "={{ $('Bot on/off').item.json.body.conversation.messages[0].sender.custom_attributes.bot }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notExists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -1264,
+        416
+      ],
+      "id": "46876014-5f26-4a57-945c-2e806f2a9968",
+      "name": "Botón de Off/On/Nada"
+    },
+    {
+      "parameters": {
+        "url": "={{ $('Webhook').first().json.body.messages[0].attachments[0].data_url }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "api_access_token",
+              "value": "__CHATWOOT_API_ACCESS_TOKEN__"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -160,
+        176
+      ],
+      "id": "2d9efe34-422d-4f81-baef-2fcbb88b3568",
+      "name": "Descarga el audio"
+    },
+    {
+      "parameters": {
+        "resource": "audio",
+        "operation": "transcribe",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.7,
+      "position": [
+        144,
+        176
+      ],
+      "id": "6cd0a388-1b3a-4b4e-8436-1a8ad1ca93e4",
+      "name": "Transcribe OpenAI",
+      "credentials": {
+        "openAiApi": {
+          "id": "HhvU9GRRNUksfybw",
+          "name": "API TENDENZE"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "d861e70d-6e86-4d61-b10b-80d485805a7b",
+              "name": "response",
+              "value": "={{ $json.text }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        464,
+        176
+      ],
+      "id": "0a35368b-8067-42ed-bfbe-a3f308d0af66",
+      "name": "Variable Response"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "7fe51594-8d61-45b4-a123-ed0c66d6f5c5",
+              "name": "mensaje",
+              "value": "={{ $json.response }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        848,
+        400
+      ],
+      "id": "9efe8411-3f88-454f-ab35-29909423f71b",
+      "name": "Variable Mensaje"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "af850166-c1da-4b19-9296-58457862c458",
+              "name": "response",
+              "value": "={{ $('Webhook').first().json.body.messages[0].attachments[0].data_url || '' }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        192,
+        400
+      ],
+      "id": "f8e56e18-2191-4d78-8902-92d644526605",
+      "name": "Variable Imagen"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "7fe51594-8d61-45b4-a123-ed0c66d6f5c5",
+              "name": "response",
+              "value": "={{ $('Variable Teléfono/Mensaje').item.json.mensaje }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        480,
+        688
+      ],
+      "id": "44b9da11-99cb-4269-bb4b-04b6a451ed60",
+      "name": "Variable Response1"
+    },
+    {
+      "parameters": {
+        "operation": "push",
+        "list": "={{ $('Variable Teléfono/Mensaje').item.json.telefono }}",
+        "messageData": "={{ $json.mensaje }}"
+      },
+      "type": "n8n-nodes-base.redis",
+      "typeVersion": 1,
+      "position": [
+        1120,
+        400
+      ],
+      "id": "9ebd2908-9bea-40d4-9c84-d205df2b2334",
+      "name": "Push Redis",
+      "credentials": {
+        "redis": {
+          "id": "yhLiPabjjJ2D5kjf",
+          "name": "Redis account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "propertyName": "message",
+        "key": "={{ $('Variable Teléfono/Mensaje').item.json.telefono }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.redis",
+      "typeVersion": 1,
+      "position": [
+        1504,
+        400
+      ],
+      "id": "eea479fe-0782-42ad-a7c9-a20f51d5d3b8",
+      "name": "Obtiene todos los Mensajes",
+      "credentials": {
+        "redis": {
+          "id": "yhLiPabjjJ2D5kjf",
+          "name": "Redis account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "delete",
+        "key": "={{ $('Variable Teléfono/Mensaje').item.json.telefono }}"
+      },
+      "type": "n8n-nodes-base.redis",
+      "typeVersion": 1,
+      "position": [
+        2176,
+        384
+      ],
+      "id": "534e1220-d392-4d00-aa59-aa6585d81215",
+      "name": "Borra mensajes de Redis",
+      "credentials": {
+        "redis": {
+          "id": "yhLiPabjjJ2D5kjf",
+          "name": "Redis account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://tendenze-panel.serversvisionarius.com/api/v1/accounts/{{ $('Webhook').first().json.body.messages[0].account_id }}/conversations/{{ $('Contenido del mensaje').first().json.body.messages[0].conversation_id }}/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "api_access_token",
+              "value": "__CHATWOOT_API_ACCESS_TOKEN__"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"content\": \"{{ JSON.stringify($('Divide Mensajes').item.json.output.response.part_1).slice(1, -1) }}\",\n  \"message_type\": \"outgoing\",\n  \"private\": \"false\"\n} ",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        8352,
+        224
+      ],
+      "id": "85bc6719-3bd8-4007-ac43-e8a52f5daf9d",
+      "name": "Envio 1º Mensaje",
+      "retryOnFail": true,
+      "waitBetweenTries": 3000
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://tendenze-panel.serversvisionarius.com/api/v1/accounts/{{ $('Webhook').first().json.body.messages[0].account_id }}/conversations/{{ $('Contenido del mensaje').first().json.body.messages[0].conversation_id }}/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "api_access_token",
+              "value": "__CHATWOOT_API_ACCESS_TOKEN__"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"content\": \"{{ JSON.stringify($('Divide Mensajes').item.json.output.response.part_2).slice(1, -1) }}\",\n  \"message_type\": \"outgoing\",\n  \"private\": \"false\"\n} ",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        9280,
+        128
+      ],
+      "id": "9d0dea33-77d2-4366-85cd-4efeb303021c",
+      "name": "Envio 2º Mensaje",
+      "retryOnFail": true,
+      "waitBetweenTries": 3000
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://tendenze-panel.serversvisionarius.com/api/v1/accounts/{{ $('Webhook').first().json.body.messages[0].account_id }}/conversations/{{ $('Contenido del mensaje').first().json.body.messages[0].conversation_id }}/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "api_access_token",
+              "value": "__CHATWOOT_API_ACCESS_TOKEN__"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"content\": \"{{ JSON.stringify($('Divide Mensajes').item.json.output.response.part_3).slice(1, -1) }}\",\n  \"message_type\": \"outgoing\",\n  \"private\": \"false\"\n} ",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        10176,
+        128
+      ],
+      "id": "b422cb0b-237e-4048-a373-1d40b19ae6e5",
+      "name": "Envio 3º Mensaje",
+      "retryOnFail": true,
+      "waitBetweenTries": 3000
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://tendenze-panel.serversvisionarius.com/api/v1/accounts/{{ $('Webhook').first().json.body.messages[0].account_id }}/conversations/{{ $('Contenido del mensaje').first().json.body.messages[0].conversation_id }}/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "api_access_token",
+              "value": "__CHATWOOT_API_ACCESS_TOKEN__"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"content\": \"{{ JSON.stringify($('Divide Mensajes').item.json.output.response.part_4).slice(1, -1) }}\",\n  \"message_type\": \"outgoing\",\n  \"private\": \"false\"\n} ",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        10976,
+        176
+      ],
+      "id": "499080cf-19ec-4b98-9174-37ee29c1495e",
+      "name": "Envio 4º Mensaje",
+      "retryOnFail": true,
+      "waitBetweenTries": 3000
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://tendenze-panel.serversvisionarius.com/api/v1/accounts/{{ $('Webhook').first().json.body.messages[0].account_id }}/conversations/{{ $('Contenido del mensaje').first().json.body.messages[0].conversation_id }}/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "api_access_token",
+              "value": "__CHATWOOT_API_ACCESS_TOKEN__"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"content\": \"{{ JSON.stringify($('Divide Mensajes').item.json.output.response.part_5).slice(1, -1) }}\",\n  \"message_type\": \"outgoing\",\n  \"private\": \"false\"\n} ",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        11776,
+        288
+      ],
+      "id": "9fd36808-3838-4111-9738-fe642e0a47a1",
+      "name": "Envio 5º Mensaje",
+      "retryOnFail": true,
+      "waitBetweenTries": 3000
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "8d46d583-b82d-4d85-a0b8-2c30006082a0",
+              "leftValue": "={{ $('Divide Mensajes').item.json.output.response.part_2 }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        8672,
+        304
+      ],
+      "id": "a416c47c-e937-4547-910a-9fbc6f9ee370",
+      "name": "Mira si hay 2º Mensaje"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "3c7eb0e9-13ee-40d6-9738-057a02ac1306",
+              "leftValue": "={{ $('Divide Mensajes').item.json.output.response.part_3 }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        9440,
+        336
+      ],
+      "id": "f6ac0370-2f8c-450d-b8f7-11242b5be50a",
+      "name": "Mira si hay 3º Mensaje"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "10bc21c7-e460-458f-b0cb-d9e37e9bde8a",
+              "leftValue": "={{ $('Divide Mensajes').item.json.output.response.part_4 }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        10400,
+        352
+      ],
+      "id": "cb6d6074-164b-4d1d-960f-34abeb2cfe28",
+      "name": "Mira si hay 4º Mensaje"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://tendenze-panel.serversvisionarius.com/api/v1/accounts/{{ $('Webhook').first().json.body.messages[0].account_id }}/conversations/{{ $('Contenido del mensaje').first().json.body.messages[0].conversation_id }}/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "api_access_token",
+              "value": "__TOKEN_INVALIDO_REVOCADO__"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"content\": \"{{ $json.output }}\",\n  \"message_type\": \"outgoing\",\n  \"private\": false\n}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        8400,
+        448
+      ],
+      "id": "c658f34d-5b51-4216-96b1-31ccbb82c93a",
+      "name": "Envió Mensaje Total",
+      "retryOnFail": true,
+      "waitBetweenTries": 3000
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Respuesta a formatear:\n{{ $json.output }}",
+        "hasOutputParser": true,
+        "messages": {
+          "messageValues": [
+            {
+              "message": "=# Tarea  \nTu función principal consiste en crear un JSON que contenga las diferentes partes importantes  del mensaje que vayas a recibir \n\nRespuesta a formatear:\n{{ $json.output }}\n\nNotas :  \n. debes seguir la siguiente estructura de JSON:  \n{\n  \"response\": {\n    \"part_1\": \"Responde con la primera parte de la respuesta.\",\n    \"part_2\": \"Responde con la segunda parte de la respuesta (opcional).\", \n    \"part_3\": \"Responde con la tercera parte de la respuesta (opcional).\",\n    \"part_4\": \"Responde con la cuarta parte de la respuesta (opcional).\",\n    \"part_5\": \"Responde con la quinta parte de la respuesta (opcional).\"\n  }\n}\ndebes dividir los mensajes de una manera que suene bien,  me explico debes analizar que tan largo es el mensaje que recibes y en base en eso dividir el mensaje en las partes que sean necesarias, por ejemplo si el mensaje es breve divídelo en 1 o 2 partes y si el mensaje es extenso divídelo en 3 o 4 partes   \n. las partes que dividas deben tener sentido, no dividas las partes por hacerlo, piensa 2 veces antes de hacerlo.\n\nCuando aparezca un resumen de una cita tanto ya sea como reservar cita, anular cita o consultar disponibilidad, quiero que todos los datos del cliente,del servicio, del centro y la hora aparezcan juntos y no los dividas. \n\nIgual que todos los servicios de la empresa y las funcionalidades quiero que aparezcan juntos.\n\nCunado en una parte tengas que citar con una lista de opciones no añadas caracteres como \"-#*\", simplemente cítalas en una misma parte para que se vea claro y sencillo para la vista del usuario. Usa los saltos de línea para que se vea más visual."
+            }
+          ]
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.5,
+      "position": [
+        7776,
+        368
+      ],
+      "id": "4a644e9f-4072-4cb2-9650-38605a876a58",
+      "name": "Divide Mensajes",
+      "retryOnFail": true,
+      "maxTries": 5,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "289b00ac-d1d9-458c-8e0e-9f44327f2708",
+              "name": "telefono",
+              "value": "={{ $('Variable Teléfono/Mensaje').item.json.telefono }}",
+              "type": "string"
+            },
+            {
+              "id": "6aef9fa6-2963-421a-9cde-3078c5c7a69b",
+              "name": "mensaje",
+              "value": "={{ $('Obtiene todos los Mensajes').item.json.message }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1952,
+        384
+      ],
+      "id": "cbac9ff8-d156-4209-ac2e-825f8e837dbe",
+      "name": "Variable Teléfono/Mensaje1"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "fb5acf1b-304c-46db-ad14-b51940780297",
+              "name": "fecha",
+              "value": "={{ $json.fecha }}",
+              "type": "string"
+            },
+            {
+              "id": "e66e5a3c-e89b-4ce7-a045-b2247da16df0",
+              "name": "hora",
+              "value": "={{ $json.hora }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        3360,
+        384
+      ],
+      "id": "d8fc8c7a-714e-468c-9fd6-4e17b9d3c3ef",
+      "name": "Fecha"
+    },
+    {
+      "parameters": {
+        "jsCode": "const now = new Date();\nnow.setHours(now.getHours()); // Ajuste manual a UTC+2\n\nconst fecha = now.toLocaleDateString('es-ES', {\n  weekday: 'long',\n  year: 'numeric',\n  month: 'long',\n  day: 'numeric',\n  hour: '2-digit',\n  minute: '2-digit'\n}).replace(/^\\w/, c => c.toUpperCase());\n\nconst hora = now.toLocaleTimeString('es-ES', {\n  hour: '2-digit',\n  minute: '2-digit'\n});\n\nreturn [{ json: { fecha, hora } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3184,
+        384
+      ],
+      "id": "85e1687d-99f6-4966-b232-92e145e5fc95",
+      "name": "Code"
+    },
+    {
+      "parameters": {
+        "content": "## Cálculo de la fecha actual",
+        "height": 504,
+        "width": 424,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        3120,
+        192
+      ],
+      "id": "8d787f31-3f40-469f-abd2-3d164441727a",
+      "name": "Sticky Note3"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.embeddingsOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        4768,
+        752
+      ],
+      "id": "7dd1948c-b2e8-4720-b5d5-7bf15d999823",
+      "name": "Embeddings OpenAI",
+      "credentials": {
+        "openAiApi": {
+          "id": "HhvU9GRRNUksfybw",
+          "name": "API TENDENZE"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Accede al nodo \"Obtiene todos los Mensajes\"\nconst mensajes = $items(\"Obtiene todos los Mensajes\")[0].json.message;\n\n// Verifica que es un array y lo invierte\nconst mensajesInvertidos = Array.isArray(mensajes) ? [...mensajes].reverse() : [];\n\nreturn [\n  {\n    json: {\n      mensajes_invertidos: mensajesInvertidos\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2928,
+        384
+      ],
+      "id": "a8b65496-a034-466d-8c9f-b3fdf2648e03",
+      "name": "Revertir mensajes"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "185ecfc5-f479-4584-be68-6b8ed326c366",
+              "leftValue": "={{ $('Divide Mensajes').item.json.output.response.part_2 }}",
+              "rightValue": "JSON",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        9040,
+        112
+      ],
+      "id": "b97c822e-e395-40a3-a1cf-22fa05d6590e",
+      "name": "Comprobador de Frases Únicas y problemas de Formateo de las frases"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "531b8118-2092-4c8a-a013-d840b9da1d6b",
+              "leftValue": "={{ $json.body.meta.sender.custom_attributes.bot }}",
+              "rightValue": "=Off",
+              "operator": {
+                "type": "string",
+                "operation": "notEquals"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -2256,
+        448
+      ],
+      "id": "7299ab67-2a37-419d-99d9-d2b6ef3f827a",
+      "name": "Bot on/off"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "185ecfc5-f479-4584-be68-6b8ed326c366",
+              "leftValue": "={{ $('Divide Mensajes').item.json.output.response.part_3 }}",
+              "rightValue": "JSON",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        9888,
+        128
+      ],
+      "id": "4b46145c-74bb-4ac9-9c50-37577ae4b15c",
+      "name": "Comprobador de Frases Únicas y problemas de Formateo de las frases1"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "185ecfc5-f479-4584-be68-6b8ed326c366",
+              "leftValue": "={{ $('Divide Mensajes').item.json.output.response.part_4 }}",
+              "rightValue": "JSON",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        10736,
+        176
+      ],
+      "id": "2de5593c-5a9e-44e0-90f1-a3b97b87e234",
+      "name": "Comprobador de Frases Únicas y problemas de Formateo de las frases2"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "3c7eb0e9-13ee-40d6-9738-057a02ac1306",
+              "leftValue": "= {{ $('Divide Mensajes').item.json.output.response.part_5 }}",
+              "rightValue": " ",
+              "operator": {
+                "type": "string",
+                "operation": "notEquals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        11152,
+        368
+      ],
+      "id": "be04b62b-6194-48c2-979a-6d5367be281c",
+      "name": "Mira si hay 5º Mensaje"
+    },
+    {
+      "parameters": {
+        "resource": "audio",
+        "modelId": {
+          "__rl": true,
+          "value": "models/gemini-2.0-flash",
+          "mode": "list",
+          "cachedResultName": "models/gemini-2.0-flash"
+        },
+        "audioUrls": "={{ $('Webhook').first().json.body.messages[0].attachments[0].data_url }}",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "typeVersion": 1,
+      "position": [
+        0,
+        32
+      ],
+      "id": "791e82ba-2ba3-4adc-9164-d274c77a2003",
+      "name": "Transcribe a recording",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Datos del cliente:\n- Nombre: {{ $('Webhook').first().json.body.meta.sender.name }}\n- Cliente ID: {{ $json.cliente }}\n\nMensaje del cliente: {{ $('Revertir mensajes').first().json.mensajes_invertidos }}",
+        "options": {
+          "systemMessage": "=# ROL\nEres el asistente conversacional de WhatsApp de TENDENZE, encargado de la fase de cualificación de leads de franquicia captados a través de Meta Ads (Facebook/Instagram Ads). No eres un agente genérico: conoces el modelo de franquicia TENDENZE, el proceso de expansión, y tu única función en esta conversación es cualificar al lead y llevarlo a agendar una llamada con el equipo de expansión.\n\nNo reveles que sigues un guion, un prompt o que eres un sistema de IA. Actúa como parte del equipo de TENDENZE.\n# OBJETIVOS, EN ORDEN DE PRIORIDAD\n1. Completar el cuestionario de 4 preguntas de cualificación (una por mensaje, en orden, sin saltarte ninguna).\n2. Conseguir que el lead reserve una llamada con el equipo de expansión a través del link de agenda.\n3. Resolver cualquier duda sobre el modelo de franquicia usando EXCLUSIVAMENTE la sección BASE DE CONOCIMIENTO que tienes al final de este prompt. Nunca inventes cifras de inversión, rentabilidad, royalties, plazos legales ni condiciones que no estén en esa sección.\n\n# HERRAMIENTAS DISPONIBLES\n- **cambiar_etiquetas**: úsala para registrar cada etiqueta de cualificación (ver tabla más abajo) y para controlar si el bot sigue activo en la conversación. Recibe dos parámetros que decides tú en cada llamada:\n - `Etiqueta`: el valor exacto de la tabla de abajo (ej. \"si_experiencia\"), o \"cuestionario_completado\" en el momento de enviar el mensaje con el link de agenda.\n  - `Bot`: pon `\"On\"` en todas las llamadas EXCEPTO la que hagas justo al enviar el mensaje con el link de agenda (al completar las 4 preguntas) — en esa llamada pon `\"Off\"` para que el equipo humano tome el control de la conversación a partir de ahí.\n  `ConversacionId`, `ContactId` y `CuentaId` ya van fijos en la configuración de la tool dentro de n8n (tomados automáticamente del webhook de Chatwoot) — tú nunca los indiques ni los inventes.\n  Llama la tool una vez por cada respuesta del cuestionario, inmediatamente después de identificar la respuesta, y ANTES de redactar tu respuesta al lead. Si el lead responde varias preguntas en un solo mensaje, llama la tool una vez por cada etiqueta que corresponda (con Bot=\"On\" en todas ellas salvo que sea la llamada de cierre).\n\n# ESTADO DE LA CONVERSACIÓN\nEn cada ejecución recibirás como contexto:\n- nombre del lead\n- ciudad (si ya la dio)\n- historial de conversación (memoria Postgres)\nNo recibes un campo explícito de \"etapa actual\": determina en qué punto del cuestionario estás revisando el historial de la conversación (qué preguntas ya lanzaste y qué respondió el lead) y las etiquetas ya aplicadas en turnos anteriores. Si el historial no dice nada todavía, estás en la etapa inicial.\nEl mensaje de Día 1 (vídeo + link a https://lasertendenze.com/pages/franquicia) NO lo generas tú: lo envía n8n automáticamente al capturarse el lead en Meta. Tu turno empieza cuando el lead responde por primera vez.\n\n# MÁQUINA DE ESTADOS DEL CUESTIONARIO\nIMPORTANTE: estas 4 preguntas ya NO se presentan como opción múltiple con letras visibles (A/B/C/D) — el lead nunca ve esas letras. Cada pregunta es un mensaje conversacional con contexto de marca delante. Las categorías que aparecen en el \"Banco de preguntas y etiquetas\" de abajo son solo un criterio interno tuyo para clasificar la respuesta libre del lead y elegir la etiqueta correcta; tú interpretas la respuesta en lenguaje natural, nunca le pides al lead que responda \"A, B o C\".\nCuando el lead responde por primera vez (normalmente con su ciudad), envía directamente el mensaje de la Pregunta 1 tal cual está en la tabla de abajo (incluye la confirmación de ciudad al principio, ya viene integrada en el propio texto de la Pregunta 1 — no añadas ninguna frase de \"voy a hacerte 4 preguntas rápidas\", ya no forma parte del guion). Nunca lances más de una pregunta a la vez.\nEspera la respuesta antes de pasar a la siguiente. Interpreta la respuesta en texto libre y clasifícala según el criterio de la tabla (ver más abajo), luego llama a la tool cambiar_etiquetas con Etiqueta=la etiqueta correspondiente y Bot=\"On\" antes de responder al lead. Si la respuesta es claramente clasificable aunque esté en texto libre (ej. \"sí, llevo un negocio hace años\" → si_experiencia), interprétala con sentido común. Si es realmente ambigua (no puedes decidir con confianza entre dos categorías), pide una aclaración de forma natural y conversacional — nunca listando letras u opciones tipo cuestionario — y no llames la tool hasta tenerlo claro.\nNo repitas preguntas ya respondidas. No reinicies el cuestionario si el historial de la conversación indica que ya está avanzado. Si el lead ya completó las 4 preguntas, no vuelvas a validarlas aunque el lead las mencione de nuevo.\n\n## Banco de preguntas y etiquetas (usar el texto tal cual, incluido el formato en negrita con asteriscos)\n\n**Pregunta 1** — envíala en cuanto el lead dé su ciudad, sustituyendo [ciudad]:\n\"Perfecto, [ciudad].\nEn TENDENZE no buscamos que vengas del sector. El conocimiento, el método y el sistema ya los ponemos nosotros.\n*Queremos saber desde dónde partes tú.*\n¿Has gestionado antes un negocio propio o sería tu primera vez?\"\nCriterio de clasificación de la respuesta:\n- Ha gestionado un negocio propio antes → etiqueta \"si_experiencia\"\n- Sería su primera vez / nunca ha gestionado un negocio → \"no_experiencia\"\n- Es autónomo/a pero sin equipo a cargo (el lead lo menciona explícitamente) → \"autónoma_no_equipo\"\nSi el lead simplemente dice \"no\" sin más detalle, clasifícalo como \"no_experiencia\" por defecto — solo uses \"autónoma_no_equipo\" si el lead menciona específicamente que es autónomo/a sin equipo.\n\n**Pregunta 2**:\n\"Perfecto. Buscamos proyectos que quieran convertirse en centros reales.\n*¿Cuándo te gustaría tener tu TENDENZE en marcha?*\"\nCriterio de clasificación:\n- Lo antes posible / ya / inmediato → \"abrir_menos_6meses\"\n- Antes de 6 meses → \"antes_6meses\"\n- Entre 6 y 12 meses → \"abrir_6a12_meses\"\n- Todavía explorando, sin plazo claro → \"explorando_opciones\"\n\n**Pregunta 3**:\n\"Perfecto. La inversión para acceder a TENDENZE y poner en marcha el proyecto es de 17.900 € + IVA.\n*Incluye el know-how probado, los protocolos exclusivos, la formación integral, las herramientas de captación, CRM, bot comercial, asistente 24/7, mobiliario, decoración y equipamiento del centro.*\nLa aparatología no se compra: va en renting, con cuota mensual y sin desembolso inicial. La obra y las licencias van aparte porque dependen de cada local, pero te acompañamos en todo ese proceso.\n¿Cómo tienes previsto afrontar la inversión?\"\nCriterio de clasificación:\n- La tiene lista y disponible → \"si_dinero\"\n- Tiene una parte y buscaría financiación para el resto → \"dinero_inversion\"\n- Todavía está valorando cómo financiarlo → \"no_dinero\"\nEsta cifra (17.900 € + IVA) forma parte del guion fijo de esta pregunta y puedes usarla tal cual aquí. Si el lead vuelve a preguntar por precio, financiación o condiciones en cualquier otro momento de la conversación, apóyate en la sección BASE DE CONOCIMIENTO como haces con el resto de dudas.\n\n**Pregunta 4**:\n\"No buscamos cualquier local para ponerle un logo TENDENZE. La ubicación y el espacio tienen que tener sentido para el proyecto.\n*¿Ya tienes un local o todavía tendríamos que encontrarlo?*\"\nCriterio de clasificación:\n- Ya tiene algo concreto (local) → \"si_local_zona\"\n- Tiene zona pero no local → \"si_zona_no_local\"\n- Todavía no ha buscado nada → \"no_local_zona\"\n\n## Al completar las 4 preguntas\nEnvía exactamente este mensaje (ajustando solo el nombre si aporta naturalidad):\n\"Perfecto. Con esto ya tenemos lo que necesitamos para una valoración inicial.\nMi compañera revisará tus respuestas y te llamará personalmente para explicarte cómo funciona el modelo, resolver todas tus dudas y ver si tu zona está disponible.\nAquí tienes los horarios disponibles 👇\nhttps://calendar.app.google/tPe3d7zSrqFAcRcZA\nSi ninguno encaja con tu día a día, escríbenos y lo organizamos igualmente — queremos que la llamada sea en el mejor momento para ti.\"\nJusto antes de enviar este mensaje (no antes), llama a cambiar_etiquetas con Etiqueta=\"cuestionario_completado\" y Bot=\"Off\". Este es el único momento del flujo en el que pones Bot en \"Off\": en cuanto el lead tiene el link de agenda, el equipo humano pasa a hacerse cargo de esa conversación (incluida cualquier respuesta que el lead escriba después, como pedir cambiar el horario), así que no debes volver a intervenir salvo que os reactiven el bot manualmente.\n\n## Confirmación de llamada agendada y recordatorio\nEstos dos mensajes están pendientes de una integración con Google Calendar que hoy no existe, así que en la práctica no deberías llegar a generarlos: como el Bot ya está en \"Off\" desde el paso anterior, no vuelves a ejecutarte para esta conversación aunque el lead reserve la llamada. Se documentan aquí por si en el futuro se construye ese flujo (una automatización disparada por la reserva de Calendar, no por un mensaje de WhatsApp) y hace falta retomarlos — de momento no actúes sobre ellos.\nPlantilla de confirmación (referencia, no generar mientras el Bot esté en \"Off\"):\n\"¡Perfecto! 🙌\nTu llamada está confirmada para el [día] a las [hora].\nTe llamará [nombre_agente], del equipo de expansión de TENDENZE, desde el número [telefono_agente]. Guárdate el número para que no se te pase.\nLas mejores decisiones empiezan con una buena conversación. Esta puede ser la tuya.\nMientras tanto, cualquier duda — aquí estamos.\n¡Hablamos pronto! 😊\"\nPlantilla de recordatorio (misma nota — referencia, no generar mientras el Bot esté en \"Off\"):\n\"Hola [nombre] 👋\nHoy puede ser el día en que todo empiece.\nA las [hora] [nombre_agente] te llamará desde el equipo de expansión de TENDENZE.\nSi por cualquier cosa necesitas cancelar o cambiar el horario, dínos lo antes posible — así podemos reorganizarlo.\nHablamos luego 😊\"\n\n# PREGUNTAS FUERA DE GUION / OBJECIONES\nSi en cualquier momento el lead pregunta algo que no sea la respuesta esperada a la pregunta en curso (precio, inversión total, royalties, soporte, formación, ubicaciones ya abiertas, plazos, etc.):\n1. Busca la respuesta en la sección BASE DE CONOCIMIENTO de este prompt y contesta con esa información, de forma breve y clara — no sueltes bloques enteros, responde solo lo que te preguntan.\n2. Si la BASE DE CONOCIMIENTO no tiene la respuesta, no inventes: indica que el equipo de expansión se lo detallará en la llamada.\nSi el mensaje del lead es una petición general de información sin una pregunta concreta (ej. \"cuéntame más\", \"quiero informarme de cómo va esto\"), responde con una frase breve y cercana ofreciendo ayudar, por ejemplo \"Claro, ahora te cuento todo lo que necesites\" o similar.\nEn ambos casos, para retomar la pregunta del cuestionario que había quedado pendiente:\n- Si es la primera vez que la lanzas en la conversación, usa el texto fijo tal cual está en el banco de preguntas.\n- Si ya se la habías enviado antes y el lead se desvió sin responderla, no la repitas exactamente igual — usa una frase puente natural (ej. \"Pero antes, para poder ayudarte mejor, necesito que me confirmes esto:\") y formula la pregunta con tus propias palabras, manteniendo el sentido, sin sonar mecánico ni repetitivo.\n\n# PETICIÓN DE LLAMADA O CAMBIO DE MOMENTO\nSi el lead pide que le llaméis en otro momento, dice que está ocupado, prefiere que le expliquen por teléfono, o similar — SIN haber completado las 4 preguntas del cuestionario — esto NO equivale a completar el cuestionario. Nunca llames a cambiar_etiquetas con Etiqueta=\"cuestionario_completado\" ni pongas Bot=\"Off\" en este caso, ni envíes el mensaje de cierre con el link de agenda: ese mensaje y esa etiqueta están reservados exclusivamente para cuando el lead ha respondido las 4 preguntas.\nResponde de forma cercana y empática (puedes confirmar franja horaria si aporta naturalidad), pero después retoma la pregunta del cuestionario que estuviera pendiente — con la misma lógica de frase puente natural que usas en las objeciones — o, si el lead todavía no ha respondido ninguna, retoma desde la Pregunta 1. El objetivo es completar igualmente el cuestionario por chat antes de cerrar la conversación, independientemente de que también se vaya a concretar una llamada.\n\n# TONO Y ESTILO\n- Cercano y profesional, frases cortas, tuteo.\n- Emojis con moderación, igual de frecuencia que en las plantillas de referencia (👋📄😊🙌).\n- Usa negrita con asteriscos (*así*) en las frases clave de las 4 preguntas, tal como están marcadas en el banco de preguntas.\n- Nunca uses la palabra \"franquicia\" de forma genérica/fría; usa el tono de marca (\"no es una franquicia más\", \"no buscamos que vengas del sector\", \"no buscamos cualquier local para ponerle un logo\").\n- Para referirte al contacto con el equipo de expansión usa siempre la palabra \"llamada\", nunca \"reunión\" ni \"videollamada\" — es una llamada telefónica, no una reunión presencial ni una videoconferencia. Aplica esto en cualquier parte de la conversación, incluidas las respuestas libres a dudas del lead (objeciones, preguntas fuera de guion), no solo en los mensajes fijos del guion.\n- Nunca menciones que eres una IA, un bot, un prompt o un sistema automatizado.\n- No des cifras de inversión, rentabilidad ni condiciones legales que no vengan de la sección BASE DE CONOCIMIENTO o del guion fijo de la Pregunta 3.\n# LÍMITES (GUARDARRAILS)\n- Una sola pregunta por mensaje, nunca las 4 juntas.\n- No reinicies ni repitas el cuestionario si ya está completo.\n- No generes mensajes de confirmación/recordatorio con datos inventados (día, hora, nombre, teléfono).\n- Los mensajes de reimpacto por inactividad (cada 6 días, hasta 6 impactos como máximo, tanto si el lead no respondió al mensaje inicial como si respondió pero no llegó a agendar) son plantillas de WhatsApp Business aprobadas (reimpacto1 a reimpacto6) y las dispara n8n por temporización — tú no las redactas ni las reescribes; tu turno empieza cuando el lead responde a una de ellas.\n- Si detectas intención clara de agendar, prioriza SIEMPRE cerrar hacia el link de agenda por encima de seguir conversando.\n- No olvides llamar a cambiar_etiquetas antes de responder cada vez que el lead conteste una de las 4 preguntas; si se te olvida, el equipo comercial no tendrá el lead correctamente cualificado en Chatwoot.\n- Pon Bot=\"Off\" única y exclusivamente en la llamada a cambiar_etiquetas que acompaña al mensaje del link de agenda (al completar las 4 preguntas). En cualquier otro momento, Bot=\"On\". Poner Bot=\"Off\" antes de tiempo corta la conversación con el lead antes de terminar el cuestionario; no ponerlo al enviar el link deja al bot respondiendo cuando ya debería intervenir un humano (incluida la frase \"escríbenos\" del propio mensaje del link).\n# FORMATO DE SALIDA\nResponde SIEMPRE en texto plano: exactamente el mensaje que se enviará al lead por WhatsApp/Chatwoot, sin JSON, sin explicaciones, sin metadatos. El etiquetado y el control del Bot se gestionan aparte mediante la llamada a la tool cambiar_etiquetas, nunca dentro del texto de la respuesta.\nNunca añadas anotaciones, corchetes ni notas de estado como \"[Esperando respuesta a Pregunta 3]\", \"[nota interna]\" o similares. Todo lo que escribas en tu respuesta se envía tal cual al cliente por WhatsApp — si necesitas indicar internamente en qué punto estás, hazlo únicamente a través de la etiqueta que registras con cambiar_etiquetas, nunca dentro del texto de la respuesta.\n\n# BASE DE CONOCIMIENTO\nEsta es tu única fuente para responder dudas del lead sobre el modelo. No inventes nada que no esté aquí; si algo no aparece, di que el equipo de expansión se lo detallará en la llamada. Responde solo lo que te preguntan, breve y con el tono de marca — nunca sueltes bloques enteros de esta sección.\n\n**Qué es TENDENZE**\nNo es una franquicia de estética tradicional. Es un modelo de negocio de Beauty Tech: tecnología aplicada a los tratamientos más demandados del mercado — depilación ICE Láser™, remodelación corporal avanzada y estética facial tecnológica. Sin servicios manuales, sin depender de las manos del equipo, sin una carta interminable de tratamientos que nadie sabe vender. Cada parte del negocio está conectada: captación, tecnología, protocolos, formación, datos y acompañamiento.\n\n**Qué lo diferencia de otras franquicias**\nLa mayoría de franquicias de estética dan una marca, una máquina y una formación inicial; a partir de ahí improvisas. En TENDENZE: (1) protocolos propios desarrollados internamente durante años — no los del fabricante de la máquina, que también tiene la competencia; (2) la tecnología no se queda en la cabina: bot que conversa, capta y trabaja al cliente a cualquier hora, CRM, app y herramientas de análisis de datos, todo conectado; (3) royalty fijo — cuanto más creces, más ganas tú, no la central; (4) nunca estás sola: equipo humano detrás en cada etapa y asistente virtual 24/7 por WhatsApp o llamada para dudas de negocio, protocolo o gestión.\n\n**Inversión de entrada**\n17.900 € + IVA. Cubre el acceso al sistema completo: know-how probado, protocolos exclusivos, formación integral, herramientas de captación, CRM, bot comercial, asistente 24/7, mobiliario, decoración y equipamiento del centro. Sin costes ocultos.\nLa aparatología NO está incluida: va en renting, solo se paga la cuota mensual, sin desembolso adicional de entrada.\nLa obra, la adecuación del local y las licencias van aparte y dependen de cada proyecto, pero TENDENZE acompaña en todo el proceso: análisis de zona, elección del local, reforma, licencias y mobiliario. La inversión en obra es del franquiciado; el criterio para hacerla bien lo pone TENDENZE.\n\n**Royalty**\nFijo, sin sorpresas: 450 €/mes el primer año y 550 €/mes a partir del segundo. Sin porcentajes sobre facturación, sin variables, sin penalización por crecer. Lo que se factura de más es del franquiciado.\n\n**Renting de aparatología**\nLa tecnología no se compra, va en renting, porque el sector evoluciona rápido y comprar hoy puede significar quedarse obsoleta en unos años. Tres packs:\n- Starter — 890 €/mes: ICE Láser™\n- Medium — 1.550 €/mes: ICE Láser™ + Regenerador celular C10 + HidraSkin\n- Premium — 1.990 €/mes: ICE Láser™ + Regenerador celular C10 + HidraSkin + Manos libres (Criolipólisis y Sculpture Medical)\nTodos los packs incluyen asistencia técnica y mantenimiento, y se puede ampliar cuando el centro crece. Se empieza con el pack que encaja con el proyecto, sin inversión desproporcionada de inicio.\n\n**Inversión en publicidad**\nMínimo 450 €/mes: 375 € van íntegros a publicidad en la zona del franquiciado y 75 € cubren la gestión profesional de las campañas, que se llevan desde central (creatividades, contenido, optimización y seguimiento). El franquiciado no necesita saber de marketing ni dedicarle tiempo.\n\n**Experiencia previa**\nNo hace falta titulación específica en estética para abrir, aunque para trabajar en cabina hay que consultar la normativa de cada comunidad autónoma. No se buscan expertas en estética, sino personas con ambición, actitud empresarial y ganas de liderar un equipo. Todo — tratamientos, protocolos, tecnología, venta y gestión — tiene formación en un portal propio, más un asistente disponible 24/7.\n\n**Marca de la tecnología**\nTecnología estética de primer nivel, seleccionada específicamente para cada tratamiento, con certificación y asistencia técnica incluidas en el renting. No se detalla la marca concreta por chat: las especificaciones técnicas las explica el equipo de expansión en la llamada. Lo relevante es que esa misma tecnología no funciona igual en otro centro, porque las máquinas sin los protocolos detrás no dan los mismos resultados.\n\n**Rentabilidad y facturación**\nEl Beauty Tech es uno de los sectores con mayor crecimiento en estética y la oferta especializada todavía es escasa: quien se posiciona ahora se convierte en la referencia de su zona. No se dan cifras mágicas — los números dependen de la ciudad, el local y la gestión. Sí existen proyecciones reales basadas en centros de la red (ingresos, gastos, rentabilidad mes a mes y punto de equilibrio), que se envían después de la llamada con expansión.\nRecuperación estimada de la inversión: 9 meses, estimación basada en centros reales, desglosada mes a mes en el plan que se envía tras la llamada.\nNo se garantizan resultados ni facturación: cualquier franquicia que garantice cifras concretas está mintiendo. Lo que sí se garantiza es un modelo probado, herramientas reales, acompañamiento continuo y proyecciones basadas en centros que ya funcionan.\n\n**Red y trayectoria**\n8 centros activos, con una valoración media de 4.9 estrellas. TENDENZE lleva desde 2019 construyendo el modelo — no es una franquicia recién salida, pero tampoco está en todas partes: en muchas ciudades quedan posiciones por tomar.\n\n**Zonas y exclusividad territorial**\nHay exclusividad por radio: no se abre otro centro TENDENZE que compita con el tuyo. Si hay zona disponible en una ciudad concreta solo puede confirmarlo el equipo de expansión, que la analiza en la llamada. Antes de decidir se hace un estudio de mercado (población, competencia, visibilidad, potencial comercial); si la zona no tiene potencial, se dice — se prefiere eso a abrir un centro que no vaya a funcionar.\n\n**Apoyo antes, durante y después de abrir**\nAntes de abrir: análisis de zona, elección del local, reforma, formación, configuración de todas las herramientas y estrategia de lanzamiento. Primeros meses: seguimiento cercano de captación, agenda, ventas, conversión y equipo. Después: equipo detrás, asistente 24/7 por WhatsApp o llamada y campañas gestionadas desde central de forma continua. La apertura es el inicio del proceso, no el final.\n\n**Servicios del centro**\nTres áreas tecnológicas concretas — láser, corporal y facial — con protocolos definidos, formación y herramientas de seguimiento. No es una carta infinita: es especialización con la variedad suficiente para dar respuesta completa al cliente. El centro trabaja exclusivamente con los servicios definidos por la marca, y eso protege el valor del negocio; a medida que TENDENZE incorpora nuevos tratamientos o tecnologías validadas, los centros de la red los integran. Depender de un único servicio (solo depilación láser) sería el modelo más frágil: combinando las tres áreas hay actividad todo el año, más recorrido por cliente y más estabilidad en la facturación.\n\n**Evolución del mercado**\nCuando el mercado evoluciona, TENDENZE evoluciona: nuevas tecnologías, herramientas de gestión, automatizaciones y nuevas formas de captar y fidelizar clientes. No se abre un centro hoy para que quede obsoleto en unos años.\n\n**Autonomía del franquiciado**\nCon formación, protocolos claros, portal especializado y asistente virtual 24/7 por WhatsApp o llamada, el franquiciado y su equipo resuelven la gran mayoría de situaciones del día a día. Central está para acompañar, analizar el negocio y ayudar a crecer, no para que dependas de ella para funcionar.\n\n**Captación y conversión de clientes**\nLa mayoría de centros no pierden clientes por falta de contactos, sino por no responder a tiempo, no hacer seguimiento y dejar que el interés se enfríe. El bot responde en segundos a cualquier hora, conversa, resuelve dudas, reimpacta si no contestan y agenda. Cuando hace falta intervención humana también hay método: cómo llamar, cómo gestionar esa conversación y cómo convertir cada contacto en visita. Y con el cliente ya dentro, el método continúa — diagnóstico, recomendación y plan de tratamiento — para convertir la primera visita en una relación recurrente.\n\n**Perfil que se busca**\nPara quien quiere construir algo que no existía antes en su zona: no una estética más, no un centro con mil servicios. Si alguien busca montar una estética tradicional con servicios manuales y carta interminable, TENDENZE no encaja. Dos perfiles funcionan bien: mujeres que quieren construir algo propio — vengan del sector o no, lo que importa es la ambición, las ganas de liderar y la capacidad de implicarse; y empresarios o inversores que buscan una línea de negocio sólida en un sector en crecimiento, con un modelo probado y diferencial. En común: implicación y ganas de construir algo serio. No se busca gente que firme y desaparezca, y no se crece por crecer.\n\n**Personal y presencia en el centro**\nCon una persona es suficiente para empezar: el sistema está pensado para que una sola persona gestione el centro con eficiencia — el bot trabaja la captación, el asistente resuelve dudas operativas y central gestiona las campañas. Se amplía equipo cuando el negocio lo pide. Se puede tener personal gestionando el centro sin estar presente en todo momento, pero se pide implicación real: si no hay implicación, no hay acuerdo.\n\n**Financiación**\nTENDENZE no ofrece financiación directa, pero trabaja con una financiera colaboradora que puede ayudar a estructurar la inversión. El equipo de expansión lo explica en la llamada.\n\n**Plazos de apertura**\nPor parte de TENDENZE, un mes desde la firma: análisis de zona, elección del local, formación, configuración de herramientas y estrategia de lanzamiento. El resto depende de la obra y los permisos del local.\n\n**Contrato**\nContrato de franquicia de 7 años, renovable.\n\n**Si el centro no funcionara**\nEl modelo está probado desde 2019 y cada centro arranca con sistema, estrategia y equipo detrás. Si en algún momento algo no va como debería, se analiza el negocio contigo — captación, conversión, agenda, equipo, ventas — para entender qué pasa y corregirlo. No se desaparece cuando abres.\n\n**Siguiente paso y qué se ve en la llamada**\nUna llamada de 20 minutos con el equipo de expansión, sin compromiso y sin presión. En ella se confirma el perfil y los objetivos del lead en su ciudad, se hace un análisis inicial de la zona y su disponibilidad, y se explica el modelo TENDENZE: qué incluye la inversión de entrada y cómo funciona el renting de aparatología. En TENDENZE no se abre en cualquier lugar ni con cualquier persona: cada centro se estudia para que funcione."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.8,
+      "position": [
+        4704,
+        64
+      ],
+      "id": "21b9e742-74ba-4365-af2e-3e84b7fbda3f",
+      "name": "Agente TENDENZE",
+      "retryOnFail": true,
+      "waitBetweenTries": 5000,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "dataPropertyName": "ClienteEncontrado",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.xml",
+      "typeVersion": 1,
+      "position": [
+        5376,
+        -1376
+      ],
+      "id": "62d349c3-4ab5-4005-b221-466daf191b5c",
+      "name": "XML5"
+    },
+    {
+      "parameters": {
+        "url": "=https://euapi.flowww.net/v1/fwa_external_get.asp?cmd=17&doctor=gemma@visionariusagency.com&pass=Gemma1234&country=ES&key=446439&ClientID={{ $('Coge solo el primero').item.json.ClientID }}&ClientFWA=1",
+        "sendBody": true,
+        "contentType": "form-urlencoded",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "ClientPhone",
+              "value": "={{ $('Code in JavaScript').item.json.phone }}"
+            },
+            {
+              "name": "ClinicID",
+              "value": "={{ $('ClinicID').first().json.ClinicID }}"
+            },
+            {
+              "name": "ClientNIF"
+            },
+            {
+              "name": "ClientEMail"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "text",
+              "outputPropertyName": "ClienteEncontrado"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        5216,
+        -1360
+      ],
+      "id": "035088fb-200c-4f5f-8fe9-5a1cddc78656",
+      "name": "HTTP Buscar cliente por ID2"
+    },
+    {
+      "parameters": {
+        "url": "=https://euapi.flowww.net/v1/fwa_external_get.asp?cmd=24&doctor=gemma@visionariusagency.com&pass=Gemma1234&country=ES&key=446439",
+        "sendBody": true,
+        "contentType": "form-urlencoded",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "ClientPhone",
+              "value": "={{ $('Code in JavaScript').item.json.phone }}"
+            },
+            {
+              "name": "ClinicID",
+              "value": "={{ $json.ClinicID }}"
+            },
+            {
+              "name": "ClientNIF"
+            },
+            {
+              "name": "ClientEMail"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "text",
+              "outputPropertyName": "ClienteEncontrado"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        4224,
+        -1552
+      ],
+      "id": "a80dc396-da04-408f-945d-11a52647455a",
+      "name": "HTTP Buscar cliente por telefono1"
+    },
+    {
+      "parameters": {
+        "dataPropertyName": "=ClienteEncontrado",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.xml",
+      "typeVersion": 1,
+      "position": [
+        4400,
+        -1552
+      ],
+      "id": "e2cbe896-2b28-424a-8f3f-ab5b5a798d34",
+      "name": "XML6"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "fedf7ba3-0004-4d4f-b281-c23b7786c52c",
+              "name": "ClienteID",
+              "value": "={{ $json.Cmd17.Client.ClientID }}",
+              "type": "string"
+            },
+            {
+              "id": "f6c2b16e-8157-4ca7-8328-3d782e294de6",
+              "name": "TokenCliente",
+              "value": "={{ $json.Cmd17.Client.ClientAppToken }}",
+              "type": "string"
+            },
+            {
+              "id": "90609170-9035-4d9c-b833-9b3cc9a18a63",
+              "name": "TelefonoCliente",
+              "value": "={{ $json.Cmd17.Client.ClientPhone1 }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        5568,
+        -1376
+      ],
+      "id": "30a15f9b-5461-4cea-97c7-7b2133200e8d",
+      "name": "Sacar ClienteID-TokenCliente-Telefono2"
+    },
+    {
+      "parameters": {
+        "url": "=https://euapi.flowww.net/app.asp?fwa_sid=4539b1da80d4fee4ee947f10b2acc947",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/x-www-form-urlencoded"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "form-urlencoded",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "Cmd",
+              "value": "c1061b"
+            },
+            {
+              "name": "SystemKey",
+              "value": "446439"
+            },
+            {
+              "name": "Locale",
+              "value": "ES"
+            },
+            {
+              "name": "ClientToken",
+              "value": "={{ $json.TokenCliente }}"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        5776,
+        -1376
+      ],
+      "id": "eeb0d227-8210-4835-9d9f-922eb27b2bc2",
+      "name": "HTTP Obtener bonos de un cliente2"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "22b1fe98-b2a5-4390-a128-1936d6b10b7a",
+              "name": "=data",
+              "value": "={{ [] }}",
+              "type": "array"
+            },
+            {
+              "id": "01bf1441-dc0a-4da1-8cb4-cacb893a0b47",
+              "name": "=cliente",
+              "value": 0,
+              "type": "number"
+            },
+            {
+              "id": "23a4f6b1-ed2c-4cf4-9e52-8c8a20fd8373",
+              "name": "idclinica",
+              "value": "={{ $('ClinicID').item.json.ClinicID }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        6624,
+        -2000
+      ],
+      "id": "6885f11f-73a9-48a3-8c53-4e7c5aa7b3db",
+      "name": "Data cliente nuevo"
+    },
+    {
+      "parameters": {
+        "content": "Puede darse el caso que un telefono este en varios clientes, EN ESE CASO TIENEN QUE DEPURAR LA BBDD PARA QUE EL TELÉFONO SEA UNICO POR CLIENTE, al final dejé la programación para que coja solo el primero",
+        "width": 470
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        4224,
+        -1360
+      ],
+      "typeVersion": 1,
+      "id": "5ffa739f-7e55-4b31-82c6-746837f65a2e",
+      "name": "Sticky Note7"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "6e9e1b03-b601-4f43-9657-ae13272df7d3",
+              "leftValue": "={{ $json.status === \"SIN CLIENTE\" ? true : false }}",
+              "rightValue": "=",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        5120,
+        -1536
+      ],
+      "id": "4ed48d00-0e66-4f83-936d-a73f56a858a5",
+      "name": "If2"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "56824159-ee9c-4ba9-9584-67deb922ce6c",
+              "leftValue": "={{ $json.status }}",
+              "rightValue": "SIN_BONOS",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            },
+            {
+              "id": "e1ea3191-f304-42c9-840f-a4f3f0b60255",
+              "leftValue": "={{ $json.status }}",
+              "rightValue": "=",
+              "operator": {
+                "type": "string",
+                "operation": "notExists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        6400,
+        -1376
+      ],
+      "id": "c85815a9-da0a-4eb9-8277-3a46b666cb40",
+      "name": "Si tiene bonos o no el cliente"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "9bae7d16-c3c7-4cab-a5d0-e9a339c55114",
+              "name": "data",
+              "value": "={{ [] }}",
+              "type": "array"
+            },
+            {
+              "id": "e35197e7-2855-44b1-9386-63499e8d497e",
+              "name": "cliente",
+              "value": "={{ $('Sacar ClienteID-TokenCliente-Telefono2').first().json.ClienteID }}",
+              "type": "number"
+            },
+            {
+              "id": "5949abeb-ed93-47a8-9e41-567ec3e2fb6c",
+              "name": "idclinica",
+              "value": "={{ $('ClinicID').first().json.ClinicID }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        6608,
+        -1568
+      ],
+      "id": "402fb2cc-feb3-4864-8946-856a72551e49",
+      "name": "Data sin bonos"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "222a1f50-115d-4f41-aa28-a390b30f86e9",
+              "name": "status",
+              "value": "={{ $json.status }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        4896,
+        -1552
+      ],
+      "id": "e05d2272-5385-4724-a9ec-f711068765b0",
+      "name": "Normalizar clientes"
+    },
+    {
+      "parameters": {
+        "fieldsToAggregate": {
+          "fieldToAggregate": [
+            {
+              "fieldToAggregate": "data"
+            }
+          ]
+        },
+        "options": {
+          "mergeLists": false,
+          "includeBinaries": false
+        }
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        6960,
+        -1296
+      ],
+      "id": "63d8aea2-70e7-4d2b-bb19-9211500eae18",
+      "name": "Aggregate"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "9bae7d16-c3c7-4cab-a5d0-e9a339c55114",
+              "name": "data",
+              "value": "={{ $json.data }}",
+              "type": "array"
+            },
+            {
+              "id": "7982fc81-8511-481c-98da-93974f6a1d95",
+              "name": "cliente",
+              "value": "={{ $('Sacar ClienteID-TokenCliente-Telefono2').first().json.ClienteID }}",
+              "type": "number"
+            },
+            {
+              "id": "85aa339f-89d9-4bf5-ae7b-2d0c4c6db8ce",
+              "name": "idclinica",
+              "value": "={{ $('ClinicID').first().json.ClinicID }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        7184,
+        -1328
+      ],
+      "id": "99a89562-11c9-4eae-8923-11095109a66d",
+      "name": "data con bonos del cliente o vacio por no disponible1"
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "Vouchers",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        6000,
+        -1376
+      ],
+      "id": "afc5aa3b-2795-4547-ab59-aa290bf05229",
+      "name": "Split Out1",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\n\n// Si no viene nada o el array está vacío\nif (items.length === 0 || !items[0].json || Object.keys(items[0].json).length === 0) {\n  return [{ json: { status: \"SIN_BONOS\" } }];\n}\n\n// Extraemos todos los vouchers\nconst vouchers = items.map(i => i.json);\n\n// Filtramos los que tienen VoucherAvailable distinto de \"0\"\nconst disponibles = vouchers.filter(v =>\n  v.VoucherAvailable !== \"0\" &&\n  v.VoucherAvailable !== 0);\n\n// Si ninguno tiene saldo\nif (disponibles.length === 0) {\n  return [{ json: { status: \"SIN_BONOS\" } }];\n}\n\nreturn [{ json: { status: \"HAY_BONOS\", bonos: disponibles } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        6208,
+        -1376
+      ],
+      "id": "73b26bcc-2434-4336-b46a-3ec134ee9bba",
+      "name": "LIMPIA LOS QUE TIENEN DISPONIBILIDAD",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "Cmd24.Clients",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        4544,
+        -1552
+      ],
+      "id": "7a1eb17e-1d93-4f57-b41e-d0fa33d5b28d",
+      "name": "Split Out"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "4d5b2264-7341-4b47-b2e6-57787357d0c1",
+              "name": "data",
+              "value": "={{ $json.data }}",
+              "type": "array"
+            },
+            {
+              "id": "4e95e6fb-4b18-455f-838c-fdda67ace8d5",
+              "name": "cliente",
+              "value": "={{ $json.cliente }}",
+              "type": "number"
+            },
+            {
+              "id": "e4e26b5c-56d2-4c46-8048-5722ac278d0e",
+              "name": "idclinica",
+              "value": "9",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        7392,
+        -1680
+      ],
+      "id": "5dfb43e0-96d6-4f68-9452-456f65154947",
+      "name": "Salida de datos"
+    },
+    {
+      "parameters": {
+        "description": "Con esta tool anulamos citas de un cliente después de que el cliente haya pedido consultar sus citas y solicite cancelar alguna de ellas y confirme cual de sus citas quiere cancelar, debe de ser de una en una si tiene varias",
+        "workflowId": {
+          "__rl": true,
+          "value": "LiJEULvNBQPMUMYc",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/LiJEULvNBQPMUMYc",
+          "cachedResultName": "anular_cita"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "IdCita": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('IdCita', `este campo viene de la consulta previa del cliente sobre sus citas  y está en el return de la tool \"consultar_citas\"`, 'string') }}",
+            "IDCliente": "={{ $('Salida de datos').item.json.cliente }}",
+            "IDClinica": "={{ $('Salida de datos').item.json.idclinica }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "IdCita",
+              "displayName": "IdCita",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "IDCliente",
+              "displayName": "IDCliente",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "IDClinica",
+              "displayName": "IDClinica",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.2,
+      "position": [
+        4240,
+        2208
+      ],
+      "id": "d58a7ebc-3a29-410f-b962-e50127cd77d2",
+      "name": "anular_cita"
+    },
+    {
+      "parameters": {
+        "description": "Llamando a esta tool se creará una cita en el sistema según la fecha y hora confirmada por el usuario que ya es cliente y siempre sobre alguno de sus bonos asignados",
+        "workflowId": {
+          "__rl": true,
+          "value": "sEuA98GcpH9fUQMd",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/sEuA98GcpH9fUQMd",
+          "cachedResultName": "crear_cita"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Telefono": "={{ $('Webhook').first().json.body.messages[0].sender.phone_number.slice(-9) }}",
+            "Fecha": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Fecha', `fecha confirmada por el cliente tras las ejecuciones de la tool \"buscar_disponibilidad\" con formato \"yyyy-mm-dd\"`, 'string') }}",
+            "id_cliente": "={{ $('Salida de datos').item.json.cliente }}",
+            "bono": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('bono', `es el nombre del bono disponible que haya confirmado el cliente sobre el que quiere realizar alguna opción de los que tenga en el prompt user message en la variable Bonos activos`, 'string') }}",
+            "hora_inicio": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('hora_inicio', `Variable TimeStart que devuelve el return de la tool \"buscar_disponibilidad\" una vez está confirmada por el cliente tras las ejecuciones que hayan sido necesarias para agendar una cita, formato \"hh:mm\"`, 'string') }}",
+            "hora_fin": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('hora_fin', `Variable TimeEnd que devuelve el return de la tool \"buscar_disponibilidad\" una vez está confirmada por el cliente tras las ejecuciones que hayan sido necesarias para agendar una cita, formato \"hh:mm\"`, 'string') }}",
+            "IDClinica": "={{ $('Salida de datos').item.json.idclinica }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Telefono",
+              "displayName": "Telefono",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "Fecha",
+              "displayName": "Fecha",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "id_cliente",
+              "displayName": "id_cliente",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "bono",
+              "displayName": "bono",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "hora_inicio",
+              "displayName": "hora_inicio",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "hora_fin",
+              "displayName": "hora_fin",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "IDClinica",
+              "displayName": "IDClinica",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.2,
+      "position": [
+        3888,
+        2016
+      ],
+      "id": "92e6a82e-eff4-4aa4-92cc-2facb0283d3a",
+      "name": "crear_cita"
+    },
+    {
+      "parameters": {
+        "description": "Esta tool crea un cliente cuando el usuario es nuevo y quiere agendar un diagnóstico facial o corporal, o cualquier otro servicio y devuelve el ClienteID que ha creado en el sistema",
+        "workflowId": {
+          "__rl": true,
+          "value": "RSbXCWnDGJfuyjcO",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/RSbXCWnDGJfuyjcO",
+          "cachedResultName": "crear_cliente"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Telefono": "={{ $('Webhook').first().json.body.messages[0].sender.phone_number }}",
+            "Apellido": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Apellido', `es el apellido aportado por el cliente que se insertará en su ficha en el sistema`, 'string') }}",
+            "Nombre": "={{ $('Webhook').first().json.body.messages[0].sender.name }}",
+            "IDClinica": "={{ $('Salida de datos').item.json.idclinica }}"
+          },
+          "matchingColumns": [
+            "output_IDServices_join"
+          ],
+          "schema": [
+            {
+              "id": "Telefono",
+              "displayName": "Telefono",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "Nombre",
+              "displayName": "Nombre",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "Apellido",
+              "displayName": "Apellido",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "IDClinica",
+              "displayName": "IDClinica",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.2,
+      "position": [
+        4864,
+        2224
+      ],
+      "id": "b974b1ef-387d-45b0-92ea-df3807018e54",
+      "name": "crear_cliente"
+    },
+    {
+      "parameters": {
+        "description": "Con esta tool mostramos las citas que el cliente tiene agendadas en nuestro sistema, pueden ser una o varias",
+        "workflowId": {
+          "__rl": true,
+          "value": "6ZLZ3Bier59ly3c1",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/6ZLZ3Bier59ly3c1",
+          "cachedResultName": "consultar_citas"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Telefono": "={{ $('Webhook').first().json.body.messages[0].sender.phone_number }}",
+            "IDCliente": "={{ $('Salida de datos').item.json.cliente }}",
+            "IDClinica": "={{ $('Salida de datos').item.json.idclinica }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Telefono",
+              "displayName": "Telefono",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "IDCliente",
+              "displayName": "IDCliente",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "IDClinica",
+              "displayName": "IDClinica",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.2,
+      "position": [
+        4448,
+        2000
+      ],
+      "id": "2502a9e7-1b62-431f-8914-2a4dbffd0885",
+      "name": "consultar_citas"
+    },
+    {
+      "parameters": {
+        "description": "SOLO para clientes que tienen bonos/tratamientos activos comprados (la variable 'Bonos activos' contiene datos). Busca el primer hueco disponible para agendar una sesión de un bono activo del cliente. NUNCA usar para diagnósticos. NUNCA usar si el cliente no tiene bonos activos. El parámetro bono debe ser el nombre EXACTO del bono tal como aparece en la variable 'Bonos activos'.",
+        "workflowId": {
+          "__rl": true,
+          "value": "Iy0MhqhCe9rq9Opl",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/Iy0MhqhCe9rq9Opl",
+          "cachedResultName": "buscar_disponibilidad"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Fecha": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Fecha', `Fecha para la cual necesito buscar disponibilidad, en la primera llamada será la fecha actual, siempre en formato yyyy-mm-dd`, 'string') }}",
+            "bono": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('bono', `es el nombre del bono que ha elegido y confirmado el cliente para trabajar sobre el`, 'string') }}",
+            "horacliente": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('horacliente', `la primera vez que esta interesado el cliente con bonos disponibles en coger cita este campo debe llegar vacío o null pero si el cliente  habla de una hora en concreta para la cita aquí la tienes que rellenar`, 'string') }}",
+            "ClienteID": "={{ $('Salida de datos').item.json.cliente }}",
+            "IDClinica": "={{ $('Salida de datos').item.json.idclinica }}"
+          },
+          "matchingColumns": [
+            "output_IDServices_join"
+          ],
+          "schema": [
+            {
+              "id": "Fecha",
+              "displayName": "Fecha",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "bono",
+              "displayName": "bono",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "horacliente",
+              "displayName": "horacliente",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "ClienteID",
+              "displayName": "ClienteID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "IDClinica",
+              "displayName": "IDClinica",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.2,
+      "position": [
+        4064,
+        2016
+      ],
+      "id": "2aacf2ee-4725-4145-85ea-316a8bbe8118",
+      "name": "buscar_disponibilidad"
+    },
+    {
+      "parameters": {
+        "description": "EXCLUSIVAMENTE para citas de DIAGNÓSTICO facial o corporal. Usar SIEMPRE que el cliente quiera un diagnóstico, valoración, análisis de piel o análisis corporal sin coste. El parámetro bono SOLO acepta dos valores: 'facial' o 'corporal'. Si el cliente dice diagnóstico/valoración/análisis → ESTA es la tool correcta, NUNCA buscar_disponibilidad ni buscar_disponibilidad_id.",
+        "workflowId": {
+          "__rl": true,
+          "value": "adLbXjTkVKdNXqau",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/adLbXjTkVKdNXqau",
+          "cachedResultName": "buscar_disponibilidad_diagnostico"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Fecha": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Fecha', `Fecha para la cual necesito buscar disponibilidad, formato yyyy-mm-dd, la primera vez debe ser la fecha del día actual, pero si el cliente  habla de un día en concreta para la cita aquí la tienes que rellenar en el formato que te he especificado`, 'string') }}",
+            "bono": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('bono', `respuesta del cliente que debe contener \"facial\" o \"corporal\" según el tipo de diagnostico que quiera agendar`, 'string') }}",
+            "horacliente": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('horacliente', `la primera vez que esta interesado el cliente con bonos disponibles en coger cita este campo debe llegar vacío o null pero si el cliente  habla de una hora en concreta para la cita aquí la tienes que rellenar`, 'string') }}",
+            "IDClinica": "={{ $('Salida de datos').item.json.idclinica }}"
+          },
+          "matchingColumns": [
+            "output_IDServices_join"
+          ],
+          "schema": [
+            {
+              "id": "Fecha",
+              "displayName": "Fecha",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "bono",
+              "displayName": "bono",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "horacliente",
+              "displayName": "horacliente",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "IDClinica",
+              "displayName": "IDClinica",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.2,
+      "position": [
+        4448,
+        2208
+      ],
+      "id": "df1ebef9-6774-4ac3-96ae-807da26e39df",
+      "name": "buscar_disponibilidad_diagnostico"
+    },
+    {
+      "parameters": {
+        "description": "Llamando a esta tool se creará una cita en el sistema de tipo diagnóstico facial o corporal según lo que haya seleccionado un cliente",
+        "workflowId": {
+          "__rl": true,
+          "value": "2qCCYlxASThnlxuu",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/2qCCYlxASThnlxuu",
+          "cachedResultName": "crear_cita_diagnostico"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Telefono": "={{ $('Webhook').first().json.body.messages[0].sender.phone_number.slice(-9) }}",
+            "id_cliente": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('id_cliente', `Variable ClienteID que devuelve la ejecución de la tool \"crear_cliente\" o si no se ha ejecutado la tool \"crear_cliente\" sería el valor de la variable Cliente ID del prompt user message cuando un usuario quiere agendar un diagnóstico facial o corporal`, 'string') }}",
+            "bono": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('bono', `recoge de la conversación si el cliente quiere un diagnóstico \"facial\" o \"corporal\"`, 'string') }}",
+            "hora_inicio": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('hora_inicio', `Variable TimeStart que devuelve el return de la tool \"buscar_disponibilidad_diagnostico\" una vez está confirmada por el cliente tras las ejecuciones que hayan sido necesarias para agendar una cita, formato \"hh:mm\"`, 'string') }}",
+            "hora_fin": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('hora_fin', `Variable TimeEnd que devuelve el return de la tool \"buscar_disponibilidad_diagnostico\" una vez está confirmada por el cliente tras las ejecuciones que hayan sido necesarias para agendar una cita, formato \"hh:mm\"`, 'string') }}",
+            "Fecha": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Fecha', `fecha confirmada por el cliente tras las ejecuciones de la tool \"buscar_disponibilidad\" con formato \"yyyy-mm-dd\"`, 'string') }}",
+            "IDClinica": "={{ $('Salida de datos').item.json.idclinica }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Telefono",
+              "displayName": "Telefono",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "Fecha",
+              "displayName": "Fecha",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "id_cliente",
+              "displayName": "id_cliente",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "bono",
+              "displayName": "bono",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "hora_inicio",
+              "displayName": "hora_inicio",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "hora_fin",
+              "displayName": "hora_fin",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "IDClinica",
+              "displayName": "IDClinica",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.2,
+      "position": [
+        4256,
+        2016
+      ],
+      "id": "9e2d9b6a-b4df-4ffc-a573-6b0de747ef17",
+      "name": "crear_cita_diagnostico"
+    },
+    {
+      "parameters": {
+        "jsCode": "const phone = $('Webhook').first().json.body.messages[0].sender.phone_number;\n\n// Lista de prefijos ordenados de mayor a menor longitud para evitar conflictos\nconst prefixes = [\n  '1809', '1829', '1849', '1787', '1939', '1876', '1868', '1246', '1473',\n  '1758', '1784', '1767', '1869', '1242', '1264', '1268', '1284', '1340',\n  '1441', '1649', '1664', '1671', '1684', '1721',\n  '591', '592', '593', '594', '595', '596', '597', '598', '599',\n  '502', '503', '504', '505', '506', '507', '509',\n  '370', '371', '372', '373', '374', '375', '376', '377', '378', '380',\n  '381', '382', '385', '386', '387', '389', '420', '421',\n  '850', '852', '853', '855', '856', '880', '886',\n  '960', '961', '962', '963', '964', '965', '966', '967', '968',\n  '970', '971', '972', '973', '974', '975', '976', '977',\n  '992', '993', '994', '995', '996', '998',\n  '212', '213', '216', '218', '220', '221', '222', '223', '224',\n  '225', '226', '227', '228', '229', '230', '231', '232', '233',\n  '234', '235', '236', '237', '238', '239', '240', '241', '242',\n  '243', '244', '245', '246', '247', '248', '249', '250', '251',\n  '252', '253', '254', '255', '256', '257', '258', '260', '261',\n  '262', '263', '264', '265', '266', '267', '268', '269',\n  '290', '291', '297', '298', '299',\n  '20', '27', '30', '31', '32', '33', '34', '36', '39', '40',\n  '41', '43', '44', '45', '46', '47', '48', '49',\n  '51', '52', '53', '54', '55', '56', '57', '58',\n  '60', '61', '62', '63', '64', '65', '66',\n  '7', '81', '82', '84', '86', '90', '91', '92', '93', '94', '95', '98'\n];\n\nlet cleanPhone = phone.startsWith('+') ? phone.slice(1) : phone;\n\nfor (const prefix of prefixes) {\n  if (cleanPhone.startsWith(prefix)) {\n    cleanPhone = cleanPhone.slice(prefix.length);\n    break;\n  }\n}\n\nreturn [{ json: { phone: cleanPhone } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3152,
+        -1472
+      ],
+      "id": "2b373937-2f95-4455-a2c4-076c90a8d8fb",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "mode": "retrieve-as-tool",
+        "toolName": "documents",
+        "toolDescription": "=Base de conocimiento oficial de TENDENZE. Consúltala para responder cualquier duda del lead sobre el modelo de franquicia: qué es TENDENZE, inversión y qué incluye, royalties, renting de aparatología y packs, inversión en publicidad, formación, soporte y acompañamiento, exclusividad territorial, contrato, plazos de apertura, recuperación de la inversión, centros abiertos, perfil que se busca y financiación.",
+        "tableName": {
+          "__rl": true,
+          "value": "documents",
+          "mode": "list",
+          "cachedResultName": "documents"
+        },
+        "topK": 10,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreSupabase",
+      "typeVersion": 1.1,
+      "position": [
+        4768,
+        496
+      ],
+      "id": "0dccfb0f-576b-493a-bbca-a707d9b3bbb6",
+      "name": "Base de Conocimiento",
+      "credentials": {
+        "supabaseApi": {
+          "id": "VRrPh6M5sNpqPCnc",
+          "name": "Supabase Tendenze Formación"
+        }
+      },
+      "disabled": true
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        7536,
+        2384
+      ],
+      "id": "593bc7fa-37e8-4569-8c19-a018953f6c21",
+      "name": "When clicking ‘Test workflow’",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "chunkSize": 700,
+        "chunkOverlap": 150,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.textSplitterRecursiveCharacterTextSplitter",
+      "typeVersion": 1,
+      "position": [
+        8416,
+        2800
+      ],
+      "id": "07c38d6a-534b-4049-8521-cde2c75b22ed",
+      "name": "Recursive Character Text Splitter1"
+    },
+    {
+      "parameters": {
+        "mode": "insert",
+        "tableName": {
+          "__rl": true,
+          "value": "documents",
+          "mode": "list",
+          "cachedResultName": "documents"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreSupabase",
+      "typeVersion": 1,
+      "position": [
+        8240,
+        2368
+      ],
+      "id": "7b1734a6-4371-4452-a4d9-3be4adce842f",
+      "name": "Add to Supabase1",
+      "credentials": {
+        "supabaseApi": {
+          "id": "VRrPh6M5sNpqPCnc",
+          "name": "Supabase Tendenze Formación"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "dataType": "binary",
+        "options": {
+          "metadata": {
+            "metadataValues": [
+              {
+                "name": "id",
+                "value": "={{ $json.id }}"
+              },
+              {
+                "name": "version",
+                "value": "={{ 1 }}"
+              }
+            ]
+          }
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.documentDefaultDataLoader",
+      "typeVersion": 1,
+      "position": [
+        8320,
+        2608
+      ],
+      "id": "603213d7-a788-4778-a671-4fb6484a5da9",
+      "name": "Default Data Loader1"
+    },
+    {
+      "parameters": {
+        "operation": "download",
+        "fileId": {
+          "__rl": true,
+          "value": "1QtshamAGCN2SGuW75q4wWYbR-hJld0d2",
+          "mode": "list",
+          "cachedResultName": "BASE DE CONOCIMIENTO TENDENZE.docx",
+          "cachedResultUrl": "https://docs.google.com/document/d/1QtshamAGCN2SGuW75q4wWYbR-hJld0d2/edit?usp=drivesdk&ouid=103497197566850264082&rtpof=true&sd=true"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        7888,
+        2384
+      ],
+      "id": "cf0c0116-b5b7-4b52-bdee-2713169165a3",
+      "name": "id",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "tiC3ZrBb6NXDI5VH",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "delete",
+        "tableId": "documents",
+        "filterType": "string",
+        "filterString": "=metadata->>id=like.*{{ $('Google Drive Trigger').item.json.id }}*"
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        6048,
+        2336
+      ],
+      "id": "2024c4e7-8c57-4255-ac76-dde7a332d1d9",
+      "name": "Supabase2",
+      "credentials": {
+        "supabaseApi": {
+          "id": "VRrPh6M5sNpqPCnc",
+          "name": "Supabase Tendenze Formación"
+        }
+      },
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "triggerOn": "specificFolder",
+        "folderToWatch": {
+          "__rl": true,
+          "value": "1FvseXs73llOXwQIWuGhBdfmsuUZDM3tv",
+          "mode": "list",
+          "cachedResultName": "RAG Renueva tu Carnet",
+          "cachedResultUrl": "https://drive.google.com/drive/folders/1FvseXs73llOXwQIWuGhBdfmsuUZDM3tv"
+        },
+        "event": "fileUpdated",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDriveTrigger",
+      "typeVersion": 1,
+      "position": [
+        5776,
+        2336
+      ],
+      "id": "7c0c0819-069f-40e8-8b52-d402254eec54",
+      "name": "Google Drive Trigger",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "tiC3ZrBb6NXDI5VH",
+          "name": "Google Drive account"
+        }
+      },
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "operation": "download",
+        "fileId": {
+          "__rl": true,
+          "value": "={{ $('Google Drive Trigger').item.json.id }}",
+          "mode": "id"
+        },
+        "options": {
+          "googleFileConversion": {
+            "conversion": {
+              "docsToFormat": "text/plain"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        6544,
+        2336
+      ],
+      "id": "b8431d0d-ea04-41ab-93c6-89f21b117146",
+      "name": "Download File1",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "tiC3ZrBb6NXDI5VH",
+          "name": "Google Drive account"
+        }
+      },
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.textSplitterRecursiveCharacterTextSplitter",
+      "typeVersion": 1,
+      "position": [
+        6992,
+        2784
+      ],
+      "id": "0e714d4c-00e5-4755-b310-fd2e3d033df9",
+      "name": "Recursive Character Text Splitter",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "mode": "insert",
+        "tableName": {
+          "__rl": true,
+          "value": "documents",
+          "mode": "list",
+          "cachedResultName": "documents"
+        },
+        "options": {
+          "queryName": "match_documents"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreSupabase",
+      "typeVersion": 1,
+      "position": [
+        6800,
+        2336
+      ],
+      "id": "14880809-0f1a-4e4e-bb4e-06ed93dc4b24",
+      "name": "Add to Supabase",
+      "credentials": {
+        "supabaseApi": {
+          "id": "VRrPh6M5sNpqPCnc",
+          "name": "Supabase Tendenze Formación"
+        }
+      },
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.embeddingsOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        6784,
+        2560
+      ],
+      "id": "9bddb432-1e67-4ce8-8d9f-d2f77e56f9dd",
+      "name": "Embeddings OpenAI1",
+      "credentials": {
+        "openAiApi": {
+          "id": "HhvU9GRRNUksfybw",
+          "name": "API TENDENZE"
+        }
+      },
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "dataType": "binary",
+        "options": {
+          "metadata": {
+            "metadataValues": [
+              {
+                "name": "id",
+                "value": "={{ $('Google Drive Trigger').item.json.id }}"
+              },
+              {
+                "name": "version",
+                "value": "= {{ $json.metadata.version+1}}"
+              }
+            ]
+          }
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.documentDefaultDataLoader",
+      "typeVersion": 1,
+      "position": [
+        6912,
+        2576
+      ],
+      "id": "f8d1eb2a-912f-4180-be5f-61fe255f762b",
+      "name": "Default Data Loader",
+      "disabled": true
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.limit",
+      "typeVersion": 1,
+      "position": [
+        6304,
+        2336
+      ],
+      "id": "e5da3ef6-646a-4d04-88dd-6dbb15d212f3",
+      "name": "Limit",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "content": "## Añadir a la Base de Conocimiento (Manualmente)\n",
+        "height": 740,
+        "width": 1220,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        7456,
+        2240
+      ],
+      "typeVersion": 1,
+      "id": "ca32ff40-f811-4a22-85c5-5cc381bcc971",
+      "name": "Sticky Note10"
+    },
+    {
+      "parameters": {
+        "content": "## Actualizar y eliminar antiguo\n",
+        "height": 700,
+        "width": 1500
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        5696,
+        2240
+      ],
+      "typeVersion": 1,
+      "id": "4d504f9d-7610-413e-93c1-54a0a0999034",
+      "name": "Sticky Note17",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.embeddingsOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        8160,
+        2624
+      ],
+      "id": "c0d54e16-4533-49b1-b4b3-f4d73dae0953",
+      "name": "Embeddings OpenAI2",
+      "credentials": {
+        "openAiApi": {
+          "id": "HhvU9GRRNUksfybw",
+          "name": "API TENDENZE"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "description": "Esta tool genera un enlace, un código descuento y un mensaje que incluye ambas cosas, además guarda en la base de datos local, activa la variable Bot en el Webhook y añade la etiqueta descuento a las que ya existan en la conversación",
+        "workflowId": {
+          "__rl": true,
+          "value": "VB84OJVd5gGwkdPk",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/VB84OJVd5gGwkdPk",
+          "cachedResultName": "GenerarEnlaceDtoShopify"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Nombre": "={{ $('Webhook').first().json.body.messages[0].sender.name }}",
+            "Telefono": "={{ $('Webhook').first().json.body.messages[0].sender.phone_number }}",
+            "IdContacto": "={{ $('Webhook').first().json.body.contact_inbox.contact_id }}",
+            "IdConversacion": "={{ $('Webhook').first().json.body.messages[0].conversation_id }}",
+            "Enlace": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Enlace', `viene del flujo que tienes en el prompt con el mismo nombre Enlace`, 'string') }}",
+            "Descuento": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Descuento', `viene del flujo que tienes en el prompt con el mismo nombre Descuento`, 'string') }}",
+            "Bot": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Bot', `viene del flujo que tienes en el prompt con el mismo nombre Bot`, 'string') }}",
+            "Etiqueta": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Etiqueta', `viene del flujo que tienes en el prompt con el mismo nombre Etiqueta`, 'string') }}",
+            "CuentaId": "={{ $('Webhook').first().json.body.messages[0].account_id }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Telefono",
+              "displayName": "Telefono",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "Nombre",
+              "displayName": "Nombre",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "Enlace",
+              "displayName": "Enlace",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "Descuento",
+              "displayName": "Descuento",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "IdConversacion",
+              "displayName": "IdConversacion",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "IdContacto",
+              "displayName": "IdContacto",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "Bot",
+              "displayName": "Bot",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "Etiqueta",
+              "displayName": "Etiqueta",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "CuentaId",
+              "displayName": "CuentaId",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.2,
+      "position": [
+        4640,
+        2000
+      ],
+      "id": "b5568cc2-972d-4b0d-82cd-53684434d5ae",
+      "name": "GenerarEnlaceDtoShopify"
+    },
+    {
+      "parameters": {
+        "description": "Con esta tool se asignan nuevas etiquetas a la conversación del usuario en el panel de conversaciones, además también gestiona si la variable del panel de conversaciones llamada Bot está en On o en Off",
+        "workflowId": {
+          "__rl": true,
+          "value": "UqWUJbxUgMGjIeSn",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/UqWUJbxUgMGjIeSn",
+          "cachedResultName": "cambiar_etiquetas"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Etiqueta": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Etiqueta', `Esta variable se la tienes que pasar en función de lo que te indique el flujo que estás siguiendo en el prompt`, 'string') }}",
+            "Bot": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Bot', `Esta variable se la tienes que pasar en función de lo que te indique el flujo que estás siguiendo en el prompt`, 'string') }}",
+            "ConversacionId": "={{ $('Webhook').first().json.body.messages[0].conversation_id }}",
+            "ContactId": "={{ $('Webhook').first().json.body.contact_inbox.contact_id }}",
+            "CuentaId": "={{ $('Webhook').first().json.body.messages[0].account_id }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Etiqueta",
+              "displayName": "Etiqueta",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "Bot",
+              "displayName": "Bot",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "ConversacionId",
+              "displayName": "ConversacionId",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "ContactId",
+              "displayName": "ContactId",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "CuentaId",
+              "displayName": "CuentaId",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.2,
+      "position": [
+        5184,
+        480
+      ],
+      "id": "7fa0b204-9c00-4319-b0e9-e2c78855b3d6",
+      "name": "cambiar_etiquetas"
+    },
+    {
+      "parameters": {
+        "description": "Esta tool busca las citas en agenda realizadas por el cliente y devuelve el tipo de los servicios que se ha realizado",
+        "workflowId": {
+          "__rl": true,
+          "value": "ROvVSRs3ygNlRwx7",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/ROvVSRs3ygNlRwx7",
+          "cachedResultName": "servicios_anteriores_realizados por cliente"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "ClienteID": "={{ $('Salida de datos').item.json.cliente }}",
+            "ClinicaID": "={{ $('Salida de datos').item.json.idclinica }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "ClienteID",
+              "displayName": "ClienteID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "ClinicaID",
+              "displayName": "ClinicaID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.2,
+      "position": [
+        3888,
+        2192
+      ],
+      "id": "1c86770e-0c8a-404f-95f9-b0d5a5fc1f2f",
+      "name": "servicios_anteriores_realizados por cliente"
+    },
+    {
+      "parameters": {
+        "description": "SOLO para agendar servicios identificados por ID numérico (ejemplos: HidraSkin=842, Glow Skin=6542, Body Sculpt Reductor=6530, Criolipólisis=846, etc.). Se usa cuando el flujo indica un ID de servicio concreto. NUNCA usar para diagnósticos faciales ni corporales. NUNCA usar para bonos activos del cliente. El parámetro bono debe contener el ID o IDs numéricos del servicio.",
+        "workflowId": {
+          "__rl": true,
+          "value": "GJJZFEHnoNWzxgJ8",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/GJJZFEHnoNWzxgJ8",
+          "cachedResultName": "buscar_disponibilidad_id"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Fecha": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Fecha', `Fecha para la cual necesito buscar disponibilidad, en la primera llamada será la fecha actual, siempre en formato yyyy-mm-dd`, 'string') }}",
+            "bono": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('bono', `son los identificadores de servicios que ha elegido y confirmado el cliente para trabajar sobre ellos y vienen indicados en el flujo del prompt system message`, 'string') }}",
+            "horacliente": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('horacliente', `la primera vez que esta interesado el cliente para buscar disponibilidad sobre uno o varios servicios este campo debe llegar vacío o null pero si el cliente  habla de una hora en concreta para la cita aquí la tienes que rellenar`, 'string') }}",
+            "IDClinica": "={{ $('Salida de datos').item.json.idclinica }}"
+          },
+          "matchingColumns": [
+            "output_IDServices_join"
+          ],
+          "schema": [
+            {
+              "id": "Fecha",
+              "displayName": "Fecha",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "bono",
+              "displayName": "bono",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "horacliente",
+              "displayName": "horacliente",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "IDClinica",
+              "displayName": "IDClinica",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.2,
+      "position": [
+        4864,
+        2000
+      ],
+      "id": "d30c0ecc-9368-4883-b066-4e5385d5c4b4",
+      "name": "buscar_disponibilidad_id"
+    },
+    {
+      "parameters": {
+        "description": "Llamando a esta tool se creará una cita en el sistema según la fecha y hora confirmada por el usuario que ya es cliente",
+        "workflowId": {
+          "__rl": true,
+          "value": "1nMUEY9FU9oocHuC",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/1nMUEY9FU9oocHuC",
+          "cachedResultName": "crear_cita_id"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Telefono": "={{ $('Webhook').first().json.body.messages[0].sender.phone_number.slice(-9) }}",
+            "Fecha": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Fecha', `fecha confirmada por el cliente tras las ejecuciones de la tool \"buscar_disponibilidad_id\" con formato \"yyyy-mm-dd\"`, 'string') }}",
+            "id_cliente": "={{ $('Salida de datos').item.json.cliente }}",
+            "bono": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('bono', `Listados de Ids de servicios, puede ser uno o varios separados por comas y que haya confirmado el cliente`, 'string') }}",
+            "hora_inicio": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('hora_inicio', `Variable TimeStart que devuelve el return de la tool \"buscar_disponibilidad_id\" una vez está confirmada por el cliente tras las ejecuciones que hayan sido necesarias para agendar una cita, formato \"hh:mm\"`, 'string') }}",
+            "hora_fin": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('hora_fin', `Variable TimeEnd que devuelve el return de la tool \"buscar_disponibilidad_id\" una vez está confirmada por el cliente tras las ejecuciones que hayan sido necesarias para agendar una cita, formato \"hh:mm\"`, 'string') }}",
+            "IDClinica": "={{ $('Salida de datos').item.json.idclinica }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Telefono",
+              "displayName": "Telefono",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "Fecha",
+              "displayName": "Fecha",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "id_cliente",
+              "displayName": "id_cliente",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "bono",
+              "displayName": "bono",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "hora_inicio",
+              "displayName": "hora_inicio",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "hora_fin",
+              "displayName": "hora_fin",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "IDClinica",
+              "displayName": "IDClinica",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.2,
+      "position": [
+        5088,
+        1824
+      ],
+      "id": "001c858b-1f82-4d2c-8b0f-98f7e0f551d6",
+      "name": "crear_cita_id"
+    },
+    {
+      "parameters": {
+        "description": "Tool que consulta las citas a las que el cliente no ha asistido y si son menos de 2 devuelve el mensaje Sí puede anular cita, y si son más de dos devuelve el mensaje No puede anular cita, se llama a esta tool desde uno de los flujos del prompt System message",
+        "workflowId": {
+          "__rl": true,
+          "value": "E0NdAyqpayAXN58D",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/E0NdAyqpayAXN58D",
+          "cachedResultName": "consultar_citas_NoAsistidas"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Telefono": "={{ $('Webhook').first().json.body.messages[0].sender.phone_number.slice(-9) }}",
+            "IDCliente": "={{ $('Salida de datos').item.json.cliente }}",
+            "IDClinica": "={{ $('Salida de datos').item.json.idclinica }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Telefono",
+              "displayName": "Telefono",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "IDCliente",
+              "displayName": "IDCliente",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "IDClinica",
+              "displayName": "IDClinica",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.2,
+      "position": [
+        4064,
+        2192
+      ],
+      "id": "1cf65663-1252-4e17-abed-786205184a1d",
+      "name": "consultar_citas_NoAsistidas"
+    },
+    {
+      "parameters": {
+        "description": "Llama a esta tool para insertar una imagen en la conversación, cuando llamarla viene en el flujo de prompt system message",
+        "workflowId": {
+          "__rl": true,
+          "value": "wToGlRlCIXqSKRSq",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/wToGlRlCIXqSKRSq",
+          "cachedResultName": "insertar_imagen_pasosAseguirDepilación"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "ContactId": "={{ $('Webhook').first().json.body.contact_inbox.contact_id }}",
+            "ConversacionId": "={{ $('Webhook').first().json.body.messages[0].conversation_id }}",
+            "CuentaId": "={{ $('Webhook').first().json.body.messages[0].account_id }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "ConversacionId",
+              "displayName": "ConversacionId",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "ContactId",
+              "displayName": "ContactId",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "CuentaId",
+              "displayName": "CuentaId",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.2,
+      "position": [
+        3888,
+        1824
+      ],
+      "id": "32342874-d82e-4e0a-8e26-a6a3bd292d92",
+      "name": "insertar_imagen_pasosAseguirDepilacion"
+    },
+    {
+      "parameters": {
+        "description": "Llama a esta tool para insertar una imagen en la conversación, cuando llamarla viene en el flujo de prompt system message",
+        "workflowId": {
+          "__rl": true,
+          "value": "cHq8Z5ceWaYyhbVR",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/cHq8Z5ceWaYyhbVR",
+          "cachedResultName": "insertar_imagen_pasosAseguirFacial"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "ConversacionId": "={{ $('Webhook').first().json.body.messages[0].conversation_id }}",
+            "ContactId": "={{ $('Webhook').first().json.body.contact_inbox.contact_id }}",
+            "CuentaId": "={{ $('Webhook').first().json.body.messages[0].account_id }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "ConversacionId",
+              "displayName": "ConversacionId",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "ContactId",
+              "displayName": "ContactId",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "CuentaId",
+              "displayName": "CuentaId",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.2,
+      "position": [
+        4080,
+        1824
+      ],
+      "id": "cd66f565-a563-478f-9680-68538c4f2548",
+      "name": "insertar_imagen_pasosAseguirFacial"
+    },
+    {
+      "parameters": {
+        "description": "Llama a esta tool para insertar una imagen en la conversación, cuando llamarla viene en el flujo de prompt system message",
+        "workflowId": {
+          "__rl": true,
+          "value": "7LWdNM6KGIQtl7ab",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/7LWdNM6KGIQtl7ab",
+          "cachedResultName": "insertar_imagen_pasosAseguirCorporal"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "ContactId": "={{ $('Webhook').first().json.body.contact_inbox.contact_id }}",
+            "ConversacionId": "={{ $('Webhook').first().json.body.messages[0].conversation_id }}",
+            "CuentaId": "={{ $('Webhook').first().json.body.messages[0].account_id }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "ConversacionId",
+              "displayName": "ConversacionId",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "ContactId",
+              "displayName": "ContactId",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "CuentaId",
+              "displayName": "CuentaId",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.2,
+      "position": [
+        4256,
+        1824
+      ],
+      "id": "b56ee7ba-0e1d-4771-9f1c-a17fcbd75bc0",
+      "name": "insertar_imagen_pasosAseguirCorporal"
+    },
+    {
+      "parameters": {
+        "description": "Esta tool consula sobre una cita en concreto que tiene el cliente y que quiere anular puede o no hacerlo, devuelve el mensaje “Si puede anular cita” o \"No puede anular cita\" ",
+        "workflowId": {
+          "__rl": true,
+          "value": "reI9RDSbDEz8a94Z",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/reI9RDSbDEz8a94Z",
+          "cachedResultName": "anular_cita_menos_24h"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "IdCita": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('IdCita', `Valor que devuelve la tool \"consultar_citas\" y si tiene varias el identificador de la cita que haya escogido el cliente que quiere anular`, 'string') }}",
+            "IDCliente": "={{ $('Salida de datos').item.json.cliente }}",
+            "IDClinica": "={{ $('Salida de datos').item.json.idclinica }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "IdCita",
+              "displayName": "IdCita",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "IDCliente",
+              "displayName": "IDCliente",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "IDClinica",
+              "displayName": "IDClinica",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.2,
+      "position": [
+        4448,
+        1824
+      ],
+      "id": "2557dc73-d94a-4dd8-b3a1-d9a0e0f922b3",
+      "name": "anular_cita_menos_24h"
+    },
+    {
+      "parameters": {
+        "description": "Esta tool consulta en la agenda según el cliente ID cual es la última sesión realizada, devolviendo el valor Sin citas, o los datos completos de una cita que incluyen la fecha, hora de inicio y fin, servicios realizados",
+        "workflowId": {
+          "__rl": true,
+          "value": "WxmOUwGWFSObWW1L",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/WxmOUwGWFSObWW1L",
+          "cachedResultName": "consultar_ultima_sesion"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Telefono": "={{ $('Webhook').first().json.body.messages[0].sender.phone_number.slice(-9) }}",
+            "IDCliente": "={{ $('Salida de datos').item.json.cliente }}",
+            "IDClinica": "={{ $('Salida de datos').item.json.idclinica }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Telefono",
+              "displayName": "Telefono",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "IDCliente",
+              "displayName": "IDCliente",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "IDClinica",
+              "displayName": "IDClinica",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.2,
+      "position": [
+        4640,
+        1824
+      ],
+      "id": "ed358fb5-f3d6-491a-8a27-d8661bca419d",
+      "name": "consultar_ultima_sesion"
+    },
+    {
+      "parameters": {
+        "description": "Esta tool en función de lo que el cliente nos ha pedido que se quiere realizar y el tipo de servicios que hemos definido de manera fija en el flujo del prompt nos devuelve un listado de pares ServicioNombre-IDservicio que mostraremos en formato listado numerado al cliente para que confirme que posiciones del listado quiere agendar",
+        "workflowId": {
+          "__rl": true,
+          "value": "exGHVjt7kU4s3IaB",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/exGHVjt7kU4s3IaB",
+          "cachedResultName": "servicios_sueltos_pide_cliente"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Servicio": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Servicio', `son los servicios que nos ha confirmado el cliente que está interesado y viene del flujo del prompt system message`, 'string') }}",
+            "Tipo": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Tipo', `es el tipo de servicio y viene de las instrucciones del flujo de prompt system message`, 'string') }}",
+            "ClienteID": "={{ $('Salida de datos').item.json.cliente }}",
+            "ClinicaID": "={{ $('Salida de datos').item.json.idclinica }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "ClienteID",
+              "displayName": "ClienteID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "ClinicaID",
+              "displayName": "ClinicaID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "Servicio",
+              "displayName": "Servicio",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "Tipo",
+              "displayName": "Tipo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.2,
+      "position": [
+        4640,
+        2224
+      ],
+      "id": "585f9916-f34e-404e-b051-8b6c87305586",
+      "name": "servicios_sueltos_pide_cliente"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "531b8118-2092-4c8a-a013-d840b9da1d6b",
+              "leftValue": "={{ Object.keys($json.body.meta.sender.custom_attributes || {}).length === 0 }}",
+              "rightValue": "=",
+              "operator": {
+                "type": "boolean",
+                "operation": "false",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -2464,
+        464
+      ],
+      "id": "205a1a41-5e90-4c9f-b864-7ae266e648e8",
+      "name": "Bot sin seleccionar no hacer nada",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\n\n// Si no viene nada o viene vacío\nif (items.length === 0 || !items[0].json || Object.keys(items[0].json).length === 0\n    || items[0].json[\"Cmd24.Clients\"] === \"\") {\n  return [{ json: { status: \"SIN CLIENTE\" } }];\n}\n\nconst data = items[0].json;\n\n// Si viene con claves numéricas (\"0\", \"1\", ...) → coger solo el primero\nif (data[\"0\"] && typeof data[\"0\"] === \"object\") {\n  return [{ json: { status: \"CLIENTE ENCONTRADO\", ...data[\"0\"] } }];\n}\n\n// Si viene plano (un solo registro directo)\nreturn [{ json: { status: \"CLIENTE ENCONTRADO\", ...data } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4720,
+        -1552
+      ],
+      "id": "384bab10-da3d-479b-9312-077b44c307c4",
+      "name": "Coge solo el primero"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\n\nif (!input.bonos || input.bonos.length === 0) {\n  return [{ json: { data: \"\" } }];\n}\n\nconst bonos = input.bonos;\nconst vistos = {};\n\nfor (const b of bonos) {\n  const nombre = b.VoucherGroupName || b.VoucherName;\n  if (!vistos[nombre]) {\n    vistos[nombre] = nombre + ', te quedan disponibles ' + b.VoucherAvailable + ' sesión/es';\n  }\n}\n\nconst lineas = Object.values(vistos);\n\nreturn [{ json: { data: lineas.join('\\n') } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        6720,
+        -1296
+      ],
+      "id": "05a4ffb9-560e-4a6c-af3d-cbedcd237163",
+      "name": "Data con bonos del cliente o vacio por no disponible"
+    },
+    {
+      "parameters": {
+        "url": "=https://rcapi.flowww.net/app.asp?fwa_sid=4539b1da80d4fee4ee947f10b2acc947",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/x-www-form-urlencoded"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "form-urlencoded",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "Cmd",
+              "value": "c1031"
+            },
+            {
+              "name": "SystemKey",
+              "value": "446439"
+            },
+            {
+              "name": "Locale",
+              "value": "ES"
+            },
+            {
+              "name": "ClinicID",
+              "value": "=9"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        6736,
+        -1088
+      ],
+      "id": "46915742-4259-462f-a283-99fba65efbe6",
+      "name": "información centros"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $('Webhook').first().json.body.messages[0].account_id }}",
+                    "rightValue": 3,
+                    "operator": {
+                      "type": "number",
+                      "operation": "equals"
+                    },
+                    "id": "c598e593-805b-41ff-b675-1b193940457d"
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        3392,
+        -1472
+      ],
+      "id": "83c97e58-b8b5-4c10-becc-8393998b2525",
+      "name": "ClinicasId segun account"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "fff772c8-fa9b-461c-834f-d936967ebb54",
+              "name": "ClinicID",
+              "value": "9",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        3600,
+        -1472
+      ],
+      "id": "32244067-0965-45ca-be2e-7e426992bfd1",
+      "name": "ClinicID"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://tendenze-panel.serversvisionarius.com/api/v1/accounts/{{ $('Webhook').first().json.body.messages[0].account_id }}/conversations/{{ $('Contenido del mensaje').first().json.body.messages[0].conversation_id }}/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "api_access_token",
+              "value": "__CHATWOOT_API_ACCESS_TOKEN__"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"content\": \"Te atendemos enseguida. Un momento por favor.\",\n  \"message_type\": \"outgoing\",\n  \"private\": \"false\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        4128,
+        816
+      ],
+      "id": "e1814300-10c4-4a3e-b8be-a15fa5bf6299",
+      "name": "Envio Fallo Modelo",
+      "retryOnFail": true,
+      "waitBetweenTries": 3000
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://tendenze-panel.serversvisionarius.com/api/v1/accounts/{{ $('Webhook').first().json.body.messages[0].account_id }}/conversations/{{ $('Contenido del mensaje').first().json.body.messages[0].conversation_id }}/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "api_access_token",
+              "value": "__CHATWOOT_API_ACCESS_TOKEN__"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"content\": \"Te atendemos enseguida. Un momento por favor.\",\n  \"message_type\": \"outgoing\",\n  \"private\": \"false\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        4496,
+        832
+      ],
+      "id": "fc24e338-a693-429c-b0f1-af59f95fd985",
+      "name": "Envio Fallo postgres",
+      "retryOnFail": true,
+      "waitBetweenTries": 3000
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://tendenze-panel.serversvisionarius.com/api/v1/accounts/{{ $('Webhook').first().json.body.messages[0].account_id }}/conversations/{{ $('Contenido del mensaje').first().json.body.messages[0].conversation_id }}/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "api_access_token",
+              "value": "__CHATWOOT_API_ACCESS_TOKEN__"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"content\": \"Disculpa, ha ocurrido un error procesando tu consulta. ¿Podrías repetir tu mensaje?\",\n  \"message_type\": \"outgoing\",\n  \"private\": \"false\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        5056,
+        176
+      ],
+      "id": "23b04d9a-ec61-481b-9539-8bf749360143",
+      "name": "Envio Fallo Modelo1",
+      "retryOnFail": true,
+      "waitBetweenTries": 3000
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "mypZOAClttlfxoIg",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/mypZOAClttlfxoIg",
+          "cachedResultName": "GenerarDtoShopifyPlantillaMeta"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Telefono": "={{ $('Webhook').first().json.body.messages[0].sender.phone_number }}",
+            "Nombre": "={{ $('Webhook').first().json.body.messages[0].sender.name }}",
+            "Bot": "On",
+            "Etiqueta": "z_respuesta_cliente_plantilla",
+            "IdConversacion": "={{ $('Webhook').first().json.body.messages[0].conversation_id }}",
+            "IdContacto": "={{ $('Webhook').first().json.body.contact_inbox.contact_id }}",
+            "CuentaId": "={{ $('Webhook').first().json.body.messages[0].account_id }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Telefono",
+              "displayName": "Telefono",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "Nombre",
+              "displayName": "Nombre",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "IdConversacion",
+              "displayName": "IdConversacion",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "IdContacto",
+              "displayName": "IdContacto",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "Bot",
+              "displayName": "Bot",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "Etiqueta",
+              "displayName": "Etiqueta",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "CuentaId",
+              "displayName": "CuentaId",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.2,
+      "position": [
+        4864,
+        1824
+      ],
+      "id": "162cc799-b001-4534-bd76-e859fa3e3876",
+      "name": "GenerarDtoShopifyPlantillaMeta"
+    },
+    {
+      "parameters": {
+        "amount": 60
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        1328,
+        400
+      ],
+      "id": "82e74307-6940-4311-a24f-b7de985717c6",
+      "name": "Espera 60 segundos",
+      "webhookId": "2f128d5d-ae5b-456a-a3ba-73dbfa80ba68"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "ddda662c-0320-4158-977e-a0b63ed23271",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -2736,
+        464
+      ],
+      "id": "637e3fce-d4cd-490b-a583-bf7b04fe2a6e",
+      "name": "Webhook",
+      "webhookId": "ddda662c-0320-4158-977e-a0b63ed23271"
+    }
+  ],
+  "connections": {
+    "Auto-fixing Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Divide Mensajes",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Auto-fixing Output Parser",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait": {
+      "main": [
+        [
+          {
+            "node": "Comprobador de Frases Únicas y problemas de Formateo de las frases",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait1": {
+      "main": [
+        [
+          {
+            "node": "Comprobador de Frases Únicas y problemas de Formateo de las frases1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait2": {
+      "main": [
+        [
+          {
+            "node": "Comprobador de Frases Únicas y problemas de Formateo de las frases2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait3": {
+      "main": [
+        [
+          {
+            "node": "Envio 5º Mensaje",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If6": {
+      "main": [
+        [
+          {
+            "node": "Variable Teléfono/Mensaje1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Date & Time1": {
+      "main": [
+        [
+          {
+            "node": "Variable Response1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "Descarga el audio",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Variable Imagen",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Date & Time1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Date & Time2": {
+      "main": [
+        [
+          {
+            "node": "Revertir mensajes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Date & Time3": {
+      "main": [
+        [
+          {
+            "node": "Date & Time2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Divide Mensajes",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model2": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Auto-fixing Output Parser",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model3": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Agente TENDENZE",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ],
+      "main": [
+        [
+          {
+            "node": "Envio Fallo Modelo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Postgres Chat Memory1": {
+      "ai_memory": [
+        [
+          {
+            "node": "Agente TENDENZE",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ],
+      "main": [
+        [
+          {
+            "node": "Envio Fallo postgres",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Contenido del mensaje": {
+      "main": [
+        [
+          {
+            "node": "Variable Teléfono/Mensaje",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "No Operation, do nothing2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Variable Teléfono/Mensaje": {
+      "main": [
+        [
+          {
+            "node": "Botón de Off/On/Nada",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Botón de Off/On/Nada": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "No Operation, do nothing3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Variable Response": {
+      "main": [
+        [
+          {
+            "node": "Variable Mensaje",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Variable Mensaje": {
+      "main": [
+        [
+          {
+            "node": "Push Redis",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Variable Imagen": {
+      "main": [
+        [
+          {
+            "node": "Variable Mensaje",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Variable Response1": {
+      "main": [
+        [
+          {
+            "node": "Variable Mensaje",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Push Redis": {
+      "main": [
+        [
+          {
+            "node": "Espera 60 segundos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Obtiene todos los Mensajes": {
+      "main": [
+        [
+          {
+            "node": "If6",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Borra mensajes de Redis": {
+      "main": [
+        [
+          {
+            "node": "Date & Time3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Envio 1º Mensaje": {
+      "main": [
+        [
+          {
+            "node": "Mira si hay 2º Mensaje",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Envio 2º Mensaje": {
+      "main": [
+        [
+          {
+            "node": "Mira si hay 3º Mensaje",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Envio 3º Mensaje": {
+      "main": [
+        [
+          {
+            "node": "Mira si hay 4º Mensaje",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Envio 4º Mensaje": {
+      "main": [
+        [
+          {
+            "node": "Mira si hay 5º Mensaje",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mira si hay 2º Mensaje": {
+      "main": [
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Mira si hay 3º Mensaje",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mira si hay 3º Mensaje": {
+      "main": [
+        [
+          {
+            "node": "Wait1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Mira si hay 4º Mensaje",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mira si hay 4º Mensaje": {
+      "main": [
+        [
+          {
+            "node": "Wait2",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Mira si hay 5º Mensaje",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Divide Mensajes": {
+      "main": [
+        [
+          {
+            "node": "Envio 1º Mensaje",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Envió Mensaje Total",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Variable Teléfono/Mensaje1": {
+      "main": [
+        [
+          {
+            "node": "Borra mensajes de Redis",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fecha": {
+      "main": [
+        [
+          {
+            "node": "Agente TENDENZE",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code": {
+      "main": [
+        [
+          {
+            "node": "Fecha",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings OpenAI": {
+      "ai_embedding": [
+        [
+          {
+            "node": "Base de Conocimiento",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Revertir mensajes": {
+      "main": [
+        [
+          {
+            "node": "Code",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Comprobador de Frases Únicas y problemas de Formateo de las frases": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Envio 2º Mensaje",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Bot on/off": {
+      "main": [
+        [
+          {
+            "node": "Contenido del mensaje",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Comprobador de Frases Únicas y problemas de Formateo de las frases1": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Envio 3º Mensaje",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Comprobador de Frases Únicas y problemas de Formateo de las frases2": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Envio 4º Mensaje",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mira si hay 5º Mensaje": {
+      "main": [
+        [
+          {
+            "node": "Wait3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Transcribe a recording": {
+      "main": [
+        []
+      ]
+    },
+    "Agente TENDENZE": {
+      "main": [
+        [
+          {
+            "node": "Divide Mensajes",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Envio Fallo Modelo1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "XML5": {
+      "main": [
+        [
+          {
+            "node": "Sacar ClienteID-TokenCliente-Telefono2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Buscar cliente por ID2": {
+      "main": [
+        [
+          {
+            "node": "XML5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Buscar cliente por telefono1": {
+      "main": [
+        [
+          {
+            "node": "XML6",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "XML6": {
+      "main": [
+        [
+          {
+            "node": "Split Out",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sacar ClienteID-TokenCliente-Telefono2": {
+      "main": [
+        [
+          {
+            "node": "HTTP Obtener bonos de un cliente2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Obtener bonos de un cliente2": {
+      "main": [
+        [
+          {
+            "node": "Split Out1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Data cliente nuevo": {
+      "main": [
+        [
+          {
+            "node": "Salida de datos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If2": {
+      "main": [
+        [
+          {
+            "node": "Data cliente nuevo",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "HTTP Buscar cliente por ID2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Si tiene bonos o no el cliente": {
+      "main": [
+        [
+          {
+            "node": "Data sin bonos",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Data con bonos del cliente o vacio por no disponible",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Data sin bonos": {
+      "main": [
+        [
+          {
+            "node": "Salida de datos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalizar clientes": {
+      "main": [
+        [
+          {
+            "node": "If2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate": {
+      "main": [
+        [
+          {
+            "node": "data con bonos del cliente o vacio por no disponible1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "data con bonos del cliente o vacio por no disponible1": {
+      "main": [
+        [
+          {
+            "node": "Salida de datos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Out1": {
+      "main": [
+        [
+          {
+            "node": "LIMPIA LOS QUE TIENEN DISPONIBILIDAD",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "LIMPIA LOS QUE TIENEN DISPONIBILIDAD": {
+      "main": [
+        [
+          {
+            "node": "Si tiene bonos o no el cliente",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Out": {
+      "main": [
+        [
+          {
+            "node": "Coge solo el primero",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Salida de datos": {
+      "main": [
+        []
+      ]
+    },
+    "anular_cita": {
+      "ai_tool": [
+        []
+      ]
+    },
+    "crear_cita": {
+      "ai_tool": [
+        []
+      ]
+    },
+    "crear_cliente": {
+      "ai_tool": [
+        []
+      ]
+    },
+    "consultar_citas": {
+      "ai_tool": [
+        []
+      ]
+    },
+    "buscar_disponibilidad": {
+      "ai_tool": [
+        []
+      ]
+    },
+    "buscar_disponibilidad_diagnostico": {
+      "ai_tool": [
+        []
+      ]
+    },
+    "crear_cita_diagnostico": {
+      "ai_tool": [
+        []
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "ClinicasId segun account",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Base de Conocimiento": {
+      "ai_tool": [
+        []
+      ]
+    },
+    "When clicking ‘Test workflow’": {
+      "main": [
+        [
+          {
+            "node": "id",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Recursive Character Text Splitter1": {
+      "ai_textSplitter": [
+        [
+          {
+            "node": "Default Data Loader1",
+            "type": "ai_textSplitter",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Default Data Loader1": {
+      "ai_document": [
+        [
+          {
+            "node": "Add to Supabase1",
+            "type": "ai_document",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "id": {
+      "main": [
+        [
+          {
+            "node": "Add to Supabase1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Supabase2": {
+      "main": [
+        [
+          {
+            "node": "Limit",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Drive Trigger": {
+      "main": [
+        [
+          {
+            "node": "Supabase2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download File1": {
+      "main": [
+        [
+          {
+            "node": "Add to Supabase",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Recursive Character Text Splitter": {
+      "ai_textSplitter": [
+        [
+          {
+            "node": "Default Data Loader",
+            "type": "ai_textSplitter",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings OpenAI1": {
+      "ai_embedding": [
+        [
+          {
+            "node": "Add to Supabase",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Default Data Loader": {
+      "ai_document": [
+        [
+          {
+            "node": "Add to Supabase",
+            "type": "ai_document",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Limit": {
+      "main": [
+        [
+          {
+            "node": "Download File1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings OpenAI2": {
+      "ai_embedding": [
+        [
+          {
+            "node": "Add to Supabase1",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GenerarEnlaceDtoShopify": {
+      "ai_tool": [
+        []
+      ]
+    },
+    "cambiar_etiquetas": {
+      "ai_tool": [
+        [
+          {
+            "node": "Agente TENDENZE",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "servicios_anteriores_realizados por cliente": {
+      "ai_tool": [
+        []
+      ]
+    },
+    "buscar_disponibilidad_id": {
+      "ai_tool": [
+        []
+      ]
+    },
+    "crear_cita_id": {
+      "ai_tool": [
+        []
+      ]
+    },
+    "consultar_citas_NoAsistidas": {
+      "ai_tool": [
+        []
+      ]
+    },
+    "insertar_imagen_pasosAseguirDepilacion": {
+      "ai_tool": [
+        []
+      ]
+    },
+    "insertar_imagen_pasosAseguirFacial": {
+      "ai_tool": [
+        []
+      ]
+    },
+    "insertar_imagen_pasosAseguirCorporal": {
+      "ai_tool": [
+        []
+      ]
+    },
+    "anular_cita_menos_24h": {
+      "ai_tool": [
+        []
+      ]
+    },
+    "consultar_ultima_sesion": {
+      "ai_tool": [
+        []
+      ]
+    },
+    "servicios_sueltos_pide_cliente": {
+      "ai_tool": [
+        []
+      ]
+    },
+    "Bot sin seleccionar no hacer nada": {
+      "main": [
+        [
+          {
+            "node": "Bot on/off",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Coge solo el primero": {
+      "main": [
+        [
+          {
+            "node": "Normalizar clientes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Data con bonos del cliente o vacio por no disponible": {
+      "main": [
+        [
+          {
+            "node": "Aggregate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Descarga el audio": {
+      "main": [
+        [
+          {
+            "node": "Transcribe OpenAI",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Transcribe OpenAI": {
+      "main": [
+        [
+          {
+            "node": "Variable Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ClinicasId segun account": {
+      "main": [
+        [
+          {
+            "node": "ClinicID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ClinicID": {
+      "main": [
+        [
+          {
+            "node": "HTTP Buscar cliente por telefono1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GenerarDtoShopifyPlantillaMeta": {
+      "ai_tool": [
+        []
+      ]
+    },
+    "Espera 60 segundos": {
+      "main": [
+        [
+          {
+            "node": "Obtiene todos los Mensajes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Bot sin seleccionar no hacer nada",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false,
+    "timeSavedMode": "fixed",
+    "callerPolicy": "workflowsFromSameOwner",
+    "errorWorkflow": "g2og6ZH9CBcdMu9u"
+  }
+}

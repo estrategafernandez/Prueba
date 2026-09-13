@@ -1507,7 +1507,7 @@
             {
               "id": "3723e83a-a0ec-4c30-874c-ff7684f4be1d",
               "leftValue": "={{ $json.body.messages[0].account_id }}",
-              "rightValue": 0,
+              "rightValue": 7,
               "operator": {
                 "type": "number",
                 "operation": "equals"
@@ -1526,12 +1526,11 @@
         -2536,
         464
       ],
-      "disabled": true,
-      "notes": "PENDIENTE: poner el account_id de la cuenta de Instagram y activar el nodo."
+      "notes": "Solo responde a la cuenta 7 de Chatwoot (Instagram). Ignora cualquier otro webhook."
     },
     {
       "parameters": {
-        "content": "## Asistente Tendenze - Instagram (ESCENARIO BASE)\n\nClon del subgrafo **activo** del asistente de Franquicias, adaptado a Instagram.\nDel original se han dejado fuera los 61 nodos que estaban sueltos en el lienzo\nsin cablear (tools de citas/bonos/Shopify y la ingesta Drive -> Supabase).\n\n### PENDIENTE DE COMPLETAR\n1. **account_id de Instagram** -> nodo `Solo cuenta Instagram` (ahora desactivado).\n2. **Prompt definitivo** -> nodo `Agente TENDENZE` (lleva un prompt provisional).\n3. **Token de Chatwoot** si la cuenta nueva usa un agente-bot distinto.\n4. **Webhook de Chatwoot** apuntando a la URL de produccion de este workflow.\n5. Mover el workflow a su carpeta (no se puede por API).\n\n### CLAVE DE SESION\nInstagram no tiene telefono, asi que la clave es el **conversation_id**,\nprefijado con la cuenta: `instagram:<cuenta>:<conversacion>`.\nSe define una sola vez en `Variable Conversacion/Mensaje` (`clave_buffer`) y de\nahi la toman Redis y la memoria de Postgres.\nTabla de memoria: **n8n_chat_histories_instagram** (se crea sola).",
+        "content": "## Asistente Tendenze - Instagram (ESCENARIO BASE)\n\nClon del subgrafo **activo** del asistente de Franquicias, adaptado a Instagram.\nDel original se han dejado fuera los 61 nodos que estaban sueltos en el lienzo\nsin cablear (tools de citas/bonos/Shopify y la ingesta Drive -> Supabase).\n\n### CUENTA\nAtiende **solo la cuenta 7** de Chatwoot (Instagram), filtrada en\n`Solo cuenta Instagram`. La clave queda `instagram:7:<conversacion>`.\n\n### PENDIENTE DE COMPLETAR\n1. **BLOQUEANTE — permisos.** El agente `IA TENDENZE` (el del token\n   `api_access_token` que usa este workflow) NO es miembro de la cuenta 7:\n   la API responde 401 \"You are not authorized to access this account\".\n   Hasta arreglarlo el asistente no puede enviar mensajes, descargar audios\n   ni cambiar etiquetas. Solucion: anadir `IA TENDENZE` como agente de la\n   cuenta 7 en Chatwoot, o poner aqui el token de un agente de esa cuenta.\n2. **Prompt definitivo** -> nodo `Agente TENDENZE` (lleva un prompt provisional).\n3. **Webhook de Chatwoot** de la cuenta 7 apuntando a la URL de produccion.\n4. Mover el workflow a su carpeta (no se puede por API).\n\n### CLAVE DE SESION\nInstagram no tiene telefono, asi que la clave es el **conversation_id**,\nprefijado con la cuenta: `instagram:<cuenta>:<conversacion>`.\nSe define una sola vez en `Variable Conversacion/Mensaje` (`clave_buffer`) y de\nahi la toman Redis y la memoria de Postgres.\nTabla de memoria: **n8n_chat_histories_instagram** (se crea sola).",
         "width": 620,
         "height": 580,
         "color": 4
@@ -2197,6 +2196,8 @@
     }
   },
   "settings": {
-    "executionOrder": "v1"
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
   }
 }
