@@ -113,17 +113,34 @@ Dos arreglos que conviene conocer porque **el original sigue teniendo ambos**:
    `{{ $json.cliente }}`, campo que en ese punto del flujo no existe, así que al
    prompt llegaba `Cliente ID: undefined` en cada turno.
 
+## Cuenta
+
+Atiende **solo la cuenta 7** de Chatwoot (Instagram). El filtro está en el nodo
+`Solo cuenta Instagram`, ya activo: cualquier webhook de otra cuenta se
+descarta. La clave de sesión queda `instagram:7:<conversation_id>`.
+
 ## Pendiente
 
-1. **`account_id` de la cuenta de Instagram** → nodo `Solo cuenta Instagram`,
-   hoy desactivado. Al estar desactivado deja pasar todo, así que hasta
-   rellenarlo el workflow respondería a cualquier cuenta cuyo webhook apunte
-   aquí.
+1. **BLOQUEANTE — permisos sobre la cuenta 7.** El agente `IA TENDENZE`, dueño
+   del `api_access_token` que usa este workflow, **no es miembro de la cuenta
+   7**. La API responde:
+
+   ```
+   GET /api/v1/accounts/7/inboxes  ->  401
+   {"error":"You are not authorized to access this account"}
+   ```
+
+   La cuenta existe (el error es de autorización, no de "no encontrada"), pero
+   el token no llega a ella. Mientras siga así, el asistente **no puede enviar
+   mensajes, descargar audios ni cambiar etiquetas** en Instagram. Se arregla de
+   una de estas dos formas:
+   - añadir `IA TENDENZE` como agente de la cuenta 7 en Chatwoot, o
+   - sustituir el `api_access_token` de este workflow por el de un agente que
+     sí pertenezca a la cuenta 7.
 2. **Prompt definitivo** → nodo `Agente TENDENZE`. Lleva uno provisional que
    solo fija idioma, tono y los límites mínimos.
-3. **Token de Chatwoot** si la cuenta nueva usa otro agente-bot.
-4. **Webhook de Chatwoot** apuntando a la URL de producción de arriba.
-5. **Carpeta**: la API pública de n8n no expone carpetas, hay que moverlo
+3. **Webhook de Chatwoot** de la cuenta 7 apuntando a la URL de producción.
+4. **Carpeta**: la API pública de n8n no expone carpetas, hay que moverlo
    arrastrándolo en la interfaz.
 
 ## Sobre este JSON
