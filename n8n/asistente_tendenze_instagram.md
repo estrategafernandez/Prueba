@@ -139,8 +139,9 @@ usa este mismo token, así que funciona con la cuenta 7 sin tocar nada.
 1. **Conectar el canal de Instagram.** La cuenta 7 aún no tiene ningún inbox
    (`/accounts/7/inboxes` devuelve vacío) y 0 conversaciones. Sin inbox no hay
    webhook que dispare este workflow.
-2. **Prompt definitivo** → nodo `Agente TENDENZE`. Lleva uno provisional que
-   solo fija idioma, tono y los límites mínimos.
+2. **Revisar el prompt v1** → `prompts/instagram_v1.md`, ya instalado en el
+   nodo `Agente TENDENZE`. Ver `prompts/instagram_v1.md` y las notas de
+   `prompt_instagram_notas.md`.
 3. **Webhook de Chatwoot** de la cuenta 7 apuntando a la URL de producción.
 4. **Etiquetas.** La cuenta 7 no tiene ninguna definida. Si el prompt va a
    apoyarse en `cambiar_etiquetas`, hay que decidir qué taxonomía crear ahí.
