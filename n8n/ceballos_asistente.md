@@ -46,6 +46,27 @@ Verificado contra el servidor: 0 restos ajenos, 12 URLs correctas, un solo token
   `Encuesta`) apuntan a workflows que **no existen** en esta instancia (404).
   El prompt termina llamando a `Aviso`, así que el cierre del flujo sigue roto.
 
+## 2026-09-14 — Prompt de cualificación v2
+
+Sustituido el `systemMessage` del nodo `Agente Vivalta2`. Copia en
+`n8n/prompts/ceballos_whatsapp_v2.md`. Ningún otro nodo tocado (verificado por hash).
+
+| | Antes | Ahora |
+|---|---|---|
+| **Compra** | financiación · vender · tiempo buscando | tiempo buscando · **zonas de interés** · vender |
+| **Alquiler** | contrato · nº personas · cuándo entrar | tiempo buscando · **nº habitaciones** · nº personas · contrato **+ duración** |
+| **Cierre** | — | franja (mañanas/tardes) y días, sin fecha concreta; «un compañero contacta en menos de 24 h» |
+
+La financiación sale del flujo por decisión de Marta. El agente tiene prohibido
+proponer o confirmar fechas: no dispone de la agenda de los comerciales.
+
+### Riesgo abierto
+
+Las tools `Agendar`, `Disponibilidad` y `Cancelar` **siguen conectadas al agente**
+aunque el prompt le prohíba agendar, y describen citas en «Mobilia», el CRM de
+Vivalta. Apuntan a workflows inexistentes (404), así que una llamada fallaría y
+podría cortar la conversación. Conviene desconectarlas.
+
 ## Etiquetas de Chatwoot
 
 Existen las 6 y son correctas, pero **ningún nodo las asigna todavía**.
