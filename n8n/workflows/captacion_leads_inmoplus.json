@@ -1,0 +1,1050 @@
+{
+ "id": "PL2FWPNGR0VgDjnG",
+ "name": "Captacion Leads InmoPlus",
+ "description": null,
+ "active": false,
+ "isArchived": false,
+ "nodes": [
+  {
+   "parameters": {
+    "rule": {
+     "interval": [
+      {
+       "field": "minutes",
+       "minutesInterval": 10
+      }
+     ]
+    }
+   },
+   "type": "n8n-nodes-base.scheduleTrigger",
+   "typeVersion": 1.2,
+   "position": [
+    0,
+    0
+   ],
+   "id": "prog",
+   "name": "Cada 10 minutos"
+  },
+  {
+   "parameters": {
+    "method": "POST",
+    "url": "https://api.sbinmo.com/login/Login",
+    "authentication": "genericCredentialType",
+    "genericAuthType": "httpCustomAuth",
+    "options": {
+     "response": {
+      "response": {
+       "neverError": true
+      }
+     }
+    },
+    "sendBody": true,
+    "specifyBody": "json",
+    "jsonBody": "={}"
+   },
+   "type": "n8n-nodes-base.httpRequest",
+   "typeVersion": 4.2,
+   "position": [
+    200,
+    0
+   ],
+   "id": "token-inmoplus",
+   "name": "Token InmoPlus",
+   "credentials": {
+    "httpCustomAuth": {
+     "id": "bbad94G3jwFsuNVa",
+     "name": "InmoPlus Ceballos (login bot)"
+    }
+   }
+  },
+  {
+   "parameters": {
+    "method": "GET",
+    "url": "=https://api.sbinmo.com/administracion/ListadoLeads?Valorado=2&pagesize=100&orden=dFechaHora&dirOrden=DESC&FechaIni={{ $now.minus({days:2}).setZone('Europe/Madrid').toFormat('dd/MM/yyyy') }}",
+    "options": {
+     "response": {
+      "response": {
+       "neverError": true
+      }
+     }
+    },
+    "sendHeaders": true,
+    "headerParameters": {
+     "parameters": [
+      {
+       "name": "Authorization",
+       "value": "=Bearer {{ $json.token || $json }}"
+      }
+     ]
+    }
+   },
+   "type": "n8n-nodes-base.httpRequest",
+   "typeVersion": 4.2,
+   "position": [
+    400,
+    0
+   ],
+   "id": "leads-sin-valorar",
+   "name": "Leads sin valorar",
+   "credentials": {}
+  },
+  {
+   "parameters": {
+    "fieldToSplitOut": "valoraciones",
+    "options": {}
+   },
+   "type": "n8n-nodes-base.splitOut",
+   "typeVersion": 1,
+   "position": [
+    600,
+    0
+   ],
+   "id": "split",
+   "name": "Separa los leads"
+  },
+  {
+   "parameters": {
+    "jsCode": "// Normaliza cada lead de InmoPlus a los campos que usa el resto del escenario.\nconst salida = [];\nfor (const it of $input.all()) {\n  const l = it.json;\n  // El telefono llega partido en prefijo y numero, y a veces con ruido.\n  let tel = String(l.cTelefono ?? '').replace(/[^0-9+]/g, '');\n  const pref = String(l.cPrefijo ?? '').replace(/[^0-9]/g, '');\n  if (tel.startsWith('+')) tel = tel.slice(1);\n  if (/^\\d{9}$/.test(tel)) tel = (pref || '34') + tel;   // espanol sin prefijo\n  tel = tel.replace(/^00/, '');\n\n  const nombre = [l.cNombre, l.cApellidos].filter(Boolean).join(' ').trim();\n  salida.push({ json: {\n    uid: l.cUid ?? '',\n    id_inmueble: l.idInmueble ?? null,\n    referencia: l.cReferencia || l.cReferenciaPropia || '',\n    nombre_completo: nombre || 'Cliente',\n    nombre_corto: (nombre.split(' ')[0] || 'Cliente'),\n    email: l.cEmail ?? '',\n    wa_id: tel,\n    telefono_mas: '+' + tel,\n    fecha: l.dFechaHora ?? '',\n    // Texto integro del correo del portal. InmoPlus ya lo ingiere, por eso no\n    // hace falta conectarse a info@.\n    correo_origen: l.cTextoMailOrigen ?? '',\n    portal: l.cMailOrigen ?? '',\n  }});\n}\nreturn salida;"
+   },
+   "type": "n8n-nodes-base.code",
+   "typeVersion": 2,
+   "position": [
+    800,
+    0
+   ],
+   "id": "campos-del-lead",
+   "name": "Campos del lead"
+  },
+  {
+   "parameters": {
+    "conditions": {
+     "options": {
+      "caseSensitive": true,
+      "typeValidation": "loose",
+      "version": 2
+     },
+     "conditions": [
+      {
+       "id": "t",
+       "leftValue": "={{ $json.wa_id }}",
+       "rightValue": "^[0-9]{10,15}$",
+       "operator": {
+        "type": "string",
+        "operation": "regex"
+       }
+      }
+     ],
+     "combinator": "and"
+    },
+    "looseTypeValidation": true,
+    "options": {}
+   },
+   "type": "n8n-nodes-base.filter",
+   "typeVersion": 2.2,
+   "position": [
+    1000,
+    0
+   ],
+   "id": "filtro",
+   "name": "Solo con teléfono válido"
+  },
+  {
+   "parameters": {
+    "operation": "rowExists",
+    "dataTableId": {
+     "__rl": true,
+     "value": "9zpS4FExMHwddDjN",
+     "mode": "list",
+     "cachedResultName": "LeadsInteresados"
+    },
+    "filters": {
+     "conditions": [
+      {
+       "keyName": "Telefono",
+       "condition": "eq",
+       "keyValue": "={{ $json.telefono_mas }}"
+      },
+      {
+       "keyName": "IdInmueble",
+       "condition": "eq",
+       "keyValue": "={{ $json.id_inmueble }}"
+      }
+     ]
+    }
+   },
+   "type": "n8n-nodes-base.dataTable",
+   "typeVersion": 1,
+   "position": [
+    1200,
+    0
+   ],
+   "id": "dedup",
+   "name": "¿Ya lo tratamos?"
+  },
+  {
+   "parameters": {
+    "conditions": {
+     "options": {
+      "caseSensitive": true,
+      "typeValidation": "loose",
+      "version": 2
+     },
+     "conditions": [
+      {
+       "id": "c",
+       "leftValue": "={{ $json.exists }}",
+       "rightValue": "",
+       "operator": {
+        "type": "boolean",
+        "operation": "false",
+        "singleValue": true
+       }
+      }
+     ],
+     "combinator": "and"
+    },
+    "looseTypeValidation": true,
+    "options": {}
+   },
+   "type": "n8n-nodes-base.if",
+   "typeVersion": 2.2,
+   "position": [
+    1400,
+    0
+   ],
+   "id": "¿es-un-lead-nuevo?",
+   "name": "¿Es un lead nuevo?"
+  },
+  {
+   "parameters": {
+    "method": "GET",
+    "url": "=https://api.sbinmo.com/inmuebles/ListadoInmuebles?pagesize=1&texto={{ $('Campos del lead').item.json.referencia }}",
+    "options": {
+     "response": {
+      "response": {
+       "neverError": true
+      }
+     }
+    },
+    "sendHeaders": true,
+    "headerParameters": {
+     "parameters": [
+      {
+       "name": "Authorization",
+       "value": "=Bearer {{ $('Token InmoPlus').item.json.token || $('Token InmoPlus').item.json }}"
+      }
+     ]
+    }
+   },
+   "type": "n8n-nodes-base.httpRequest",
+   "typeVersion": 4.2,
+   "position": [
+    1600,
+    -120
+   ],
+   "id": "datos-del-inmueble",
+   "name": "Datos del inmueble",
+   "credentials": {}
+  },
+  {
+   "parameters": {
+    "jsCode": "// InmoPlus marca la operacion en el propio inmueble: nVenta y nAlquiler.\n// Un inmueble puede estar en las dos; en ese caso mandamos la de compra,\n// que es la que la agencia prioriza para un lead sin mas contexto.\nconst lead = $('Campos del lead').item.json;\nconst resp = $input.first().json || {};\nconst inm = (resp.inmuebles || [])[0] || {};\n\nconst venta    = Number(inm.nVenta ?? 0) > 0;\nconst alquiler = Number(inm.nAlquiler ?? 0) > 0;\nconst operacion = venta ? 'compra' : (alquiler ? 'alquiler' : 'compra');\n\n// Descripcion corta del inmueble para la variable de la plantilla.\nconst descripcion = String(\n  inm.cTituloWeb || inm.cTitulo || inm.cTipoInmueble || ''\n).replace(/\\s+/g, ' ').trim() || ('referencia ' + lead.referencia);\n\n// PLANTILLAS DE META. Ajustar aqui si cambian los nombres o las variables.\n// Ojo: Meta rechaza variables con saltos de linea, tabuladores o mas de\n// cuatro espacios seguidos (error 132000), por eso se aplana todo.\nconst aplana = (t) => String(t ?? '').replace(/[\\r\\n\\t]+/g, ' ').replace(/\\s{2,}/g, ' ').trim().slice(0, 900);\nconst PLANTILLAS = {\n  compra:   { nombre: 'plantilla_compra',   idioma: 'en', etiqueta: 'compra' },\n  alquiler: { nombre: 'plantilla_alquiler', idioma: 'en', etiqueta: 'alquiler' },\n};\nconst p = PLANTILLAS[operacion];\n\nreturn [{ json: {\n  ...lead,\n  operacion,\n  descripcion_inmueble: aplana(descripcion),\n  plantilla: p.nombre,\n  idioma: p.idioma,\n  etiqueta_operacion: p.etiqueta,\n  param1: aplana(lead.nombre_corto),\n  param2: aplana(descripcion),\n}}];"
+   },
+   "type": "n8n-nodes-base.code",
+   "typeVersion": 2,
+   "position": [
+    1800,
+    -120
+   ],
+   "id": "compra-o-alquiler",
+   "name": "Compra o alquiler"
+  },
+  {
+   "parameters": {
+    "method": "GET",
+    "url": "=https://panel-inmoceballos.serversvisionarius.com/api/v1/accounts/1/contacts/search?q=%2B{{ $json.wa_id }}",
+    "authentication": "genericCredentialType",
+    "genericAuthType": "httpHeaderAuth",
+    "options": {
+     "response": {
+      "response": {
+       "neverError": true
+      }
+     }
+    }
+   },
+   "type": "n8n-nodes-base.httpRequest",
+   "typeVersion": 4.2,
+   "position": [
+    2000,
+    -120
+   ],
+   "id": "busca-el-contacto",
+   "name": "Busca el contacto",
+   "credentials": {
+    "httpHeaderAuth": {
+     "id": "HytaCnD62Ixsx7Fw",
+     "name": "Chatwoot Ceballos (api_access_token)"
+    }
+   }
+  },
+  {
+   "parameters": {
+    "conditions": {
+     "options": {
+      "caseSensitive": true,
+      "typeValidation": "loose",
+      "version": 2
+     },
+     "conditions": [
+      {
+       "id": "c",
+       "leftValue": "={{ ($json.payload || []).length }}",
+       "rightValue": 0,
+       "operator": {
+        "type": "number",
+        "operation": "gt"
+       }
+      }
+     ],
+     "combinator": "and"
+    },
+    "looseTypeValidation": true,
+    "options": {}
+   },
+   "type": "n8n-nodes-base.if",
+   "typeVersion": 2.2,
+   "position": [
+    2200,
+    -120
+   ],
+   "id": "¿existe-el-contacto?",
+   "name": "¿Existe el contacto?"
+  },
+  {
+   "parameters": {
+    "method": "POST",
+    "url": "=https://panel-inmoceballos.serversvisionarius.com/api/v1/accounts/1/contacts",
+    "authentication": "genericCredentialType",
+    "genericAuthType": "httpHeaderAuth",
+    "options": {
+     "response": {
+      "response": {
+       "neverError": true
+      }
+     }
+    },
+    "sendBody": true,
+    "specifyBody": "json",
+    "jsonBody": "={\n  \"name\": {{ JSON.stringify($('Compra o alquiler').item.json.nombre_completo) }},\n  \"phone_number\": \"+{{ $('Compra o alquiler').item.json.wa_id }}\",\n  \"identifier\": \"{{ $('Compra o alquiler').item.json.wa_id }}\",\n  \"inbox_id\": 1,\n  \"source_id\": \"{{ $('Compra o alquiler').item.json.wa_id }}\",\n  \"custom_attributes\": { \"bot\": \"On\" }\n}"
+   },
+   "type": "n8n-nodes-base.httpRequest",
+   "typeVersion": 4.2,
+   "position": [
+    2400,
+    0
+   ],
+   "id": "crea-el-contacto",
+   "name": "Crea el contacto",
+   "credentials": {
+    "httpHeaderAuth": {
+     "id": "HytaCnD62Ixsx7Fw",
+     "name": "Chatwoot Ceballos (api_access_token)"
+    }
+   }
+  },
+  {
+   "parameters": {
+    "assignments": {
+     "assignments": [
+      {
+       "id": "a",
+       "name": "contact_id",
+       "value": "={{ $json.payload[0].id }}",
+       "type": "number"
+      }
+     ]
+    },
+    "options": {}
+   },
+   "type": "n8n-nodes-base.set",
+   "typeVersion": 3.4,
+   "position": [
+    2400,
+    -240
+   ],
+   "id": "contacto-existente",
+   "name": "Contacto existente"
+  },
+  {
+   "parameters": {
+    "assignments": {
+     "assignments": [
+      {
+       "id": "a",
+       "name": "contact_id",
+       "value": "={{ $json.payload.contact.id }}",
+       "type": "number"
+      }
+     ]
+    },
+    "options": {}
+   },
+   "type": "n8n-nodes-base.set",
+   "typeVersion": 3.4,
+   "position": [
+    2600,
+    0
+   ],
+   "id": "contacto-nuevo",
+   "name": "Contacto nuevo"
+  },
+  {
+   "parameters": {
+    "method": "GET",
+    "url": "=https://panel-inmoceballos.serversvisionarius.com/api/v1/accounts/1/contacts/{{ $json.contact_id }}/conversations",
+    "authentication": "genericCredentialType",
+    "genericAuthType": "httpHeaderAuth",
+    "options": {
+     "response": {
+      "response": {
+       "neverError": true
+      }
+     }
+    }
+   },
+   "type": "n8n-nodes-base.httpRequest",
+   "typeVersion": 4.2,
+   "position": [
+    2800,
+    -120
+   ],
+   "id": "conversaciones-del-contacto",
+   "name": "Conversaciones del contacto",
+   "credentials": {
+    "httpHeaderAuth": {
+     "id": "HytaCnD62Ixsx7Fw",
+     "name": "Chatwoot Ceballos (api_access_token)"
+    }
+   }
+  },
+  {
+   "parameters": {
+    "conditions": {
+     "options": {
+      "caseSensitive": true,
+      "typeValidation": "loose",
+      "version": 2
+     },
+     "conditions": [
+      {
+       "id": "c",
+       "leftValue": "={{ ($json.payload || []).length }}",
+       "rightValue": 0,
+       "operator": {
+        "type": "number",
+        "operation": "gt"
+       }
+      }
+     ],
+     "combinator": "and"
+    },
+    "looseTypeValidation": true,
+    "options": {}
+   },
+   "type": "n8n-nodes-base.if",
+   "typeVersion": 2.2,
+   "position": [
+    3000,
+    -120
+   ],
+   "id": "¿ya-tiene-conversación?",
+   "name": "¿Ya tiene conversación?"
+  },
+  {
+   "parameters": {
+    "assignments": {
+     "assignments": [
+      {
+       "id": "a",
+       "name": "conversation_id",
+       "value": "={{ $json.payload[0].id }}",
+       "type": "number"
+      }
+     ]
+    },
+    "options": {}
+   },
+   "type": "n8n-nodes-base.set",
+   "typeVersion": 3.4,
+   "position": [
+    3200,
+    -240
+   ],
+   "id": "conversación-existente",
+   "name": "Conversación existente"
+  },
+  {
+   "parameters": {
+    "method": "POST",
+    "url": "=https://panel-inmoceballos.serversvisionarius.com/api/v1/accounts/1/conversations",
+    "authentication": "genericCredentialType",
+    "genericAuthType": "httpHeaderAuth",
+    "options": {
+     "response": {
+      "response": {
+       "neverError": true
+      }
+     }
+    },
+    "sendBody": true,
+    "specifyBody": "json",
+    "jsonBody": "={\n  \"source_id\": \"{{ $('Compra o alquiler').item.json.wa_id }}\",\n  \"inbox_id\": 1,\n  \"contact_id\": {{ $('Contacto existente').isExecuted ? $('Contacto existente').item.json.contact_id : $('Contacto nuevo').item.json.contact_id }}\n}"
+   },
+   "type": "n8n-nodes-base.httpRequest",
+   "typeVersion": 4.2,
+   "position": [
+    3200,
+    0
+   ],
+   "id": "crea-la-conversación",
+   "name": "Crea la conversación",
+   "credentials": {
+    "httpHeaderAuth": {
+     "id": "HytaCnD62Ixsx7Fw",
+     "name": "Chatwoot Ceballos (api_access_token)"
+    }
+   }
+  },
+  {
+   "parameters": {
+    "assignments": {
+     "assignments": [
+      {
+       "id": "a",
+       "name": "conversation_id",
+       "value": "={{ $json.id }}",
+       "type": "number"
+      }
+     ]
+    },
+    "options": {}
+   },
+   "type": "n8n-nodes-base.set",
+   "typeVersion": 3.4,
+   "position": [
+    3400,
+    0
+   ],
+   "id": "conversación-nueva",
+   "name": "Conversación nueva"
+  },
+  {
+   "parameters": {
+    "assignments": {
+     "assignments": [
+      {
+       "id": "a",
+       "name": "conversation_id",
+       "value": "={{ $json.conversation_id }}",
+       "type": "number"
+      }
+     ]
+    },
+    "options": {}
+   },
+   "type": "n8n-nodes-base.set",
+   "typeVersion": 3.4,
+   "position": [
+    3600,
+    -120
+   ],
+   "id": "id-de-conversación",
+   "name": "Id de conversación"
+  },
+  {
+   "parameters": {
+    "method": "POST",
+    "url": "=https://panel-inmoceballos.serversvisionarius.com/api/v1/accounts/1/conversations/{{ $json.conversation_id }}/messages",
+    "authentication": "genericCredentialType",
+    "genericAuthType": "httpHeaderAuth",
+    "options": {
+     "response": {
+      "response": {
+       "neverError": true
+      }
+     }
+    },
+    "sendBody": true,
+    "specifyBody": "json",
+    "jsonBody": "={\n  \"content\": {{ JSON.stringify('Hola ' + $('Compra o alquiler').item.json.param1 + ', te escribimos de Inmobiliaria Ceballos por tu interés en ' + $('Compra o alquiler').item.json.param2) }},\n  \"message_type\": \"outgoing\",\n  \"template_params\": {\n    \"name\": {{ JSON.stringify($('Compra o alquiler').item.json.plantilla) }},\n    \"category\": \"MARKETING\",\n    \"language\": {{ JSON.stringify($('Compra o alquiler').item.json.idioma) }},\n    \"processed_params\": {\n      \"1\": {{ JSON.stringify($('Compra o alquiler').item.json.param1) }},\n      \"2\": {{ JSON.stringify($('Compra o alquiler').item.json.param2) }}\n    }\n  }\n}"
+   },
+   "type": "n8n-nodes-base.httpRequest",
+   "typeVersion": 4.2,
+   "position": [
+    3800,
+    -120
+   ],
+   "id": "envía-la-plantilla",
+   "name": "Envía la plantilla",
+   "credentials": {
+    "httpHeaderAuth": {
+     "id": "HytaCnD62Ixsx7Fw",
+     "name": "Chatwoot Ceballos (api_access_token)"
+    }
+   }
+  },
+  {
+   "parameters": {
+    "schema": {
+     "__rl": true,
+     "mode": "list",
+     "value": "public"
+    },
+    "table": {
+     "__rl": true,
+     "value": "n8n_chat_histories",
+     "mode": "list",
+     "cachedResultName": "n8n_chat_histories"
+    },
+    "columns": {
+     "mappingMode": "defineBelow",
+     "value": {
+      "session_id": "={{ $('Compra o alquiler').item.json.telefono_mas }}",
+      "message": "={{ JSON.stringify({ type: 'ai', content: 'Hola ' + $('Compra o alquiler').item.json.param1 + ', te escribimos de Inmobiliaria Ceballos por tu interés en ' + $('Compra o alquiler').item.json.param2, tool_calls: [], additional_kwargs: {}, response_metadata: {}, invalid_tool_calls: [] }) }}"
+     },
+     "matchingColumns": [
+      "id"
+     ],
+     "attemptToConvertTypes": false,
+     "convertFieldsToString": true
+    },
+    "options": {}
+   },
+   "type": "n8n-nodes-base.postgres",
+   "typeVersion": 2.6,
+   "position": [
+    4000,
+    -120
+   ],
+   "id": "memoria",
+   "name": "Memoria del agente"
+  },
+  {
+   "parameters": {
+    "method": "GET",
+    "url": "=https://panel-inmoceballos.serversvisionarius.com/api/v1/accounts/1/conversations/{{ $('Id de conversación').item.json.conversation_id }}/labels",
+    "authentication": "genericCredentialType",
+    "genericAuthType": "httpHeaderAuth",
+    "options": {
+     "response": {
+      "response": {
+       "neverError": true
+      }
+     }
+    }
+   },
+   "type": "n8n-nodes-base.httpRequest",
+   "typeVersion": 4.2,
+   "position": [
+    4200,
+    -120
+   ],
+   "id": "etiquetas-actuales",
+   "name": "Etiquetas actuales",
+   "credentials": {
+    "httpHeaderAuth": {
+     "id": "HytaCnD62Ixsx7Fw",
+     "name": "Chatwoot Ceballos (api_access_token)"
+    }
+   }
+  },
+  {
+   "parameters": {
+    "jsCode": "// Chatwoot REEMPLAZA todas las etiquetas al hacer POST, no las añade.\n// Hay que leer las que ya tiene y mandar la union, o se borran las que\n// haya puesto un comercial a mano.\nconst actuales = ($input.first().json.payload || []).map(String);\nconst d = $('Compra o alquiler').item.json;\nconst nuevas = ['1-bienvenida_ia', d.etiqueta_operacion];\nconst union = [...new Set([...actuales, ...nuevas])];\nreturn [{ json: { labels: union, conversation_id: $('Id de conversación').item.json.conversation_id } }];"
+   },
+   "type": "n8n-nodes-base.code",
+   "typeVersion": 2,
+   "position": [
+    4400,
+    -120
+   ],
+   "id": "une-las-etiquetas",
+   "name": "Une las etiquetas"
+  },
+  {
+   "parameters": {
+    "method": "POST",
+    "url": "=https://panel-inmoceballos.serversvisionarius.com/api/v1/accounts/1/conversations/{{ $json.conversation_id }}/labels",
+    "authentication": "genericCredentialType",
+    "genericAuthType": "httpHeaderAuth",
+    "options": {
+     "response": {
+      "response": {
+       "neverError": true
+      }
+     }
+    },
+    "sendBody": true,
+    "specifyBody": "json",
+    "jsonBody": "={\n  \"labels\": {{ JSON.stringify($json.labels) }}\n}"
+   },
+   "type": "n8n-nodes-base.httpRequest",
+   "typeVersion": 4.2,
+   "position": [
+    4600,
+    -120
+   ],
+   "id": "aplica-las-etiquetas",
+   "name": "Aplica las etiquetas",
+   "credentials": {
+    "httpHeaderAuth": {
+     "id": "HytaCnD62Ixsx7Fw",
+     "name": "Chatwoot Ceballos (api_access_token)"
+    }
+   }
+  },
+  {
+   "parameters": {
+    "dataTableId": {
+     "__rl": true,
+     "value": "9zpS4FExMHwddDjN",
+     "mode": "list",
+     "cachedResultName": "LeadsInteresados"
+    },
+    "columns": {
+     "mappingMode": "defineBelow",
+     "value": {
+      "Telefono": "={{ $('Compra o alquiler').item.json.telefono_mas }}",
+      "IdInmueble": "={{ $('Compra o alquiler').item.json.id_inmueble }}"
+     },
+     "matchingColumns": [],
+     "attemptToConvertTypes": false,
+     "convertFieldsToString": false
+    },
+    "options": {}
+   },
+   "type": "n8n-nodes-base.dataTable",
+   "typeVersion": 1,
+   "position": [
+    4800,
+    -120
+   ],
+   "id": "registra",
+   "name": "Registra el lead"
+  }
+ ],
+ "connections": {
+  "Cada 10 minutos": {
+   "main": [
+    [
+     {
+      "node": "Token InmoPlus",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Token InmoPlus": {
+   "main": [
+    [
+     {
+      "node": "Leads sin valorar",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Leads sin valorar": {
+   "main": [
+    [
+     {
+      "node": "Separa los leads",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Separa los leads": {
+   "main": [
+    [
+     {
+      "node": "Campos del lead",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Campos del lead": {
+   "main": [
+    [
+     {
+      "node": "Solo con teléfono válido",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Solo con teléfono válido": {
+   "main": [
+    [
+     {
+      "node": "¿Ya lo tratamos?",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "¿Ya lo tratamos?": {
+   "main": [
+    [
+     {
+      "node": "¿Es un lead nuevo?",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "¿Es un lead nuevo?": {
+   "main": [
+    [
+     {
+      "node": "Datos del inmueble",
+      "type": "main",
+      "index": 0
+     }
+    ],
+    []
+   ]
+  },
+  "Datos del inmueble": {
+   "main": [
+    [
+     {
+      "node": "Compra o alquiler",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Compra o alquiler": {
+   "main": [
+    [
+     {
+      "node": "Busca el contacto",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Busca el contacto": {
+   "main": [
+    [
+     {
+      "node": "¿Existe el contacto?",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "¿Existe el contacto?": {
+   "main": [
+    [
+     {
+      "node": "Contacto existente",
+      "type": "main",
+      "index": 0
+     }
+    ],
+    [
+     {
+      "node": "Crea el contacto",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Crea el contacto": {
+   "main": [
+    [
+     {
+      "node": "Contacto nuevo",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Contacto existente": {
+   "main": [
+    [
+     {
+      "node": "Conversaciones del contacto",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Contacto nuevo": {
+   "main": [
+    [
+     {
+      "node": "Conversaciones del contacto",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Conversaciones del contacto": {
+   "main": [
+    [
+     {
+      "node": "¿Ya tiene conversación?",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "¿Ya tiene conversación?": {
+   "main": [
+    [
+     {
+      "node": "Conversación existente",
+      "type": "main",
+      "index": 0
+     }
+    ],
+    [
+     {
+      "node": "Crea la conversación",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Crea la conversación": {
+   "main": [
+    [
+     {
+      "node": "Conversación nueva",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Conversación existente": {
+   "main": [
+    [
+     {
+      "node": "Id de conversación",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Conversación nueva": {
+   "main": [
+    [
+     {
+      "node": "Id de conversación",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Id de conversación": {
+   "main": [
+    [
+     {
+      "node": "Envía la plantilla",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Envía la plantilla": {
+   "main": [
+    [
+     {
+      "node": "Memoria del agente",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Memoria del agente": {
+   "main": [
+    [
+     {
+      "node": "Etiquetas actuales",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Etiquetas actuales": {
+   "main": [
+    [
+     {
+      "node": "Une las etiquetas",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Une las etiquetas": {
+   "main": [
+    [
+     {
+      "node": "Aplica las etiquetas",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Aplica las etiquetas": {
+   "main": [
+    [
+     {
+      "node": "Registra el lead",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  }
+ },
+ "settings": {
+  "executionOrder": "v1",
+  "callerPolicy": "workflowsFromSameOwner",
+  "availableInMCP": false
+ },
+ "staticData": null,
+ "meta": null,
+ "pinData": null,
+ "versionCounter": 1,
+ "tags": []
+}

@@ -1,0 +1,516 @@
+{
+ "id": "x7XoS7kiTeeIET9l",
+ "name": "Seguimientos Leads Ceballos",
+ "description": null,
+ "active": false,
+ "isArchived": false,
+ "nodes": [
+  {
+   "parameters": {
+    "rule": {
+     "interval": [
+      {
+       "field": "minutes",
+       "minutesInterval": 30
+      }
+     ]
+    }
+   },
+   "type": "n8n-nodes-base.scheduleTrigger",
+   "typeVersion": 1.2,
+   "position": [
+    0,
+    0
+   ],
+   "id": "pr",
+   "name": "Cada 30 minutos"
+  },
+  {
+   "parameters": {
+    "assignments": {
+     "assignments": [
+      {
+       "id": "horas_seguimiento_1",
+       "name": "horas_seguimiento_1",
+       "value": "12",
+       "type": "number"
+      },
+      {
+       "id": "horas_seguimiento_2",
+       "name": "horas_seguimiento_2",
+       "value": "24",
+       "type": "number"
+      },
+      {
+       "id": "etiqueta_bienvenida",
+       "name": "etiqueta_bienvenida",
+       "value": "1-bienvenida_ia",
+       "type": "string"
+      },
+      {
+       "id": "etiqueta_en_proceso",
+       "name": "etiqueta_en_proceso",
+       "value": "2-en_proceso",
+       "type": "string"
+      },
+      {
+       "id": "etiqueta_agendada",
+       "name": "etiqueta_agendada",
+       "value": "3-agendada_ia",
+       "type": "string"
+      },
+      {
+       "id": "etiqueta_intervenir",
+       "name": "etiqueta_intervenir",
+       "value": "4-intervenir",
+       "type": "string"
+      },
+      {
+       "id": "etiqueta_seguimiento_1",
+       "name": "etiqueta_seguimiento_1",
+       "value": "seguimiento_1",
+       "type": "string"
+      },
+      {
+       "id": "etiqueta_seguimiento_2",
+       "name": "etiqueta_seguimiento_2",
+       "value": "seguimiento_2",
+       "type": "string"
+      },
+      {
+       "id": "plantilla_seguimiento_1",
+       "name": "plantilla_seguimiento_1",
+       "value": "seguimiento_1",
+       "type": "string"
+      },
+      {
+       "id": "idioma_seguimiento_1",
+       "name": "idioma_seguimiento_1",
+       "value": "en",
+       "type": "string"
+      },
+      {
+       "id": "plantilla_seguimiento_2",
+       "name": "plantilla_seguimiento_2",
+       "value": "seguimiento_2",
+       "type": "string"
+      },
+      {
+       "id": "idioma_seguimiento_2",
+       "name": "idioma_seguimiento_2",
+       "value": "en",
+       "type": "string"
+      },
+      {
+       "id": "adopcion_automatica",
+       "name": "adopcion_automatica",
+       "value": "true",
+       "type": "string"
+      },
+      {
+       "id": "max_candidatas",
+       "name": "max_candidatas",
+       "value": "60",
+       "type": "number"
+      },
+      {
+       "id": "horas_max_adopcion",
+       "name": "horas_max_adopcion",
+       "value": "48",
+       "type": "number"
+      },
+      {
+       "id": "hora_inicio_envios",
+       "name": "hora_inicio_envios",
+       "value": "9",
+       "type": "number"
+      },
+      {
+       "id": "hora_fin_envios",
+       "name": "hora_fin_envios",
+       "value": "21",
+       "type": "number"
+      }
+     ]
+    },
+    "options": {}
+   },
+   "type": "n8n-nodes-base.set",
+   "typeVersion": 3.4,
+   "position": [
+    200,
+    0
+   ],
+   "id": "cfg",
+   "name": "Configuración"
+  },
+  {
+   "parameters": {
+    "method": "GET",
+    "url": "=https://panel-inmoceballos.serversvisionarius.com/api/v1/accounts/1/conversations?status=open&page=1",
+    "authentication": "genericCredentialType",
+    "genericAuthType": "httpHeaderAuth",
+    "options": {
+     "response": {
+      "response": {
+       "neverError": true
+      }
+     }
+    }
+   },
+   "type": "n8n-nodes-base.httpRequest",
+   "typeVersion": 4.2,
+   "position": [
+    400,
+    0
+   ],
+   "id": "conversaciones-abiertas",
+   "name": "Conversaciones abiertas",
+   "credentials": {
+    "httpHeaderAuth": {
+     "id": "HytaCnD62Ixsx7Fw",
+     "name": "Chatwoot Ceballos (api_access_token)"
+    }
+   }
+  },
+  {
+   "parameters": {
+    "jsCode": "// Aplana las conversaciones abiertas y deja solo las que pueden entrar al\n// embudo, para no pedir los mensajes de todas en cada vuelta.\nconst cfg = $('Configuración').first().json;\nconst ET = [cfg.etiqueta_bienvenida, cfg.etiqueta_seguimiento_1, cfg.etiqueta_seguimiento_2];\nconst FINALES = [cfg.etiqueta_en_proceso, cfg.etiqueta_agendada, cfg.etiqueta_intervenir];\nconst max = Number(cfg.max_candidatas);\n\nconst salida = [];\nfor (const it of $input.all()) {\n  const payload = it.json?.data?.payload || it.json?.payload || [];\n  for (const c of payload) {\n    const etiquetas = (c.labels || []).map(String);\n    // Si un comercial ya intervino o el lead avanzo, el automatico no toca nada.\n    if (FINALES.some((e) => etiquetas.includes(e))) continue;\n    const enEmbudo = ET.some((e) => etiquetas.includes(e));\n    const meta = c.meta || {};\n    const sender = meta.sender || {};\n    salida.push({ json: {\n      conversacion_id: c.id,\n      contacto_id: sender.id ?? null,\n      nombre: sender.name ?? '',\n      telefono: sender.phone_number ?? '',\n      etiquetas,\n      // Adopcion: conversaciones sin etiqueta de estado a las que ya escribimos.\n      es_adopcion: !enEmbudo && String(cfg.adopcion_automatica) === 'true',\n    }});\n    if (salida.length >= max) return salida;\n  }\n}\nreturn salida;"
+   },
+   "type": "n8n-nodes-base.code",
+   "typeVersion": 2,
+   "position": [
+    600,
+    0
+   ],
+   "id": "cand",
+   "name": "Seleccionar candidatas"
+  },
+  {
+   "parameters": {
+    "method": "GET",
+    "url": "=https://panel-inmoceballos.serversvisionarius.com/api/v1/accounts/1/conversations/{{ $json.conversacion_id }}/messages",
+    "authentication": "genericCredentialType",
+    "genericAuthType": "httpHeaderAuth",
+    "options": {
+     "response": {
+      "response": {
+       "neverError": true
+      }
+     }
+    }
+   },
+   "type": "n8n-nodes-base.httpRequest",
+   "typeVersion": 4.2,
+   "position": [
+    800,
+    0
+   ],
+   "id": "mensajes-de-la-conversación",
+   "name": "Mensajes de la conversación",
+   "credentials": {
+    "httpHeaderAuth": {
+     "id": "HytaCnD62Ixsx7Fw",
+     "name": "Chatwoot Ceballos (api_access_token)"
+    }
+   }
+  },
+  {
+   "parameters": {
+    "jsCode": "// Maquina de estados del seguimiento, a partir de las etiquetas de la\n// conversacion y del ultimo mensaje real (se ignoran notas privadas y\n// eventos de actividad del panel).\nconst cfg = $('Configuración').first().json;\nconst conv = $('Seleccionar candidatas').item.json;\n\nconst horasSeg1 = Number(cfg.horas_seguimiento_1);\nconst horasSeg2 = Number(cfg.horas_seguimiento_2);\nconst horaIni = Number(cfg.hora_inicio_envios);\nconst horaFin = Number(cfg.hora_fin_envios);\nconst ET_BIENVENIDA = cfg.etiqueta_bienvenida;\nconst ET_EN_PROCESO = cfg.etiqueta_en_proceso;\nconst ET_SEG1 = cfg.etiqueta_seguimiento_1;\nconst ET_SEG2 = cfg.etiqueta_seguimiento_2;\n\n// Horas transcurridas contando solo el horario de envio: si escribimos a las\n// 22:00, las horas no corren mientras el cliente duerme.\nfunction horasActivas(desde, hasta) {\n  if (!desde || hasta <= desde) return 0;\n  let cursor = DateTime.fromSeconds(desde).setZone('Europe/Madrid');\n  const fin = DateTime.fromSeconds(hasta).setZone('Europe/Madrid');\n  let total = 0, vueltas = 0;\n  while (cursor < fin && vueltas < 400) {\n    vueltas++;\n    const sig = cursor.startOf('day').plus({ days: 1 });\n    const tramoFin = sig < fin ? sig : fin;\n    const vIni = cursor.startOf('day').plus({ hours: horaIni });\n    const vFin = cursor.startOf('day').plus({ hours: horaFin });\n    const a = cursor > vIni ? cursor : vIni;\n    const b = tramoFin < vFin ? tramoFin : vFin;\n    if (b > a) total += b.diff(a, 'hours').hours;\n    cursor = tramoFin;\n  }\n  return total;\n}\n\nconst resp = $input.item.json || {};\nconst mensajes = (resp.payload || []).filter((m) => m.message_type !== 2 && m.private !== true);\nconst entrantes = mensajes.filter((m) => m.message_type === 0);\nconst salientes = mensajes.filter((m) => m.message_type === 1 || m.message_type === 3);\nconst ultimoEntrante = entrantes.length ? Math.max(...entrantes.map((m) => m.created_at)) : 0;\nconst ultimoSaliente = salientes.length ? Math.max(...salientes.map((m) => m.created_at)) : 0;\n\nconst ahora = $now.setZone('Europe/Madrid');\nconst ahoraSeg = Math.floor(ahora.toSeconds());\nconst horasDesdeSalida = horasActivas(ultimoSaliente, ahoraSeg);\n\n// El cliente ha contestado si ha escrito ALGUNA vez. No vale mirar si el\n// ultimo mensaje es suyo: en cuanto el asistente le responde, el ultimo vuelve\n// a ser saliente y la conversacion pareceria sin contestar otra vez.\nconst haContestado = ultimoEntrante > 0;\nconst podemosEnviar = ahora.hour >= horaIni && ahora.hour < horaFin;\n\nconst etiquetas = conv.etiquetas || [];\nconst nombreCorto = String(conv.nombre || '').split(' ')[0] || String(conv.nombre || '');\nconst sinEstado = etiquetas.filter((l) => ![ET_BIENVENIDA, ET_SEG1, ET_SEG2].includes(l));\nconst unicas = (l) => [...new Set(l)];\n\nconst base = {\n  conversacion_id: conv.conversacion_id,\n  contacto_id: conv.contacto_id,\n  nombre: conv.nombre,\n  telefono: conv.telefono,\n  etiquetas_actuales: etiquetas,\n  horas_activas_desde_ultimo_envio: Math.round(horasDesdeSalida * 10) / 10,\n  ha_contestado: haContestado,\n  plantilla: '', idioma: '', param1: '',\n};\n// Fuera de horario no sale ninguna plantilla. Como el cambio de etiqueta va\n// unido al envio, se pospone entero hasta la primera vuelta despues de las 8.\nconst enEspera = { json: { ...base, accion: 'sin_accion', motivo: 'fuera de horario' } };\n\nif (!conv.es_adopcion) {\n  if (haContestado) {\n    return { json: { ...base, accion: 'en_proceso',\n      etiquetas_finales: unicas([...sinEstado, ET_EN_PROCESO]) } };\n  }\n  if (etiquetas.includes(ET_SEG2)) return { json: { ...base, accion: 'sin_accion' } };\n  if (etiquetas.includes(ET_SEG1)) {\n    if (horasDesdeSalida < horasSeg2) return { json: { ...base, accion: 'sin_accion' } };\n    if (!podemosEnviar) return enEspera;\n    return { json: { ...base, accion: 'seguimiento_2',\n      etiquetas_finales: unicas([...sinEstado, ET_SEG2]),\n      plantilla: cfg.plantilla_seguimiento_2, idioma: cfg.idioma_seguimiento_2, param1: nombreCorto } };\n  }\n  if (etiquetas.includes(ET_BIENVENIDA)) {\n    if (horasDesdeSalida < horasSeg1) return { json: { ...base, accion: 'sin_accion' } };\n    if (!podemosEnviar) return enEspera;\n    return { json: { ...base, accion: 'seguimiento_1',\n      etiquetas_finales: unicas([...sinEstado, ET_SEG1]),\n      plantilla: cfg.plantilla_seguimiento_1, idioma: cfg.idioma_seguimiento_1, param1: nombreCorto } };\n  }\n  return { json: { ...base, accion: 'sin_accion' } };\n}\n\n// Adopcion: conversaciones ya contactadas pero sin etiqueta de estado.\nif (!ultimoSaliente || ultimoEntrante > 0) return { json: { ...base, accion: 'sin_accion' } };\n// Nunca adoptamos conversaciones antiguas: evita escribir a leads parados\n// desde hace dias el dia que se activa el escenario.\nif ((ahoraSeg - ultimoSaliente) / 3600 > Number(cfg.horas_max_adopcion)) {\n  return { json: { ...base, accion: 'sin_accion' } };\n}\nif (horasDesdeSalida < horasSeg1) {\n  return { json: { ...base, accion: 'adoptar', etiquetas_finales: unicas([...etiquetas, ET_BIENVENIDA]) } };\n}\nif (!podemosEnviar) return enEspera;\nreturn { json: { ...base, accion: 'seguimiento_1',\n  etiquetas_finales: unicas([...sinEstado, ET_SEG1]),\n  plantilla: cfg.plantilla_seguimiento_1, idioma: cfg.idioma_seguimiento_1, param1: nombreCorto } };",
+    "mode": "runOnceForEachItem"
+   },
+   "type": "n8n-nodes-base.code",
+   "typeVersion": 2,
+   "position": [
+    1000,
+    0
+   ],
+   "id": "dec",
+   "name": "Decidir acción"
+  },
+  {
+   "parameters": {
+    "conditions": {
+     "options": {
+      "caseSensitive": true,
+      "typeValidation": "loose",
+      "version": 2
+     },
+     "conditions": [
+      {
+       "id": "f",
+       "leftValue": "={{ $json.accion }}",
+       "rightValue": "sin_accion",
+       "operator": {
+        "type": "string",
+        "operation": "notEquals"
+       }
+      }
+     ],
+     "combinator": "and"
+    },
+    "looseTypeValidation": true,
+    "options": {}
+   },
+   "type": "n8n-nodes-base.filter",
+   "typeVersion": 2.2,
+   "position": [
+    1200,
+    0
+   ],
+   "id": "flt",
+   "name": "¿Hay algo que hacer?"
+  },
+  {
+   "parameters": {
+    "conditions": {
+     "options": {
+      "caseSensitive": true,
+      "typeValidation": "loose",
+      "version": 2
+     },
+     "conditions": [
+      {
+       "id": "p",
+       "leftValue": "={{ $json.plantilla }}",
+       "rightValue": "",
+       "operator": {
+        "type": "string",
+        "operation": "notEmpty",
+        "singleValue": true
+       }
+      }
+     ],
+     "combinator": "and"
+    },
+    "looseTypeValidation": true,
+    "options": {}
+   },
+   "type": "n8n-nodes-base.if",
+   "typeVersion": 2.2,
+   "position": [
+    1400,
+    0
+   ],
+   "id": "ifp",
+   "name": "¿Toca enviar plantilla?"
+  },
+  {
+   "parameters": {
+    "method": "POST",
+    "url": "=https://panel-inmoceballos.serversvisionarius.com/api/v1/accounts/1/conversations/{{ $json.conversacion_id }}/messages",
+    "authentication": "genericCredentialType",
+    "genericAuthType": "httpHeaderAuth",
+    "options": {
+     "response": {
+      "response": {
+       "neverError": true
+      }
+     }
+    },
+    "sendBody": true,
+    "specifyBody": "json",
+    "jsonBody": "={\n  \"content\": {{ JSON.stringify('Hola ' + $json.param1 + ',') }},\n  \"message_type\": \"outgoing\",\n  \"template_params\": {\n    \"name\": {{ JSON.stringify($json.plantilla) }},\n    \"category\": \"MARKETING\",\n    \"language\": {{ JSON.stringify($json.idioma) }},\n    \"processed_params\": { \"1\": {{ JSON.stringify($json.param1) }} }\n  }\n}"
+   },
+   "type": "n8n-nodes-base.httpRequest",
+   "typeVersion": 4.2,
+   "position": [
+    1600,
+    -120
+   ],
+   "id": "enviar-seguimiento",
+   "name": "Enviar seguimiento",
+   "credentials": {
+    "httpHeaderAuth": {
+     "id": "HytaCnD62Ixsx7Fw",
+     "name": "Chatwoot Ceballos (api_access_token)"
+    }
+   }
+  },
+  {
+   "parameters": {
+    "method": "POST",
+    "url": "=https://panel-inmoceballos.serversvisionarius.com/api/v1/accounts/1/conversations/{{ $('Decidir acción').item.json.conversacion_id }}/labels",
+    "authentication": "genericCredentialType",
+    "genericAuthType": "httpHeaderAuth",
+    "options": {
+     "response": {
+      "response": {
+       "neverError": true
+      }
+     }
+    },
+    "sendBody": true,
+    "specifyBody": "json",
+    "jsonBody": "={\n  \"labels\": {{ JSON.stringify($('Decidir acción').item.json.etiquetas_finales) }}\n}"
+   },
+   "type": "n8n-nodes-base.httpRequest",
+   "typeVersion": 4.2,
+   "position": [
+    1800,
+    0
+   ],
+   "id": "aplicar-etiquetas",
+   "name": "Aplicar etiquetas",
+   "credentials": {
+    "httpHeaderAuth": {
+     "id": "HytaCnD62Ixsx7Fw",
+     "name": "Chatwoot Ceballos (api_access_token)"
+    }
+   }
+  },
+  {
+   "parameters": {
+    "assignments": {
+     "assignments": [
+      {
+       "id": "r",
+       "name": "resultado",
+       "value": "={{ $('Decidir acción').item.json.accion }} -> conversación {{ $('Decidir acción').item.json.conversacion_id }}",
+       "type": "string"
+      }
+     ]
+    },
+    "options": {}
+   },
+   "type": "n8n-nodes-base.set",
+   "typeVersion": 3.4,
+   "position": [
+    2000,
+    0
+   ],
+   "id": "res",
+   "name": "Resultado"
+  }
+ ],
+ "connections": {
+  "Cada 30 minutos": {
+   "main": [
+    [
+     {
+      "node": "Configuración",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Configuración": {
+   "main": [
+    [
+     {
+      "node": "Conversaciones abiertas",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Conversaciones abiertas": {
+   "main": [
+    [
+     {
+      "node": "Seleccionar candidatas",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Seleccionar candidatas": {
+   "main": [
+    [
+     {
+      "node": "Mensajes de la conversación",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Mensajes de la conversación": {
+   "main": [
+    [
+     {
+      "node": "Decidir acción",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Decidir acción": {
+   "main": [
+    [
+     {
+      "node": "¿Hay algo que hacer?",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "¿Hay algo que hacer?": {
+   "main": [
+    [
+     {
+      "node": "¿Toca enviar plantilla?",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "¿Toca enviar plantilla?": {
+   "main": [
+    [
+     {
+      "node": "Enviar seguimiento",
+      "type": "main",
+      "index": 0
+     }
+    ],
+    [
+     {
+      "node": "Aplicar etiquetas",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Enviar seguimiento": {
+   "main": [
+    [
+     {
+      "node": "Aplicar etiquetas",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Aplicar etiquetas": {
+   "main": [
+    [
+     {
+      "node": "Resultado",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  }
+ },
+ "settings": {
+  "executionOrder": "v1",
+  "callerPolicy": "workflowsFromSameOwner",
+  "availableInMCP": false
+ },
+ "staticData": null,
+ "meta": null,
+ "pinData": null,
+ "versionCounter": 2,
+ "tags": []
+}

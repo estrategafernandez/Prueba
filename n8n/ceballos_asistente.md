@@ -105,6 +105,77 @@ workflows antiguos siguen con el token embebido; conviene migrarlos.
    workflow lanza un error explícito si no hay ninguno configurado.
 2. **Que Meta apruebe `aviso_abierta`**, que sigue en revisión.
 
+## 2026-09-15 — Captación de leads y seguimientos
+
+Arquitectura tomada del desarrollo de DCano (`EnviarPlantillaNuevosLeadsInmovilla`
+y `Escenario 3 - Seguimientos Leads por Etiquetas`), adaptada a InmoPlus. Solo se
+copió el patrón: ningún dato, token ni identificador de aquel cliente.
+
+### `Captacion Leads InmoPlus` (`PL2FWPNGR0VgDjnG`, 27 nodos, parado)
+
+Cada 10 minutos: login en InmoPlus → `ListadoLeads` con `Valorado=2` (solo los que
+nadie ha tocado) desde hace 2 días → normaliza teléfono → descarta los repetidos
+contra la tabla `LeadsInteresados` (teléfono + inmueble) → consulta el inmueble
+para saber si es venta o alquiler por `nVenta`/`nAlquiler` → busca o crea el
+contacto en Chatwoot → reutiliza su conversación o la crea → envía
+`plantilla_compra` o `plantilla_alquiler` → **inserta el mensaje en
+`n8n_chat_histories`** con `session_id = +teléfono`, que es la memoria del agente
+→ etiqueta `1-bienvenida_ia` + `compra`/`alquiler` → registra el lead.
+
+### `Seguimientos Leads Ceballos` (`x7XoS7kiTeeIET9l`, 11 nodos, parado)
+
+Cada 30 minutos recorre las conversaciones abiertas y decide por etiquetas:
+
+| Estado | Condición | Acción |
+|---|---|---|
+| `1-bienvenida_ia` | 12 h útiles sin respuesta | envía `seguimiento_1` |
+| `seguimiento_1` | 24 h útiles más sin respuesta | envía `seguimiento_2` |
+| `seguimiento_2` | — | fin del automático |
+| cualquiera | el cliente escribe | pasa a `2-en_proceso` |
+| `2-en_proceso`, `3-agendada_ia`, `4-intervenir` | — | el automático no toca nada |
+
+**Las horas son útiles, no de reloj.** Solo corren entre las 9 y las 21, así que a
+quien se le escribe a las 22:00 no se le persigue a las 7:00. Por eso los umbrales
+son 12 y 24 y no 24 y 48: con una ventana de 12 h al día, 12 h útiles equivalen a
+unas 24 h naturales. Si se cambia la ventana hay que recalcularlos.
+
+Dos detalles que se replicaron a propósito del diseño de DCano:
+
+- **«Ha contestado» es «ha escrito alguna vez»**, no «el último mensaje es suyo».
+  En cuanto el asistente responde, el último vuelve a ser saliente y la
+  conversación parecería sin contestar, con lo que se le mandaría un seguimiento
+  a alguien que está hablando con nosotros ahora mismo.
+- **Adopción con tope de 48 h**: al activar el escenario no se escribe a leads
+  parados desde hace días.
+
+Probado con Node: 9 escenarios (los dos seguimientos, cliente que contesta,
+cliente que contesta y recibe respuesta, adopción, adopción antigua, fuera de
+horario y cómputo de horas útiles).
+
+### Etiquetas nuevas
+
+Se crearon en Chatwoot `seguimiento_1` y `seguimiento_2`, que no existían y son el
+estado del embudo. Las 6 anteriores siguen igual.
+
+### Credenciales
+
+Se crearon dos credenciales de n8n y los workflows nuevos las usan en lugar de
+llevar secretos dentro: **Chatwoot Ceballos (api_access_token)** e **InmoPlus
+Ceballos (login bot)**. Los workflows antiguos siguen con los valores embebidos.
+
+### PENDIENTE
+
+1. **Ninguna plantilla está aprobada.** Las cinco (`plantilla_compra`,
+   `plantilla_alquiler`, `seguimiento_1`, `seguimiento_2`, `aviso_abierta`) están
+   en revisión, y Meta **rechaza el envío de plantillas no aprobadas**. Todo queda
+   configurado, pero no enviará hasta que Meta las apruebe.
+2. **Cuántas variables lleva cada plantilla.** `plantilla_compra` y
+   `plantilla_alquiler` están montadas con dos (`{{1}}` nombre, `{{2}}` inmueble)
+   y los seguimientos con una (`{{1}}` nombre). Si el número real no coincide,
+   Meta rechaza el envío: hace falta el cuerpo exacto de cada una.
+3. **Los dos escenarios están parados.** No se activan hasta que lo anterior esté
+   resuelto y se pruebe con un lead real.
+
 ## Etiquetas de Chatwoot
 
 Existen las 6 y son correctas, pero **ningún nodo las asigna todavía**.
