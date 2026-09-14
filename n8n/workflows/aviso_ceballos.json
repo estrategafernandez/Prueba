@@ -1,0 +1,573 @@
+{
+ "id": "FptrwOsEst1T6t4f",
+ "name": "AVISO Ceballos",
+ "description": null,
+ "active": false,
+ "isArchived": false,
+ "nodes": [
+  {
+   "parameters": {
+    "inputSource": "workflowInputs",
+    "workflowInputs": {
+     "values": [
+      {
+       "name": "resumen"
+      },
+      {
+       "name": "disponibilidad"
+      },
+      {
+       "name": "nombre_cliente"
+      },
+      {
+       "name": "telefono_cliente"
+      },
+      {
+       "name": "operacion"
+      },
+      {
+       "name": "inmueble"
+      }
+     ]
+    }
+   },
+   "type": "n8n-nodes-base.executeWorkflowTrigger",
+   "typeVersion": 1.1,
+   "position": [
+    0,
+    0
+   ],
+   "id": "trigger",
+   "name": "Recibe del agente"
+  },
+  {
+   "parameters": {
+    "jsCode": "// Destinatarios del aviso interno. AÑADIR AQUI LOS TELEFONOS REALES.\n// El telefono va en formato internacional sin el signo +  (ej. 34600111222).\nconst DESTINATARIOS = [\n  { nombre: 'Alejandro',      telefono: 'PENDIENTE_ALEJANDRO' },\n  { nombre: 'María Ángeles',  telefono: 'PENDIENTE_MARIA_ANGELES' },\n];\n\nconst e = $input.first().json;\n\n// WhatsApp RECHAZA variables de plantilla que contengan saltos de linea,\n// tabuladores o mas de 4 espacios seguidos (error 132000). Un resumen de\n// conversacion es multilinea por naturaleza, asi que hay que aplanarlo.\nconst aplana = (t) => String(t ?? '')\n  .replace(/\\r/g, ' ')\n  .replace(/\\n+/g, ' · ')\n  .replace(/\\t/g, ' ')\n  .replace(/\\s{2,}/g, ' ')\n  .trim();\n\nconst trozos = [];\nif (e.operacion)        trozos.push(`Operación: ${aplana(e.operacion)}`);\nif (e.inmueble)         trozos.push(`Inmueble: ${aplana(e.inmueble)}`);\nif (e.nombre_cliente)   trozos.push(`Cliente: ${aplana(e.nombre_cliente)}`);\nif (e.telefono_cliente) trozos.push(`Teléfono: ${aplana(e.telefono_cliente)}`);\nif (e.resumen)          trozos.push(`Resumen: ${aplana(e.resumen)}`);\nif (e.disponibilidad)   trozos.push(`Disponibilidad: ${aplana(e.disponibilidad)}`);\n\nlet contenido = trozos.join(' — ');\n\n// Limite de Meta por variable: 1024 caracteres. Se recorta con margen.\nconst MAX = 900;\nif (contenido.length > MAX) contenido = contenido.slice(0, MAX - 1) + '…';\nif (!contenido) contenido = 'Nuevo lead cualificado. Revisa la conversación en el panel.';\n\nconst pendientes = DESTINATARIOS.filter(d => d.telefono.startsWith('PENDIENTE'));\nif (pendientes.length === DESTINATARIOS.length) {\n  throw new Error('AVISO: no hay ningun telefono configurado en el nodo Destinatarios del aviso.');\n}\n\nreturn DESTINATARIOS\n  .filter(d => !d.telefono.startsWith('PENDIENTE'))\n  .map(d => ({ json: { ...d, contenido, wa_id: String(d.telefono).replace(/[^0-9]/g, '') } }));"
+   },
+   "type": "n8n-nodes-base.code",
+   "typeVersion": 2,
+   "position": [
+    210,
+    0
+   ],
+   "id": "destinatarios",
+   "name": "Destinatarios del aviso"
+  },
+  {
+   "parameters": {
+    "method": "GET",
+    "url": "=https://panel-inmoceballos.serversvisionarius.com/api/v1/accounts/1/contacts/search?q=%2B{{ $json.wa_id }}",
+    "authentication": "genericCredentialType",
+    "genericAuthType": "httpHeaderAuth",
+    "options": {
+     "response": {
+      "response": {
+       "neverError": true
+      }
+     }
+    }
+   },
+   "type": "n8n-nodes-base.httpRequest",
+   "typeVersion": 4.2,
+   "position": [
+    420,
+    0
+   ],
+   "id": "busca-el-contacto",
+   "name": "Busca el contacto",
+   "credentials": {
+    "httpHeaderAuth": {
+     "id": "HytaCnD62Ixsx7Fw",
+     "name": "Chatwoot Ceballos (api_access_token)"
+    }
+   }
+  },
+  {
+   "parameters": {
+    "conditions": {
+     "options": {
+      "caseSensitive": true,
+      "typeValidation": "loose",
+      "version": 2
+     },
+     "conditions": [
+      {
+       "id": "existe",
+       "leftValue": "={{ ($json.payload || []).length }}",
+       "rightValue": 0,
+       "operator": {
+        "type": "number",
+        "operation": "gt"
+       }
+      }
+     ],
+     "combinator": "and"
+    },
+    "looseTypeValidation": true,
+    "options": {}
+   },
+   "type": "n8n-nodes-base.if",
+   "typeVersion": 2.2,
+   "position": [
+    630,
+    0
+   ],
+   "id": "existe",
+   "name": "¿Existe el contacto?"
+  },
+  {
+   "parameters": {
+    "method": "POST",
+    "url": "=https://panel-inmoceballos.serversvisionarius.com/api/v1/accounts/1/contacts",
+    "authentication": "genericCredentialType",
+    "genericAuthType": "httpHeaderAuth",
+    "options": {
+     "response": {
+      "response": {
+       "neverError": true
+      }
+     }
+    },
+    "sendBody": true,
+    "specifyBody": "json",
+    "jsonBody": "={\n  \"name\": \"{{ $('Destinatarios del aviso').item.json.nombre }}\",\n  \"phone_number\": \"+{{ $('Destinatarios del aviso').item.json.wa_id }}\",\n  \"identifier\": \"{{ $('Destinatarios del aviso').item.json.wa_id }}\",\n  \"inbox_id\": 1,\n  \"source_id\": \"{{ $('Destinatarios del aviso').item.json.wa_id }}\"\n}"
+   },
+   "type": "n8n-nodes-base.httpRequest",
+   "typeVersion": 4.2,
+   "position": [
+    840,
+    140
+   ],
+   "id": "crea-el-contacto",
+   "name": "Crea el contacto",
+   "credentials": {
+    "httpHeaderAuth": {
+     "id": "HytaCnD62Ixsx7Fw",
+     "name": "Chatwoot Ceballos (api_access_token)"
+    }
+   }
+  },
+  {
+   "parameters": {
+    "assignments": {
+     "assignments": [
+      {
+       "id": "cid",
+       "name": "contact_id",
+       "value": "={{ $json.payload[0].id }}",
+       "type": "number"
+      },
+      {
+       "id": "sid",
+       "name": "source_id",
+       "value": "={{ $json.payload[0].contact_inboxes[0].source_id }}",
+       "type": "string"
+      }
+     ]
+    },
+    "options": {}
+   },
+   "type": "n8n-nodes-base.set",
+   "typeVersion": 3.4,
+   "position": [
+    840,
+    -140
+   ],
+   "id": "set-exist",
+   "name": "Contacto existente"
+  },
+  {
+   "parameters": {
+    "assignments": {
+     "assignments": [
+      {
+       "id": "cid",
+       "name": "contact_id",
+       "value": "={{ $json.payload.contact.id }}",
+       "type": "number"
+      },
+      {
+       "id": "sid",
+       "name": "source_id",
+       "value": "={{ $json.payload.contact.contact_inboxes[0].source_id }}",
+       "type": "string"
+      }
+     ]
+    },
+    "options": {}
+   },
+   "type": "n8n-nodes-base.set",
+   "typeVersion": 3.4,
+   "position": [
+    1050,
+    140
+   ],
+   "id": "set-new",
+   "name": "Contacto recién creado"
+  },
+  {
+   "parameters": {
+    "method": "GET",
+    "url": "=https://panel-inmoceballos.serversvisionarius.com/api/v1/accounts/1/contacts/{{ $json.contact_id }}/conversations",
+    "authentication": "genericCredentialType",
+    "genericAuthType": "httpHeaderAuth",
+    "options": {
+     "response": {
+      "response": {
+       "neverError": true
+      }
+     }
+    }
+   },
+   "type": "n8n-nodes-base.httpRequest",
+   "typeVersion": 4.2,
+   "position": [
+    1260,
+    0
+   ],
+   "id": "conversaciones-del-contacto",
+   "name": "Conversaciones del contacto",
+   "credentials": {
+    "httpHeaderAuth": {
+     "id": "HytaCnD62Ixsx7Fw",
+     "name": "Chatwoot Ceballos (api_access_token)"
+    }
+   }
+  },
+  {
+   "parameters": {
+    "conditions": {
+     "options": {
+      "caseSensitive": true,
+      "typeValidation": "loose",
+      "version": 2
+     },
+     "conditions": [
+      {
+       "id": "hay",
+       "leftValue": "={{ ($json.payload || []).length }}",
+       "rightValue": 0,
+       "operator": {
+        "type": "number",
+        "operation": "gt"
+       }
+      }
+     ],
+     "combinator": "and"
+    },
+    "looseTypeValidation": true,
+    "options": {}
+   },
+   "type": "n8n-nodes-base.if",
+   "typeVersion": 2.2,
+   "position": [
+    1470,
+    0
+   ],
+   "id": "hay-conv",
+   "name": "¿Ya tiene conversación?"
+  },
+  {
+   "parameters": {
+    "assignments": {
+     "assignments": [
+      {
+       "id": "conv",
+       "name": "conversation_id",
+       "value": "={{ $json.payload[0].id }}",
+       "type": "number"
+      }
+     ]
+    },
+    "options": {}
+   },
+   "type": "n8n-nodes-base.set",
+   "typeVersion": 3.4,
+   "position": [
+    1680,
+    -140
+   ],
+   "id": "conv-exist",
+   "name": "Reutiliza la conversación"
+  },
+  {
+   "parameters": {
+    "method": "POST",
+    "url": "=https://panel-inmoceballos.serversvisionarius.com/api/v1/accounts/1/conversations",
+    "authentication": "genericCredentialType",
+    "genericAuthType": "httpHeaderAuth",
+    "options": {
+     "response": {
+      "response": {
+       "neverError": true
+      }
+     }
+    },
+    "sendBody": true,
+    "specifyBody": "json",
+    "jsonBody": "={\n  \"source_id\": \"{{ $('Destinatarios del aviso').item.json.wa_id }}\",\n  \"inbox_id\": 1,\n  \"contact_id\": {{ $('Contacto existente').isExecuted ? $('Contacto existente').item.json.contact_id : $('Contacto recién creado').item.json.contact_id }}\n}"
+   },
+   "type": "n8n-nodes-base.httpRequest",
+   "typeVersion": 4.2,
+   "position": [
+    1680,
+    140
+   ],
+   "id": "crea-la-conversación",
+   "name": "Crea la conversación",
+   "credentials": {
+    "httpHeaderAuth": {
+     "id": "HytaCnD62Ixsx7Fw",
+     "name": "Chatwoot Ceballos (api_access_token)"
+    }
+   }
+  },
+  {
+   "parameters": {
+    "assignments": {
+     "assignments": [
+      {
+       "id": "conv",
+       "name": "conversation_id",
+       "value": "={{ $json.id }}",
+       "type": "number"
+      }
+     ]
+    },
+    "options": {}
+   },
+   "type": "n8n-nodes-base.set",
+   "typeVersion": 3.4,
+   "position": [
+    1890,
+    140
+   ],
+   "id": "conv-new",
+   "name": "Conversación nueva"
+  },
+  {
+   "parameters": {
+    "method": "POST",
+    "url": "=https://panel-inmoceballos.serversvisionarius.com/api/v1/accounts/1/conversations/{{ $json.conversation_id }}/messages",
+    "authentication": "genericCredentialType",
+    "genericAuthType": "httpHeaderAuth",
+    "options": {
+     "response": {
+      "response": {
+       "neverError": true
+      }
+     }
+    },
+    "sendBody": true,
+    "specifyBody": "json",
+    "jsonBody": "={\n  \"content\": \"Hola {{ $('Destinatarios del aviso').item.json.nombre }},\\n{{ $('Destinatarios del aviso').item.json.contenido }}\\nUn saludo. Que tengas buen día\",\n  \"template_params\": {\n    \"name\": \"aviso_abierta\",\n    \"category\": \"MARKETING\",\n    \"language\": \"en\",\n    \"processed_params\": {\n      \"body\": {\n        \"1\": \"{{ $('Destinatarios del aviso').item.json.nombre }}\",\n        \"2\": \"{{ $('Destinatarios del aviso').item.json.contenido }}\"\n      }\n    }\n  }\n}"
+   },
+   "type": "n8n-nodes-base.httpRequest",
+   "typeVersion": 4.2,
+   "position": [
+    2100,
+    0
+   ],
+   "id": "envía-el-aviso",
+   "name": "Envía el aviso",
+   "credentials": {
+    "httpHeaderAuth": {
+     "id": "HytaCnD62Ixsx7Fw",
+     "name": "Chatwoot Ceballos (api_access_token)"
+    }
+   }
+  },
+  {
+   "parameters": {
+    "assignments": {
+     "assignments": [
+      {
+       "id": "r",
+       "name": "response",
+       "value": "=Aviso enviado al equipo para {{ $('Destinatarios del aviso').item.json.nombre }}. Un comercial contactará al cliente en menos de 24 horas.",
+       "type": "string"
+      }
+     ]
+    },
+    "options": {}
+   },
+   "type": "n8n-nodes-base.set",
+   "typeVersion": 3.4,
+   "position": [
+    2310,
+    0
+   ],
+   "id": "resp",
+   "name": "Responde al agente"
+  }
+ ],
+ "connections": {
+  "Recibe del agente": {
+   "main": [
+    [
+     {
+      "node": "Destinatarios del aviso",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Destinatarios del aviso": {
+   "main": [
+    [
+     {
+      "node": "Busca el contacto",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Busca el contacto": {
+   "main": [
+    [
+     {
+      "node": "¿Existe el contacto?",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "¿Existe el contacto?": {
+   "main": [
+    [
+     {
+      "node": "Contacto existente",
+      "type": "main",
+      "index": 0
+     }
+    ],
+    [
+     {
+      "node": "Crea el contacto",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Crea el contacto": {
+   "main": [
+    [
+     {
+      "node": "Contacto recién creado",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Contacto existente": {
+   "main": [
+    [
+     {
+      "node": "Conversaciones del contacto",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Contacto recién creado": {
+   "main": [
+    [
+     {
+      "node": "Conversaciones del contacto",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Conversaciones del contacto": {
+   "main": [
+    [
+     {
+      "node": "¿Ya tiene conversación?",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "¿Ya tiene conversación?": {
+   "main": [
+    [
+     {
+      "node": "Reutiliza la conversación",
+      "type": "main",
+      "index": 0
+     }
+    ],
+    [
+     {
+      "node": "Crea la conversación",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Crea la conversación": {
+   "main": [
+    [
+     {
+      "node": "Conversación nueva",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Reutiliza la conversación": {
+   "main": [
+    [
+     {
+      "node": "Envía el aviso",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Conversación nueva": {
+   "main": [
+    [
+     {
+      "node": "Envía el aviso",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Envía el aviso": {
+   "main": [
+    [
+     {
+      "node": "Responde al agente",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  }
+ },
+ "settings": {
+  "executionOrder": "v1",
+  "callerPolicy": "workflowsFromSameOwner",
+  "availableInMCP": false
+ },
+ "staticData": null,
+ "meta": null,
+ "pinData": null,
+ "versionCounter": 1,
+ "tags": []
+}

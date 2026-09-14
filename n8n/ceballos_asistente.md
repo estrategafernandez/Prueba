@@ -60,12 +60,50 @@ Sustituido el `systemMessage` del nodo `Agente Vivalta2`. Copia en
 La financiación sale del flujo por decisión de Marta. El agente tiene prohibido
 proponer o confirmar fechas: no dispone de la agenda de los comerciales.
 
-### Riesgo abierto
+### Resuelto el 2026-09-14 (ver más abajo)
 
-Las tools `Agendar`, `Disponibilidad` y `Cancelar` **siguen conectadas al agente**
-aunque el prompt le prohíba agendar, y describen citas en «Mobilia», el CRM de
-Vivalta. Apuntan a workflows inexistentes (404), así que una llamada fallaría y
-podría cortar la conversación. Conviene desconectarlas.
+Las tools de agenda ya están desconectadas y la tool `AVISO` reconstruida.
+
+## 2026-09-14 — Tools: agenda fuera y AVISO reconstruida
+
+**Desconectadas** `Agendar`, `Disponibilidad` y `Cancelar`: se retira su conexión
+`ai_tool` con el agente y se marcan como desactivadas. Ya no aparecen en la lista
+de herramientas del modelo, así que no puede intentar cerrar citas. Los nodos se
+conservan por si hiciera falta recuperarlos.
+
+**Creada** `AVISO Ceballos` (`FptrwOsEst1T6t4f`, 14 nodos), exportada en
+`n8n/workflows/aviso_ceballos.json`. La tool `AVISO` del agente ya apunta a ella.
+
+Recibe seis campos: `resumen`, `disponibilidad`, `operacion`, `inmueble`,
+`nombre_cliente` y `telefono_cliente`. Los cuatro primeros los redacta el agente;
+los dos últimos salen del webhook.
+
+Flujo: busca el contacto del comercial en Chatwoot, lo crea si no existe,
+**reutiliza su conversación abierta en lugar de abrir un hilo nuevo**, y envía la
+plantilla `aviso_abierta` con `{{1}}` = nombre del comercial y `{{2}}` = el aviso.
+
+### Por qué el contenido se aplana
+
+WhatsApp **rechaza** las variables de plantilla que contengan saltos de línea,
+tabuladores o más de cuatro espacios seguidos (error 132000). Un resumen de
+conversación es multilínea por naturaleza, así que el nodo `Destinatarios del
+aviso` lo colapsa a una sola línea separando por ` · `, recorta a 900 caracteres
+(el límite de Meta es 1024) y usa un texto por defecto si no llega nada.
+Probado con Node contra saltos, retornos de carro, tabuladores, espacios
+múltiples, un resumen de 3.200 caracteres y entrada vacía.
+
+### Credencial
+
+Las llamadas a Chatwoot de este workflow usan la credencial de n8n
+**«Chatwoot Ceballos (api_access_token)»**, no el token en texto plano. Los
+workflows antiguos siguen con el token embebido; conviene migrarlos.
+
+### PENDIENTE para que funcione
+
+1. **Los teléfonos de Alejandro y María Ángeles**, en el nodo `Destinatarios del
+   aviso`. Están como `PENDIENTE_ALEJANDRO` y `PENDIENTE_MARIA_ANGELES`; el
+   workflow lanza un error explícito si no hay ninguno configurado.
+2. **Que Meta apruebe `aviso_abierta`**, que sigue en revisión.
 
 ## Etiquetas de Chatwoot
 
