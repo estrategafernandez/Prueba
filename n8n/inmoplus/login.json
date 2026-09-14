@@ -1,0 +1,334 @@
+{
+  "openapi": "3.0.4",
+  "info": {
+    "title": "API InmoPlus",
+    "description": "Acceso API InmoPlus",
+    "contact": {
+      "name": "InmoPlus.com",
+      "url": "https://inmoplus.es/contacto",
+      "email": "info@inmoplus.es"
+    },
+    "license": {
+      "name": "MIT License",
+      "url": "https://inmoplus.es/avisolegal"
+    },
+    "version": "v1"
+  },
+  "paths": {
+    "/login/Login": {
+      "post": {
+        "tags": [
+          "Autorización"
+        ],
+        "summary": "Inicio de sesión para uso de API Inmoplus.",
+        "description": "Devuelve un token Bearer que deberá enviarse como header \"Authorization\". El token tiene una validez de 1 hora",
+        "operationId": "Login",
+        "parameters": [
+          {
+            "name": "softwareid",
+            "in": "header",
+            "description": "Código de software facilitados por Inmoplus",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "catalogo",
+            "in": "header",
+            "description": "Catálogo de acceso a datos",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "description": "Login y password de usuario",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AccesoLoginDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RespuestaEstadoDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RespuestaEstadoDto"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RespuestaToken"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/login/RenovarToken": {
+      "get": {
+        "tags": [
+          "Autorización"
+        ],
+        "summary": "Renovar token si el usuario está interactuando con el API",
+        "operationId": "RenovarToken",
+        "responses": {
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RespuestaEstadoDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccesoLoginDto"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RespuestaToken"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/login/Logout": {
+      "post": {
+        "tags": [
+          "Autorización"
+        ],
+        "summary": "Cierre de sesión de usuario",
+        "operationId": "Logout",
+        "responses": {
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RespuestaEstadoDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccesoLoginDto"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AccesoLoginDto": {
+        "required": [
+          "loginUsuario",
+          "passwordUsuario"
+        ],
+        "type": "object",
+        "properties": {
+          "loginUsuario": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "passwordUsuario": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "idConexion": {
+            "type": "string",
+            "nullable": true
+          },
+          "sobreescribirSesion": {
+            "type": "boolean"
+          },
+          "reiniciarSesion": {
+            "type": "boolean",
+            "description": "Se utiliza para indicar si se debe reiniciar la sesión del usuario, por si se ha cerrado la sesión por cortes de red o por otro motivo."
+          }
+        },
+        "additionalProperties": false
+      },
+      "Advertencia": {
+        "type": "object",
+        "properties": {
+          "codigo": {
+            "type": "integer",
+            "description": "Codigo de status",
+            "format": "int32"
+          },
+          "codigoItem": {
+            "type": "integer",
+            "description": "Codigo del item. Se utiliza para adjuntar el id del item creado cuando son operaciones múltiples",
+            "format": "int32"
+          },
+          "codigoUsuario": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "mensaje": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "ProblemDetails": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "nullable": true
+          },
+          "title": {
+            "type": "string",
+            "nullable": true
+          },
+          "status": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "detail": {
+            "type": "string",
+            "nullable": true
+          },
+          "instance": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": { }
+      },
+      "RespuestaEstadoDto": {
+        "type": "object",
+        "properties": {
+          "statusCode": {
+            "type": "integer",
+            "description": "Código de respuesta",
+            "format": "int32"
+          },
+          "id": {
+            "type": "integer",
+            "description": "Id del tipo creado, modificado o eliminado",
+            "format": "int32"
+          },
+          "id2": {
+            "type": "integer",
+            "description": "Id del inmueble creado, modificado o eliminado",
+            "format": "int32"
+          },
+          "mensaje": {
+            "type": "string",
+            "description": "Mensaje de respuesta",
+            "nullable": true
+          },
+          "advertencias": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Advertencia"
+            },
+            "description": "Lista de posibles errores durante la ejecución de la acción",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "RespuestaToken": {
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "securitySchemes": {
+      "Bearer": {
+        "type": "http",
+        "description": "Autenticación JWT (Bearer). Ver control Api InmoPlus > Login",
+        "scheme": "bearer"
+      }
+    }
+  },
+  "security": [
+    { }
+  ],
+  "tags": [
+    {
+      "name": "Login"
+    }
+  ]
+}

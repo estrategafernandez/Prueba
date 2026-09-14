@@ -1,0 +1,316 @@
+{
+  "openapi": "3.0.4",
+  "info": {
+    "title": "Usuarios de InmoPlus",
+    "description": "CRUD de Usuarios InmoPlus",
+    "contact": {
+      "name": "InmoPlus.com",
+      "url": "https://inmoplus.es/contacto",
+      "email": "info@inmoplus.es"
+    },
+    "license": {
+      "name": "MIT License",
+      "url": "https://inmoplus.es/avisolegal"
+    },
+    "version": "v1"
+  },
+  "paths": {
+    "/usuarios/ListadoUsuariosDisponibles": {
+      "get": {
+        "tags": [
+          "Usuarios"
+        ],
+        "summary": "Devuelve lista de usuarios disponibles",
+        "operationId": "ListadoUsuariosDisponibles",
+        "parameters": [
+          {
+            "name": "texto",
+            "in": "query",
+            "description": "Buscar por nombre, mail, teléfono o nif",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Captadores",
+            "in": "query",
+            "description": "Solo usuarios con rol de captador",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "Vendedores",
+            "in": "query",
+            "description": "Solo usuarios con rol de vendedor",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "orden",
+            "in": "query",
+            "description": "Ordenar por campo",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "dirOrden",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "numpage",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "pagesize",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RespuestaEstadoDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RespuestaEstadoDto"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListadoUsuariosCortoDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "API_GetUsuariosCortoDto": {
+        "type": "object",
+        "properties": {
+          "nId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "cNom": {
+            "type": "string",
+            "description": "Nombre del usuario",
+            "nullable": true
+          },
+          "cApe": {
+            "type": "string",
+            "description": "Apellido del usuario",
+            "nullable": true
+          },
+          "cNif": {
+            "type": "string",
+            "description": "NIF del usuario",
+            "nullable": true
+          },
+          "cTel": {
+            "type": "string",
+            "description": "Teléfono del usuario",
+            "nullable": true
+          },
+          "cMov": {
+            "type": "string",
+            "description": "Móvil del usuario",
+            "nullable": true
+          },
+          "cMail": {
+            "type": "string",
+            "description": "Correo electrónico del usuario",
+            "nullable": true
+          },
+          "lVendedor": {
+            "type": "boolean",
+            "description": "Indica si el usuario es vendedor",
+            "nullable": true
+          },
+          "lCaptador": {
+            "type": "boolean",
+            "description": "Indica si el usuario es captador",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "Advertencia": {
+        "type": "object",
+        "properties": {
+          "codigo": {
+            "type": "integer",
+            "description": "Codigo de status",
+            "format": "int32"
+          },
+          "codigoItem": {
+            "type": "integer",
+            "description": "Codigo del item. Se utiliza para adjuntar el id del item creado cuando son operaciones múltiples",
+            "format": "int32"
+          },
+          "codigoUsuario": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "mensaje": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "ListadoUsuariosCortoDto": {
+        "type": "object",
+        "properties": {
+          "totalRegistros": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "totalPaginas": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "paginaActual": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "usuarios": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/API_GetUsuariosCortoDto"
+            },
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "ProblemDetails": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "nullable": true
+          },
+          "title": {
+            "type": "string",
+            "nullable": true
+          },
+          "status": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "detail": {
+            "type": "string",
+            "nullable": true
+          },
+          "instance": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": { }
+      },
+      "RespuestaEstadoDto": {
+        "type": "object",
+        "properties": {
+          "statusCode": {
+            "type": "integer",
+            "description": "Código de respuesta",
+            "format": "int32"
+          },
+          "id": {
+            "type": "integer",
+            "description": "Id del tipo creado, modificado o eliminado",
+            "format": "int32"
+          },
+          "id2": {
+            "type": "integer",
+            "description": "Id del inmueble creado, modificado o eliminado",
+            "format": "int32"
+          },
+          "mensaje": {
+            "type": "string",
+            "description": "Mensaje de respuesta",
+            "nullable": true
+          },
+          "advertencias": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Advertencia"
+            },
+            "description": "Lista de posibles errores durante la ejecución de la acción",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "securitySchemes": {
+      "Bearer": {
+        "type": "http",
+        "description": "Autenticación JWT (Bearer). Ver control Api InmoPlus > Login",
+        "scheme": "bearer"
+      }
+    }
+  },
+  "security": [
+    { }
+  ],
+  "tags": [
+    {
+      "name": "Usuarios"
+    }
+  ]
+}

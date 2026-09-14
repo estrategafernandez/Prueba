@@ -1,0 +1,1672 @@
+{
+  "openapi": "3.0.4",
+  "info": {
+    "title": "Localizaciones y medios de contacto. InmoPlus",
+    "description": "Provincias, Municipios, Zonas, SubZonas, Direcciones y Medios de Contacto InmoPlus<br />Todos comparten los mismos filtros",
+    "contact": {
+      "name": "InmoPlus.com",
+      "url": "https://inmoplus.es/contacto",
+      "email": "info@inmoplus.es"
+    },
+    "license": {
+      "name": "MIT License",
+      "url": "https://inmoplus.es/avisolegal"
+    },
+    "version": "v1"
+  },
+  "paths": {
+    "/ficheros/ListadoDirecciones": {
+      "get": {
+        "tags": [
+          "Direcciones"
+        ],
+        "summary": "Devuelve lista de direcciones",
+        "operationId": "ListadoDirecciones",
+        "parameters": [
+          {
+            "name": "texto",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "codigoPais",
+            "in": "query",
+            "description": "Código de país para filtrar provincias, municipios, zonas y subzonas. No aplicable a Medios de Contacto",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "codigoProvincia",
+            "in": "query",
+            "description": "Código de provincia para filtrar municipios, zonas y subzonas. No aplicable a Medios de Contacto",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "codigoMunicipio",
+            "in": "query",
+            "description": "Código de municipio para filtrar zonas y subzonas. No aplicable a Medios de Contacto",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "codigoZona",
+            "in": "query",
+            "description": "Código de zona para filtrar subzonas. No aplicable a Medios de Contacto",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "codigoSubZona",
+            "in": "query",
+            "description": "Código de subzona. No aplicable a Medios de Contacto",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "codigoTipoCont",
+            "in": "query",
+            "description": "Código de tipo de contacto. No aplicable a Provincias, Municipios, Zonas, SubZonas y Direcciones",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "codigoDireccion",
+            "in": "query",
+            "description": "Código de dirección. No aplicable a Provincias, Municipios, Zonas, SubZonas y Medios de Contacto",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "orden",
+            "in": "query",
+            "description": "Orden de los resultados por columna",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "dirOrden",
+            "in": "query",
+            "description": "Dirección del orden. Puede ser ASC o DESC",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "numpage",
+            "in": "query",
+            "description": "Número de página para la paginación",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "pagesize",
+            "in": "query",
+            "description": "Número de registros por página para la paginación",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RespuestaEstadoDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RespuestaEstadoDto"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListadoDireccionesDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/ficheros/ListadoMunicipios": {
+      "get": {
+        "tags": [
+          "Municipios"
+        ],
+        "summary": "Devuelve lista de municipios",
+        "operationId": "ListadoMunicipios",
+        "parameters": [
+          {
+            "name": "texto",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "codigoPais",
+            "in": "query",
+            "description": "Código de país para filtrar provincias, municipios, zonas y subzonas. No aplicable a Medios de Contacto",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "codigoProvincia",
+            "in": "query",
+            "description": "Código de provincia para filtrar municipios, zonas y subzonas. No aplicable a Medios de Contacto",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "codigoMunicipio",
+            "in": "query",
+            "description": "Código de municipio para filtrar zonas y subzonas. No aplicable a Medios de Contacto",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "codigoZona",
+            "in": "query",
+            "description": "Código de zona para filtrar subzonas. No aplicable a Medios de Contacto",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "codigoSubZona",
+            "in": "query",
+            "description": "Código de subzona. No aplicable a Medios de Contacto",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "codigoTipoCont",
+            "in": "query",
+            "description": "Código de tipo de contacto. No aplicable a Provincias, Municipios, Zonas, SubZonas y Direcciones",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "codigoDireccion",
+            "in": "query",
+            "description": "Código de dirección. No aplicable a Provincias, Municipios, Zonas, SubZonas y Medios de Contacto",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "orden",
+            "in": "query",
+            "description": "Orden de los resultados por columna",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "dirOrden",
+            "in": "query",
+            "description": "Dirección del orden. Puede ser ASC o DESC",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "numpage",
+            "in": "query",
+            "description": "Número de página para la paginación",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "pagesize",
+            "in": "query",
+            "description": "Número de registros por página para la paginación",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RespuestaEstadoDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RespuestaEstadoDto"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListadoMunicipiosDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/ficheros/ListadoPaises": {
+      "get": {
+        "tags": [
+          "Paises"
+        ],
+        "summary": "Devuelve lista de paises",
+        "operationId": "ListadoPaises",
+        "parameters": [
+          {
+            "name": "texto",
+            "in": "query",
+            "description": "Parámetros opcionales para querystring",
+            "schema": {
+              "type": "string",
+              "default": ""
+            }
+          }
+        ],
+        "responses": {
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RespuestaEstadoDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RespuestaEstadoDto"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListadoPaisesDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/ficheros/ListadoProvincias": {
+      "get": {
+        "tags": [
+          "Provincias"
+        ],
+        "summary": "Devuelve lista de provincias",
+        "operationId": "ListadoProvincias",
+        "parameters": [
+          {
+            "name": "texto",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "codigoPais",
+            "in": "query",
+            "description": "Código de país para filtrar provincias, municipios, zonas y subzonas. No aplicable a Medios de Contacto",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "codigoProvincia",
+            "in": "query",
+            "description": "Código de provincia para filtrar municipios, zonas y subzonas. No aplicable a Medios de Contacto",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "codigoMunicipio",
+            "in": "query",
+            "description": "Código de municipio para filtrar zonas y subzonas. No aplicable a Medios de Contacto",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "codigoZona",
+            "in": "query",
+            "description": "Código de zona para filtrar subzonas. No aplicable a Medios de Contacto",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "codigoSubZona",
+            "in": "query",
+            "description": "Código de subzona. No aplicable a Medios de Contacto",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "codigoTipoCont",
+            "in": "query",
+            "description": "Código de tipo de contacto. No aplicable a Provincias, Municipios, Zonas, SubZonas y Direcciones",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "codigoDireccion",
+            "in": "query",
+            "description": "Código de dirección. No aplicable a Provincias, Municipios, Zonas, SubZonas y Medios de Contacto",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "orden",
+            "in": "query",
+            "description": "Orden de los resultados por columna",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "dirOrden",
+            "in": "query",
+            "description": "Dirección del orden. Puede ser ASC o DESC",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "numpage",
+            "in": "query",
+            "description": "Número de página para la paginación",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "pagesize",
+            "in": "query",
+            "description": "Número de registros por página para la paginación",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RespuestaEstadoDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RespuestaEstadoDto"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListadoProvinciasDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/ficheros/ListadoSubZonas": {
+      "get": {
+        "tags": [
+          "SubZonas"
+        ],
+        "summary": "Devuelve lista de subZonas",
+        "operationId": "ListadoSubZonas",
+        "parameters": [
+          {
+            "name": "texto",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "codigoPais",
+            "in": "query",
+            "description": "Código de país para filtrar provincias, municipios, zonas y subzonas. No aplicable a Medios de Contacto",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "codigoProvincia",
+            "in": "query",
+            "description": "Código de provincia para filtrar municipios, zonas y subzonas. No aplicable a Medios de Contacto",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "codigoMunicipio",
+            "in": "query",
+            "description": "Código de municipio para filtrar zonas y subzonas. No aplicable a Medios de Contacto",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "codigoZona",
+            "in": "query",
+            "description": "Código de zona para filtrar subzonas. No aplicable a Medios de Contacto",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "codigoSubZona",
+            "in": "query",
+            "description": "Código de subzona. No aplicable a Medios de Contacto",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "codigoTipoCont",
+            "in": "query",
+            "description": "Código de tipo de contacto. No aplicable a Provincias, Municipios, Zonas, SubZonas y Direcciones",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "codigoDireccion",
+            "in": "query",
+            "description": "Código de dirección. No aplicable a Provincias, Municipios, Zonas, SubZonas y Medios de Contacto",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "orden",
+            "in": "query",
+            "description": "Orden de los resultados por columna",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "dirOrden",
+            "in": "query",
+            "description": "Dirección del orden. Puede ser ASC o DESC",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "numpage",
+            "in": "query",
+            "description": "Número de página para la paginación",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "pagesize",
+            "in": "query",
+            "description": "Número de registros por página para la paginación",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RespuestaEstadoDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RespuestaEstadoDto"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListadoSubZonasDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/ficheros/ListadoMediosContacto": {
+      "get": {
+        "tags": [
+          "Medios de Contacto"
+        ],
+        "summary": "Devuelve lista de Medios de Contactos",
+        "operationId": "ListadoMediosContacto",
+        "parameters": [
+          {
+            "name": "texto",
+            "in": "query",
+            "description": "Parámetro opcional para querystring",
+            "schema": {
+              "type": "string",
+              "default": ""
+            }
+          },
+          {
+            "name": "idmedio",
+            "in": "query",
+            "description": "Parámetro opcional para querystring",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 0
+            }
+          }
+        ],
+        "responses": {
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RespuestaEstadoDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RespuestaEstadoDto"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListadoTiposContactoDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/ficheros/ListadoZonas": {
+      "get": {
+        "tags": [
+          "Zonas"
+        ],
+        "summary": "Devuelve lista de zonas",
+        "operationId": "ListadoZonas",
+        "parameters": [
+          {
+            "name": "texto",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "codigoPais",
+            "in": "query",
+            "description": "Código de país para filtrar provincias, municipios, zonas y subzonas. No aplicable a Medios de Contacto",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "codigoProvincia",
+            "in": "query",
+            "description": "Código de provincia para filtrar municipios, zonas y subzonas. No aplicable a Medios de Contacto",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "codigoMunicipio",
+            "in": "query",
+            "description": "Código de municipio para filtrar zonas y subzonas. No aplicable a Medios de Contacto",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "codigoZona",
+            "in": "query",
+            "description": "Código de zona para filtrar subzonas. No aplicable a Medios de Contacto",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "codigoSubZona",
+            "in": "query",
+            "description": "Código de subzona. No aplicable a Medios de Contacto",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "codigoTipoCont",
+            "in": "query",
+            "description": "Código de tipo de contacto. No aplicable a Provincias, Municipios, Zonas, SubZonas y Direcciones",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "codigoDireccion",
+            "in": "query",
+            "description": "Código de dirección. No aplicable a Provincias, Municipios, Zonas, SubZonas y Medios de Contacto",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "orden",
+            "in": "query",
+            "description": "Orden de los resultados por columna",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "dirOrden",
+            "in": "query",
+            "description": "Dirección del orden. Puede ser ASC o DESC",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "numpage",
+            "in": "query",
+            "description": "Número de página para la paginación",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "pagesize",
+            "in": "query",
+            "description": "Número de registros por página para la paginación",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RespuestaEstadoDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RespuestaEstadoDto"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListadoZonasDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "API_DireccionesDto": {
+        "type": "object",
+        "properties": {
+          "nCodDirec": {
+            "type": "integer",
+            "description": "Código de la dirección.",
+            "format": "int32"
+          },
+          "nCodMun": {
+            "type": "integer",
+            "description": "Código del municipio de la dirección.",
+            "format": "int32"
+          },
+          "cDirec": {
+            "type": "string",
+            "description": "Texto de la dirección.",
+            "nullable": true
+          },
+          "nZona": {
+            "type": "integer",
+            "description": "Código de la zona de la dirección.",
+            "format": "int32",
+            "nullable": true
+          },
+          "cCp": {
+            "type": "string",
+            "description": "Código postal de la dirección.",
+            "nullable": true
+          },
+          "cNomMun": {
+            "type": "string",
+            "description": "Nombre del municipio de la dirección.",
+            "nullable": true
+          },
+          "cPais": {
+            "type": "string",
+            "description": "Nombre del país de la dirección.",
+            "nullable": true
+          },
+          "cNomPrv": {
+            "type": "string",
+            "description": "Nombre de la provincia de la dirección.",
+            "nullable": true
+          },
+          "idPais": {
+            "type": "integer",
+            "description": "Identificador del país de la dirección.",
+            "format": "int32",
+            "nullable": true
+          },
+          "cZona": {
+            "type": "string",
+            "description": "Nombre de la zona de la dirección.",
+            "nullable": true
+          },
+          "nCodPro": {
+            "type": "integer",
+            "description": "Código de la provincia de la dirección.",
+            "format": "int32",
+            "nullable": true
+          },
+          "cLatitud": {
+            "type": "string",
+            "description": "Latitud geográfica de la dirección.",
+            "nullable": true
+          },
+          "cLongitud": {
+            "type": "string",
+            "description": "Longitud geográfica de la dirección.",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "API_MunicipiosDto": {
+        "type": "object",
+        "properties": {
+          "nCodMun": {
+            "type": "integer",
+            "description": "Código del municipio.",
+            "format": "int32"
+          },
+          "nPrv": {
+            "type": "integer",
+            "description": "Código de la provincia a la que pertenece el municipio.",
+            "format": "int32"
+          },
+          "cNomMun": {
+            "type": "string",
+            "description": "Nombre del municipio.",
+            "nullable": true
+          },
+          "nCodProvWeb": {
+            "type": "string",
+            "description": "Código de la provincia usado en la web.",
+            "nullable": true
+          },
+          "nCodMunWeb": {
+            "type": "integer",
+            "description": "Código del municipio usado en la web.",
+            "format": "int32",
+            "nullable": true
+          },
+          "cMunicipioWeb": {
+            "type": "string",
+            "description": "Identificador o nombre del municipio usado en la web.",
+            "nullable": true
+          },
+          "cNomPrv": {
+            "type": "string",
+            "description": "Nombre de la provincia a la que pertenece el municipio.",
+            "nullable": true
+          },
+          "cPais": {
+            "type": "string",
+            "description": "Nombre del país al que pertenece el municipio.",
+            "nullable": true
+          },
+          "cCodigo": {
+            "type": "string",
+            "description": "Código del país.",
+            "nullable": true
+          },
+          "nCodPais": {
+            "type": "integer",
+            "description": "Código del país al que pertenece el municipio.",
+            "format": "int32",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "API_PaisesDto": {
+        "type": "object",
+        "properties": {
+          "idPais": {
+            "type": "integer",
+            "description": "Identificador único del país.",
+            "format": "int32"
+          },
+          "cCodigo": {
+            "type": "string",
+            "description": "Código del país.",
+            "nullable": true
+          },
+          "cPais": {
+            "type": "string",
+            "description": "Nombre del país.",
+            "nullable": true
+          },
+          "lActivo": {
+            "type": "boolean",
+            "description": "Indica si el país está activo.",
+            "nullable": true
+          },
+          "cPaisWeb": {
+            "type": "string",
+            "description": "Identificador o nombre del país usado en la web.",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "API_ProvinciasDto": {
+        "type": "object",
+        "properties": {
+          "nCodPro": {
+            "type": "integer",
+            "description": "Código de la provincia.",
+            "format": "int32"
+          },
+          "cNomPrv": {
+            "type": "string",
+            "description": "Nombre de la provincia.",
+            "nullable": true
+          },
+          "cCodigoPro": {
+            "type": "string",
+            "description": "Código identificador de la provincia.",
+            "nullable": true
+          },
+          "nCodPais": {
+            "type": "integer",
+            "description": "Código del país al que pertenece la provincia.",
+            "format": "int32",
+            "nullable": true
+          },
+          "cProvinciaWeb": {
+            "type": "string",
+            "description": "Identificador o nombre de la provincia usado en la web.",
+            "nullable": true
+          },
+          "cPais": {
+            "type": "string",
+            "description": "Nombre del país al que pertenece la provincia.",
+            "nullable": true
+          },
+          "cCodigo": {
+            "type": "string",
+            "description": "Código del país.",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "API_SubZonasDto": {
+        "type": "object",
+        "properties": {
+          "idSubZona": {
+            "type": "integer",
+            "description": "Identificador único de la subzona.",
+            "format": "int32"
+          },
+          "nCodZona": {
+            "type": "integer",
+            "description": "Código de la zona a la que pertenece la subzona.",
+            "format": "int32"
+          },
+          "cSubZona": {
+            "type": "string",
+            "description": "Nombre de la subzona.",
+            "nullable": true
+          },
+          "cZona": {
+            "type": "string",
+            "description": "Nombre de la zona a la que pertenece la subzona.",
+            "nullable": true
+          },
+          "nCodMun": {
+            "type": "integer",
+            "description": "Código del municipio al que pertenece la subzona.",
+            "format": "int32",
+            "nullable": true
+          },
+          "cNomMun": {
+            "type": "string",
+            "description": "Nombre del municipio al que pertenece la subzona.",
+            "nullable": true
+          },
+          "nPrv": {
+            "type": "integer",
+            "description": "Código de la provincia a la que pertenece la subzona.",
+            "format": "int32",
+            "nullable": true
+          },
+          "cNomPrv": {
+            "type": "string",
+            "description": "Nombre de la provincia a la que pertenece la subzona.",
+            "nullable": true
+          },
+          "nCodPais": {
+            "type": "integer",
+            "description": "Código del país al que pertenece la subzona.",
+            "format": "int32",
+            "nullable": true
+          },
+          "cCodigo": {
+            "type": "string",
+            "description": "Código del país.",
+            "nullable": true
+          },
+          "cPais": {
+            "type": "string",
+            "description": "Nombre del país al que pertenece la subzona.",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "API_TiposContactoDto": {
+        "type": "object",
+        "properties": {
+          "nId": {
+            "type": "integer",
+            "description": "Identificador del tipo de contacto.",
+            "format": "int32"
+          },
+          "cTipoCont": {
+            "type": "string",
+            "description": "Descripción del tipo de contacto.",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "API_ZonasDto": {
+        "type": "object",
+        "properties": {
+          "cZonaWeb": {
+            "type": "string",
+            "description": "Identificador o nombre de la zona usado en la web.",
+            "nullable": true
+          },
+          "nCodZon": {
+            "type": "integer",
+            "description": "Código de la zona.",
+            "format": "int32"
+          },
+          "nCodMun": {
+            "type": "integer",
+            "description": "Código del municipio al que pertenece la zona.",
+            "format": "int32"
+          },
+          "cZona": {
+            "type": "string",
+            "description": "Nombre de la zona.",
+            "nullable": true
+          },
+          "nCodMunWeb": {
+            "type": "integer",
+            "description": "Código del municipio usado en la web.",
+            "format": "int32",
+            "nullable": true
+          },
+          "nCodZonWeb": {
+            "type": "integer",
+            "description": "Código de la zona usado en la web.",
+            "format": "int32",
+            "nullable": true
+          },
+          "nCodProvWeb": {
+            "type": "string",
+            "description": "Código de la provincia usado en la web.",
+            "nullable": true
+          },
+          "cNomMun": {
+            "type": "string",
+            "description": "Nombre del municipio al que pertenece la zona.",
+            "nullable": true
+          },
+          "cNomPrv": {
+            "type": "string",
+            "description": "Nombre de la provincia a la que pertenece la zona.",
+            "nullable": true
+          },
+          "nPrv": {
+            "type": "integer",
+            "description": "Código de la provincia a la que pertenece la zona.",
+            "format": "int32",
+            "nullable": true
+          },
+          "cCodigo": {
+            "type": "string",
+            "description": "Código del país.",
+            "nullable": true
+          },
+          "cPais": {
+            "type": "string",
+            "description": "Nombre del país al que pertenece la zona.",
+            "nullable": true
+          },
+          "nCodPais": {
+            "type": "integer",
+            "description": "Código del país al que pertenece la zona.",
+            "format": "int32",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "Advertencia": {
+        "type": "object",
+        "properties": {
+          "codigo": {
+            "type": "integer",
+            "description": "Codigo de status",
+            "format": "int32"
+          },
+          "codigoItem": {
+            "type": "integer",
+            "description": "Codigo del item. Se utiliza para adjuntar el id del item creado cuando son operaciones múltiples",
+            "format": "int32"
+          },
+          "codigoUsuario": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "mensaje": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "ListadoDireccionesDto": {
+        "type": "object",
+        "properties": {
+          "totalRegistros": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "totalPaginas": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "paginaActual": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "direcciones": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/API_DireccionesDto"
+            },
+            "description": "Listado de direcciones.",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "ListadoMunicipiosDto": {
+        "type": "object",
+        "properties": {
+          "totalRegistros": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "totalPaginas": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "paginaActual": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "municipios": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/API_MunicipiosDto"
+            },
+            "description": "Listado de municipios.",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "ListadoPaisesDto": {
+        "type": "object",
+        "properties": {
+          "totalRegistros": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "totalPaginas": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "paginaActual": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "paises": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/API_PaisesDto"
+            },
+            "description": "Listado de países.",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "ListadoProvinciasDto": {
+        "type": "object",
+        "properties": {
+          "totalRegistros": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "totalPaginas": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "paginaActual": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "provincias": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/API_ProvinciasDto"
+            },
+            "description": "Listado de provincias.",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "ListadoSubZonasDto": {
+        "type": "object",
+        "properties": {
+          "totalRegistros": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "totalPaginas": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "paginaActual": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "subZonas": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/API_SubZonasDto"
+            },
+            "description": "Listado de subzonas.",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "ListadoTiposContactoDto": {
+        "type": "object",
+        "properties": {
+          "totalRegistros": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "totalPaginas": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "paginaActual": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "medios": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/API_TiposContactoDto"
+            },
+            "description": "Listado de tipos de contacto (medios).",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "ListadoZonasDto": {
+        "type": "object",
+        "properties": {
+          "totalRegistros": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "totalPaginas": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "paginaActual": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "zonas": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/API_ZonasDto"
+            },
+            "description": "Listado de zonas.",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "ProblemDetails": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "nullable": true
+          },
+          "title": {
+            "type": "string",
+            "nullable": true
+          },
+          "status": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "detail": {
+            "type": "string",
+            "nullable": true
+          },
+          "instance": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": { }
+      },
+      "RespuestaEstadoDto": {
+        "type": "object",
+        "properties": {
+          "statusCode": {
+            "type": "integer",
+            "description": "Código de respuesta",
+            "format": "int32"
+          },
+          "id": {
+            "type": "integer",
+            "description": "Id del tipo creado, modificado o eliminado",
+            "format": "int32"
+          },
+          "id2": {
+            "type": "integer",
+            "description": "Id del inmueble creado, modificado o eliminado",
+            "format": "int32"
+          },
+          "mensaje": {
+            "type": "string",
+            "description": "Mensaje de respuesta",
+            "nullable": true
+          },
+          "advertencias": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Advertencia"
+            },
+            "description": "Lista de posibles errores durante la ejecución de la acción",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "securitySchemes": {
+      "Bearer": {
+        "type": "http",
+        "description": "Autenticación JWT (Bearer). Ver control Api InmoPlus > Login",
+        "scheme": "bearer"
+      }
+    }
+  },
+  "security": [
+    { }
+  ],
+  "tags": [
+    {
+      "name": "Direcciones"
+    },
+    {
+      "name": "Municipios"
+    },
+    {
+      "name": "Paises"
+    },
+    {
+      "name": "Provincias"
+    },
+    {
+      "name": "SubZonas"
+    },
+    {
+      "name": "TiposContactos"
+    },
+    {
+      "name": "Zonas"
+    }
+  ]
+}

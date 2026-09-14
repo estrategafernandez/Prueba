@@ -1,0 +1,1154 @@
+{
+  "openapi": "3.0.4",
+  "info": {
+    "title": "API InmoPlus",
+    "description": "CRUD de inmuebles InmoPlus",
+    "contact": {
+      "name": "InmoPlus.com",
+      "url": "https://inmoplus.es/contacto",
+      "email": "info@inmoplus.es"
+    },
+    "license": {
+      "name": "MIT License",
+      "url": "https://inmoplus.es/avisolegal"
+    },
+    "version": "v1"
+  },
+  "paths": {
+    "/inmuebles/ListadoInmuebles": {
+      "get": {
+        "tags": [
+          "Todos los tipos"
+        ],
+        "summary": "Devuelve lista de inmuebles de cualquier tipo",
+        "operationId": "ListadoInmuebles",
+        "parameters": [
+          {
+            "name": "habitacionesMin",
+            "in": "query",
+            "description": "Habitaciones mínimas",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "habitacionesMax",
+            "in": "query",
+            "description": "Habitaciones máximas",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "banosMin",
+            "in": "query",
+            "description": "Baños mínimos",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "banosMax",
+            "in": "query",
+            "description": "Baños máximos",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "mtsParcelaMin",
+            "in": "query",
+            "description": "Metros de parcela mínimos",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "mtsParcelaMax",
+            "in": "query",
+            "description": "Metros de parcela máximos",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "plantaMin",
+            "in": "query",
+            "description": "Planta mínima",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "plantaMax",
+            "in": "query",
+            "description": "Planta máxima",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "amueblado",
+            "in": "query",
+            "description": "0: Todos; 1: Con; 2: Sin",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "conPiscina",
+            "in": "query",
+            "description": "0: Todos; 1: Con; 2: Sin",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "calefaccion",
+            "in": "query",
+            "description": "0: Todos; 1: Con; 2: Sin",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "conGaraje",
+            "in": "query",
+            "description": "0: Todos; 1: Con; 2: Sin",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "conTerraza",
+            "in": "query",
+            "description": "0: Todos; 1: Con; 2: Sin",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "exterior",
+            "in": "query",
+            "description": "0: Todos; 1: Con; 2: Sin",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "listaActividades",
+            "in": "query",
+            "description": "Especial para locales y naves: códigos de actividades separadas por coma.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "conRegTuris",
+            "in": "query",
+            "description": "Con registro de turismo: 0: Todos; 1: Con; 2: Sin",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "TipoGeneral",
+            "in": "query",
+            "description": "Tipo de inmueble: Viviendas, Oficinas, Locales, Naves, Terrenos, Singulares, Garajes",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Historico",
+            "in": "query",
+            "description": "Buscar en Cartera, Historico o Todos. Por defecto Cartera",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "operacion",
+            "in": "query",
+            "description": "Buscar en Venta, Alquiler o Traspaso",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "listaSubtipos",
+            "in": "query",
+            "description": "Permite buscar por varios subtipos de inmueble, separados por coma. Por ejemplo: \"ESTANDAR,DUPLEX,ATICO\"",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "description": "Estado del inmueble: Disponible, Reservado, Vendido, Alquilado, Traspasado, Retirado. etc",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "pais",
+            "in": "query",
+            "description": "Código de país",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "provincia",
+            "in": "query",
+            "description": "Código de provincia",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "listaMunicipios",
+            "in": "query",
+            "description": "Lista de municipios",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "listaZonas",
+            "in": "query",
+            "description": "Lista de zonas",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "listaSubzonas",
+            "in": "query",
+            "description": "Lista de subzonas",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "texto",
+            "in": "query",
+            "description": "Para buscar por Referencias, dirección, teléfono, mail o nombre de propietario",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "precioMin",
+            "in": "query",
+            "description": "Precio mínimo",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "precioMax",
+            "in": "query",
+            "description": "Precio máximo",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "superficieMin",
+            "in": "query",
+            "description": "Superficie mínima",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "superficieMax",
+            "in": "query",
+            "description": "Superficie máxima",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "conVideo",
+            "in": "query",
+            "description": "Si tiene video",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "conFotos",
+            "in": "query",
+            "description": "Si tiene fotos",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "permuta",
+            "in": "query",
+            "description": "Si permite permuta",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "captador",
+            "in": "query",
+            "description": "Código de captador",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "promocion",
+            "in": "query",
+            "description": "Indica si es promoción",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "codigoPromocion",
+            "in": "query",
+            "description": "Si se indica, se listarán los inmuebles de esa promoción",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "deBanco",
+            "in": "query",
+            "description": "Si es inmueble de banco",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "fechaAlta1",
+            "in": "query",
+            "description": "Fecha de alta desde",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "fechaAlta2",
+            "in": "query",
+            "description": "Fecha de alta hasta",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "anos",
+            "in": "query",
+            "description": "Años de la propiedad",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "cambioPrecio",
+            "in": "query",
+            "description": "Inclurir si el inmueble cambió de precio",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "orden",
+            "in": "query",
+            "description": "Ordenar por columna",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "dirOrden",
+            "in": "query",
+            "description": "Orden ascendente o descendente",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "numpage",
+            "in": "query",
+            "description": "Número de página",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "pagesize",
+            "in": "query",
+            "description": "Número de registros por página",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RespuestaEstadoDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RespuestaEstadoDto"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListadoInmueblesGeneralDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Advertencia": {
+        "type": "object",
+        "properties": {
+          "codigo": {
+            "type": "integer",
+            "description": "Codigo de status",
+            "format": "int32"
+          },
+          "codigoItem": {
+            "type": "integer",
+            "description": "Codigo del item. Se utiliza para adjuntar el id del item creado cuando son operaciones múltiples",
+            "format": "int32"
+          },
+          "codigoUsuario": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "mensaje": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "ListadoInmueblesGeneralDto": {
+        "type": "object",
+        "properties": {
+          "totalRegistros": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "totalPaginas": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "paginaActual": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "inmuebles": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TodosTiposDto"
+            },
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "ProblemDetails": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "nullable": true
+          },
+          "title": {
+            "type": "string",
+            "nullable": true
+          },
+          "status": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "detail": {
+            "type": "string",
+            "nullable": true
+          },
+          "instance": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": { }
+      },
+      "RespuestaEstadoDto": {
+        "type": "object",
+        "properties": {
+          "statusCode": {
+            "type": "integer",
+            "description": "Código de respuesta",
+            "format": "int32"
+          },
+          "id": {
+            "type": "integer",
+            "description": "Id del tipo creado, modificado o eliminado",
+            "format": "int32"
+          },
+          "id2": {
+            "type": "integer",
+            "description": "Id del inmueble creado, modificado o eliminado",
+            "format": "int32"
+          },
+          "mensaje": {
+            "type": "string",
+            "description": "Mensaje de respuesta",
+            "nullable": true
+          },
+          "advertencias": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Advertencia"
+            },
+            "description": "Lista de posibles errores durante la ejecución de la acción",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "TodosTiposDto": {
+        "type": "object",
+        "properties": {
+          "cDirec": {
+            "type": "string",
+            "description": "Dirección del inmueble",
+            "nullable": true
+          },
+          "cNomPrv": {
+            "type": "string",
+            "description": "Provincia",
+            "nullable": true
+          },
+          "nCodInm": {
+            "type": "integer",
+            "description": "Código del inmueble",
+            "format": "int32",
+            "nullable": true
+          },
+          "nCodSubTipo": {
+            "type": "integer",
+            "description": "Código del subtipo de inmueble (Consultar: /valores/SubtiposInmuebles)",
+            "format": "int32",
+            "nullable": true
+          },
+          "lHistorico": {
+            "type": "boolean",
+            "description": "Está en histórico",
+            "nullable": true
+          },
+          "cTipoGen": {
+            "type": "string",
+            "description": "Tipo general del inmueble",
+            "nullable": true
+          },
+          "nCodPais": {
+            "type": "integer",
+            "description": "Código del país (Consultar: /ficheros/Paises)",
+            "format": "int32",
+            "nullable": true
+          },
+          "nCodProvincia": {
+            "type": "integer",
+            "description": "Código de la provincia (Consultar: /ficheros/Provincias)",
+            "format": "int32",
+            "nullable": true
+          },
+          "nCodMun": {
+            "type": "integer",
+            "description": "Código del municipio (Consultar: /ficheros/Municipios)",
+            "format": "int32",
+            "nullable": true
+          },
+          "nCodDirec": {
+            "type": "integer",
+            "description": "Código de la dirección (Consultar: /ficheros/Direcciones)",
+            "format": "int32",
+            "nullable": true
+          },
+          "cStatus": {
+            "type": "string",
+            "description": "Código del estado del inmueble (Consultar: /valores/Estados)",
+            "nullable": true
+          },
+          "nVenta": {
+            "type": "number",
+            "description": "Precio de venta",
+            "format": "double",
+            "nullable": true
+          },
+          "nAlquiler": {
+            "type": "number",
+            "description": "Precio de alquiler",
+            "format": "double",
+            "nullable": true
+          },
+          "nTraspaso": {
+            "type": "number",
+            "description": "Precio de traspaso",
+            "format": "double",
+            "nullable": true
+          },
+          "dFecAlta": {
+            "type": "string",
+            "description": "Fecha de alta del inmueble",
+            "format": "date-time",
+            "nullable": true
+          },
+          "cTipoVia": {
+            "type": "string",
+            "description": "Código del tipo de vía (Consultar: /ficheros/TiposVia)",
+            "nullable": true
+          },
+          "cPiso": {
+            "type": "string",
+            "description": "Piso",
+            "nullable": true
+          },
+          "cLetra": {
+            "type": "string",
+            "description": "Letra",
+            "nullable": true
+          },
+          "cBloque": {
+            "type": "string",
+            "description": "Bloque",
+            "nullable": true
+          },
+          "cNumDir": {
+            "type": "string",
+            "description": "Número de portal",
+            "nullable": true
+          },
+          "cCodPost": {
+            "type": "string",
+            "description": "Código postal",
+            "nullable": true
+          },
+          "lBanco": {
+            "type": "boolean",
+            "description": "Inmueble de banco",
+            "nullable": true
+          },
+          "cCoordX": {
+            "type": "string",
+            "description": "Coordenada X del inmueble",
+            "nullable": true
+          },
+          "cCoordY": {
+            "type": "string",
+            "description": "Coordenada Y del inmueble",
+            "nullable": true
+          },
+          "cCertEnergia": {
+            "type": "string",
+            "description": "Certificado de eficiencia energética",
+            "nullable": true
+          },
+          "lMls": {
+            "type": "boolean",
+            "description": "Está en MLS",
+            "nullable": true
+          },
+          "cConserv": {
+            "type": "string",
+            "description": "Conservación",
+            "nullable": true
+          },
+          "cSubZona": {
+            "type": "string",
+            "description": "Nombre de la subzona",
+            "nullable": true
+          },
+          "cZona": {
+            "type": "string",
+            "description": "Nombre de la zona",
+            "nullable": true
+          },
+          "cPais": {
+            "type": "string",
+            "description": "Nombre del país",
+            "nullable": true
+          },
+          "cNomMun": {
+            "type": "string",
+            "description": "Nombre del municipio",
+            "nullable": true
+          },
+          "nNivelUbicacion": {
+            "type": "integer",
+            "description": "Nivel de ubicación del inmueble (Consultar: /valores/NivelUbicacion)",
+            "format": "int32",
+            "nullable": true
+          },
+          "nCodPropiedad": {
+            "type": "integer",
+            "description": "Codigo de propiedad en tabla correspondiente al tipo de inmueble",
+            "format": "int32",
+            "nullable": true
+          },
+          "nCodInm2": {
+            "type": "integer",
+            "description": "Código del inmueble en tabla general de inmuebles",
+            "format": "int32",
+            "nullable": true
+          },
+          "cReferencia": {
+            "type": "string",
+            "description": "Referencia del inmueble (generada automáticamente)",
+            "nullable": true
+          },
+          "cReferenciaPropia": {
+            "type": "string",
+            "description": "Referencia propia del agente inmobiliario (si la tiene)",
+            "nullable": true
+          },
+          "lOpcionCompra": {
+            "type": "boolean",
+            "description": "Indica si el inmueble tiene opción de compra",
+            "nullable": true
+          },
+          "cNombre": {
+            "type": "string",
+            "description": "Nombre de la oficina",
+            "nullable": true
+          },
+          "nSupTot": {
+            "type": "number",
+            "description": "Superficie total",
+            "format": "double",
+            "nullable": true
+          },
+          "nCodSubZona": {
+            "type": "integer",
+            "description": "Código de la subzona (Consultar: /ficheros/SubZonas)",
+            "format": "int32",
+            "nullable": true
+          },
+          "nCodZona": {
+            "type": "integer",
+            "description": "Código de la zona (Consultar: /ficheros/Zonas)",
+            "format": "int32",
+            "nullable": true
+          },
+          "nCodOfi": {
+            "type": "integer",
+            "description": "Código de la oficina a la que pertenece el inmueble",
+            "format": "int32",
+            "nullable": true
+          },
+          "nCodFotos": {
+            "type": "integer",
+            "description": "Código de las fotos del inmueble",
+            "format": "int32",
+            "nullable": true
+          },
+          "cUrlInmueble": {
+            "type": "string",
+            "description": "URL del inmueble en la web",
+            "nullable": true
+          },
+          "nFotos": {
+            "type": "integer",
+            "description": "Número de fotos",
+            "format": "int32",
+            "nullable": true
+          },
+          "nConsumoKwh": {
+            "type": "integer",
+            "description": "Consumo energético en kWh",
+            "format": "int32",
+            "nullable": true
+          },
+          "cEmisiones": {
+            "type": "string",
+            "description": "Etiqueta de emisiones de CO2",
+            "nullable": true
+          },
+          "nEmisionesCO2": {
+            "type": "integer",
+            "description": "Emisiones de CO2 en kg",
+            "format": "int32",
+            "nullable": true
+          },
+          "cUrl3d": {
+            "type": "string",
+            "description": "URL del tour virtual 3D del inmueble",
+            "nullable": true
+          },
+          "nIdPromo": {
+            "type": "integer",
+            "description": "Código de la promoción a la que pertenece el inmueble (si aplica)",
+            "format": "int32",
+            "nullable": true
+          },
+          "lPisoPiloto": {
+            "type": "boolean",
+            "description": "Indica si el inmueble es un piso piloto",
+            "nullable": true
+          },
+          "lMarcadoPropietario": {
+            "type": "boolean",
+            "description": "Uso interno",
+            "nullable": true
+          },
+          "lPermuta": {
+            "type": "boolean",
+            "description": "Indica si el inmueble admite permuta",
+            "nullable": true
+          },
+          "cVideo": {
+            "type": "string",
+            "description": "URL del video del inmueble",
+            "nullable": true
+          },
+          "cCaptador": {
+            "type": "string",
+            "description": "Nombre del captador",
+            "nullable": true
+          },
+          "arrayFotos": {
+            "type": "string",
+            "description": "Array de fotos del inmueble",
+            "nullable": true
+          },
+          "nVentaDif": {
+            "type": "number",
+            "description": "Diferencia de venta con el precio de venta original (si aplica)",
+            "format": "double",
+            "nullable": true
+          },
+          "nAlqDif": {
+            "type": "number",
+            "description": "Diferencia de alquiler con el precio de alquiler original (si aplica)",
+            "format": "double",
+            "nullable": true
+          },
+          "dFecMod": {
+            "type": "string",
+            "description": "Fecha de modificación del inmueble",
+            "format": "date-time",
+            "nullable": true
+          },
+          "cRazSoc": {
+            "type": "string",
+            "description": "Razón social del propietario",
+            "nullable": true
+          },
+          "nHab": {
+            "type": "integer",
+            "description": "Número habitaciones",
+            "format": "int32",
+            "nullable": true
+          },
+          "nBanos": {
+            "type": "integer",
+            "description": "Número baños",
+            "format": "int32",
+            "nullable": true
+          },
+          "nTerraza": {
+            "type": "integer",
+            "description": "Número terrazas",
+            "format": "int32",
+            "nullable": true
+          },
+          "lGaraje": {
+            "type": "boolean",
+            "description": "Tiene garaje",
+            "nullable": true
+          },
+          "lVacacional": {
+            "type": "boolean",
+            "description": "Es vacacional",
+            "nullable": true
+          },
+          "lAmueb": {
+            "type": "boolean",
+            "description": "Está amueblado",
+            "nullable": true
+          },
+          "nAscensor": {
+            "type": "integer",
+            "description": "Número de ascensores",
+            "format": "int32",
+            "nullable": true
+          },
+          "lPiscina": {
+            "type": "boolean",
+            "description": "Tiene piscina",
+            "nullable": true
+          },
+          "lPuerta": {
+            "type": "boolean",
+            "description": "Tiene puerta blindada",
+            "nullable": true
+          },
+          "lAire": {
+            "type": "boolean",
+            "description": "Tiene aire acondicionado",
+            "nullable": true
+          },
+          "lTrastero": {
+            "type": "boolean",
+            "description": "Tiene trastero",
+            "nullable": true
+          },
+          "lVest": {
+            "type": "boolean",
+            "description": "Tiene vestidor",
+            "nullable": true
+          },
+          "lOficina": {
+            "type": "boolean",
+            "description": "Tiene oficina",
+            "nullable": true
+          },
+          "lBodega": {
+            "type": "boolean",
+            "description": "Tiene bodega",
+            "nullable": true
+          },
+          "lGimnasio": {
+            "type": "boolean",
+            "description": "Tiene gimnasio",
+            "nullable": true
+          },
+          "lPrimeraLineaMar": {
+            "type": "boolean",
+            "description": "Está en primera línea de mar",
+            "nullable": true
+          },
+          "lPatio": {
+            "type": "boolean",
+            "description": "Tiene patio",
+            "nullable": true
+          },
+          "lSot": {
+            "type": "boolean",
+            "description": "Tiene sótano",
+            "nullable": true
+          },
+          "lSalGas": {
+            "type": "boolean",
+            "description": "Tiene salida de humos / gases",
+            "nullable": true
+          },
+          "lAct": {
+            "type": "boolean",
+            "description": "Está en actividad (tipo locales)",
+            "nullable": true
+          },
+          "lVigilante": {
+            "type": "boolean",
+            "description": "Tiene vigilante",
+            "nullable": true
+          },
+          "lCampa": {
+            "type": "boolean",
+            "description": "Tiene campa (Naves / locales)",
+            "nullable": true
+          },
+          "lAgua": {
+            "type": "boolean",
+            "description": "Tiene agua",
+            "nullable": true
+          },
+          "lConstruible": {
+            "type": "boolean",
+            "description": "Es construible (terrenos)",
+            "nullable": true
+          },
+          "lUrbanizable": {
+            "type": "boolean",
+            "description": "Es urbanizable (terrenos)",
+            "nullable": true
+          },
+          "lValla": {
+            "type": "boolean",
+            "description": "Tiene valla (terrenos)",
+            "nullable": true
+          },
+          "lAgricola": {
+            "type": "boolean",
+            "description": "Es agrícola (terrenos)",
+            "nullable": true
+          },
+          "lRiego": {
+            "type": "boolean",
+            "description": "Tiene riego (terrenos)",
+            "nullable": true
+          },
+          "lRustico": {
+            "type": "boolean",
+            "description": "Es rústico (terrenos)",
+            "nullable": true
+          },
+          "nNumPlazas": {
+            "type": "integer",
+            "description": "Número de plazas (garajes / locales / naves)",
+            "format": "int32",
+            "nullable": true
+          },
+          "lExterior": {
+            "type": "boolean",
+            "description": "Es exterior",
+            "nullable": true
+          },
+          "cCalef": {
+            "type": "string",
+            "description": "Tipo de calefacción",
+            "nullable": true
+          },
+          "nCodActividad1": {
+            "type": "integer",
+            "description": "Código de actividad 1 (locales)",
+            "format": "int32",
+            "nullable": true
+          },
+          "nCodActividad2": {
+            "type": "integer",
+            "description": "Código de actividad 2 (locales)",
+            "format": "int32",
+            "nullable": true
+          },
+          "cRegistroTurismo": {
+            "type": "string",
+            "description": "Número de registro de turismo (viviendas vacacionales)",
+            "nullable": true
+          },
+          "nTotalViviendas": {
+            "type": "integer",
+            "description": "Número total de viviendas",
+            "format": "int32",
+            "nullable": true
+          },
+          "cNombreEdificio": {
+            "type": "string",
+            "description": "Nombre del edificio",
+            "nullable": true
+          },
+          "nPisosPorPlanta": {
+            "type": "integer",
+            "description": "Número de pisos por planta",
+            "format": "int32",
+            "nullable": true
+          },
+          "lAccesoPlaya": {
+            "type": "boolean",
+            "description": "Tiene acceso a la playa",
+            "nullable": true
+          },
+          "nIndRefAlquiler": {
+            "type": "number",
+            "description": "Índice de referencia de alquiler",
+            "format": "double",
+            "nullable": true
+          },
+          "nAlqAnterior": {
+            "type": "number",
+            "description": "Alquiler anterior",
+            "format": "double",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "securitySchemes": {
+      "Bearer": {
+        "type": "http",
+        "description": "Autenticación JWT (Bearer). Ver control Api InmoPlus > Login",
+        "scheme": "bearer"
+      }
+    }
+  },
+  "security": [
+    { }
+  ],
+  "tags": [
+    {
+      "name": "AGeneralInmuebles"
+    }
+  ]
+}

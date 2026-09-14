@@ -1,0 +1,1177 @@
+{
+  "openapi": "3.0.4",
+  "info": {
+    "title": "API InmoPlus",
+    "description": "CRUD Administración InmoPlus",
+    "contact": {
+      "name": "InmoPlus.com",
+      "url": "https://inmoplus.es/contacto",
+      "email": "info@inmoplus.es"
+    },
+    "license": {
+      "name": "MIT License",
+      "url": "https://inmoplus.es/avisolegal"
+    },
+    "version": "v1"
+  },
+  "paths": {
+    "/administracion/ListadoLeads": {
+      "get": {
+        "tags": [
+          "Leads"
+        ],
+        "summary": "Devuelve lista de Leads recibidos",
+        "operationId": "ListadoLeads",
+        "parameters": [
+          {
+            "name": "FechaIni",
+            "in": "query",
+            "description": "Formato dd/MM/yyyy. Fecha desde",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "FechaFin",
+            "in": "query",
+            "description": "Formato dd/MM/yyyy. Fecha hasta",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Valorado",
+            "in": "query",
+            "description": "Comprobar si se ha realizado valoración. 0 = todos, 1 = valorados, 2 = no valorados",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "Origen",
+            "in": "query",
+            "description": "Fuente del lead. buscar que el origen contenga el texto indicado. \"buscocasa, idealista, fotocasa, etc\"",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "orden",
+            "in": "query",
+            "description": "Ordenar por columna",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "dirOrden",
+            "in": "query",
+            "description": "Dirección del orden. ASC o DESC",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "numpage",
+            "in": "query",
+            "description": "Número de página",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "pagesize",
+            "in": "query",
+            "description": "Número de registros por página",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RespuestaEstadoDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RespuestaEstadoDto"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListadoValoraciones"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/administracion/ValorarLead/{ctg}": {
+      "post": {
+        "tags": [
+          "Leads"
+        ],
+        "summary": "Actualiza valoración de Leads.",
+        "operationId": "ValorarLead",
+        "parameters": [
+          {
+            "name": "ctg",
+            "in": "path",
+            "description": "Catálogo de conexión",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "description": "Objeto con la información de la valoración",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MarcarValoracionLeadsDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RespuestaEstadoDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RespuestaEstadoDto"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RespuestaEstadoDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/administracion/ListadoGestionesAgenda": {
+      "get": {
+        "tags": [
+          "Gestiones Agenda"
+        ],
+        "summary": "Devuelve lista de demandas",
+        "operationId": "ListadoGestionesAgenda",
+        "parameters": [
+          {
+            "name": "TipoVisualizacion",
+            "in": "query",
+            "description": "Tipo de gestiones a filtrar. 0 = todas, 1 = solo gestiones, 2 = solo agenda",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "FechaTarea1",
+            "in": "query",
+            "description": "Formato dd/MM/yyyy. Fecha desde",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "FechaTarea2",
+            "in": "query",
+            "description": "Formato dd/MM/yyyy. Fecha hasta",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Estado",
+            "in": "query",
+            "description": "Estado de la gestión. Revisar /valores/EstadoGestion",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Usuario",
+            "in": "query",
+            "description": "Id del usuario que realiza la gestión. Admite lista de ids separados por coma",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Contacto",
+            "in": "query",
+            "description": "Id de contacto.",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "Inmueble",
+            "in": "query",
+            "description": "Id de inmueble.",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "orden",
+            "in": "query",
+            "description": "Ordenar por columna",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "dirOrden",
+            "in": "query",
+            "description": "Dirección del orden. ASC o DESC",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "numpage",
+            "in": "query",
+            "description": "Número de página",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "pagesize",
+            "in": "query",
+            "description": "Número de registros por página",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RespuestaEstadoDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RespuestaEstadoDto"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListadoGestionesAgenda"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/administracion/CrearGestionAgenda": {
+      "post": {
+        "tags": [
+          "Gestiones Agenda"
+        ],
+        "summary": "Crear gestión - agenda",
+        "operationId": "CrearGestionAgenda",
+        "requestBody": {
+          "description": "",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgendaDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RespuestaEstadoDto"
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RespuestaEstadoDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error"
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "API_GetGestionesAgendaDto": {
+        "type": "object",
+        "properties": {
+          "nId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "nTipGest": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "hIni": {
+            "type": "string",
+            "nullable": true
+          },
+          "hFin": {
+            "type": "string",
+            "nullable": true
+          },
+          "dFecTarea": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "cEstado": {
+            "type": "string",
+            "nullable": true
+          },
+          "nCodUser": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "cPropietario": {
+            "type": "string",
+            "nullable": true
+          },
+          "razSocPropietario": {
+            "type": "string",
+            "nullable": true
+          },
+          "lMarcadoPropietario": {
+            "type": "boolean",
+            "nullable": true
+          },
+          "nCaptadorPropietario": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "telPropietario1": {
+            "type": "string",
+            "nullable": true
+          },
+          "telPropietario2": {
+            "type": "string",
+            "nullable": true
+          },
+          "movPropietario": {
+            "type": "string",
+            "nullable": true
+          },
+          "mailPropietario": {
+            "type": "string",
+            "nullable": true
+          },
+          "codAreaPropietario": {
+            "type": "string",
+            "nullable": true
+          },
+          "nCodProp": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "nCodInter": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "mComent": {
+            "type": "string",
+            "nullable": true
+          },
+          "mComentProp": {
+            "type": "string",
+            "nullable": true
+          },
+          "lConfirm": {
+            "type": "boolean",
+            "nullable": true
+          },
+          "nCodOperador": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "lAgenda": {
+            "type": "boolean",
+            "nullable": true
+          },
+          "nCodDem": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "lInformePropietario": {
+            "type": "boolean",
+            "nullable": true
+          },
+          "lNotificacion": {
+            "type": "boolean",
+            "nullable": true
+          },
+          "nTiempo": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "cPersCont": {
+            "type": "string",
+            "nullable": true
+          },
+          "nMedioCont": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "cAsunto": {
+            "type": "string",
+            "nullable": true
+          },
+          "lAvisoActivo": {
+            "type": "boolean",
+            "nullable": true
+          },
+          "dFecAviso": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "cHoraAviso": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "cDireccion": {
+            "type": "string",
+            "nullable": true
+          },
+          "nCodLLave": {
+            "type": "string",
+            "nullable": true
+          },
+          "cContacto": {
+            "type": "string",
+            "nullable": true
+          },
+          "razSocContacto": {
+            "type": "string",
+            "nullable": true
+          },
+          "cTel1": {
+            "type": "string",
+            "nullable": true
+          },
+          "cTel2": {
+            "type": "string",
+            "nullable": true
+          },
+          "cMov": {
+            "type": "string",
+            "nullable": true
+          },
+          "cCodArea": {
+            "type": "string",
+            "nullable": true
+          },
+          "cUsuario": {
+            "type": "string",
+            "nullable": true
+          },
+          "nCodOfic": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "lMls": {
+            "type": "boolean",
+            "nullable": true
+          },
+          "cRefMls": {
+            "type": "string",
+            "nullable": true
+          },
+          "cHashMls": {
+            "type": "string",
+            "nullable": true
+          },
+          "idMls": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "lProspeccion": {
+            "type": "boolean",
+            "nullable": true
+          },
+          "cPiso": {
+            "type": "string",
+            "nullable": true
+          },
+          "cLetra": {
+            "type": "string",
+            "nullable": true
+          },
+          "cBloque": {
+            "type": "string",
+            "nullable": true
+          },
+          "cNumDir": {
+            "type": "string",
+            "nullable": true
+          },
+          "dFecAvisoPropiet": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "cMail": {
+            "type": "string",
+            "nullable": true
+          },
+          "cNomCom": {
+            "type": "string",
+            "nullable": true
+          },
+          "nCaptadorContacto": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "lContactoPropietario": {
+            "type": "boolean",
+            "nullable": true
+          },
+          "lContactoDemandante": {
+            "type": "boolean",
+            "nullable": true
+          },
+          "lContactoComprador": {
+            "type": "boolean",
+            "nullable": true
+          },
+          "cTipoAviso": {
+            "type": "string",
+            "nullable": true
+          },
+          "cAntelacionAviso": {
+            "type": "string",
+            "nullable": true
+          },
+          "lMailActivo": {
+            "type": "boolean",
+            "nullable": true
+          },
+          "lAlertaLeida": {
+            "type": "boolean",
+            "nullable": true
+          },
+          "cMedioContacto": {
+            "type": "string",
+            "nullable": true
+          },
+          "cCaptador": {
+            "type": "string",
+            "nullable": true
+          },
+          "referencia": {
+            "type": "string",
+            "nullable": true
+          },
+          "nCodInm": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "nCaptadorInmueble": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "lFirmada": {
+            "type": "boolean",
+            "nullable": true
+          },
+          "cParteFirmado": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "API_GetValoracionesLeads": {
+        "type": "object",
+        "properties": {
+          "nId": {
+            "type": "integer",
+            "description": "Identificador único",
+            "format": "int32"
+          },
+          "dFechaHora": {
+            "type": "string",
+            "description": "Fecha y hora de la valoración",
+            "format": "date-time",
+            "nullable": true
+          },
+          "idInmueble": {
+            "type": "integer",
+            "description": "Identificador del inmueble asociado",
+            "format": "int32",
+            "nullable": true
+          },
+          "idContacto": {
+            "type": "integer",
+            "description": "Identificador del contacto asociado",
+            "format": "int32",
+            "nullable": true
+          },
+          "cTextoMailOrigen": {
+            "type": "string",
+            "description": "Texto del correo electrónico de origen",
+            "nullable": true
+          },
+          "cTextoValoracion": {
+            "type": "string",
+            "description": "Texto de la valoración",
+            "nullable": true
+          },
+          "lHistorico": {
+            "type": "boolean",
+            "description": "Indica si la valoración está en histórico",
+            "nullable": true
+          },
+          "lValorado": {
+            "type": "boolean",
+            "description": "Indica si la valoración ha sido realizada",
+            "nullable": true
+          },
+          "nValoracion": {
+            "type": "integer",
+            "description": "Valoración del lead, puede ser un valor entre 1 y 5",
+            "format": "int32",
+            "nullable": true
+          },
+          "cPrefijo": {
+            "type": "string",
+            "description": "Prefijo de área del teléfono del contacto",
+            "nullable": true
+          },
+          "cTelefono": {
+            "type": "string",
+            "description": "Número de teléfono del contacto",
+            "nullable": true
+          },
+          "cEmail": {
+            "type": "string",
+            "description": "Correo electrónico del contacto",
+            "nullable": true
+          },
+          "cNombre": {
+            "type": "string",
+            "description": "Nombre del contacto",
+            "nullable": true
+          },
+          "cApellidos": {
+            "type": "string",
+            "description": "Apellidos del contacto",
+            "nullable": true
+          },
+          "cMailOrigen": {
+            "type": "string",
+            "description": "Correo electrónico de origen del lead",
+            "nullable": true
+          },
+          "dFechaValoracion": {
+            "type": "string",
+            "description": "Fecha de valoración del lead",
+            "format": "date-time",
+            "nullable": true
+          },
+          "cUid": {
+            "type": "string",
+            "description": "Identificador único del lead, utilizado para identificar de manera única cada valoración en el sistema.",
+            "nullable": true
+          },
+          "cReferencia": {
+            "type": "string",
+            "description": "Referencia del inmueble del lead",
+            "nullable": true
+          },
+          "cReferenciaPropia": {
+            "type": "string",
+            "description": "Referencia propia del inmueble del lead",
+            "nullable": true
+          },
+          "cRazSoc": {
+            "type": "string",
+            "description": "Razón social del contacto del lead",
+            "nullable": true
+          },
+          "totalFilas": {
+            "type": "integer",
+            "format": "int32"
+          }
+        },
+        "additionalProperties": false
+      },
+      "Advertencia": {
+        "type": "object",
+        "properties": {
+          "codigo": {
+            "type": "integer",
+            "description": "Codigo de status",
+            "format": "int32"
+          },
+          "codigoItem": {
+            "type": "integer",
+            "description": "Codigo del item. Se utiliza para adjuntar el id del item creado cuando son operaciones múltiples",
+            "format": "int32"
+          },
+          "codigoUsuario": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "mensaje": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "AgendaDto": {
+        "required": [
+          "dFecTarea",
+          "hFin",
+          "hIni",
+          "nTipGest"
+        ],
+        "type": "object",
+        "properties": {
+          "nTipGest": {
+            "type": "integer",
+            "description": "Tipo de gestión. Revisar /valores/TipoGestiones",
+            "format": "int32"
+          },
+          "hIni": {
+            "type": "string",
+            "description": "Hora de inicio",
+            "format": "date-time"
+          },
+          "hFin": {
+            "type": "string",
+            "description": "Hora de fin",
+            "format": "date-time"
+          },
+          "dFecTarea": {
+            "type": "string",
+            "description": "Fecha de la Gestión",
+            "format": "date-time"
+          },
+          "cEstado": {
+            "type": "string",
+            "description": "Estado de la gestión. Revisar /valores/EstadoGestion",
+            "nullable": true
+          },
+          "nCodUser": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "format": "int32"
+            },
+            "description": "Código de usuario que realiza la gestión. Puede ser una lista de códigos de usuario. Ejemplo: 1,2,3...N",
+            "nullable": true
+          },
+          "nCodInm": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "format": "int32"
+            },
+            "description": "Código de inmueble. Puede ser una lista de códigos de inmueble. Ejemplo: 1,2,3...N",
+            "nullable": true
+          },
+          "nCodProp": {
+            "type": "integer",
+            "description": "Código de propietario",
+            "format": "int32",
+            "nullable": true
+          },
+          "lAvisoPropietario": {
+            "type": "boolean",
+            "description": "Indica si se debe enviar un aviso al propietario.",
+            "nullable": true
+          },
+          "nCodInter": {
+            "type": "integer",
+            "description": "Código de contacto.",
+            "format": "int32",
+            "nullable": true
+          },
+          "mComent": {
+            "type": "string",
+            "description": "Comentario de la gestión",
+            "nullable": true
+          },
+          "mComentProp": {
+            "type": "string",
+            "description": "Comentario para enviar al propietario",
+            "nullable": true
+          },
+          "lConfirm": {
+            "type": "boolean",
+            "description": "Indica si la gestión ha sido confirmada",
+            "nullable": true
+          },
+          "lAgenda": {
+            "type": "boolean",
+            "description": "Marcar para mostrar en agenda",
+            "nullable": true
+          },
+          "nMedioCont": {
+            "type": "integer",
+            "description": "Código de medio de contacto. Revisar /ficheros/ListadoMediosContacto",
+            "format": "int32",
+            "nullable": true
+          },
+          "cAsunto": {
+            "type": "string",
+            "nullable": true
+          },
+          "cTipoAviso": {
+            "type": "string",
+            "description": "Tipo de aviso: A = Email + Notificación; M = Email; N = Notificación",
+            "nullable": true
+          },
+          "cAntelacionAviso": {
+            "type": "string",
+            "description": "Antelación del aviso en minutos. \"NO\" indica que no hay antelación.",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "ListadoGestionesAgenda": {
+        "type": "object",
+        "properties": {
+          "totalRegistros": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "totalPaginas": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "paginaActual": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "gestiones": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/API_GetGestionesAgendaDto"
+            },
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "ListadoValoraciones": {
+        "type": "object",
+        "properties": {
+          "totalRegistros": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "totalPaginas": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "paginaActual": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "valoraciones": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/API_GetValoracionesLeads"
+            },
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "MarcarValoracionLeadsDto": {
+        "required": [
+          "cUid",
+          "idInmueble"
+        ],
+        "type": "object",
+        "properties": {
+          "cUid": {
+            "minLength": 1,
+            "type": "string",
+            "description": "Identificador único de la valoración. Este campo es obligatorio"
+          },
+          "idInmueble": {
+            "type": "integer",
+            "description": "Identificador del inmueble asociado a la valoración. Este campo es obligatorio",
+            "format": "int32"
+          },
+          "idContacto": {
+            "type": "integer",
+            "description": "Identificador del contacto. Si no se proporciona, se asumirá que la valoración no está asociada a ningún contacto creado en la base de datos.",
+            "format": "int32",
+            "nullable": true
+          },
+          "nValoracion": {
+            "maximum": 5,
+            "minimum": 1,
+            "type": "integer",
+            "description": "Valoración numérica de la propiedad. Este campo es obligatorio y debe estar en el rango de 1 a 5.",
+            "format": "int32"
+          },
+          "cTextoValoracion": {
+            "type": "string",
+            "description": "Conversación completa de la valoración para control interno",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "ProblemDetails": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "nullable": true
+          },
+          "title": {
+            "type": "string",
+            "nullable": true
+          },
+          "status": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "detail": {
+            "type": "string",
+            "nullable": true
+          },
+          "instance": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": { }
+      },
+      "RespuestaEstadoDto": {
+        "type": "object",
+        "properties": {
+          "statusCode": {
+            "type": "integer",
+            "description": "Código de respuesta",
+            "format": "int32"
+          },
+          "id": {
+            "type": "integer",
+            "description": "Id del tipo creado, modificado o eliminado",
+            "format": "int32"
+          },
+          "id2": {
+            "type": "integer",
+            "description": "Id del inmueble creado, modificado o eliminado",
+            "format": "int32"
+          },
+          "mensaje": {
+            "type": "string",
+            "description": "Mensaje de respuesta",
+            "nullable": true
+          },
+          "advertencias": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Advertencia"
+            },
+            "description": "Lista de posibles errores durante la ejecución de la acción",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "securitySchemes": {
+      "Bearer": {
+        "type": "http",
+        "description": "Autenticación JWT (Bearer). Ver control Api InmoPlus > Login",
+        "scheme": "bearer"
+      }
+    }
+  },
+  "security": [
+    { }
+  ],
+  "tags": [
+    {
+      "name": "AvisosNotificaciones"
+    },
+    {
+      "name": "GestionesAgenda"
+    }
+  ]
+}

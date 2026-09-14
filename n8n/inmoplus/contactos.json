@@ -1,0 +1,349 @@
+{
+  "openapi": "3.0.4",
+  "info": {
+    "title": "API InmoPlus",
+    "description": "CRUD contactos InmoPlus",
+    "contact": {
+      "name": "InmoPlus.com",
+      "url": "https://inmoplus.es/contacto",
+      "email": "info@inmoplus.es"
+    },
+    "license": {
+      "name": "MIT License",
+      "url": "https://inmoplus.es/avisolegal"
+    },
+    "version": "v1"
+  },
+  "paths": {
+    "/contactos/BuscarContactos": {
+      "get": {
+        "tags": [
+          "Contactos"
+        ],
+        "summary": "Devuelve lista de contactos para búsquedas rápidas",
+        "operationId": "BuscarContactos",
+        "parameters": [
+          {
+            "name": "texto",
+            "in": "query",
+            "description": "Texto a buscar en nombre, apellidos, teléfono, email, dni",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RespuestaEstadoDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RespuestaEstadoDto"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/API_BuscarContactos"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "API_BuscarContactos": {
+        "type": "object",
+        "properties": {
+          "nId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "nCodCapt": {
+            "type": "integer",
+            "description": "Código del captador asociado al contacto",
+            "format": "int32",
+            "nullable": true
+          },
+          "cApe": {
+            "type": "string",
+            "description": "Apellidos",
+            "nullable": true
+          },
+          "cNom": {
+            "type": "string",
+            "description": "Nombre",
+            "nullable": true
+          },
+          "cCodArea": {
+            "type": "string",
+            "description": "Código del área geográfica",
+            "nullable": true
+          },
+          "cTel1": {
+            "type": "string",
+            "description": "Teléfono 1",
+            "nullable": true
+          },
+          "cTel2": {
+            "type": "string",
+            "description": "Teléfono 2",
+            "nullable": true
+          },
+          "cMov": {
+            "type": "string",
+            "description": "Móvil",
+            "nullable": true
+          },
+          "cDni": {
+            "type": "string",
+            "description": "DNI",
+            "nullable": true
+          },
+          "cMail": {
+            "type": "string",
+            "description": "Correo electrónico",
+            "nullable": true
+          },
+          "cRazonSocial": {
+            "type": "string",
+            "description": "Razón social",
+            "nullable": true
+          },
+          "nombreAsociado": {
+            "type": "string",
+            "description": "Nombre de contacto asociado. un contacto puede tener varios datos de contacto asociados (Otras personas, casa, trabajo, etc.)",
+            "nullable": true
+          },
+          "emailAsociado": {
+            "type": "string",
+            "description": "Correo electrónico del contacto asociado",
+            "nullable": true
+          },
+          "telefonoAsociado": {
+            "type": "string",
+            "description": "Teléfono del contacto asociado",
+            "nullable": true
+          },
+          "lPropietario": {
+            "type": "boolean",
+            "description": "Es propietario",
+            "nullable": true
+          },
+          "lInteresado": {
+            "type": "boolean",
+            "description": "Es interesado",
+            "nullable": true
+          },
+          "lBanco": {
+            "type": "boolean",
+            "description": "Es comprador",
+            "nullable": true
+          },
+          "lProveedor": {
+            "type": "boolean",
+            "description": "Es proveedor",
+            "nullable": true
+          },
+          "lPromotor": {
+            "type": "boolean",
+            "description": "Es promotor",
+            "nullable": true
+          },
+          "lComprador": {
+            "type": "boolean",
+            "description": "Es comprador",
+            "nullable": true
+          },
+          "lAgencia": {
+            "type": "boolean",
+            "description": "Es agencia",
+            "nullable": true
+          },
+          "lPrecontacto": {
+            "type": "boolean",
+            "description": "Es precontacto. Un precontacto es un contacto que aún no ha sido validado o confirmado, y puede requerir seguimiento adicional antes de convertirse en un contacto activo.",
+            "nullable": true
+          },
+          "lProspeccion": {
+            "type": "boolean",
+            "description": "Es contacto de un inmueble en prospección.",
+            "nullable": true
+          },
+          "cIdioma": {
+            "type": "string",
+            "description": "Idioma del contacto",
+            "nullable": true
+          },
+          "cMedioContacto": {
+            "type": "string",
+            "description": "Medio de contacto por el que llegó",
+            "nullable": true
+          },
+          "cCaptador": {
+            "type": "string",
+            "description": "Nombre del captador asociado al contacto",
+            "nullable": true
+          },
+          "mComent": {
+            "type": "string",
+            "description": "Comentarios adicionales sobre el contacto",
+            "nullable": true
+          },
+          "nValoracion": {
+            "type": "integer",
+            "description": "Valoración del contacto. Máximo 5.",
+            "format": "int32",
+            "nullable": true
+          },
+          "lValorado": {
+            "type": "boolean",
+            "description": "Indica si el contacto ha sido valorado o no",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "Advertencia": {
+        "type": "object",
+        "properties": {
+          "codigo": {
+            "type": "integer",
+            "description": "Codigo de status",
+            "format": "int32"
+          },
+          "codigoItem": {
+            "type": "integer",
+            "description": "Codigo del item. Se utiliza para adjuntar el id del item creado cuando son operaciones múltiples",
+            "format": "int32"
+          },
+          "codigoUsuario": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "mensaje": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "ProblemDetails": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "nullable": true
+          },
+          "title": {
+            "type": "string",
+            "nullable": true
+          },
+          "status": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "detail": {
+            "type": "string",
+            "nullable": true
+          },
+          "instance": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": { }
+      },
+      "RespuestaEstadoDto": {
+        "type": "object",
+        "properties": {
+          "statusCode": {
+            "type": "integer",
+            "description": "Código de respuesta",
+            "format": "int32"
+          },
+          "id": {
+            "type": "integer",
+            "description": "Id del tipo creado, modificado o eliminado",
+            "format": "int32"
+          },
+          "id2": {
+            "type": "integer",
+            "description": "Id del inmueble creado, modificado o eliminado",
+            "format": "int32"
+          },
+          "mensaje": {
+            "type": "string",
+            "description": "Mensaje de respuesta",
+            "nullable": true
+          },
+          "advertencias": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Advertencia"
+            },
+            "description": "Lista de posibles errores durante la ejecución de la acción",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "securitySchemes": {
+      "Bearer": {
+        "type": "http",
+        "description": "Autenticación JWT (Bearer). Ver control Api InmoPlus > Login",
+        "scheme": "bearer"
+      }
+    }
+  },
+  "security": [
+    { }
+  ],
+  "tags": [
+    {
+      "name": "Contactos"
+    }
+  ]
+}
