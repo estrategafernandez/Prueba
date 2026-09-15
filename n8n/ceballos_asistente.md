@@ -176,6 +176,55 @@ Ceballos (login bot)**. Los workflows antiguos siguen con los valores embebidos.
 3. **Los dos escenarios están parados.** No se activan hasta que lo anterior esté
    resuelto y se pruebe con un lead real.
 
+## 2026-09-15 — Inventario web y enlace en las plantillas
+
+### `Inventario Web Ceballos` (`frDxLN3ejiFxrQ5H`, 7 nodos, parado)
+
+Cada hora descarga los 4 listados públicos de inmobiliariaceballos.com
+(compra y alquiler × Guadalajara y Madrid) con `rows=500`, que trae el catálogo
+entero en una petición por listado en vez de recorrer 10 páginas de 15. Extrae
+cada inmueble del HTML y guarda en la tabla **`InventarioWeb`** los que aún no
+estén, con su **URL pública**, referencia, tipo, zona, precio y superficie.
+
+El tipo sale del `alt` de la foto y no del `<h2>`, porque en muchas fichas el
+`<h2>` es un titular comercial. El precio centinela 99.999.999 € se guarda como
+«A consultar».
+
+**Salvaguarda:** cada listado publica su total en `sTotInm`. Si el número de
+inmuebles extraídos no cuadra, el nodo lanza un error y no inserta nada, para
+que un cambio de maquetación se vea en las ejecuciones en lugar de colar datos
+a medias. Probado con Node contra los listados reales (141, 2 y 1 inmuebles) y
+contra HTML alterado, que efectivamente falla.
+
+Solo inserta lo que falta, nunca borra. La tabla es el mapa
+referencia → URL pública, y esa relación no cambia. Un inmueble retirado se
+queda en la tabla; no molesta porque solo se consulta por referencia.
+
+### El enlace en la plantilla de bienvenida
+
+`plantilla_compra` y `plantilla_alquiler` llevan dos variables: `{{1}}` el
+nombre del cliente y `{{2}}` **el enlace a la ficha en la web**.
+
+`Captacion Leads InmoPlus` busca ahora la referencia del lead en `InventarioWeb`
+y usa esa URL. Si el inmueble no estuviera todavía en la tabla, cae al listado
+de la web filtrado por esa referencia, para que la variable nunca vaya vacía —
+Meta rechaza el envío si falta un parámetro.
+
+Las plantillas de seguimiento llevan **una sola variable**, el nombre.
+
+### Prompt v3
+
+Se añade el contexto de origen: el cliente llega de un portal, ya ha recibido la
+bienvenida con el enlace y ha visto la ficha, así que el agente no debe
+presentarle el inmueble desde cero ni reenviar el enlace. La estructura de
+preguntas de la v2 no se toca.
+
+### Nota
+
+La tabla `InventarioWeb` tiene una fila de prueba con referencia `TEST-1` que la
+API de n8n no deja borrar (`DELETE` no permitido). Es inocua, pero conviene
+quitarla desde la interfaz.
+
 ## Etiquetas de Chatwoot
 
 Existen las 6 y son correctas, pero **ningún nodo las asigna todavía**.

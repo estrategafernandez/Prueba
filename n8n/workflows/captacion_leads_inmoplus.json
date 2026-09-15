@@ -31,21 +31,21 @@
     "url": "https://api.sbinmo.com/login/Login",
     "authentication": "genericCredentialType",
     "genericAuthType": "httpCustomAuth",
+    "sendBody": true,
+    "specifyBody": "json",
+    "jsonBody": "={}",
     "options": {
      "response": {
       "response": {
        "neverError": true
       }
      }
-    },
-    "sendBody": true,
-    "specifyBody": "json",
-    "jsonBody": "={}"
+    }
    },
    "type": "n8n-nodes-base.httpRequest",
    "typeVersion": 4.2,
    "position": [
-    200,
+    208,
     0
    ],
    "id": "token-inmoplus",
@@ -59,15 +59,7 @@
   },
   {
    "parameters": {
-    "method": "GET",
     "url": "=https://api.sbinmo.com/administracion/ListadoLeads?Valorado=2&pagesize=100&orden=dFechaHora&dirOrden=DESC&FechaIni={{ $now.minus({days:2}).setZone('Europe/Madrid').toFormat('dd/MM/yyyy') }}",
-    "options": {
-     "response": {
-      "response": {
-       "neverError": true
-      }
-     }
-    },
     "sendHeaders": true,
     "headerParameters": {
      "parameters": [
@@ -76,6 +68,13 @@
        "value": "=Bearer {{ $json.token || $json }}"
       }
      ]
+    },
+    "options": {
+     "response": {
+      "response": {
+       "neverError": true
+      }
+     }
     }
    },
    "type": "n8n-nodes-base.httpRequest",
@@ -85,8 +84,7 @@
     0
    ],
    "id": "leads-sin-valorar",
-   "name": "Leads sin valorar",
-   "credentials": {}
+   "name": "Leads sin valorar"
   },
   {
    "parameters": {
@@ -96,7 +94,7 @@
    "type": "n8n-nodes-base.splitOut",
    "typeVersion": 1,
    "position": [
-    600,
+    608,
     0
    ],
    "id": "split",
@@ -142,7 +140,7 @@
    "type": "n8n-nodes-base.filter",
    "typeVersion": 2.2,
    "position": [
-    1000,
+    1008,
     0
    ],
    "id": "filtro",
@@ -161,12 +159,10 @@
      "conditions": [
       {
        "keyName": "Telefono",
-       "condition": "eq",
        "keyValue": "={{ $json.telefono_mas }}"
       },
       {
        "keyName": "IdInmueble",
-       "condition": "eq",
        "keyValue": "={{ $json.id_inmueble }}"
       }
      ]
@@ -209,7 +205,7 @@
    "type": "n8n-nodes-base.if",
    "typeVersion": 2.2,
    "position": [
-    1400,
+    1408,
     0
    ],
    "id": "¿es-un-lead-nuevo?",
@@ -217,15 +213,7 @@
   },
   {
    "parameters": {
-    "method": "GET",
     "url": "=https://api.sbinmo.com/inmuebles/ListadoInmuebles?pagesize=1&texto={{ $('Campos del lead').item.json.referencia }}",
-    "options": {
-     "response": {
-      "response": {
-       "neverError": true
-      }
-     }
-    },
     "sendHeaders": true,
     "headerParameters": {
      "parameters": [
@@ -234,17 +222,23 @@
        "value": "=Bearer {{ $('Token InmoPlus').item.json.token || $('Token InmoPlus').item.json }}"
       }
      ]
+    },
+    "options": {
+     "response": {
+      "response": {
+       "neverError": true
+      }
+     }
     }
    },
    "type": "n8n-nodes-base.httpRequest",
    "typeVersion": 4.2,
    "position": [
     1600,
-    -120
+    -128
    ],
    "id": "datos-del-inmueble",
-   "name": "Datos del inmueble",
-   "credentials": {}
+   "name": "Datos del inmueble"
   },
   {
    "parameters": {
@@ -253,15 +247,14 @@
    "type": "n8n-nodes-base.code",
    "typeVersion": 2,
    "position": [
-    1800,
-    -120
+    1808,
+    -128
    ],
    "id": "compra-o-alquiler",
    "name": "Compra o alquiler"
   },
   {
    "parameters": {
-    "method": "GET",
     "url": "=https://panel-inmoceballos.serversvisionarius.com/api/v1/accounts/1/contacts/search?q=%2B{{ $json.wa_id }}",
     "authentication": "genericCredentialType",
     "genericAuthType": "httpHeaderAuth",
@@ -277,7 +270,7 @@
    "typeVersion": 4.2,
    "position": [
     2000,
-    -120
+    -128
    ],
    "id": "busca-el-contacto",
    "name": "Busca el contacto",
@@ -315,8 +308,8 @@
    "type": "n8n-nodes-base.if",
    "typeVersion": 2.2,
    "position": [
-    2200,
-    -120
+    2208,
+    -128
    ],
    "id": "¿existe-el-contacto?",
    "name": "¿Existe el contacto?"
@@ -327,16 +320,16 @@
     "url": "=https://panel-inmoceballos.serversvisionarius.com/api/v1/accounts/1/contacts",
     "authentication": "genericCredentialType",
     "genericAuthType": "httpHeaderAuth",
+    "sendBody": true,
+    "specifyBody": "json",
+    "jsonBody": "={\n  \"name\": {{ JSON.stringify($('Compra o alquiler').item.json.nombre_completo) }},\n  \"phone_number\": \"+{{ $('Compra o alquiler').item.json.wa_id }}\",\n  \"identifier\": \"{{ $('Compra o alquiler').item.json.wa_id }}\",\n  \"inbox_id\": 1,\n  \"source_id\": \"{{ $('Compra o alquiler').item.json.wa_id }}\",\n  \"custom_attributes\": { \"bot\": \"On\" }\n}",
     "options": {
      "response": {
       "response": {
        "neverError": true
       }
      }
-    },
-    "sendBody": true,
-    "specifyBody": "json",
-    "jsonBody": "={\n  \"name\": {{ JSON.stringify($('Compra o alquiler').item.json.nombre_completo) }},\n  \"phone_number\": \"+{{ $('Compra o alquiler').item.json.wa_id }}\",\n  \"identifier\": \"{{ $('Compra o alquiler').item.json.wa_id }}\",\n  \"inbox_id\": 1,\n  \"source_id\": \"{{ $('Compra o alquiler').item.json.wa_id }}\",\n  \"custom_attributes\": { \"bot\": \"On\" }\n}"
+    }
    },
    "type": "n8n-nodes-base.httpRequest",
    "typeVersion": 4.2,
@@ -393,7 +386,7 @@
    "type": "n8n-nodes-base.set",
    "typeVersion": 3.4,
    "position": [
-    2600,
+    2608,
     0
    ],
    "id": "contacto-nuevo",
@@ -401,7 +394,6 @@
   },
   {
    "parameters": {
-    "method": "GET",
     "url": "=https://panel-inmoceballos.serversvisionarius.com/api/v1/accounts/1/contacts/{{ $json.contact_id }}/conversations",
     "authentication": "genericCredentialType",
     "genericAuthType": "httpHeaderAuth",
@@ -417,7 +409,7 @@
    "typeVersion": 4.2,
    "position": [
     2800,
-    -120
+    -128
    ],
    "id": "conversaciones-del-contacto",
    "name": "Conversaciones del contacto",
@@ -455,8 +447,8 @@
    "type": "n8n-nodes-base.if",
    "typeVersion": 2.2,
    "position": [
-    3000,
-    -120
+    3008,
+    -128
    ],
    "id": "¿ya-tiene-conversación?",
    "name": "¿Ya tiene conversación?"
@@ -490,16 +482,16 @@
     "url": "=https://panel-inmoceballos.serversvisionarius.com/api/v1/accounts/1/conversations",
     "authentication": "genericCredentialType",
     "genericAuthType": "httpHeaderAuth",
+    "sendBody": true,
+    "specifyBody": "json",
+    "jsonBody": "={\n  \"source_id\": \"{{ $('Compra o alquiler').item.json.wa_id }}\",\n  \"inbox_id\": 1,\n  \"contact_id\": {{ $('Contacto existente').isExecuted ? $('Contacto existente').item.json.contact_id : $('Contacto nuevo').item.json.contact_id }}\n}",
     "options": {
      "response": {
       "response": {
        "neverError": true
       }
      }
-    },
-    "sendBody": true,
-    "specifyBody": "json",
-    "jsonBody": "={\n  \"source_id\": \"{{ $('Compra o alquiler').item.json.wa_id }}\",\n  \"inbox_id\": 1,\n  \"contact_id\": {{ $('Contacto existente').isExecuted ? $('Contacto existente').item.json.contact_id : $('Contacto nuevo').item.json.contact_id }}\n}"
+    }
    },
    "type": "n8n-nodes-base.httpRequest",
    "typeVersion": 4.2,
@@ -533,7 +525,7 @@
    "type": "n8n-nodes-base.set",
    "typeVersion": 3.4,
    "position": [
-    3400,
+    3408,
     0
    ],
    "id": "conversación-nueva",
@@ -557,7 +549,7 @@
    "typeVersion": 3.4,
    "position": [
     3600,
-    -120
+    -128
    ],
    "id": "id-de-conversación",
    "name": "Id de conversación"
@@ -568,22 +560,22 @@
     "url": "=https://panel-inmoceballos.serversvisionarius.com/api/v1/accounts/1/conversations/{{ $json.conversation_id }}/messages",
     "authentication": "genericCredentialType",
     "genericAuthType": "httpHeaderAuth",
+    "sendBody": true,
+    "specifyBody": "json",
+    "jsonBody": "={\n  \"content\": {{ JSON.stringify('Hola ' + $('Compra o alquiler').item.json.param1 + ', te escribimos de Inmobiliaria Ceballos por tu interés en ' + $('Compra o alquiler').item.json.descripcion_inmueble + '. Puedes verlo aquí: ' + $('Enlace web').item.json.url_inmueble) }},\n  \"message_type\": \"outgoing\",\n  \"template_params\": {\n    \"name\": {{ JSON.stringify($('Compra o alquiler').item.json.plantilla) }},\n    \"category\": \"MARKETING\",\n    \"language\": {{ JSON.stringify($('Compra o alquiler').item.json.idioma) }},\n    \"processed_params\": {\n      \"1\": {{ JSON.stringify($('Compra o alquiler').item.json.param1) }},\n      \"2\": {{ JSON.stringify($('Enlace web').item.json.url_inmueble) }}\n    }\n  }\n}",
     "options": {
      "response": {
       "response": {
        "neverError": true
       }
      }
-    },
-    "sendBody": true,
-    "specifyBody": "json",
-    "jsonBody": "={\n  \"content\": {{ JSON.stringify('Hola ' + $('Compra o alquiler').item.json.param1 + ', te escribimos de Inmobiliaria Ceballos por tu interés en ' + $('Compra o alquiler').item.json.param2) }},\n  \"message_type\": \"outgoing\",\n  \"template_params\": {\n    \"name\": {{ JSON.stringify($('Compra o alquiler').item.json.plantilla) }},\n    \"category\": \"MARKETING\",\n    \"language\": {{ JSON.stringify($('Compra o alquiler').item.json.idioma) }},\n    \"processed_params\": {\n      \"1\": {{ JSON.stringify($('Compra o alquiler').item.json.param1) }},\n      \"2\": {{ JSON.stringify($('Compra o alquiler').item.json.param2) }}\n    }\n  }\n}"
+    }
    },
    "type": "n8n-nodes-base.httpRequest",
    "typeVersion": 4.2,
    "position": [
-    3800,
-    -120
+    3808,
+    -128
    ],
    "id": "envía-la-plantilla",
    "name": "Envía la plantilla",
@@ -604,18 +596,17 @@
     "table": {
      "__rl": true,
      "value": "n8n_chat_histories",
-     "mode": "list",
-     "cachedResultName": "n8n_chat_histories"
+     "mode": "list"
     },
     "columns": {
      "mappingMode": "defineBelow",
      "value": {
-      "session_id": "={{ $('Compra o alquiler').item.json.telefono_mas }}",
-      "message": "={{ JSON.stringify({ type: 'ai', content: 'Hola ' + $('Compra o alquiler').item.json.param1 + ', te escribimos de Inmobiliaria Ceballos por tu interés en ' + $('Compra o alquiler').item.json.param2, tool_calls: [], additional_kwargs: {}, response_metadata: {}, invalid_tool_calls: [] }) }}"
+      "message": "={{ JSON.stringify({ type: 'ai', content: 'Hola ' + $('Compra o alquiler').item.json.param1 + ', te escribimos de Inmobiliaria Ceballos por tu interés en ' + $('Compra o alquiler').item.json.descripcion_inmueble + '. Puedes verlo aquí: ' + $('Enlace web').item.json.url_inmueble, tool_calls: [], additional_kwargs: {}, response_metadata: {}, invalid_tool_calls: [] }) }}"
      },
      "matchingColumns": [
       "id"
      ],
+     "schema": [],
      "attemptToConvertTypes": false,
      "convertFieldsToString": true
     },
@@ -625,14 +616,19 @@
    "typeVersion": 2.6,
    "position": [
     4000,
-    -120
+    -128
    ],
    "id": "memoria",
-   "name": "Memoria del agente"
+   "name": "Memoria del agente",
+   "credentials": {
+    "postgres": {
+     "id": "oI4RP6JIhAdG4B51",
+     "name": "Postgres account"
+    }
+   }
   },
   {
    "parameters": {
-    "method": "GET",
     "url": "=https://panel-inmoceballos.serversvisionarius.com/api/v1/accounts/1/conversations/{{ $('Id de conversación').item.json.conversation_id }}/labels",
     "authentication": "genericCredentialType",
     "genericAuthType": "httpHeaderAuth",
@@ -647,8 +643,8 @@
    "type": "n8n-nodes-base.httpRequest",
    "typeVersion": 4.2,
    "position": [
-    4200,
-    -120
+    4208,
+    -128
    ],
    "id": "etiquetas-actuales",
    "name": "Etiquetas actuales",
@@ -667,7 +663,7 @@
    "typeVersion": 2,
    "position": [
     4400,
-    -120
+    -128
    ],
    "id": "une-las-etiquetas",
    "name": "Une las etiquetas"
@@ -678,22 +674,22 @@
     "url": "=https://panel-inmoceballos.serversvisionarius.com/api/v1/accounts/1/conversations/{{ $json.conversation_id }}/labels",
     "authentication": "genericCredentialType",
     "genericAuthType": "httpHeaderAuth",
+    "sendBody": true,
+    "specifyBody": "json",
+    "jsonBody": "={\n  \"labels\": {{ JSON.stringify($json.labels) }}\n}",
     "options": {
      "response": {
       "response": {
        "neverError": true
       }
      }
-    },
-    "sendBody": true,
-    "specifyBody": "json",
-    "jsonBody": "={\n  \"labels\": {{ JSON.stringify($json.labels) }}\n}"
+    }
    },
    "type": "n8n-nodes-base.httpRequest",
    "typeVersion": 4.2,
    "position": [
-    4600,
-    -120
+    4608,
+    -128
    ],
    "id": "aplica-las-etiquetas",
    "name": "Aplica las etiquetas",
@@ -728,10 +724,65 @@
    "typeVersion": 1,
    "position": [
     4800,
-    -120
+    -128
    ],
    "id": "registra",
    "name": "Registra el lead"
+  },
+  {
+   "parameters": {
+    "operation": "get",
+    "dataTableId": {
+     "__rl": true,
+     "value": "Uy9XuTLbJxIsv9HG",
+     "mode": "list",
+     "cachedResultName": "InventarioWeb"
+    },
+    "matchType": "allConditions",
+    "filters": {
+     "conditions": [
+      {
+       "keyName": "Referencia",
+       "condition": "eq",
+       "keyValue": "={{ $json.referencia }}"
+      }
+     ]
+    },
+    "returnAll": false,
+    "limit": 1,
+    "alwaysOutputData": true
+   },
+   "type": "n8n-nodes-base.dataTable",
+   "typeVersion": 1,
+   "position": [
+    1900,
+    -120
+   ],
+   "id": "enlace",
+   "name": "Enlace del inmueble"
+  },
+  {
+   "parameters": {
+    "assignments": {
+     "assignments": [
+      {
+       "id": "u",
+       "name": "url_inmueble",
+       "type": "string",
+       "value": "={{ $json.Url || 'https://www.inmobiliariaceballos.com/es-ES/Content/BuyProperties/19?pagina=1&rows=15&ref={{ $('Compra o alquiler').item.json.referencia }}' }}"
+      }
+     ]
+    },
+    "options": {}
+   },
+   "type": "n8n-nodes-base.set",
+   "typeVersion": 3.4,
+   "position": [
+    1950,
+    -120
+   ],
+   "id": "enlaceweb",
+   "name": "Enlace web"
   }
  ],
  "connections": {
@@ -839,7 +890,7 @@
    "main": [
     [
      {
-      "node": "Busca el contacto",
+      "node": "Enlace del inmueble",
       "type": "main",
       "index": 0
      }
@@ -1035,6 +1086,28 @@
      }
     ]
    ]
+  },
+  "Enlace del inmueble": {
+   "main": [
+    [
+     {
+      "node": "Enlace web",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Enlace web": {
+   "main": [
+    [
+     {
+      "node": "Busca el contacto",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
   }
  },
  "settings": {
@@ -1043,8 +1116,10 @@
   "availableInMCP": false
  },
  "staticData": null,
- "meta": null,
- "pinData": null,
- "versionCounter": 1,
+ "meta": {
+  "templateCredsSetupCompleted": true
+ },
+ "pinData": {},
+ "versionCounter": 7,
  "tags": []
 }
