@@ -282,6 +282,90 @@ ya funcionaba.
   están en la versión 10, que es la que usa el agente, pero conviene revisarlo y
   publicarlo desde el panel de Retell.
 
+## 2026-09-15 (tarde) — Agente reconectado, limpieza y búsqueda por características
+
+### El agente de WhatsApp vuelve a funcionar
+
+`Agente Vivalta2` no tenía entrada `main`: la cadena del webhook moría en `Fecha`
+y el agente nunca se ejecutaba. Se cierra el circuito insertando por el camino el
+contexto del inmueble:
+
+```
+Fecha → Inmueble del lead → Contexto del inmueble → Agente Ceballos → Filter5 → …
+```
+
+`Inmueble del lead` busca en `InventarioWeb` la referencia que el escenario de
+captación deja en los atributos del contacto de Chatwoot. `Contexto del inmueble`
+compone la `descripcion` que lee el prompt. **Si no hay referencia no se inventa
+nada**: el texto le dice al agente que la pida y que no dé datos de ningún
+inmueble que el cliente no le haya facilitado.
+
+### Renombrados
+
+`Agente Vivalta2` → **`Agente Ceballos`**, y `GET CONTACT Vivalta VI` →
+**`Busca contacto en Chatwoot`**. Las 4 expresiones `$('…')` que referenciaban al
+segundo se actualizaron en el mismo cambio, que es lo que evita romperlo.
+
+### Limpieza de material ajeno
+
+Eliminados 16 nodos muertos, en dos lotes y comprobando antes de cada uno que
+ninguno tenía referencias `$('…')` ni entradas externas: las cinco tools de
+Vivalta, la tabla `clientes_agendado` con su cálculo de agenda, el aviso por
+Telegram y los filtros de `v4_ciempozuelos`. El asistente pasa de 111 a 95 nodos.
+
+El workflow antiguo `Captación Leads` se renombra a **`[OBSOLETO] Captacion Leads
+(sustituido)`** y se le retira el contenido del gimnasio y la tabla
+`n8n_chat_histories_quinto`. No se borra: hay copia redactada en `n8n/backups/`
+y basta con decirlo para eliminarlo del todo.
+
+**Barrido final de la instancia: los 11 workflows sin una sola mención a Vivalta,
+Club Pilates, Indautxu, `_quinto`, `ciempozuelos` ni `clientes_agendado`.**
+
+### `Busqueda Inmuebles por Caracteristicas` (`z64nuPcgL063THmJ`, 5 nodos, activo)
+
+Webhook `POST /webhook/busqueda-caracteristicas`. Trae de `InventarioWeb` los
+inmuebles de la operación y los puntúa en un nodo Code: la tabla tiene unos 180
+registros, así que sale más simple y más flexible que filtrar por rangos sobre
+columnas de texto.
+
+Descartes duros por precio máximo, habitaciones mínimas y tipo. Y una regla de
+sentido comercial: **si el cliente no pide expresamente un garaje, un trastero o
+un local, no se le ofrecen**; tampoco los inmuebles sin tipo, porque no se sabe
+qué son. Devuelve hasta 3 opciones con referencia y enlace.
+
+Probado con Node sobre los 143 inmuebles reales de compra: piso en el centro con
+tope de precio, chalet con mínimo de habitaciones, búsqueda sin criterios,
+búsqueda imposible y zona con acentos.
+
+### Retell
+
+Tres tools: `Busqueda_referencia` (ya existía), `Aviso_comercial` y
+`Busqueda_caracteristicas`. El nodo de búsqueda por características **no salta al
+aviso**: sale a `Cualificación Compra` o `Cualificación Alquiler`, y su `else` al
+subagente genérico. Ofrecer alternativas no sustituye a cualificar.
+
+En el `global_prompt` se añaden seis **reglas innegociables**: abrir con el saludo
+de la hora, terminar siempre la cualificación aunque se haya usado la búsqueda, no
+cerrar citas, ejecutar `Aviso_comercial` antes de colgar, prometer contacto en
+menos de 24 h y no dar datos de ningún inmueble que no venga de una tool.
+
+**Agente publicado**, versión 12.
+
+### Saludo según la hora
+
+`Llamadas entrantes` pasa de 2 a 3 nodos. Ya no manda el nombre fijo «Fernando»:
+calcula en hora de Madrid `saludo` (Buenos días hasta las 14:00, Buenas tardes
+hasta las 21:00, Buenas noches después), `momento_del_dia`, `hora_actual`,
+`fecha_actual` y el teléfono de quien llama, y los entrega como variables
+dinámicas a Retell.
+
+### Quedan huérfanos
+
+Al eliminar los filtros de Vivalta, `Fijamos agente a conver` y
+`Actualizamos contacto2` se quedan sin entrada. Son nodos de Ceballos ya
+corregidos, así que no se borran, pero **hoy no se ejecutan**: hay que decidir
+dónde engancharlos.
+
 ## Etiquetas de Chatwoot
 
 Existen las 6 y son correctas, pero **ningún nodo las asigna todavía**.

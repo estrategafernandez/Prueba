@@ -1,0 +1,1810 @@
+{
+ "id": "240TvnaNUjhVNqwD",
+ "name": "Captación Leads",
+ "description": null,
+ "active": false,
+ "isArchived": false,
+ "nodes": [
+  {
+   "parameters": {},
+   "type": "n8n-nodes-base.manualTrigger",
+   "typeVersion": 1,
+   "position": [
+    -1088,
+    -32
+   ],
+   "id": "980573fb-bad4-44cc-90bb-7d847f3b7325",
+   "name": "When clicking ‘Execute workflow’"
+  },
+  {
+   "parameters": {
+    "method": "POST",
+    "url": "https://api.sbinmo.com/login/Login",
+    "sendHeaders": true,
+    "headerParameters": {
+     "parameters": [
+      {
+       "name": "accept",
+       "value": "application/json"
+      },
+      {
+       "name": "softwareid",
+       "value": "<<REDACTADO>>"
+      },
+      {
+       "name": "catalogo",
+       "value": "Ceballos"
+      },
+      {
+       "name": "Content-Type",
+       "value": "application/json"
+      }
+     ]
+    },
+    "sendBody": true,
+    "bodyParameters": {
+     "parameters": [
+      {
+       "name": "loginUsuario",
+       "value": "bot"
+      },
+      {
+       "name": "passwordUsuario",
+       "value": "<<REDACTADO>>"
+      }
+     ]
+    },
+    "options": {}
+   },
+   "type": "n8n-nodes-base.httpRequest",
+   "typeVersion": 4.4,
+   "position": [
+    -816,
+    -32
+   ],
+   "id": "6562dfa9-4bad-4e24-b9a9-8219f2da4fdb",
+   "name": "Obtener Token",
+   "onError": "continueErrorOutput"
+  },
+  {
+   "parameters": {
+    "url": "https://api.sbinmo.com/administracion/ListadoLeads",
+    "sendQuery": true,
+    "queryParameters": {
+     "parameters": [
+      {
+       "name": "numpage",
+       "value": "={{ $json.numpage }}"
+      },
+      {
+       "name": "pagesize",
+       "value": "500"
+      },
+      {
+       "name": "FechaIni",
+       "value": "={{ $today.minus(1, 'day').format('dd-MM-yyyy') }}"
+      }
+     ]
+    },
+    "sendHeaders": true,
+    "headerParameters": {
+     "parameters": [
+      {
+       "name": "Authorization",
+       "value": "<<REDACTADO>>"
+      }
+     ]
+    },
+    "options": {}
+   },
+   "type": "n8n-nodes-base.httpRequest",
+   "typeVersion": 4.4,
+   "position": [
+    208,
+    -16
+   ],
+   "id": "09d2af7a-d9bf-41ea-bf25-ce568777e527",
+   "name": "LEADS"
+  },
+  {
+   "parameters": {
+    "url": "https://api.sbinmo.com/inmuebles/ListadoInmuebles",
+    "sendQuery": true,
+    "queryParameters": {
+     "parameters": [
+      {
+       "name": "texto",
+       "value": "P-2336"
+      }
+     ]
+    },
+    "sendHeaders": true,
+    "headerParameters": {
+     "parameters": [
+      {
+       "name": "accept",
+       "value": "application/json"
+      },
+      {
+       "name": "Authorization",
+       "value": "<<REDACTADO>>"
+      }
+     ]
+    },
+    "options": {}
+   },
+   "type": "n8n-nodes-base.httpRequest",
+   "typeVersion": 4.4,
+   "position": [
+    544,
+    816
+   ],
+   "id": "285b070a-6d5a-4b3a-b44b-2dae289e6f1d",
+   "name": "INMUEBLES"
+  },
+  {
+   "parameters": {
+    "sortFieldsUi": {
+     "sortField": [
+      {
+       "fieldName": "dFechaHora",
+       "order": "descending"
+      }
+     ]
+    },
+    "options": {}
+   },
+   "type": "n8n-nodes-base.sort",
+   "typeVersion": 1,
+   "position": [
+    768,
+    -16
+   ],
+   "id": "68ab9820-8963-43e4-b70c-c7bd787c66e8",
+   "name": "Sort"
+  },
+  {
+   "parameters": {
+    "fieldToSplitOut": "valoraciones",
+    "options": {}
+   },
+   "type": "n8n-nodes-base.splitOut",
+   "typeVersion": 1,
+   "position": [
+    496,
+    -16
+   ],
+   "id": "5913d3c4-2eb8-4f7f-8d07-dc13b03eded8",
+   "name": "Split Out"
+  },
+  {
+   "parameters": {
+    "url": "https://api.sbinmo.com/administracion/ListadoLeads",
+    "sendHeaders": true,
+    "headerParameters": {
+     "parameters": [
+      {
+       "name": "Authorization",
+       "value": "<<REDACTADO>>"
+      }
+     ]
+    },
+    "options": {}
+   },
+   "type": "n8n-nodes-base.httpRequest",
+   "typeVersion": 4.4,
+   "position": [
+    784,
+    816
+   ],
+   "id": "7dbfe873-8d6e-4635-966e-e5133afca390",
+   "name": "Leads"
+  },
+  {
+   "parameters": {
+    "method": "POST",
+    "url": "https://api.sbinmo.com/login/Login",
+    "sendHeaders": true,
+    "headerParameters": {
+     "parameters": [
+      {
+       "name": "accept",
+       "value": "application/json"
+      },
+      {
+       "name": "softwareid",
+       "value": "<<REDACTADO>>"
+      },
+      {
+       "name": "catalogo",
+       "value": "Ceballos"
+      },
+      {
+       "name": "Content-Type",
+       "value": "application/json"
+      }
+     ]
+    },
+    "sendBody": true,
+    "specifyBody": "json",
+    "jsonBody": "{\n  \"loginUsuario\": \"bot\",\n  \"passwordUsuario\": \"<<REDACTADO>>\",\n  \"idConexion\": \"string\",\n  \"sobreescribirSesion\": true,\n  \"reiniciarSesion\": true\n}",
+    "options": {}
+   },
+   "type": "n8n-nodes-base.httpRequest",
+   "typeVersion": 4.4,
+   "position": [
+    -496,
+    -32
+   ],
+   "id": "02a41845-886f-4cf9-9a31-9a7b6c8c9459",
+   "name": "Obtener Token1",
+   "onError": "continueErrorOutput"
+  },
+  {
+   "parameters": {
+    "assignments": {
+     "assignments": [
+      {
+       "id": "394bcd19-972b-4074-8309-bd69c1bb3d80",
+       "name": "numpage",
+       "value": "1",
+       "type": "string"
+      }
+     ]
+    },
+    "options": {}
+   },
+   "type": "n8n-nodes-base.set",
+   "typeVersion": 3.4,
+   "position": [
+    -80,
+    -16
+   ],
+   "id": "d1834cc9-03ed-4591-8a85-c07d63e0b34a",
+   "name": "Edit Fields"
+  },
+  {
+   "parameters": {
+    "amount": 3
+   },
+   "type": "n8n-nodes-base.wait",
+   "typeVersion": 1.1,
+   "position": [
+    2688,
+    -16
+   ],
+   "id": "561ab8cc-7319-41fd-9515-7bf851f3dfad",
+   "name": "Wait13",
+   "webhookId": "f3eaee18-888a-4788-9037-1185867c5d4f"
+  },
+  {
+   "parameters": {
+    "method": "POST",
+    "url": "=https://panel-inmoceballos.serversvisionarius.com/api/v1/accounts/1/conversations",
+    "sendHeaders": true,
+    "headerParameters": {
+     "parameters": [
+      {
+       "name": "api_access_token",
+       "value": "<<REDACTADO>>"
+      },
+      {
+       "name": "Content-Type",
+       "value": "application/json"
+      }
+     ]
+    },
+    "sendBody": true,
+    "specifyBody": "json",
+    "jsonBody": "={\n  \"source_id\": \"{{ $json.payload.contact.identifier }}\",\n  \"inbox_id\": 1,\n  \"contact_id\": {{ $json.payload.contact.id }}\n}\n",
+    "options": {}
+   },
+   "type": "n8n-nodes-base.httpRequest",
+   "typeVersion": 4.2,
+   "position": [
+    3856,
+    144
+   ],
+   "id": "aba25218-9387-4777-9cb7-69ee6ce99016",
+   "name": "Crear Conversación2",
+   "retryOnFail": true,
+   "waitBetweenTries": 3000,
+   "onError": "continueRegularOutput"
+  },
+  {
+   "parameters": {
+    "amount": 3
+   },
+   "type": "n8n-nodes-base.wait",
+   "typeVersion": 1.1,
+   "position": [
+    3600,
+    144
+   ],
+   "id": "ef8abdcc-73ba-4702-a5bb-3ecf69b709ec",
+   "name": "Wait15",
+   "webhookId": "cbeb963c-8ab7-4be0-86d5-d1b5b7f2fa4d"
+  },
+  {
+   "parameters": {
+    "method": "POST",
+    "url": "=https://panel-inmoceballos.serversvisionarius.com/api/v1/accounts/1/contacts",
+    "sendHeaders": true,
+    "headerParameters": {
+     "parameters": [
+      {
+       "name": "api_access_token",
+       "value": "<<REDACTADO>>"
+      },
+      {
+       "name": "Content-Type",
+       "value": "application/json"
+      }
+     ]
+    },
+    "sendBody": true,
+    "specifyBody": "json",
+    "jsonBody": "={\n  \"name\": \"{{ $('Loop Over Items1').item.json.cNombre }} {{ $('Loop Over Items1').item.json.cApellidos }}\",\n  \"phone_number\": \"+{{ $('Loop Over Items1').item.json.processed_wa_id }}\",\n  \"identifier\": \"{{ $('Loop Over Items1').item.json.processed_wa_id }}\",\n  \"inbox_id\": 1,\n  \"source_id\": \"{{ $('Loop Over Items1').item.json.processed_wa_id }}\",\n  \"custom_attributes\": {\n    \"bot\": \"On\"\n  }\n}",
+    "options": {}
+   },
+   "type": "n8n-nodes-base.httpRequest",
+   "typeVersion": 4.2,
+   "position": [
+    3296,
+    144
+   ],
+   "id": "ba6d6ec3-33b6-4c6e-8b22-64e26a3e188f",
+   "name": "Crea Contacto1",
+   "retryOnFail": true,
+   "waitBetweenTries": 3000,
+   "onError": "continueErrorOutput"
+  },
+  {
+   "parameters": {
+    "method": "POST",
+    "url": "=hhttps://panel-inmoceballos.serversvisionarius.com/api/v1/accounts/1/conversations",
+    "sendHeaders": true,
+    "headerParameters": {
+     "parameters": [
+      {
+       "name": "api_access_token",
+       "value": "<<REDACTADO>>"
+      },
+      {
+       "name": "Content-Type",
+       "value": "application/json"
+      }
+     ]
+    },
+    "sendBody": true,
+    "specifyBody": "json",
+    "jsonBody": "={\n  \"source_id\": \"{{ $('GET CONTACT InmoCeballos').item.json.payload[0].contact_inboxes[0].source_id }}\",\n  \"inbox_id\": 1,\n  \"contact_id\": {{ $('GET CONTACT InmoCeballos').item.json.payload[0].id }}\n}\n",
+    "options": {}
+   },
+   "type": "n8n-nodes-base.httpRequest",
+   "typeVersion": 4.2,
+   "position": [
+    3584,
+    -64
+   ],
+   "id": "8cc8f36e-db6f-4555-97b5-737d3314137c",
+   "name": "Crear Conversación3",
+   "retryOnFail": true,
+   "waitBetweenTries": 3000,
+   "onError": "continueRegularOutput"
+  },
+  {
+   "parameters": {},
+   "type": "n8n-nodes-base.merge",
+   "typeVersion": 3.2,
+   "position": [
+    4032,
+    -208
+   ],
+   "id": "5ff46a07-bea2-4f5e-be73-651d46425af4",
+   "name": "Merge5"
+  },
+  {
+   "parameters": {
+    "assignments": {
+     "assignments": [
+      {
+       "id": "c4a801c8-0157-4e6b-ad4b-7863d53633b4",
+       "name": "Nombre",
+       "value": "={{ $json.meta.sender.name }}",
+       "type": "string"
+      },
+      {
+       "id": "9a1cf18d-ae61-4e68-a57d-6a3c00839290",
+       "name": "Numero",
+       "value": "={{ $json.meta.sender.phone_number }}",
+       "type": "string"
+      },
+      {
+       "id": "84eb8b86-98ac-4fd1-98bb-252f5ec520c0",
+       "name": "Contact_ID",
+       "value": "={{ $('Crea Contacto1').item.json.payload.contact.id }}",
+       "type": "number"
+      },
+      {
+       "id": "6f4c29f3-bddb-4bbf-97c9-2f7ca919363e",
+       "name": "ID",
+       "value": "={{ $('Crear Conversación2').item.json.id }}",
+       "type": "string"
+      }
+     ]
+    },
+    "options": {}
+   },
+   "type": "n8n-nodes-base.set",
+   "typeVersion": 3.4,
+   "position": [
+    4112,
+    144
+   ],
+   "id": "56b8d9f8-503a-4251-9294-3ffbec934411",
+   "name": "Edit Fields4"
+  },
+  {
+   "parameters": {},
+   "type": "n8n-nodes-base.merge",
+   "typeVersion": 3.2,
+   "position": [
+    4592,
+    0
+   ],
+   "id": "f480f51d-a359-444a-95db-3b3a8eb29cca",
+   "name": "Merge6"
+  },
+  {
+   "parameters": {
+    "assignments": {
+     "assignments": [
+      {
+       "id": "c4a801c8-0157-4e6b-ad4b-7863d53633b4",
+       "name": "Nombre",
+       "value": "={{ $('GET CONTACT InmoCeballos').item.json.payload[0].name }}",
+       "type": "string"
+      },
+      {
+       "id": "9a1cf18d-ae61-4e68-a57d-6a3c00839290",
+       "name": "Numero",
+       "value": "={{ $('GET CONTACT InmoCeballos').item.json.payload[0].phone_number }}",
+       "type": "string"
+      },
+      {
+       "id": "84eb8b86-98ac-4fd1-98bb-252f5ec520c0",
+       "name": "ID",
+       "value": "={{ $json.ID }}",
+       "type": "number"
+      },
+      {
+       "id": "c1471588-da98-416e-a8cf-e4993e9322f3",
+       "name": "Contact_ID",
+       "value": "={{ $json.Contact_ID }}",
+       "type": "string"
+      }
+     ]
+    },
+    "options": {}
+   },
+   "type": "n8n-nodes-base.set",
+   "typeVersion": 3.4,
+   "position": [
+    4288,
+    -208
+   ],
+   "id": "131edde5-a61e-4918-9af5-c5b4f81a25b0",
+   "name": "Edit Fields6"
+  },
+  {
+   "parameters": {
+    "assignments": {
+     "assignments": [
+      {
+       "id": "c4a801c8-0157-4e6b-ad4b-7863d53633b4",
+       "name": "Nombre",
+       "value": "={{ $json.Nombre }}",
+       "type": "string"
+      },
+      {
+       "id": "9a1cf18d-ae61-4e68-a57d-6a3c00839290",
+       "name": "Numero",
+       "value": "={{ $json.Numero }}",
+       "type": "string"
+      },
+      {
+       "id": "84eb8b86-98ac-4fd1-98bb-252f5ec520c0",
+       "name": "ID",
+       "value": "={{ $json.ID }}",
+       "type": "number"
+      },
+      {
+       "id": "c1471588-da98-416e-a8cf-e4993e9322f3",
+       "name": "Contact_ID",
+       "value": "={{ $json.Contact_ID }}",
+       "type": "string"
+      }
+     ]
+    },
+    "options": {}
+   },
+   "type": "n8n-nodes-base.set",
+   "typeVersion": 3.4,
+   "position": [
+    4816,
+    0
+   ],
+   "id": "299e27d9-7ac8-4012-84b9-35cdeeb343c7",
+   "name": "Edit Fields10"
+  },
+  {
+   "parameters": {
+    "url": "=https://panel-inmoceballos.serversvisionarius.com/api/v1/accounts/1/conversations",
+    "sendHeaders": true,
+    "headerParameters": {
+     "parameters": [
+      {
+       "name": "api_access_token",
+       "value": "<<REDACTADO>>"
+      },
+      {
+       "name": "Content-Type",
+       "value": "application/json"
+      }
+     ]
+    },
+    "sendBody": true,
+    "specifyBody": "json",
+    "jsonBody": "={\n  \"source_id\": \"{{ $('Loop Over Items1').item.json.processed_wa_id }}\",\n\"inbox_id\": 1\n}\n",
+    "options": {}
+   },
+   "type": "n8n-nodes-base.httpRequest",
+   "typeVersion": 4.2,
+   "position": [
+    3184,
+    -176
+   ],
+   "id": "4d5ad9cb-c205-4e7d-941c-29f7997b6198",
+   "name": "Coger Id conversacion1",
+   "retryOnFail": true,
+   "waitBetweenTries": 3000
+  },
+  {
+   "parameters": {
+    "conditions": {
+     "options": {
+      "caseSensitive": true,
+      "leftValue": "",
+      "typeValidation": "strict",
+      "version": 2
+     },
+     "conditions": [
+      {
+       "id": "73cc9a89-67e9-447f-85f4-b7f2bbddddbd",
+       "leftValue": "={{ $json.data.meta.all_count }}",
+       "rightValue": 0,
+       "operator": {
+        "type": "number",
+        "operation": "notEquals"
+       }
+      }
+     ],
+     "combinator": "and"
+    },
+    "options": {}
+   },
+   "type": "n8n-nodes-base.if",
+   "typeVersion": 2.2,
+   "position": [
+    3408,
+    -192
+   ],
+   "id": "2afc65e0-f0de-47a4-b0f3-9351aa0c16a6",
+   "name": "Existe?1"
+  },
+  {
+   "parameters": {
+    "assignments": {
+     "assignments": [
+      {
+       "id": "b0fd1837-d8b3-4685-8082-13ef55a5331b",
+       "name": "ID",
+       "value": "={{ $json.data.payload[0].id }}",
+       "type": "number"
+      },
+      {
+       "id": "0b9368e8-3a07-4cf5-9c92-683562fbaafd",
+       "name": "Contact_ID",
+       "value": "={{ $('GET CONTACT InmoCeballos').item.json.payload[0].id }}",
+       "type": "number"
+      }
+     ]
+    },
+    "options": {}
+   },
+   "type": "n8n-nodes-base.set",
+   "typeVersion": 3.4,
+   "position": [
+    3744,
+    -224
+   ],
+   "id": "06181f23-ee60-419c-9f6c-a1da79ae6ccc",
+   "name": "Mapeo ID conver1"
+  },
+  {
+   "parameters": {
+    "conditions": {
+     "options": {
+      "caseSensitive": true,
+      "leftValue": "",
+      "typeValidation": "strict",
+      "version": 3
+     },
+     "conditions": [
+      {
+       "id": "06f9d946-2c1f-4e66-8e0b-4f579fc4d354",
+       "leftValue": "={{ $('GET CONTACT InmoCeballos').item.json.payload[0].name }}",
+       "rightValue": "",
+       "operator": {
+        "type": "string",
+        "operation": "exists",
+        "singleValue": true
+       }
+      }
+     ],
+     "combinator": "and"
+    },
+    "options": {}
+   },
+   "type": "n8n-nodes-base.if",
+   "typeVersion": 2.3,
+   "position": [
+    2912,
+    -16
+   ],
+   "id": "91fda00f-2d4f-440c-9269-33e968f66a81",
+   "name": "If8"
+  },
+  {
+   "parameters": {
+    "assignments": {
+     "assignments": [
+      {
+       "id": "b0fd1837-d8b3-4685-8082-13ef55a5331b",
+       "name": "ID",
+       "value": "={{ $('Crear Conversación3').item.json.id }}",
+       "type": "number"
+      },
+      {
+       "id": "b402f05f-60c6-4510-998f-4769bf7a9dd1",
+       "name": "Contact_ID",
+       "value": "={{ $('GET CONTACT InmoCeballos').first().json.payload[0].id }}",
+       "type": "string"
+      }
+     ]
+    },
+    "options": {}
+   },
+   "type": "n8n-nodes-base.set",
+   "typeVersion": 3.4,
+   "position": [
+    3856,
+    -64
+   ],
+   "id": "fbc3343e-bdf1-4887-96b6-73ab2ad6856b",
+   "name": "Edit Fields1"
+  },
+  {
+   "parameters": {
+    "operation": "get",
+    "dataTableId": {
+     "__rl": true,
+     "value": "9zpS4FExMHwddDjN",
+     "mode": "list",
+     "cachedResultName": "LeadsInteresados",
+     "cachedResultUrl": "/projects/T6iytuB99ZD1qJbH/datatables/9zpS4FExMHwddDjN"
+    },
+    "matchType": "allConditions",
+    "filters": {
+     "conditions": [
+      {
+       "keyName": "Telefono",
+       "keyValue": "={{ $json.processed_wa_id }}"
+      },
+      {
+       "keyName": "IdInmueble",
+       "keyValue": "={{ $json.idInmueble }}"
+      }
+     ]
+    },
+    "returnAll": true
+   },
+   "type": "n8n-nodes-base.dataTable",
+   "typeVersion": 1.1,
+   "position": [
+    1920,
+    -16
+   ],
+   "id": "424d4561-e822-4f6d-9f3c-6fd47a2608c5",
+   "name": "Get row(s)",
+   "alwaysOutputData": true
+  },
+  {
+   "parameters": {
+    "options": {}
+   },
+   "type": "n8n-nodes-base.splitInBatches",
+   "typeVersion": 3,
+   "position": [
+    1648,
+    -16
+   ],
+   "id": "12f088c6-d60e-41b6-aba6-ff07eee93beb",
+   "name": "Loop Over Items1"
+  },
+  {
+   "parameters": {
+    "conditions": {
+     "options": {
+      "caseSensitive": true,
+      "leftValue": "",
+      "typeValidation": "strict",
+      "version": 3
+     },
+     "conditions": [
+      {
+       "id": "f63df85d-a584-4b23-944d-b40e007b27e4",
+       "leftValue": "={{ $json.id }}",
+       "rightValue": 0,
+       "operator": {
+        "type": "number",
+        "operation": "exists",
+        "singleValue": true
+       }
+      }
+     ],
+     "combinator": "and"
+    },
+    "options": {}
+   },
+   "type": "n8n-nodes-base.if",
+   "typeVersion": 2.3,
+   "position": [
+    2160,
+    -16
+   ],
+   "id": "c84a70cd-d98c-402b-b36b-9337592750a4",
+   "name": "If2"
+  },
+  {
+   "parameters": {
+    "jsCode": "for (const item of $input.all()) {\n  // Obtener el teléfono\n  let wa_id = item.json.cTelefono;\n\n  // Convertir a string y limpiar espacios/guiones\n  wa_id = String(wa_id).replace(/[\\s-]/g, '');\n\n  if (wa_id.startsWith('+')) {\n    // Quitar el +\n    wa_id = wa_id.substring(1);\n\n    // Si después de quitar el + quedan 9 dígitos,\n    // asumimos que es un número español sin prefijo\n    if (/^\\d{9}$/.test(wa_id)) {\n      wa_id = '34' + wa_id;\n    }\n  } else if (/^\\d{9}$/.test(wa_id)) {\n    // Número español sin prefijo\n    wa_id = '34' + wa_id;\n  }\n  // Si ya tiene un prefijo internacional (34, 40, 44, etc.), no hacer nada\n\n  item.json.processed_wa_id = wa_id;\n}\n\nreturn $input.all();"
+   },
+   "type": "n8n-nodes-base.code",
+   "typeVersion": 2,
+   "position": [
+    1360,
+    -16
+   ],
+   "id": "418ecc76-9dc1-4d04-bdfb-79dd45e3b28d",
+   "name": "Formateamos Número"
+  },
+  {
+   "parameters": {
+    "url": "=https://panel-inmoceballos.serversvisionarius.com/api/v1/accounts/1/contacts/search?q=%2B{{ $('Loop Over Items1').item.json.processed_wa_id }}",
+    "sendHeaders": true,
+    "headerParameters": {
+     "parameters": [
+      {
+       "name": "api_access_token",
+       "value": "<<REDACTADO>>"
+      },
+      {
+       "name": "Content-Type",
+       "value": "application/json"
+      }
+     ]
+    },
+    "options": {}
+   },
+   "type": "n8n-nodes-base.httpRequest",
+   "typeVersion": 4.2,
+   "position": [
+    2432,
+    0
+   ],
+   "id": "e8256285-ed1c-425e-ae8e-240420d97a98",
+   "name": "GET CONTACT InmoCeballos",
+   "retryOnFail": true,
+   "waitBetweenTries": 3000,
+   "onError": "continueErrorOutput"
+  },
+  {
+   "parameters": {
+    "rules": {
+     "values": [
+      {
+       "conditions": {
+        "options": {
+         "caseSensitive": true,
+         "leftValue": "",
+         "typeValidation": "strict",
+         "version": 3
+        },
+        "conditions": [
+         {
+          "leftValue": "={{ $json.compra }}",
+          "rightValue": true,
+          "operator": {
+           "type": "boolean",
+           "operation": "equals"
+          },
+          "id": "b36cebad-678a-465c-8699-ff14221b128e"
+         }
+        ],
+        "combinator": "and"
+       },
+       "renameOutput": true,
+       "outputKey": "compra"
+      },
+      {
+       "conditions": {
+        "options": {
+         "caseSensitive": true,
+         "leftValue": "",
+         "typeValidation": "strict",
+         "version": 3
+        },
+        "conditions": [
+         {
+          "id": "2ac48e9f-414f-4c28-880d-0519a984b07f",
+          "leftValue": "={{ $json.alquiler }}",
+          "rightValue": true,
+          "operator": {
+           "type": "boolean",
+           "operation": "equals"
+          }
+         }
+        ],
+        "combinator": "and"
+       },
+       "renameOutput": true,
+       "outputKey": "alquiler"
+      }
+     ]
+    },
+    "options": {}
+   },
+   "type": "n8n-nodes-base.switch",
+   "typeVersion": 3.4,
+   "position": [
+    6096,
+    0
+   ],
+   "id": "d9630194-c533-4743-aa8d-bf307f9192f1",
+   "name": "Switch"
+  },
+  {
+   "parameters": {
+    "modelId": {
+     "__rl": true,
+     "value": "gpt-4o",
+     "mode": "list",
+     "cachedResultName": "GPT-4O"
+    },
+    "responses": {
+     "values": [
+      {
+       "content": "={{ JSON.stringify($json.inmuebles[0]) }}"
+      },
+      {
+       "role": "system",
+       "content": "ENTRADA: un objeto JSON con las características de un inmueble (habitaciones, baños, superficie, ubicación, precio, extras booleanos como piscina, garaje, terraza, etc.)\n\nSALIDA: un único párrafo en español, en prosa natural y fluida, como si un comercial estuviera describiendo el inmueble en persona. Nunca uses formato lista, markdown, guiones, ni etiquetas de campo.\n\nREGLAS:\n- Menciona solo los campos con valor presente y relevante (numérico >0, booleano true, o texto no vacío). Ignora completamente cualquier campo vacío, en 0, false o null.\n- No menciones nombres de campos técnicos (nHab, lPiscina, etc.), tradúcelos a lenguaje natural: \"4 habitaciones\", \"con piscina\", \"3 baños\".\n- Incluye, si están presentes: tipo de inmueble, ubicación (municipio/provincia), superficie, habitaciones, baños, y extras relevantes (garaje, piscina, terraza, ascensor, trastero, etc.).\n- Determina el tipo de operación según qué campo de precio tenga valor mayor que 0: si nVenta > 0 es una venta, si nAlquiler > 0 es un alquiler. Si ambos tienen valor, menciona ambas opciones. Refleja la operación de forma natural en la redacción (por ejemplo, \"está en venta por...\", \"disponible en alquiler por...\", \"se ofrece en venta y también en alquiler\"), no como una etiqueta separada.\n- Incluye el precio de venta o alquiler solo si el cliente ya lo ha pedido o si el contexto de la llamada lo requiere; si no se indica lo contrario, inclúyelo de forma natural al final, junto con el tipo de operación correspondiente.\n- No inventes ni deduzcas datos que no estén en el JSON.\n- No uses frases de saludo ni cierre (eso lo gestiona el flujo de llamada, no tú).\n- Máximo 4-5 frases. Debe sonar natural al ser leído en voz alta, no como una ficha técnica.\n- Responde ÚNICAMENTE con el párrafo final, sin explicaciones ni comentarios adicionales."
+      }
+     ]
+    },
+    "builtInTools": {},
+    "options": {}
+   },
+   "type": "@n8n/n8n-nodes-langchain.openAi",
+   "typeVersion": 2.1,
+   "position": [
+    5936,
+    -304
+   ],
+   "id": "144751ad-b5fc-4991-951e-f5a87f080a8d",
+   "name": "Message a model",
+   "credentials": {
+    "openAiApi": {
+     "id": "vCPiOBwERnyU1VFo",
+     "name": "OpenAi account"
+    }
+   }
+  },
+  {
+   "parameters": {
+    "method": "POST",
+    "url": "https://api.sbinmo.com/login/Login",
+    "sendHeaders": true,
+    "headerParameters": {
+     "parameters": [
+      {
+       "name": "accept",
+       "value": "application/json"
+      },
+      {
+       "name": "softwareid",
+       "value": "<<REDACTADO>>"
+      },
+      {
+       "name": "catalogo",
+       "value": "Ceballos"
+      },
+      {
+       "name": "Content-Type",
+       "value": "application/json"
+      }
+     ]
+    },
+    "sendBody": true,
+    "bodyParameters": {
+     "parameters": [
+      {
+       "name": "loginUsuario",
+       "value": "bot"
+      },
+      {
+       "name": "passwordUsuario",
+       "value": "<<REDACTADO>>"
+      }
+     ]
+    },
+    "options": {}
+   },
+   "type": "n8n-nodes-base.httpRequest",
+   "typeVersion": 4.4,
+   "position": [
+    5072,
+    0
+   ],
+   "id": "9c843f0f-1a0b-4a24-8387-8b89685358a7",
+   "name": "Obtener Token2",
+   "onError": "continueErrorOutput"
+  },
+  {
+   "parameters": {
+    "method": "POST",
+    "url": "https://api.sbinmo.com/login/Login",
+    "sendHeaders": true,
+    "headerParameters": {
+     "parameters": [
+      {
+       "name": "accept",
+       "value": "application/json"
+      },
+      {
+       "name": "softwareid",
+       "value": "<<REDACTADO>>"
+      },
+      {
+       "name": "catalogo",
+       "value": "Ceballos"
+      },
+      {
+       "name": "Content-Type",
+       "value": "application/json"
+      }
+     ]
+    },
+    "sendBody": true,
+    "specifyBody": "json",
+    "jsonBody": "{\n  \"loginUsuario\": \"bot\",\n  \"passwordUsuario\": \"<<REDACTADO>>\",\n  \"idConexion\": \"string\",\n  \"sobreescribirSesion\": true,\n  \"reiniciarSesion\": true\n}",
+    "options": {}
+   },
+   "type": "n8n-nodes-base.httpRequest",
+   "typeVersion": 4.4,
+   "position": [
+    5328,
+    0
+   ],
+   "id": "ba58329a-0163-40f5-a783-6140785a5360",
+   "name": "Obtener Token3",
+   "onError": "continueErrorOutput"
+  },
+  {
+   "parameters": {
+    "url": "https://api.sbinmo.com/inmuebles/ListadoInmuebles",
+    "sendQuery": true,
+    "queryParameters": {
+     "parameters": [
+      {
+       "name": "pagesize",
+       "value": "500"
+      },
+      {
+       "name": "texto",
+       "value": "={{ $('Loop Over Items1').item.json.cReferencia }}"
+      }
+     ]
+    },
+    "sendHeaders": true,
+    "headerParameters": {
+     "parameters": [
+      {
+       "name": "Authorization",
+       "value": "<<REDACTADO>>"
+      }
+     ]
+    },
+    "options": {}
+   },
+   "type": "n8n-nodes-base.httpRequest",
+   "typeVersion": 4.4,
+   "position": [
+    5616,
+    0
+   ],
+   "id": "9e5f6dd6-2914-4d6f-a8e0-7ca7abf1e84c",
+   "name": "INMUEBLES-REFERENCIA"
+  },
+  {
+   "parameters": {
+    "jsCode": "const inmueble = items[0].json.inmuebles[0];\nconst { nVenta, nAlquiler, nTraspaso } = inmueble;\n\nreturn [\n  {\n    json: {\n      ...inmueble,\n      compra: nVenta > 0,\n      alquiler: nAlquiler > 0,\n      traspaso: nTraspaso > 0\n    }\n  }\n];"
+   },
+   "type": "n8n-nodes-base.code",
+   "typeVersion": 2,
+   "position": [
+    5872,
+    0
+   ],
+   "id": "36d94722-b78a-4a66-a919-66cf145b04f2",
+   "name": "Code in JavaScript"
+  },
+  {
+   "parameters": {
+    "method": "POST",
+    "url": "=https://panel-inmoceballos.serversvisionarius.com//api/v1/accounts/1/conversations/{{ $('Edit Fields10').item.json.ID }}/messages",
+    "sendHeaders": true,
+    "headerParameters": {
+     "parameters": [
+      {
+       "name": "api_access_token",
+       "value": "<<REDACTADO>>"
+      },
+      {
+       "name": "Content-Type",
+       "value": "application/json"
+      }
+     ]
+    },
+    "sendBody": true,
+    "specifyBody": "json",
+    "jsonBody": "={\n\"content\": \"Hola *{{ $('Formateamos Número2').item.json.first_name }}*, 😁\\n\\nHemos recibido tu inscripción a *Club Pilates Indautxu* 🤗.\\n\\n*¡Bienvenida y qué alegría que hayas decidido unirte a nuestra comunidad!*\\n\\nPara poder ir completando tu ficha, puedes por favor facilitarnos los siguientes datos:\\n\\n- Fecha de nacimiento:\\n- Número de identidad:\\n- Persona y teléfono de contacto de emergencia:\\n- Lesiones:\\n- Objetivos:\\n\\nA través de nuestra app Club Pilates España podrás ir reservando tus clases.\\n\\nTe comparto también toda la información importante que debes saber como socia de *Club Pilates Indautxu*.\\n\\n*Nos vemos en el Club✨*\",\n  \"template_params\": {\n    \"name\": \"bienvenida\",\n    \"category\": \"MARKETING\",\n    \"language\": \"en\",\n    \"processed_params\": {\n      \"body\": {\n        \"1\": \"{{ $('Formateamos Número2').item.json.first_name }}\",\n        \"2\": \"Indautxu\",\n        \"3\": \"Indautxu\"\n      }\n    }\n  }\n}",
+    "options": {}
+   },
+   "type": "n8n-nodes-base.httpRequest",
+   "typeVersion": 4.2,
+   "position": [
+    6400,
+    -112
+   ],
+   "id": "44b486eb-9003-4dd7-8d72-10ab5010d838",
+   "name": "Compra",
+   "retryOnFail": true,
+   "waitBetweenTries": 3000,
+   "onError": "continueRegularOutput"
+  },
+  {
+   "parameters": {
+    "method": "POST",
+    "url": "=https://panel-inmoceballos.serversvisionarius.com//api/v1/accounts/1/conversations/{{ $('Edit Fields10').item.json.ID }}/messages",
+    "sendHeaders": true,
+    "headerParameters": {
+     "parameters": [
+      {
+       "name": "api_access_token",
+       "value": "<<REDACTADO>>"
+      },
+      {
+       "name": "Content-Type",
+       "value": "application/json"
+      }
+     ]
+    },
+    "sendBody": true,
+    "specifyBody": "json",
+    "jsonBody": "={\n\"content\": \"Hola *{{ $('Formateamos Número2').item.json.first_name }}*, 😁\\n\\nHemos recibido tu inscripción a *Club Pilates Indautxu* 🤗.\\n\\n*¡Bienvenida y qué alegría que hayas decidido unirte a nuestra comunidad!*\\n\\nPara poder ir completando tu ficha, puedes por favor facilitarnos los siguientes datos:\\n\\n- Fecha de nacimiento:\\n- Número de identidad:\\n- Persona y teléfono de contacto de emergencia:\\n- Lesiones:\\n- Objetivos:\\n\\nA través de nuestra app Club Pilates España podrás ir reservando tus clases.\\n\\nTe comparto también toda la información importante que debes saber como socia de *Club Pilates Indautxu*.\\n\\n*Nos vemos en el Club✨*\",\n  \"template_params\": {\n    \"name\": \"bienvenida\",\n    \"category\": \"MARKETING\",\n    \"language\": \"en\",\n    \"processed_params\": {\n      \"body\": {\n        \"1\": \"{{ $('Formateamos Número2').item.json.first_name }}\",\n        \"2\": \"Indautxu\",\n        \"3\": \"Indautxu\"\n      }\n    }\n  }\n}",
+    "options": {}
+   },
+   "type": "n8n-nodes-base.httpRequest",
+   "typeVersion": 4.2,
+   "position": [
+    6400,
+    128
+   ],
+   "id": "bfe5c366-15ea-4dd3-bd94-de3c09886e39",
+   "name": "Alquiler",
+   "retryOnFail": true,
+   "waitBetweenTries": 3000,
+   "onError": "continueRegularOutput"
+  },
+  {
+   "parameters": {
+    "schema": {
+     "__rl": true,
+     "mode": "list",
+     "value": "public"
+    },
+    "table": {
+     "__rl": true,
+     "value": "n8n_chat_histories_quinto",
+     "mode": "list",
+     "cachedResultName": "n8n_chat_histories_quinto"
+    },
+    "columns": {
+     "mappingMode": "defineBelow",
+     "value": {
+      "session_id": "=+{{ $('Formateamos Número2').item.json.processed_wa_id }}",
+      "message": "={\n  \"type\": \"ai\",\n  \"content\": \"Hola **, 😁\\n\\nHemos recibido tu inscripción a *Club Pilates Indautxu* 🤗.\\n\\n*¡Bienvenida y qué alegría que hayas decidido unirte a nuestra comunidad!*\\n\\nPara poder ir completando tu ficha, puedes por favor facilitarnos los siguientes datos:\\n\\n- Fecha de nacimiento:\\n- Número de identidad:\\n- Persona y teléfono de contacto de emergencia:\\n- Lesiones:\\n- Objetivos:\\n\\nA través de nuestra app Club Pilates España podrás ir reservando tus clases.\\n\\nTe comparto también toda la información importante que debes saber como socia de *Club Pilates Indautxu*.\\n\\n*Nos vemos en el Club✨*\"\n}"
+     },
+     "matchingColumns": [
+      "id"
+     ],
+     "schema": [
+      {
+       "id": "id",
+       "displayName": "id",
+       "required": false,
+       "defaultMatch": true,
+       "display": true,
+       "type": "number",
+       "canBeUsedToMatch": true,
+       "removed": true
+      },
+      {
+       "id": "session_id",
+       "displayName": "session_id",
+       "required": true,
+       "defaultMatch": false,
+       "display": true,
+       "type": "string",
+       "canBeUsedToMatch": true
+      },
+      {
+       "id": "message",
+       "displayName": "message",
+       "required": true,
+       "defaultMatch": false,
+       "display": true,
+       "type": "object",
+       "canBeUsedToMatch": true
+      }
+     ],
+     "attemptToConvertTypes": false,
+     "convertFieldsToString": false
+    },
+    "options": {}
+   },
+   "type": "n8n-nodes-base.postgres",
+   "typeVersion": 2.6,
+   "position": [
+    6624,
+    -112
+   ],
+   "id": "3d33fcc3-c5f0-4182-a405-c7fd13cac068",
+   "name": "Postgres56",
+   "retryOnFail": true,
+   "waitBetweenTries": 3000,
+   "credentials": {
+    "postgres": {
+     "id": "oI4RP6JIhAdG4B51",
+     "name": "Postgres account"
+    }
+   },
+   "onError": "continueErrorOutput"
+  },
+  {
+   "parameters": {
+    "schema": {
+     "__rl": true,
+     "mode": "list",
+     "value": "public"
+    },
+    "table": {
+     "__rl": true,
+     "value": "n8n_chat_histories_quinto",
+     "mode": "list",
+     "cachedResultName": "n8n_chat_histories_quinto"
+    },
+    "columns": {
+     "mappingMode": "defineBelow",
+     "value": {
+      "session_id": "=+{{ $('Formateamos Número2').item.json.processed_wa_id }}",
+      "message": "={\n  \"type\": \"ai\",\n  \"content\": \"Hola **, 😁\\n\\nHemos recibido tu inscripción a *Club Pilates Indautxu* 🤗.\\n\\n*¡Bienvenida y qué alegría que hayas decidido unirte a nuestra comunidad!*\\n\\nPara poder ir completando tu ficha, puedes por favor facilitarnos los siguientes datos:\\n\\n- Fecha de nacimiento:\\n- Número de identidad:\\n- Persona y teléfono de contacto de emergencia:\\n- Lesiones:\\n- Objetivos:\\n\\nA través de nuestra app Club Pilates España podrás ir reservando tus clases.\\n\\nTe comparto también toda la información importante que debes saber como socia de *Club Pilates Indautxu*.\\n\\n*Nos vemos en el Club✨*\"\n}"
+     },
+     "matchingColumns": [
+      "id"
+     ],
+     "schema": [
+      {
+       "id": "id",
+       "displayName": "id",
+       "required": false,
+       "defaultMatch": true,
+       "display": true,
+       "type": "number",
+       "canBeUsedToMatch": true,
+       "removed": true
+      },
+      {
+       "id": "session_id",
+       "displayName": "session_id",
+       "required": true,
+       "defaultMatch": false,
+       "display": true,
+       "type": "string",
+       "canBeUsedToMatch": true
+      },
+      {
+       "id": "message",
+       "displayName": "message",
+       "required": true,
+       "defaultMatch": false,
+       "display": true,
+       "type": "object",
+       "canBeUsedToMatch": true
+      }
+     ],
+     "attemptToConvertTypes": false,
+     "convertFieldsToString": false
+    },
+    "options": {}
+   },
+   "type": "n8n-nodes-base.postgres",
+   "typeVersion": 2.6,
+   "position": [
+    6624,
+    128
+   ],
+   "id": "d245d364-5a57-412a-8a9f-f1448f94e8b3",
+   "name": "Postgres",
+   "retryOnFail": true,
+   "waitBetweenTries": 3000,
+   "credentials": {
+    "postgres": {
+     "id": "oI4RP6JIhAdG4B51",
+     "name": "Postgres account"
+    }
+   },
+   "onError": "continueErrorOutput"
+  },
+  {
+   "parameters": {
+    "dataTableId": {
+     "__rl": true,
+     "value": "DpG3XD4krC2GDNcD",
+     "mode": "list",
+     "cachedResultName": "Inmuebles",
+     "cachedResultUrl": "/projects/T6iytuB99ZD1qJbH/datatables/DpG3XD4krC2GDNcD"
+    },
+    "columns": {
+     "mappingMode": "defineBelow",
+     "value": {
+      "Descripcion": "={{ $json.output[0].content[0].text }}",
+      "Referencia": "={{ $('Loop Over Items1').item.json.cReferencia }}"
+     },
+     "matchingColumns": [],
+     "schema": [
+      {
+       "id": "Referencia",
+       "displayName": "Referencia",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "type": "string",
+       "readOnly": false,
+       "removed": false
+      },
+      {
+       "id": "Descripcion",
+       "displayName": "Descripcion",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "type": "string",
+       "readOnly": false,
+       "removed": false
+      }
+     ],
+     "attemptToConvertTypes": false,
+     "convertFieldsToString": false
+    },
+    "options": {}
+   },
+   "type": "n8n-nodes-base.dataTable",
+   "typeVersion": 1.1,
+   "position": [
+    6288,
+    -304
+   ],
+   "id": "3a9923fe-f97e-4311-9438-a4b3b7677522",
+   "name": "Insert row"
+  },
+  {
+   "parameters": {},
+   "type": "n8n-nodes-base.merge",
+   "typeVersion": 3.2,
+   "position": [
+    7168,
+    288
+   ],
+   "id": "19b7e511-80ef-489f-960d-409a033ffa31",
+   "name": "Merge"
+  },
+  {
+   "parameters": {
+    "content": "# FALTAN PLANTILLAS POR DEFINIR\n",
+    "height": 144,
+    "width": 432,
+    "color": 3
+   },
+   "type": "n8n-nodes-base.stickyNote",
+   "typeVersion": 1,
+   "position": [
+    6608,
+    -320
+   ],
+   "id": "660475c8-0a90-4ea9-9c19-884f0e908dd4",
+   "name": "Sticky Note"
+  },
+  {
+   "parameters": {},
+   "type": "n8n-nodes-base.limit",
+   "typeVersion": 1,
+   "position": [
+    1072,
+    -16
+   ],
+   "id": "91ae4361-5c70-43e2-98b6-4ca095053c12",
+   "name": "Limit"
+  }
+ ],
+ "connections": {
+  "When clicking ‘Execute workflow’": {
+   "main": [
+    [
+     {
+      "node": "Obtener Token",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Obtener Token": {
+   "main": [
+    [],
+    [
+     {
+      "node": "Obtener Token1",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "LEADS": {
+   "main": [
+    [
+     {
+      "node": "Split Out",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Split Out": {
+   "main": [
+    [
+     {
+      "node": "Sort",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Obtener Token1": {
+   "main": [
+    [
+     {
+      "node": "Edit Fields",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Edit Fields": {
+   "main": [
+    [
+     {
+      "node": "LEADS",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Wait13": {
+   "main": [
+    [
+     {
+      "node": "If8",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Crear Conversación2": {
+   "main": [
+    [
+     {
+      "node": "Edit Fields4",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Wait15": {
+   "main": [
+    [
+     {
+      "node": "Crear Conversación2",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Crea Contacto1": {
+   "main": [
+    [
+     {
+      "node": "Wait15",
+      "type": "main",
+      "index": 0
+     }
+    ],
+    []
+   ]
+  },
+  "Crear Conversación3": {
+   "main": [
+    [
+     {
+      "node": "Edit Fields1",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Merge5": {
+   "main": [
+    [
+     {
+      "node": "Edit Fields6",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Edit Fields4": {
+   "main": [
+    [
+     {
+      "node": "Merge6",
+      "type": "main",
+      "index": 1
+     }
+    ]
+   ]
+  },
+  "Merge6": {
+   "main": [
+    [
+     {
+      "node": "Edit Fields10",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Edit Fields6": {
+   "main": [
+    [
+     {
+      "node": "Merge6",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Coger Id conversacion1": {
+   "main": [
+    [
+     {
+      "node": "Existe?1",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Existe?1": {
+   "main": [
+    [
+     {
+      "node": "Mapeo ID conver1",
+      "type": "main",
+      "index": 0
+     }
+    ],
+    [
+     {
+      "node": "Crear Conversación3",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Mapeo ID conver1": {
+   "main": [
+    [
+     {
+      "node": "Merge5",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "If8": {
+   "main": [
+    [
+     {
+      "node": "Coger Id conversacion1",
+      "type": "main",
+      "index": 0
+     }
+    ],
+    [
+     {
+      "node": "Crea Contacto1",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Edit Fields1": {
+   "main": [
+    [
+     {
+      "node": "Merge5",
+      "type": "main",
+      "index": 1
+     }
+    ]
+   ]
+  },
+  "Get row(s)": {
+   "main": [
+    [
+     {
+      "node": "If2",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Loop Over Items1": {
+   "main": [
+    [],
+    [
+     {
+      "node": "Get row(s)",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "If2": {
+   "main": [
+    [
+     {
+      "node": "Loop Over Items1",
+      "type": "main",
+      "index": 0
+     }
+    ],
+    [
+     {
+      "node": "GET CONTACT InmoCeballos",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Sort": {
+   "main": [
+    [
+     {
+      "node": "Limit",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Formateamos Número": {
+   "main": [
+    [
+     {
+      "node": "Loop Over Items1",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "GET CONTACT InmoCeballos": {
+   "main": [
+    [
+     {
+      "node": "Wait13",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Edit Fields10": {
+   "main": [
+    [
+     {
+      "node": "Obtener Token2",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Obtener Token2": {
+   "main": [
+    [],
+    [
+     {
+      "node": "Obtener Token3",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Obtener Token3": {
+   "main": [
+    [
+     {
+      "node": "INMUEBLES-REFERENCIA",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "INMUEBLES-REFERENCIA": {
+   "main": [
+    [
+     {
+      "node": "Code in JavaScript",
+      "type": "main",
+      "index": 0
+     },
+     {
+      "node": "Message a model",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Code in JavaScript": {
+   "main": [
+    [
+     {
+      "node": "Switch",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Message a model": {
+   "main": [
+    [
+     {
+      "node": "Insert row",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Postgres56": {
+   "main": [
+    [
+     {
+      "node": "Merge",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Postgres": {
+   "main": [
+    [
+     {
+      "node": "Merge",
+      "type": "main",
+      "index": 1
+     }
+    ]
+   ]
+  },
+  "Merge": {
+   "main": [
+    [
+     {
+      "node": "Loop Over Items1",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Limit": {
+   "main": [
+    []
+   ]
+  }
+ },
+ "settings": {
+  "executionOrder": "v1",
+  "binaryMode": "separate",
+  "availableInMCP": false,
+  "timeSavedMode": "fixed",
+  "timezone": "Europe/Madrid",
+  "callerPolicy": "workflowsFromSameOwner"
+ },
+ "staticData": null,
+ "meta": {
+  "templateCredsSetupCompleted": true
+ },
+ "pinData": {},
+ "versionCounter": 463,
+ "tags": []
+}

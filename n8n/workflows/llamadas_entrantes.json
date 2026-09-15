@@ -1,0 +1,89 @@
+{
+ "id": "G3qBXfs4GYyVJsZT",
+ "name": "Llamadas entrantes",
+ "description": null,
+ "active": true,
+ "isArchived": false,
+ "nodes": [
+  {
+   "parameters": {
+    "httpMethod": "POST",
+    "path": "llamada-entrante",
+    "responseMode": "responseNode",
+    "options": {}
+   },
+   "type": "n8n-nodes-base.webhook",
+   "typeVersion": 2.1,
+   "position": [
+    0,
+    0
+   ],
+   "id": "b98491ea-29d1-4f70-93e9-c8eb0120ef2c",
+   "name": "Webhook",
+   "webhookId": "2a553ba1-dfe4-4c68-b026-bf4607ab8b55"
+  },
+  {
+   "parameters": {
+    "respondWith": "json",
+    "responseBody": "={\n  \"override_agent_id\": \"agent_fe3fc67932af0a16aa9d4f014e\",\n  \"dynamic_variables\": {\n    \"saludo\": \"{{ $json.saludo }}\",\n    \"momento_del_dia\": \"{{ $json.momento_del_dia }}\",\n    \"hora_actual\": \"{{ $json.hora_actual }}\",\n    \"fecha_actual\": \"{{ $json.fecha_actual }}\",\n    \"telefono_cliente\": \"{{ $json.telefono_cliente }}\"\n  }\n}",
+    "options": {}
+   },
+   "type": "n8n-nodes-base.respondToWebhook",
+   "typeVersion": 1.5,
+   "position": [
+    304,
+    0
+   ],
+   "id": "a5bcfeb6-25b6-4d34-8854-416cb1d7c7b8",
+   "name": "Respond to Webhook"
+  },
+  {
+   "parameters": {
+    "jsCode": "// Saludo segun la hora real en Madrid, para que la llamada suene natural.\n// Convencion en castellano: dias hasta las 14:00, tardes hasta las 21:00,\n// y noches a partir de ahi.\nconst ahora = $now.setZone('Europe/Madrid');\nconst h = ahora.hour;\nconst saludo = h < 14 ? 'Buenos días' : (h < 21 ? 'Buenas tardes' : 'Buenas noches');\n\n// Telefono desde el que llaman, por si el flujo lo necesita.\nconst b = $input.first().json.body || $input.first().json || {};\nconst llamada = b.call || b;\nconst telefono = String(llamada.from_number || b.from_number || '').trim();\n\nreturn [{ json: {\n  saludo,\n  momento_del_dia: h < 14 ? 'mañana' : (h < 21 ? 'tarde' : 'noche'),\n  hora_actual: ahora.toFormat('HH:mm'),\n  fecha_actual: ahora.setLocale('es').toFormat(\"cccc d 'de' LLLL 'de' yyyy\"),\n  telefono_cliente: telefono,\n}}];"
+   },
+   "type": "n8n-nodes-base.code",
+   "typeVersion": 2,
+   "position": [
+    220,
+    0
+   ],
+   "id": "saludo",
+   "name": "Saludo segun la hora"
+  }
+ ],
+ "connections": {
+  "Webhook": {
+   "main": [
+    [
+     {
+      "node": "Saludo segun la hora",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Saludo segun la hora": {
+   "main": [
+    [
+     {
+      "node": "Respond to Webhook",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  }
+ },
+ "settings": {
+  "executionOrder": "v1",
+  "binaryMode": "separate",
+  "availableInMCP": false,
+  "callerPolicy": "workflowsFromSameOwner"
+ },
+ "staticData": null,
+ "meta": null,
+ "pinData": {},
+ "versionCounter": 34,
+ "tags": []
+}

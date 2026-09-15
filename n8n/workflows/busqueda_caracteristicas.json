@@ -1,0 +1,159 @@
+{
+ "id": "z64nuPcgL063THmJ",
+ "name": "Busqueda Inmuebles por Caracteristicas",
+ "description": null,
+ "active": true,
+ "isArchived": false,
+ "nodes": [
+  {
+   "parameters": {
+    "httpMethod": "POST",
+    "path": "busqueda-caracteristicas",
+    "responseMode": "responseNode",
+    "options": {}
+   },
+   "type": "n8n-nodes-base.webhook",
+   "typeVersion": 2.1,
+   "position": [
+    0,
+    0
+   ],
+   "id": "wh",
+   "name": "Peticion de busqueda",
+   "webhookId": "a9dda1f1-b94f-4015-b227-22d6081e12f1"
+  },
+  {
+   "parameters": {
+    "jsCode": "// Acepta tanto {args:{...}} (como manda Retell) como el cuerpo plano.\nconst b = $input.first().json.body || $input.first().json || {};\nconst a = b.args || b;\nconst t = (x) => String(x ?? '').trim();\nreturn [{ json: {\n  operacion: (t(a.operacion).toLowerCase().startsWith('alq') ? 'alquiler' : 'compra'),\n  zona: t(a.zona), tipo: t(a.tipo),\n  precio_max: t(a.precio_max), habitaciones_min: t(a.habitaciones_min),\n}}];"
+   },
+   "type": "n8n-nodes-base.code",
+   "typeVersion": 2,
+   "position": [
+    220,
+    0
+   ],
+   "id": "pide",
+   "name": "Lo que pide el cliente"
+  },
+  {
+   "parameters": {
+    "operation": "get",
+    "dataTableId": {
+     "__rl": true,
+     "value": "Uy9XuTLbJxIsv9HG",
+     "mode": "list",
+     "cachedResultName": "InventarioWeb"
+    },
+    "matchType": "allConditions",
+    "filters": {
+     "conditions": [
+      {
+       "keyName": "Operacion",
+       "condition": "eq",
+       "keyValue": "={{ $json.operacion }}"
+      },
+      {
+       "keyName": "Activo",
+       "condition": "eq",
+       "keyValue": "si"
+      }
+     ]
+    },
+    "returnAll": true,
+    "alwaysOutputData": true
+   },
+   "type": "n8n-nodes-base.dataTable",
+   "typeVersion": 1,
+   "position": [
+    440,
+    0
+   ],
+   "id": "tab",
+   "name": "Inmuebles de esa operacion"
+  },
+  {
+   "parameters": {
+    "jsCode": "// Busca en el inventario de la web por caracteristicas y devuelve las mejores\n// coincidencias. La tabla es pequena (unos 180 inmuebles), asi que se traen\n// todos los de la operacion y se puntuan aqui: sale mas simple y mas flexible\n// que intentar filtrar por rangos en columnas de texto.\nconst a = $('Lo que pide el cliente').first().json;\nconst filas = $input.all().map((x) => x.json).filter((f) => f && f.Referencia && f.Referencia !== 'TEST-1');\n\nconst num = (t) => { const m = String(t ?? '').replace(/\\./g, '').match(/\\d+/); return m ? Number(m[0]) : null; };\nconst norm = (t) => String(t ?? '').toLowerCase()\n  .normalize('NFD').replace(/[̀-ͯ]/g, '');   // sin acentos, para comparar\n\n// Todo lo que no es vivienda. Si el cliente no pide expresamente un garaje o un\n// local, ofrecerselo queda mal: un comercial no lo haria.\nconst NO_VIVIENDA = ['garaje','trastero','terreno','solar','local','nave','oficina','negocio',\n                     'almacen','pabellon','suelo','edificio','singular','amarre','hotel'];\n// Sin tipo no se puede saber que es, asi que tampoco se ofrece a ciegas.\nconst esVivienda = (tipo) => !!String(tipo ?? '').trim() && !NO_VIVIENDA.some((p) => norm(tipo).includes(p));\n\nconst pedidas = {\n  zona: norm(a.zona), tipo: norm(a.tipo),\n  precioMax: num(a.precio_max), habMin: num(a.habitaciones_min),\n};\n\nconst candidatos = [];\nfor (const f of filas) {\n  const precio = num(f.PrecioTexto);\n  const hab = num(f.Habitaciones);\n\n  // Descartes duros: si pide un tope de precio, un minimo de habitaciones o un\n  // tipo concreto, no tiene sentido ofrecerle algo que no lo cumple.\n  if (pedidas.precioMax && precio && precio > pedidas.precioMax) continue;\n  if (pedidas.habMin && hab !== null && hab < pedidas.habMin) continue;\n  if (pedidas.tipo && !norm(f.Tipo).includes(pedidas.tipo)) continue;\n  // Sin tipo pedido, solo viviendas.\n  if (!pedidas.tipo && !esVivienda(f.Tipo)) continue;\n\n  let puntos = 0;\n  if (pedidas.zona && norm(f.Zona).includes(pedidas.zona)) puntos += 3;\n  if (pedidas.habMin && hab === pedidas.habMin) puntos += 1;\n  if (pedidas.precioMax && precio) puntos += 1;   // cabe en presupuesto\n  candidatos.push({ f, puntos, precio: precio ?? Number.MAX_SAFE_INTEGER });\n}\n\n// Mejor puntuacion primero y, a igualdad, mas barato.\ncandidatos.sort((x, y) => y.puntos - x.puntos || x.precio - y.precio);\nconst top = candidatos.slice(0, 3);\n\nif (!top.length) {\n  return [{ json: { encontrados: 0, texto:\n    'No hay ningun inmueble publicado que encaje con esas caracteristicas. ' +\n    'Ofrecete a tomar nota de lo que busca para que un compañero le avise cuando entre algo.' }}];\n}\n\nconst texto = top.map((c, i) => {\n  const f = c.f;\n  const d = [f.Tipo, f.Zona ? `en ${f.Zona}` : null, f.PrecioTexto, f.Superficie,\n             f.Habitaciones ? `${f.Habitaciones} hab` : null]\n    .filter(Boolean).join(', ');\n  return `${i + 1}. Referencia ${f.Referencia}: ${d}. Ficha: ${f.Url}`;\n}).join('\\n');\n\nreturn [{ json: { encontrados: top.length, texto:\n  `Estos son los que mas se acercan:\\n${texto}` }}];"
+   },
+   "type": "n8n-nodes-base.code",
+   "typeVersion": 2,
+   "position": [
+    660,
+    0
+   ],
+   "id": "flt",
+   "name": "Elige los 3 mejores"
+  },
+  {
+   "parameters": {
+    "respondWith": "text",
+    "responseBody": "={{ $json.texto }}",
+    "options": {}
+   },
+   "type": "n8n-nodes-base.respondToWebhook",
+   "typeVersion": 1.1,
+   "position": [
+    880,
+    0
+   ],
+   "id": "rs",
+   "name": "Responder"
+  }
+ ],
+ "connections": {
+  "Peticion de busqueda": {
+   "main": [
+    [
+     {
+      "node": "Lo que pide el cliente",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Lo que pide el cliente": {
+   "main": [
+    [
+     {
+      "node": "Inmuebles de esa operacion",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Inmuebles de esa operacion": {
+   "main": [
+    [
+     {
+      "node": "Elige los 3 mejores",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Elige los 3 mejores": {
+   "main": [
+    [
+     {
+      "node": "Responder",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  }
+ },
+ "settings": {
+  "executionOrder": "v1",
+  "callerPolicy": "workflowsFromSameOwner",
+  "availableInMCP": false
+ },
+ "staticData": null,
+ "meta": null,
+ "pinData": null,
+ "versionCounter": 5,
+ "tags": []
+}
