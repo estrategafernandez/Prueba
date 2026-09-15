@@ -225,6 +225,63 @@ La tabla `InventarioWeb` tiene una fila de prueba con referencia `TEST-1` que la
 API de n8n no deja borrar (`DELETE` no permitido). Es inocua, pero conviene
 quitarla desde la interfaz.
 
+## 2026-09-15 — Asistente telefónico y verificación de referencias
+
+### Las referencias de InmoPlus y de la web SON la misma
+
+Comprobado sin autenticarme, usando el webhook `busqueda-referencia` que ya está
+en producción: se le pasan referencias sacadas de la web y las encuentra en el CRM.
+`P-1644` devuelve el mismo piso que raspa el inventario (224 m², 5 hab., 3 baños,
+665.000 €) y `C-849` los mismos 272 m². De paso confirma que el precio centinela
+99.999.999 € **viene de InmoPlus**, no es una rareza de la web.
+
+Por tanto el enlace de `InventarioWeb` se puede casar con el lead por referencia,
+que es como está montado `Captacion Leads InmoPlus`.
+
+### El telefónico ya tenía la búsqueda por referencia
+
+El agente de Retell (`agent_fe3fc67932af0a16aa9d4f014e`) usa un Conversation Flow
+(`conversation_flow_61c97778ee61`) que ya traía la tool `Busqueda_referencia`
+apuntando al webhook de n8n. No hacía falta añadirla.
+
+### `AVISO Telefonico Ceballos` (`0tAqTuD02FaQreB0`, 4 nodos, activo)
+
+Webhook `POST /webhook/aviso-telefonico` que Retell llama al terminar la llamada.
+Normaliza lo que manda Retell (`{name, args:{...}}`) y llama al sub-workflow
+`AVISO Ceballos`, de modo que el aviso del telefónico y el de WhatsApp comparten
+la misma lógica, el mismo aplanado y la misma plantilla.
+
+En el flujo de Retell se añadió la tool `Aviso_comercial` y un nodo `function`
+**Aviso al comercial**. Los tres subagentes de cualificación (Alquiler, Compra y
+el genérico) terminaban en `None`, sin llevar a ningún sitio ni siquiera a colgar:
+ahora los tres pasan por el aviso y de ahí a `End Call`.
+
+### Probado de punta a punta
+
+Se llamó al webhook con datos de prueba. La cadena entera funcionó —contacto,
+conversación y mensaje creados en Chatwoot— y el envío **falló en Meta con
+`(#132001) Template name does not exist in the translation`**, que es exactamente
+el error de una plantilla sin aprobar. Ningún WhatsApp llegó a entregarse.
+
+Sirve como prueba de dos cosas: la integración está bien y lo único que falta es
+la aprobación de las plantillas.
+
+La prueba dejó creados en Chatwoot los contactos de Alejandro y María Ángeles,
+que hacían falta igualmente, con un mensaje fallido cada uno.
+
+### Detalle que costó encontrar
+
+Un nodo `webhook` creado por API **no se registra si le falta el campo
+`webhookId`**. El workflow aparece como activo pero la URL devuelve 404 sin más
+pistas. Hay que asignarle un UUID y usar `typeVersion` 2.1, como el webhook que
+ya funcionaba.
+
+### PENDIENTE
+
+- El flujo de Retell está **sin publicar** (`is_published: false`). Los cambios
+  están en la versión 10, que es la que usa el agente, pero conviene revisarlo y
+  publicarlo desde el panel de Retell.
+
 ## Etiquetas de Chatwoot
 
 Existen las 6 y son correctas, pero **ningún nodo las asigna todavía**.

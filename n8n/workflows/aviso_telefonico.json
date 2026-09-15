@@ -1,0 +1,135 @@
+{
+ "id": "0tAqTuD02FaQreB0",
+ "name": "AVISO Telefonico Ceballos",
+ "description": null,
+ "active": true,
+ "isArchived": false,
+ "nodes": [
+  {
+   "parameters": {
+    "httpMethod": "POST",
+    "path": "aviso-telefonico",
+    "responseMode": "responseNode",
+    "options": {}
+   },
+   "type": "n8n-nodes-base.webhook",
+   "typeVersion": 2.1,
+   "position": [
+    0,
+    0
+   ],
+   "id": "wh",
+   "name": "Llamada de Retell",
+   "webhookId": "5460358a-c87a-4c10-af3e-c0ecbe500b60"
+  },
+  {
+   "parameters": {
+    "jsCode": "// Retell envia {name, args:{...}} cuando la tool tiene args_at_root=false,\n// que es como esta configurada la de busqueda por referencia. Se acepta\n// tambien el cuerpo plano por si se cambia esa opcion.\nconst b = $input.first().json.body || $input.first().json || {};\nconst a = b.args || b;\nconst t = (x) => String(x ?? '').trim();\nreturn [{ json: {\n  resumen:          t(a.resumen) || 'Llamada entrante sin resumen.',\n  disponibilidad:   t(a.disponibilidad) || 'No indicada',\n  operacion:        t(a.operacion) || 'No indicada',\n  inmueble:         t(a.referencia) || t(a.inmueble) || 'No indicado',\n  nombre_cliente:   t(a.nombre_cliente) || t(a.nombre) || 'Cliente',\n  telefono_cliente: t(a.telefono_cliente) || t(a.telefono) || t(b.from_number) || '',\n}}];"
+   },
+   "type": "n8n-nodes-base.code",
+   "typeVersion": 2,
+   "position": [
+    220,
+    0
+   ],
+   "id": "norm",
+   "name": "Normaliza lo que manda Retell"
+  },
+  {
+   "parameters": {
+    "workflowId": {
+     "__rl": true,
+     "value": "FptrwOsEst1T6t4f",
+     "mode": "list",
+     "cachedResultName": "AVISO Ceballos"
+    },
+    "workflowInputs": {
+     "mappingMode": "defineBelow",
+     "value": {
+      "resumen": "={{ $json.resumen }}",
+      "disponibilidad": "={{ $json.disponibilidad }}",
+      "operacion": "={{ $json.operacion }}",
+      "inmueble": "={{ $json.inmueble }}",
+      "nombre_cliente": "={{ $json.nombre_cliente }}",
+      "telefono_cliente": "={{ $json.telefono_cliente }}"
+     },
+     "matchingColumns": [],
+     "schema": [],
+     "attemptToConvertTypes": false,
+     "convertFieldsToString": true
+    },
+    "options": {
+     "waitForSubWorkflow": true
+    }
+   },
+   "type": "n8n-nodes-base.executeWorkflow",
+   "typeVersion": 1.2,
+   "position": [
+    440,
+    0
+   ],
+   "id": "ex",
+   "name": "Avisar al equipo"
+  },
+  {
+   "parameters": {
+    "respondWith": "text",
+    "responseBody": "=Aviso enviado al equipo. Un comercial contactará al cliente en menos de 24 horas.",
+    "options": {}
+   },
+   "type": "n8n-nodes-base.respondToWebhook",
+   "typeVersion": 1.1,
+   "position": [
+    660,
+    0
+   ],
+   "id": "rs",
+   "name": "Responder a Retell"
+  }
+ ],
+ "connections": {
+  "Llamada de Retell": {
+   "main": [
+    [
+     {
+      "node": "Normaliza lo que manda Retell",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Normaliza lo que manda Retell": {
+   "main": [
+    [
+     {
+      "node": "Avisar al equipo",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Avisar al equipo": {
+   "main": [
+    [
+     {
+      "node": "Responder a Retell",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  }
+ },
+ "settings": {
+  "executionOrder": "v1",
+  "callerPolicy": "workflowsFromSameOwner",
+  "availableInMCP": false
+ },
+ "staticData": null,
+ "meta": null,
+ "pinData": null,
+ "versionCounter": 10,
+ "tags": []
+}

@@ -1,0 +1,318 @@
+{
+ "conversation_flow_id": "conversation_flow_61c97778ee61",
+ "version": 10,
+ "last_modification_timestamp": 1789432260675,
+ "global_prompt": "# Datos\nFecha y hora actual: {{current_time_Europe/Madrid}}\n\n#ROL\n\nEres María, asistente de IA de \"Inmobiliaria Ceballos\".\n\nResponderás llamadas de clientes que están buscando alguna propiedad, ya sea para comprar, o para alquilarla.\n\n\n# CONTEXTO\nEres el asistente virtual de Inmobiliaria Ceballos. Inmobiliaria ubicada en Guadalajara, España. \n\nEsta inmobiliaria, gestiona propiedades tanto en venta como alquiler.\n\n",
+ "nodes": [
+  {
+   "name": "End Call",
+   "display_position": {
+    "y": 102,
+    "x": 1926
+   },
+   "id": "end-call-node-1788256836275",
+   "instruction": {
+    "type": "prompt",
+    "text": "Politely end the call"
+   },
+   "type": "end",
+   "skippable": false
+  },
+  {
+   "instruction": {
+    "text": "Muchas gracias por contactar con Inmobiliaria Ceballos.\n¿En que podemos ayudarle?",
+    "type": "prompt"
+   },
+   "type": "conversation",
+   "id": "start-node-1788256836275",
+   "edges": [
+    {
+     "transition_condition": {
+      "type": "prompt",
+      "prompt": "Cliente llamada por un inmueble visto en la web o portales"
+     },
+     "destination_node_id": "node-1789165424534",
+     "id": "edge-1789165150858-6vu929857"
+    },
+    {
+     "transition_condition": {
+      "type": "prompt",
+      "prompt": "Cliente menciona buscar inmueble en ALQUILER. Saltamos a 'cualificación alquiler'"
+     },
+     "destination_node_id": "node-1788819911935",
+     "id": "edge-1788819704484-94orf6lwa"
+    },
+    {
+     "transition_condition": {
+      "prompt": "Cliente menciona querer COMPRAR un inmueble o propiedad. 'Saltamos a 'cualificación compra'",
+      "type": "prompt"
+     },
+     "destination_node_id": "subagent-1788845646210-0",
+     "id": "edge-1788819707969-itgwsmuds"
+    }
+   ],
+   "start_speaker": "agent",
+   "skippable": false,
+   "display_position": {
+    "x": -18,
+    "y": 366
+   },
+   "name": "Bienvenida"
+  },
+  {
+   "edges": [
+    {
+     "destination_node_id": "node-aviso-comercial-ceballos",
+     "id": "edge-1788819911935-4tzw26otp",
+     "transition_condition": {
+      "prompt": "Cliente responde a todas las preguntas",
+      "type": "prompt"
+     }
+    }
+   ],
+   "instruction": {
+    "text": "Si están interesados en buscar una propiedad en alquiler, debes de cualificarlos con una serie de preguntas:\n1- ¿Cuantos dormitorios necesitan?\n2- ¿Cuantas personas serán?\n3- ¿Trabajáis o actualmente no? *Si trabajan, ¿que tipo de contrato tienen?\n\n** Una sola pregunta por turno**\n\nPreguntas, y esperas a que el cliente responda antes de lanzar la siguiente pregunta.\n\nUna vez haya respondido a estas preguntas avanza.",
+    "type": "prompt"
+   },
+   "skippable": false,
+   "type": "subagent",
+   "id": "node-1788819911935",
+   "display_position": {
+    "x": 534,
+    "y": 894
+   },
+   "name": "Cualificación Alquiler"
+  },
+  {
+   "name": "Cualificación Compra",
+   "skippable": false,
+   "id": "subagent-1788845646210-0",
+   "edges": [
+    {
+     "transition_condition": {
+      "type": "prompt",
+      "prompt": "Describe the transition condition"
+     },
+     "id": "subagent-1788845646210-0-edge-1788845646210-0",
+     "destination_node_id": "node-aviso-comercial-ceballos"
+    }
+   ],
+   "instruction": {
+    "type": "prompt",
+    "text": "Si están interesados en buscar una propiedad para comprar, debes de cualificarlos con una serie de preguntas:\n1- ¿Que tipo de vivienda está buscando? \"piso, chalet independiente...\" ¿Algúna característica imprescindible?\n2- ¿Cuantos dormitorios necesitan?\n3- ¿Tenéis alguna zona concreta en la que estéis buscando? ¿Cuál?\n3- ¿Que presupuesto aproximado tenéis estipulado para esta compra?\n\n** Una sola pregunta por turno**\n\nPreguntas, y esperas a que el cliente responda antes de lanzar la siguiente pregunta.\n\nUna vez haya respondido a estas preguntas avanza."
+   },
+   "type": "subagent",
+   "display_position": {
+    "x": 534,
+    "y": 1326
+   }
+  },
+  {
+   "display_position": {
+    "y": 222,
+    "x": 438
+   },
+   "instruction": {
+    "type": "prompt",
+    "text": "Vale genial, ¿podrías decirme la referencia del inmueble?\nEs un código que empieza por la letra \"c\" o \"p\" seguido de números.\n\nSi dicen no tener o no conocer la referencia, solicita que te indiquen la direccion."
+   },
+   "type": "conversation",
+   "id": "node-1789165424534",
+   "name": "Solicitud referencia",
+   "edges": [
+    {
+     "destination_node_id": "node-1789193387919",
+     "transition_condition": {
+      "prompt": "Cliente nos indica la referencia o dirección",
+      "type": "prompt"
+     },
+     "id": "edge-1789165424534-7iuojvxm0"
+    }
+   ],
+   "skippable": false
+  },
+  {
+   "type": "function",
+   "edges": [],
+   "name": "Busqueda Referencia",
+   "display_position": {
+    "y": -18,
+    "x": 894
+   },
+   "enable_typing_sound": false,
+   "wait_for_result": true,
+   "else_edge": {
+    "id": "node-1789193387919-else-edge",
+    "transition_condition": {
+     "prompt": "Else",
+     "type": "prompt"
+    },
+    "destination_node_id": "node-1789202970991"
+   },
+   "speak_during_execution": true,
+   "id": "node-1789193387919",
+   "instruction": {
+    "text": "Usarás esta tool para buscar la información de la propiedad usando la referencia \"C-XXX\"\nCuando la tool finalice, te llegará la informacíon de dicha propiedad.\n\nCuando ejecutes la tool dirás:\n\"Dame un momento mientras busco esta referencia, para tener toda la información.\"",
+    "type": "prompt"
+   },
+   "tool_id": "tool-1789193383835",
+   "skippable": false,
+   "tool_type": "local"
+  },
+  {
+   "display_position": {
+    "x": 1374,
+    "y": 486
+   },
+   "skippable": false,
+   "instruction": {
+    "type": "prompt",
+    "text": "Tras tener la información, dirás, \"me hablas de la propiedad en (venta o alquiler) situada en (dirección), correcto?\" \n\nTras la confirmación, preguntarás:\n\"¿Quieres saber algo en concreto de dicha propiedad, o te gustaría visitarla?\"\n\nSi te preguntan algo, responde con lo que tienes, sin inventar nada.\nSi te dicen que quieren visitar, pasarás a cualifiacion correspondiente (venta o alquiler, en función de la operación de la propiedad)"
+   },
+   "id": "node-1789202970991",
+   "edges": [
+    {
+     "id": "edge-1789202970991-xgiuw2iiu",
+     "transition_condition": {
+      "prompt": "Describe the transition condition",
+      "type": "prompt"
+     },
+     "destination_node_id": "node-aviso-comercial-ceballos"
+    }
+   ],
+   "name": "Subagent",
+   "type": "subagent"
+  },
+  {
+   "type": "function",
+   "edges": [],
+   "id": "node-aviso-comercial-ceballos",
+   "else_edge": {
+    "id": "node-aviso-comercial-ceballos-else-edge",
+    "destination_node_id": "end-call-node-1788256836275",
+    "transition_condition": {
+     "type": "prompt",
+     "prompt": "Else"
+    }
+   },
+   "display_position": {
+    "x": 1560,
+    "y": 102
+   },
+   "speak_during_execution": true,
+   "tool_type": "local",
+   "tool_id": "tool-aviso-comercial-ceballos",
+   "skippable": false,
+   "name": "Aviso al comercial",
+   "enable_typing_sound": false,
+   "instruction": {
+    "text": "Usarás esta tool para avisar al equipo comercial de que la llamada ha terminado.\nPasa el resumen completo de lo que te ha contado el cliente y la disponibilidad que haya indicado para la visita.\n\nCuando la ejecutes dirás:\n\"Perfecto, se lo paso al equipo. Un compañero te llamará en menos de veinticuatro horas.\"",
+    "type": "prompt"
+   },
+   "wait_for_result": true
+  }
+ ],
+ "start_node_id": "start-node-1788256836275",
+ "start_speaker": "agent",
+ "tools": [
+  {
+   "max_retry": 0,
+   "url": "https://n8n-inmo-ceballos.serversvisionarius.com/webhook/busqueda-referencia",
+   "execution_message_type": "prompt",
+   "name": "Busqueda_referencia",
+   "type": "custom",
+   "speak_after_execution": true,
+   "speak_during_execution": false,
+   "tool_id": "tool-1789193383835",
+   "enable_typing_sound": false,
+   "method": "POST",
+   "timeout_ms": 120000,
+   "parameter_type": "form",
+   "description": "Tool de busqueda de inmuebles por referencia.\nLa referencia tiene un formato C-XXXX",
+   "response_variables": {},
+   "query_params": {},
+   "headers": {},
+   "args_at_root": false,
+   "parameters": {
+    "required": [
+     "referencia"
+    ],
+    "properties": {
+     "referencia": {
+      "type": "string",
+      "description": "referencia del inmueble o propiedad indicada por el cliente"
+     }
+    },
+    "type": "object"
+   }
+  },
+  {
+   "method": "POST",
+   "query_params": {},
+   "tool_id": "tool-aviso-comercial-ceballos",
+   "response_variables": {},
+   "max_retry": 0,
+   "timeout_ms": 120000,
+   "enable_typing_sound": false,
+   "args_at_root": false,
+   "name": "Aviso_comercial",
+   "speak_after_execution": true,
+   "execution_message_type": "prompt",
+   "url": "https://n8n-inmo-ceballos.serversvisionarius.com/webhook/aviso-telefonico",
+   "headers": {},
+   "parameter_type": "form",
+   "description": "Avisa al equipo comercial de que la llamada ha terminado y hay un lead cualificado. Úsala UNA SOLA VEZ, al final de la conversación, cuando ya tengas el motivo de la llamada y, si el cliente quiere visitar el inmueble, su disponibilidad. Pasa siempre el resumen completo de lo que ha contado el cliente y la disponibilidad que haya indicado.",
+   "speak_during_execution": true,
+   "type": "custom",
+   "parameters": {
+    "properties": {
+     "telefono_cliente": {
+      "type": "string",
+      "description": "Teléfono del cliente"
+     },
+     "resumen": {
+      "description": "Resumen completo de la conversación: qué busca el cliente, inmueble por el que pregunta, respuestas de cualificación y cualquier comentario relevante",
+      "type": "string"
+     },
+     "disponibilidad": {
+      "description": "Disponibilidad indicada para la visita: mañanas o tardes y días de la semana. Si no quiere visitar, indícalo aquí",
+      "type": "string"
+     },
+     "nombre_cliente": {
+      "type": "string",
+      "description": "Nombre del cliente"
+     },
+     "referencia": {
+      "type": "string",
+      "description": "Referencia del inmueble, si la ha dado"
+     },
+     "operacion": {
+      "description": "Compra o Alquiler",
+      "type": "string"
+     }
+    },
+    "type": "object",
+    "required": [
+     "resumen",
+     "disponibilidad"
+    ]
+   }
+  }
+ ],
+ "model_choice": {
+  "high_priority": true,
+  "model": "gpt-4.1",
+  "type": "cascading"
+ },
+ "tool_call_strict_mode": true,
+ "kb_config": {
+  "top_k": 3,
+  "filter_score": 0.6
+ },
+ "begin_tag_display_position": {
+  "y": 510,
+  "x": -186
+ },
+ "is_published": false,
+ "is_transfer_cf": false
+}
