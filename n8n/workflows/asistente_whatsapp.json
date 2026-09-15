@@ -2431,8 +2431,7 @@
      ]
     },
     "returnAll": false,
-    "limit": 1,
-    "alwaysOutputData": true
+    "limit": 1
    },
    "type": "n8n-nodes-base.dataTable",
    "typeVersion": 1,
@@ -2441,7 +2440,8 @@
     1216
    ],
    "id": "inmueble-del-lead",
-   "name": "Inmueble del lead"
+   "name": "Inmueble del lead",
+   "alwaysOutputData": true
   },
   {
    "parameters": {
@@ -3355,6 +3355,6 @@
  "staticData": null,
  "meta": null,
  "pinData": {},
- "versionCounter": 63,
+ "versionCounter": 66,
  "tags": []
 }

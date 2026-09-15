@@ -431,6 +431,35 @@ bot antes de tiempo. Útil para cualquier prueba futura.
   poder probar, ya que el workflow corre cada hora. La próxima ejecución no las
   duplicará.
 
+## 2026-09-15 — Más pruebas: dos fallos más
+
+### `alwaysOutputData` iba en el sitio equivocado
+
+Lo había puesto **dentro de `parameters`**, y en n8n es una propiedad del nodo,
+no un parámetro. Consecuencia: cuando la búsqueda en la tabla no encontraba
+nada, el nodo no emitía ningún item y **la cadena se cortaba en silencio**.
+Justo el caso de un lead sin referencia, que es el que había que cubrir.
+
+Corregido en los cuatro nodos afectados: `Inmueble del lead` (Asistente),
+`Enlace del inmueble` (Captación), `Inmuebles de esa operacion` (Búsqueda) e
+`Inventario actual` (Inventario).
+
+Comprobado después: con el contacto sin referencia, el agente responde
+«para ubicar la vivienda que viste en el portal, me dices la zona…» en lugar
+de inventarse un inmueble.
+
+### Habitaciones se guardaban con la etiqueta
+
+El extractor guardaba `"4 Hab."` tal cual venía del HTML, y la búsqueda añadía
+« hab», con lo que salía «4 Hab. hab». Ahora el extractor guarda solo el número
+y la presentación tolera las filas antiguas.
+
+### Búsqueda por características, probada en vivo
+
+- alquiler, piso en el centro, hasta 1.200 € → 2 opciones correctas
+- compra, chalet, 4+ habitaciones, hasta 500.000 € → 3 opciones correctas
+- búsqueda imposible → el texto de «no hay nada, tomo nota»
+
 ## Etiquetas de Chatwoot
 
 Existen las 6 y son correctas, pero **ningún nodo las asigna todavía**.

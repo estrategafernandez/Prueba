@@ -65,7 +65,7 @@
      "parameters": [
       {
        "name": "Authorization",
-       "value": "=Bearer {{ $json.token || $json }}"
+       "value": "<<REDACTADO>>"
       }
      ]
     },
@@ -219,7 +219,7 @@
      "parameters": [
       {
        "name": "Authorization",
-       "value": "=Bearer {{ $('Token InmoPlus').item.json.token || $('Token InmoPlus').item.json }}"
+       "value": "<<REDACTADO>>"
       }
      ]
     },
@@ -749,8 +749,7 @@
      ]
     },
     "returnAll": false,
-    "limit": 1,
-    "alwaysOutputData": true
+    "limit": 1
    },
    "type": "n8n-nodes-base.dataTable",
    "typeVersion": 1,
@@ -759,7 +758,8 @@
     -120
    ],
    "id": "enlace",
-   "name": "Enlace del inmueble"
+   "name": "Enlace del inmueble",
+   "alwaysOutputData": true
   },
   {
    "parameters": {
@@ -1120,6 +1120,6 @@
   "templateCredsSetupCompleted": true
  },
  "pinData": {},
- "versionCounter": 7,
+ "versionCounter": 8,
  "tags": []
 }
