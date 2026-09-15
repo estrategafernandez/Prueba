@@ -2,7 +2,7 @@
  "id": "frDxLN3ejiFxrQ5H",
  "name": "Inventario Web Ceballos",
  "description": null,
- "active": false,
+ "active": true,
  "isArchived": false,
  "nodes": [
   {
@@ -71,7 +71,7 @@
   },
   {
    "parameters": {
-    "jsCode": "// Extrae los inmuebles del HTML del listado. La web es una app ASP.NET que\n// sirve HTML plano, asi que no hace falta navegador.\nconst BASE = 'https://www.inmobiliariaceballos.com';\n// La agencia publica 99.999.999 EUR cuando el precio es \"a consultar\".\nconst PRECIO_CENTINELA = 99999999;\n\nconst ENT = {'&aacute;':'á','&eacute;':'é','&iacute;':'í','&oacute;':'ó','&uacute;':'ú',\n '&Aacute;':'Á','&Eacute;':'É','&Iacute;':'Í','&Oacute;':'Ó','&Uacute;':'Ú',\n '&ntilde;':'ñ','&Ntilde;':'Ñ','&uuml;':'ü','&nbsp;':' ','&quot;':'\"','&apos;':\"'\",\n '&lt;':'<','&gt;':'>'};\nconst dec = (s) => String(s ?? '')\n  .replace(/&#(\\d+);/g, (_, d) => String.fromCodePoint(Number(d)))\n  .replace(/&#x([0-9a-f]+);/gi, (_, h) => String.fromCodePoint(parseInt(h, 16)))\n  .replace(/&[a-zA-Z]+;/g, (e) => ENT[e] ?? e)\n  .replace(/&amp;/g, '&');                       // siempre el ultimo\nconst txt = (s) => dec(String(s ?? '').replace(/<[^>]+>/g, '')).replace(/\\s+/g, ' ').trim();\nconst ent = (s) => { const m = String(s ?? '').replace(/\\./g, '').match(/\\d+/); return m ? Number(m[0]) : null; };\n\nconst salida = [];\nfor (const it of $input.all()) {\n  const meta = $('Listados a consultar').itemMatching(it.pairedItem?.item ?? 0)?.json\n            ?? $('Listados a consultar').first().json;\n  const html = String(it.json.data ?? it.json.body ?? '');\n\n  // El listado publica su propio total. Sirve de suma de control: si el\n  // parseo no cuadra, la maquetacion ha cambiado y es mejor fallar a la vista\n  // que insertar datos a medias.\n  const totalWeb = ent((html.match(/id=\"sTotInm\"[^>]*>(\\d+)</) || [])[1]);\n  const bloques = html.split(/(?=<div id=\"\\d+\" class=\"row property-row)/).slice(1);\n\n  const encontrados = [];\n  for (const b of bloques) {\n    const id = ent((b.match(/^<div id=\"(\\d+)\"/) || [])[1]);\n    if (!id) continue;\n    const saca = (re) => { const m = b.match(re); return m ? txt(m[1]) : ''; };\n    // El tipo sale del alt de la foto, no del <h2>: en muchas fichas el <h2>\n    // es un titular comercial y no el tipo de inmueble.\n    const alt = saca(/alt=\"([^\"]*)\"/);\n    const corte = alt.indexOf('.');\n    const precioTexto = saca(/<div class=\"col-sm-5\"><strong class=\"txt15\">([\\s\\S]*?)<\\/strong>/);\n    const precioNum = ent(precioTexto);\n    encontrados.push({\n      Referencia: saca(/PropertyDetail\\/\\d+\"><strong>([^<]+)<\\/strong>/) || '',\n      Operacion: meta.operacion,\n      Provincia: meta.provincia,\n      Tipo: (corte === -1 ? alt : alt.slice(0, corte)).trim(),\n      Zona: corte === -1 ? '' : alt.slice(corte + 1).trim(),\n      Titulo: saca(/<h2>([\\s\\S]*?)<\\/h2>/),\n      PrecioTexto: (precioNum !== null && precioNum >= PRECIO_CENTINELA) ? 'A consultar' : precioTexto,\n      Superficie: saca(/fa-square\"><\\/i>\\s*([^<]*)</),\n      Habitaciones: saca(/fa-bed\"><\\/i>\\s*([^<]*)</),\n      Url: `${BASE}/es-ES/Content/PropertyDetail/${id}`,\n      IdFicha: String(id),\n      Activo: 'si',\n      VistoUltima: $now.setZone('Europe/Madrid').toISO(),\n    });\n  }\n  if (totalWeb !== null && encontrados.length !== totalWeb) {\n    throw new Error(`Inventario ${meta.operacion}/${meta.provincia}: la web anuncia ${totalWeb} inmuebles y se extrajeron ${encontrados.length}. Probable cambio de maquetacion; no se inserta nada.`);\n  }\n  for (const e of encontrados) if (e.Referencia) salida.push({ json: e });\n}\nif (!salida.length) throw new Error('Inventario: no se extrajo ningun inmueble de los 4 listados.');\nreturn salida;"
+    "jsCode": "// Extrae los inmuebles del HTML del listado. La web es una app ASP.NET que\n// sirve HTML plano, asi que no hace falta navegador.\nconst BASE = 'https://www.inmobiliariaceballos.com';\n// La agencia publica 99.999.999 EUR cuando el precio es \"a consultar\".\nconst PRECIO_CENTINELA = 99999999;\n\nconst ENT = {'&aacute;':'á','&eacute;':'é','&iacute;':'í','&oacute;':'ó','&uacute;':'ú',\n '&Aacute;':'Á','&Eacute;':'É','&Iacute;':'Í','&Oacute;':'Ó','&Uacute;':'Ú',\n '&ntilde;':'ñ','&Ntilde;':'Ñ','&uuml;':'ü','&nbsp;':' ','&quot;':'\"','&apos;':\"'\",\n '&lt;':'<','&gt;':'>'};\nconst dec = (s) => String(s ?? '')\n  .replace(/&#(\\d+);/g, (_, d) => String.fromCodePoint(Number(d)))\n  .replace(/&#x([0-9a-f]+);/gi, (_, h) => String.fromCodePoint(parseInt(h, 16)))\n  .replace(/&[a-zA-Z]+;/g, (e) => ENT[e] ?? e)\n  .replace(/&amp;/g, '&');                       // siempre el ultimo\nconst txt = (s) => dec(String(s ?? '').replace(/<[^>]+>/g, '')).replace(/\\s+/g, ' ').trim();\nconst ent = (s) => { const m = String(s ?? '').replace(/\\./g, '').match(/\\d+/); return m ? Number(m[0]) : null; };\n\nconst salida = [];\nfor (const it of $input.all()) {\n  const meta = $('Listados a consultar').itemMatching(it.pairedItem?.item ?? 0)?.json\n            ?? $('Listados a consultar').first().json;\n  const html = String(it.json.data ?? it.json.body ?? '');\n\n  // El listado publica su propio total. Sirve de suma de control: si el\n  // parseo no cuadra, la maquetacion ha cambiado y es mejor fallar a la vista\n  // que insertar datos a medias.\n  const totalWeb = ent((html.match(/id=\"sTotInm\"[^>]*>(\\d+)</) || [])[1]);\n  const bloques = html.split(/(?=<div id=\"\\d+\" class=\"row property-row)/).slice(1);\n\n  const encontrados = [];\n  for (const b of bloques) {\n    const id = ent((b.match(/^<div id=\"(\\d+)\"/) || [])[1]);\n    if (!id) continue;\n    const saca = (re) => { const m = b.match(re); return m ? txt(m[1]) : ''; };\n    // El tipo sale del alt de la foto, no del <h2>: en muchas fichas el <h2>\n    // es un titular comercial y no el tipo de inmueble.\n    const alt = saca(/alt=\"([^\"]*)\"/);\n    const corte = alt.indexOf('.');\n    const precioTexto = saca(/<div class=\"col-sm-5\"><strong class=\"txt15\">([\\s\\S]*?)<\\/strong>/);\n    const precioNum = ent(precioTexto);\n    encontrados.push({\n      Referencia: saca(/PropertyDetail\\/\\d+\"><strong>([^<]+)<\\/strong>/) || '',\n      Operacion: meta.operacion,\n      Provincia: meta.provincia,\n      Tipo: (corte === -1 ? alt : alt.slice(0, corte)).trim(),\n      Zona: corte === -1 ? '' : alt.slice(corte + 1).trim(),\n      Titulo: saca(/<h2>([\\s\\S]*?)<\\/h2>/),\n      PrecioTexto: (precioNum !== null && precioNum >= PRECIO_CENTINELA) ? 'A consultar' : precioTexto,\n      Superficie: saca(/fa-square\"><\\/i>\\s*([^<]*)</),\n      Habitaciones: saca(/fa-bed\"><\\/i>\\s*([^<]*)</),\n      Url: `${BASE}/es-ES/Content/PropertyDetail/${id}`,\n      IdFicha: String(id),\n      Activo: 'si',\n      VistoUltima: $now.setZone('Europe/Madrid').toISO(),\n    });\n  }\n  if (totalWeb !== null && encontrados.length !== totalWeb) {\n    throw new Error(`Inventario ${meta.operacion}/${meta.provincia}: la web anuncia ${totalWeb} inmuebles y se extrajeron ${encontrados.length}. Probable cambio de maquetacion; no se inserta nada.`);\n  }\n  for (const e of encontrados) if (e.Referencia) salida.push({ json: e });\n}\nif (!salida.length) throw new Error('Inventario: no se extrajo ningun inmueble de los 4 listados.');\n\n// Deduplicacion en JavaScript contra lo que ya hay guardado. Se hacia con el\n// nodo rowExists, pero se comia items sin dar error: de 190 entradas devolvia\n// 143, justo las de compra. Aqui es determinista y se puede probar.\nconst yaGuardados = new Set(\n  $('Inventario actual').all()\n    .map((x) => x.json)\n    .filter((r) => r && r.Referencia)\n    .map((r) => `${r.Referencia}|${r.Operacion}`)\n);\nconst nuevos = salida.filter((s) => !yaGuardados.has(`${s.json.Referencia}|${s.json.Operacion}`));\nconsole.log(`Inventario: ${salida.length} en la web, ${yaGuardados.size} ya guardados, ${nuevos.length} nuevos`);\nreturn nuevos;"
    },
    "type": "n8n-nodes-base.code",
    "typeVersion": 2,
@@ -81,73 +81,6 @@
    ],
    "id": "ext",
    "name": "Extrae los inmuebles"
-  },
-  {
-   "parameters": {
-    "operation": "rowExists",
-    "dataTableId": {
-     "__rl": true,
-     "value": "Uy9XuTLbJxIsv9HG",
-     "mode": "list",
-     "cachedResultName": "InventarioWeb"
-    },
-    "filters": {
-     "conditions": [
-      {
-       "keyName": "Referencia",
-       "condition": "eq",
-       "keyValue": "={{ $json.Referencia }}"
-      },
-      {
-       "keyName": "Operacion",
-       "condition": "eq",
-       "keyValue": "={{ $json.Operacion }}"
-      }
-     ]
-    }
-   },
-   "type": "n8n-nodes-base.dataTable",
-   "typeVersion": 1,
-   "position": [
-    800,
-    0
-   ],
-   "id": "ex",
-   "name": "¿Ya está en la tabla?"
-  },
-  {
-   "parameters": {
-    "conditions": {
-     "options": {
-      "caseSensitive": true,
-      "typeValidation": "loose",
-      "version": 2
-     },
-     "conditions": [
-      {
-       "id": "c",
-       "leftValue": "={{ $json.exists }}",
-       "rightValue": "",
-       "operator": {
-        "type": "boolean",
-        "operation": "false",
-        "singleValue": true
-       }
-      }
-     ],
-     "combinator": "and"
-    },
-    "looseTypeValidation": true,
-    "options": {}
-   },
-   "type": "n8n-nodes-base.if",
-   "typeVersion": 2.2,
-   "position": [
-    1000,
-    0
-   ],
-   "id": "if",
-   "name": "¿Es nuevo?"
   },
   {
    "parameters": {
@@ -173,6 +106,27 @@
    ],
    "id": "ins",
    "name": "Guarda el inmueble"
+  },
+  {
+   "parameters": {
+    "operation": "get",
+    "dataTableId": {
+     "__rl": true,
+     "value": "Uy9XuTLbJxIsv9HG",
+     "mode": "list",
+     "cachedResultName": "InventarioWeb"
+    },
+    "returnAll": true,
+    "alwaysOutputData": true
+   },
+   "type": "n8n-nodes-base.dataTable",
+   "typeVersion": 1,
+   "position": [
+    100,
+    0
+   ],
+   "id": "inv-actual",
+   "name": "Inventario actual"
   }
  ],
  "connections": {
@@ -180,7 +134,7 @@
    "main": [
     [
      {
-      "node": "Listados a consultar",
+      "node": "Inventario actual",
       "type": "main",
       "index": 0
      }
@@ -213,34 +167,22 @@
    "main": [
     [
      {
-      "node": "¿Ya está en la tabla?",
-      "type": "main",
-      "index": 0
-     }
-    ]
-   ]
-  },
-  "¿Ya está en la tabla?": {
-   "main": [
-    [
-     {
-      "node": "¿Es nuevo?",
-      "type": "main",
-      "index": 0
-     }
-    ]
-   ]
-  },
-  "¿Es nuevo?": {
-   "main": [
-    [
-     {
       "node": "Guarda el inmueble",
       "type": "main",
       "index": 0
      }
-    ],
-    []
+    ]
+   ]
+  },
+  "Inventario actual": {
+   "main": [
+    [
+     {
+      "node": "Listados a consultar",
+      "type": "main",
+      "index": 0
+     }
+    ]
    ]
   }
  },
@@ -249,9 +191,13 @@
   "callerPolicy": "workflowsFromSameOwner",
   "availableInMCP": false
  },
- "staticData": null,
+ "staticData": {
+  "node:Cada hora": {
+   "recurrenceRules": []
+  }
+ },
  "meta": null,
  "pinData": null,
- "versionCounter": 1,
+ "versionCounter": 7,
  "tags": []
 }

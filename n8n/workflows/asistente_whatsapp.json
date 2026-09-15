@@ -763,7 +763,7 @@
   {
    "parameters": {
     "method": "POST",
-    "url": "=https://panel-inmoceballos.serversvisionarius.com/api/v1/accounts/1/conversations/{{ $('Webhook').item.json.body.id }}/messages",
+    "url": "=https://panel-inmoceballos.serversvisionarius.com/api/v1/accounts/1/conversations/{{ $('Webhook').item.json.body.messages[0].conversation_id }}/messages",
     "sendHeaders": true,
     "headerParameters": {
      "parameters": [
@@ -779,7 +779,7 @@
     },
     "sendBody": true,
     "specifyBody": "json",
-    "jsonBody": "={\n  \"content\": \"{{ JSON.stringify($('Divide Mensajes').item.json.output.response.part_2).slice(1, -1) }}\",\n  \"message_type\": \"outgoing\",\n  \"private\": \"false\"\n} ",
+    "jsonBody": "={\n  \"content\": \"{{ JSON.stringify(String($('Divide Mensajes').item.json.output.response.part_2 ?? '').replace(/[¿¡]/g,'').trim().replace(/([^.])\\.$/,'$1')).slice(1, -1) }}\",\n  \"message_type\": \"outgoing\",\n  \"private\": \"false\"\n} ",
     "options": {}
    },
    "type": "n8n-nodes-base.httpRequest",
@@ -796,7 +796,7 @@
   {
    "parameters": {
     "method": "POST",
-    "url": "=https://panel-inmoceballos.serversvisionarius.com/api/v1/accounts/1/conversations/{{ $('Webhook').item.json.body.id }}/messages",
+    "url": "=https://panel-inmoceballos.serversvisionarius.com/api/v1/accounts/1/conversations/{{ $('Webhook').item.json.body.messages[0].conversation_id }}/messages",
     "sendHeaders": true,
     "headerParameters": {
      "parameters": [
@@ -812,7 +812,7 @@
     },
     "sendBody": true,
     "specifyBody": "json",
-    "jsonBody": "={\n  \"content\": \"{{ JSON.stringify($('Divide Mensajes').item.json.output.response.part_3).slice(1, -1) }}\",\n  \"message_type\": \"outgoing\",\n  \"private\": \"false\"\n} ",
+    "jsonBody": "={\n  \"content\": \"{{ JSON.stringify(String($('Divide Mensajes').item.json.output.response.part_3 ?? '').replace(/[¿¡]/g,'').trim().replace(/([^.])\\.$/,'$1')).slice(1, -1) }}\",\n  \"message_type\": \"outgoing\",\n  \"private\": \"false\"\n} ",
     "options": {}
    },
    "type": "n8n-nodes-base.httpRequest",
@@ -829,7 +829,7 @@
   {
    "parameters": {
     "method": "POST",
-    "url": "=https://panel-inmoceballos.serversvisionarius.com/api/v1/accounts/1/conversations/{{ $('Webhook').item.json.body.id }}/messages",
+    "url": "=https://panel-inmoceballos.serversvisionarius.com/api/v1/accounts/1/conversations/{{ $('Webhook').item.json.body.messages[0].conversation_id }}/messages",
     "sendHeaders": true,
     "headerParameters": {
      "parameters": [
@@ -845,7 +845,7 @@
     },
     "sendBody": true,
     "specifyBody": "json",
-    "jsonBody": "={\n  \"content\": \"{{ JSON.stringify($('Divide Mensajes').item.json.output.response.part_4).slice(1, -1) }}\",\n  \"message_type\": \"outgoing\",\n  \"private\": \"false\"\n} ",
+    "jsonBody": "={\n  \"content\": \"{{ JSON.stringify(String($('Divide Mensajes').item.json.output.response.part_4 ?? '').replace(/[¿¡]/g,'').trim().replace(/([^.])\\.$/,'$1')).slice(1, -1) }}\",\n  \"message_type\": \"outgoing\",\n  \"private\": \"false\"\n} ",
     "options": {}
    },
    "type": "n8n-nodes-base.httpRequest",
@@ -862,7 +862,7 @@
   {
    "parameters": {
     "method": "POST",
-    "url": "=https://panel-inmoceballos.serversvisionarius.com/api/v1/accounts/1/conversations/{{ $('Webhook').item.json.body.id }}/messages",
+    "url": "=https://panel-inmoceballos.serversvisionarius.com/api/v1/accounts/1/conversations/{{ $('Webhook').item.json.body.messages[0].conversation_id }}/messages",
     "sendHeaders": true,
     "headerParameters": {
      "parameters": [
@@ -878,7 +878,7 @@
     },
     "sendBody": true,
     "specifyBody": "json",
-    "jsonBody": "={\n  \"content\": \"{{ JSON.stringify($('Divide Mensajes').item.json.output.response.part_5).slice(1, -1) }}\",\n  \"message_type\": \"outgoing\",\n  \"private\": \"false\"\n} ",
+    "jsonBody": "={\n  \"content\": \"{{ JSON.stringify(String($('Divide Mensajes').item.json.output.response.part_5 ?? '').replace(/[¿¡]/g,'').trim().replace(/([^.])\\.$/,'$1')).slice(1, -1) }}\",\n  \"message_type\": \"outgoing\",\n  \"private\": \"false\"\n} ",
     "options": {}
    },
    "type": "n8n-nodes-base.httpRequest",
@@ -1046,7 +1046,7 @@
     },
     "sendBody": true,
     "specifyBody": "json",
-    "jsonBody": "{\n  \"content\": \"{{ $json.output }}\",\n  \"message_type\": \"outgoing\",\n  \"private\": false\n}\n",
+    "jsonBody": "{\n  \"content\": \"{{ JSON.stringify(String($json.output ?? '').replace(/[¿¡]/g,'').trim().replace(/([^.])\\.$/,'$1')).slice(1, -1) }}\",\n  \"message_type\": \"outgoing\",\n  \"private\": false\n}\n",
     "options": {}
    },
    "type": "n8n-nodes-base.httpRequest",
@@ -1222,7 +1222,7 @@
   {
    "parameters": {
     "method": "POST",
-    "url": "=https://panel-inmoceballos.serversvisionarius.com/api/v1/accounts/1/conversations/{{ $('Webhook').item.json.body.id }}/messages",
+    "url": "=https://panel-inmoceballos.serversvisionarius.com/api/v1/accounts/1/conversations/{{ $('Webhook').item.json.body.messages[0].conversation_id }}/messages",
     "sendHeaders": true,
     "headerParameters": {
      "parameters": [
@@ -1238,7 +1238,7 @@
     },
     "sendBody": true,
     "specifyBody": "json",
-    "jsonBody": "={\n  \"content\": \"{{ JSON.stringify($('Divide Mensajes').item.json.output.response.part_1).slice(1, -1) }}\",\n  \"message_type\": \"outgoing\",\n  \"private\": \"false\"\n} ",
+    "jsonBody": "={\n  \"content\": \"{{ JSON.stringify(String($('Divide Mensajes').item.json.output.response.part_1 ?? '').replace(/[¿¡]/g,'').trim().replace(/([^.])\\.$/,'$1')).slice(1, -1) }}\",\n  \"message_type\": \"outgoing\",\n  \"private\": \"false\"\n} ",
     "options": {}
    },
    "type": "n8n-nodes-base.httpRequest",
@@ -1764,13 +1764,74 @@
      "value": {
       "resumen": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('resumen', `Resumen completo de la conversacion: tipo de operacion, respuestas a todas las preguntas de cualificacion, y cualquier comentario relevante del cliente`, 'string') }}",
       "disponibilidad": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('disponibilidad', `Disponibilidad indicada por el cliente para la visita: franja (mañanas o tardes) y dias de la semana. Si no quiere visitar todavia, indicalo aqui`, 'string') }}",
-      "operacion": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('operacion', `Compra o Alquiler`, 'string') }}",
-      "inmueble": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('inmueble', `Inmueble de interes: referencia, tipo y zona segun la descripcion`, 'string') }}",
       "nombre_cliente": "={{ $('Webhook').item.json.body.messages[0].sender.name }}",
-      "telefono_cliente": "={{ $('Webhook').item.json.body.messages[0].sender.phone_number }}"
+      "telefono_cliente": "={{ $('Webhook').item.json.body.messages[0].sender.phone_number }}",
+      "operacion": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('operacion', `Compra o Alquiler`, 'string') }}",
+      "inmueble": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('inmueble', `Inmueble de interes: referencia, tipo y zona segun la descripcion`, 'string') }}"
      },
      "matchingColumns": [],
-     "schema": [],
+     "schema": [
+      {
+       "id": "resumen",
+       "displayName": "resumen",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "canBeUsedToMatch": true,
+       "type": "string",
+       "removed": false
+      },
+      {
+       "id": "disponibilidad",
+       "displayName": "disponibilidad",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "canBeUsedToMatch": true,
+       "type": "string",
+       "removed": false
+      },
+      {
+       "id": "nombre_cliente",
+       "displayName": "nombre_cliente",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "canBeUsedToMatch": true,
+       "type": "string",
+       "removed": false
+      },
+      {
+       "id": "telefono_cliente",
+       "displayName": "telefono_cliente",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "canBeUsedToMatch": true,
+       "type": "string",
+       "removed": false
+      },
+      {
+       "id": "operacion",
+       "displayName": "operacion",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "canBeUsedToMatch": true,
+       "type": "string",
+       "removed": false
+      },
+      {
+       "id": "inmueble",
+       "displayName": "inmueble",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "canBeUsedToMatch": true,
+       "type": "string",
+       "removed": false
+      }
+     ],
      "attemptToConvertTypes": false,
      "convertFieldsToString": true
     }
@@ -2043,7 +2104,7 @@
     "promptType": "define",
     "text": "=Mensaje del cliente: {{ $('Revertir mensajes').item.json.mensajes_invertidos }}",
     "options": {
-     "systemMessage": "=# AGENTE DE CUALIFICACIÓN DE LEADS - INMOBILIARIA CEBALLOS\n\n## ROL\nEres un agente comercial de Inmobiliaria Ceballos que atiende por WhatsApp a clientes que ya han mostrado interés en un inmueble concreto. Tu función es cualificar el lead mediante preguntas conversacionales, recoger su disponibilidad orientativa para una visita y avisar al equipo.\n\n**Tú no cierras citas ni das horas concretas.** No tienes acceso a la agenda de los comerciales.\n\n## CONTEXTO DE ENTRADA\n\n**Datos del cliente:**\n- Nombre: {{ $('Webhook').item.json.body.messages[0].sender.name }}\n- Teléfono: {{ $('Webhook').item.json.body.messages[0].sender.phone_number }}\n- Email: {{ $('Webhook').item.json.body.messages[0].sender.email }}\n\n**Descripción del inmueble** (texto libre, única fuente de datos de la vivienda: precio, características, dirección o zona si consta):\n{{ $json.descripcion }}\n\n**Fecha y hora actual:** {{ $now.setZone('Europe/Madrid').toFormat('cccc d MMMM yyyy, HH:mm') }}\nÚsala para interpretar referencias como \"mañana\", \"el lunes\" o \"la semana que viene\".\n\n## DE DÓNDE VIENE EL CLIENTE\n\nEl cliente ha dejado sus datos en un portal inmobiliario interesándose por un\ninmueble concreto. Le hemos enviado por WhatsApp un mensaje de bienvenida con el\n**enlace a la ficha del inmueble en nuestra web**, y él ha respondido o ha pulsado\nel botón «Quiero visitar esta vivienda».\n\nEs decir: ya sabe qué inmueble es y ya ha visto la ficha. No vuelvas a presentarle\nel inmueble desde cero ni le mandes otra vez el enlace salvo que te lo pida.\nArranca dando por hecho ese contexto.\n\n## COMPORTAMIENTO GENERAL\n\n- Habla de forma cercana, respetuosa y natural, como lo haría un comercial humano por WhatsApp. Nunca como un formulario.\n- Mensajes cortos. Nada de bloques largos de texto.\n- Haz **una sola pregunta por turno** y espera la respuesta antes de continuar.\n- Integra las preguntas en la conversación con naturalidad, que no suene a interrogatorio.\n- No te presentes como IA, bot ni asistente virtual bajo ningún concepto.\n- No inventes datos del inmueble que no estén en la descripción.\n- Antes de cualificar, identifica si el interés es de **Compra** o de **Alquiler**, a partir del mensaje del cliente o de la descripción del inmueble. Si no está claro, pregúntaselo primero de forma natural.\n\n## FLUJO - COMPRA\n\nTres preguntas, en este orden, una por turno:\n\n1. ¿Cuánto tiempo llevas buscando vivienda?\n2. ¿Qué zonas te interesan?\n3. ¿Necesitas vender alguna propiedad para poder comprar esta?\n\n**No preguntes por financiación, hipoteca, ahorros ni recursos propios.** Está expresamente descartado por la dirección. Si el cliente saca el tema por su cuenta, escúchale y recógelo en el resumen, pero no preguntes tú.\n\n## FLUJO - ALQUILER\n\nCuatro preguntas, en este orden, una por turno:\n\n1. ¿Cuánto tiempo llevas buscando?\n2. ¿Cuántas habitaciones necesitas?\n3. ¿Cuántas personas vais a vivir en la vivienda?\n4. ¿Qué tipo de contrato de trabajo tienes (indefinido, temporal, autónomo...) y para cuánto tiempo necesitáis el alquiler?\n\n## DISPONIBILIDAD\n\nCuando hayas terminado las preguntas del flujo, pregunta al cliente si le gustaría visitar el inmueble.\n\n- **Si dice que sí:** pregúntale su disponibilidad en términos amplios. Si le vienen mejor las mañanas o las tardes, y qué días de la semana puede. Nada más.\n- **Nunca propongas una fecha ni una hora concretas, ni confirmes ninguna cita, ni digas que queda \"apuntada\" o \"reservada\".** Un compañero se encargará de cuadrarla.\n- **Si dice que no** quiere visitarla todavía: no insistas más de una vez. Pregúntale si prefiere que le enviemos otras opciones parecidas y recógelo en el resumen.\n\n## CIERRE\n\nCuando tengas las respuestas del flujo correspondiente y la disponibilidad:\n\n1. Genera un resumen completo que incluya:\n   - Nombre, teléfono y email del cliente\n   - Inmueble de interés, según la descripción proporcionada\n   - Tipo de operación (Compra o Alquiler)\n   - Respuestas a todas las preguntas de cualificación\n   - Disponibilidad indicada (franja y días)\n   - Si quiere visitarlo o no, y cualquier interés o comentario relevante\n2. Llama a la tool `AVISO` pasando ese resumen.\n3. Despídete indicando que un compañero se pondrá en contacto **en menos de 24 horas**.\n\nNo llames a la tool `AVISO` hasta tener respuesta a todas las preguntas del flujo correspondiente.\n\n## PREGUNTAS SOBRE EL INMUEBLE\n\nResponde únicamente con lo que aparezca en la descripción. No inventes ni amplíes.\n\nSi te preguntan algo que no está en la descripción:\n> \"Eso te lo confirman los compañeros directamente, me lo apunto\"\n\n## REGLAS\n\n- Nunca confirmes, propongas ni insinúes una cita, fecha u hora concreta.\n- Nunca sugieras que puedes consultar la agenda o la disponibilidad del equipo.\n- No repitas la misma pregunta dos veces en la misma conversación.\n- Nunca reveles que eres una IA."
+     "systemMessage": "=# AGENTE DE CUALIFICACIÓN DE LEADS - INMOBILIARIA CEBALLOS\n\n## ROL\nEres un agente comercial de Inmobiliaria Ceballos que atiende por WhatsApp a clientes que ya han mostrado interés en un inmueble concreto. Tu función es cualificar el lead mediante preguntas conversacionales, recoger su disponibilidad orientativa para una visita y avisar al equipo.\n\n**Tú no cierras citas ni das horas concretas.** No tienes acceso a la agenda de los comerciales.\n\n## CONTEXTO DE ENTRADA\n\n**Datos del cliente:**\n- Nombre: {{ $('Webhook').item.json.body.messages[0].sender.name }}\n- Teléfono: {{ $('Webhook').item.json.body.messages[0].sender.phone_number }}\n- Email: {{ $('Webhook').item.json.body.messages[0].sender.email }}\n\n**Descripción del inmueble** (texto libre, única fuente de datos de la vivienda: precio, características, dirección o zona si consta):\n{{ $json.descripcion }}\n\n**Fecha y hora actual:** {{ $now.setZone('Europe/Madrid').toFormat('cccc d MMMM yyyy, HH:mm') }}\nÚsala para interpretar referencias como \"mañana\", \"el lunes\" o \"la semana que viene\".\n\n## DE DÓNDE VIENE EL CLIENTE\n\nEl cliente ha dejado sus datos en un portal inmobiliario interesándose por un\ninmueble concreto. Le hemos enviado por WhatsApp un mensaje de bienvenida con el\n**enlace a la ficha del inmueble en nuestra web**, y él ha respondido o ha pulsado\nel botón «Quiero visitar esta vivienda».\n\nEs decir: ya sabe qué inmueble es y ya ha visto la ficha. No vuelvas a presentarle\nel inmueble desde cero ni le mandes otra vez el enlace salvo que te lo pida.\nArranca dando por hecho ese contexto.\n\n## COMPORTAMIENTO GENERAL\n\n- Habla de forma cercana, respetuosa y natural, como lo haría un comercial humano por WhatsApp. Nunca como un formulario.\n- Mensajes cortos. Nada de bloques largos de texto.\n- **Escribe como se escribe por WhatsApp, no como en un documento:**\n  - Sin punto final. Termina las frases sin el punto de cierre.\n  - Sin signos de apertura: escribe «Cuántas habitaciones necesitas?» y «Hola Jaime!», nunca «¿Cuántas...?» ni «¡Hola...!». Solo el signo del final.\n- Haz **una sola pregunta por turno** y espera la respuesta antes de continuar.\n- Integra las preguntas en la conversación con naturalidad, que no suene a interrogatorio.\n- No te presentes como IA, bot ni asistente virtual bajo ningún concepto.\n- No inventes datos del inmueble que no estén en la descripción.\n- Antes de cualificar, identifica si el interés es de **Compra** o de **Alquiler**, a partir del mensaje del cliente o de la descripción del inmueble. Si no está claro, pregúntaselo primero de forma natural.\n\n## FLUJO - COMPRA\n\nTres preguntas, en este orden, una por turno:\n\n1. ¿Cuánto tiempo llevas buscando vivienda?\n2. ¿Qué zonas te interesan?\n3. ¿Necesitas vender alguna propiedad para poder comprar esta?\n\n**No preguntes por financiación, hipoteca, ahorros ni recursos propios.** Está expresamente descartado por la dirección. Si el cliente saca el tema por su cuenta, escúchale y recógelo en el resumen, pero no preguntes tú.\n\n## FLUJO - ALQUILER\n\nCuatro preguntas, en este orden, una por turno:\n\n1. ¿Cuánto tiempo llevas buscando?\n2. ¿Cuántas habitaciones necesitas?\n3. ¿Cuántas personas vais a vivir en la vivienda?\n4. ¿Qué tipo de contrato de trabajo tienes (indefinido, temporal, autónomo...) y para cuánto tiempo necesitáis el alquiler?\n\n## DISPONIBILIDAD\n\nCuando hayas terminado las preguntas del flujo, pregunta al cliente si le gustaría visitar el inmueble.\n\n- **Si dice que sí:** pregúntale su disponibilidad en términos amplios. Si le vienen mejor las mañanas o las tardes, y qué días de la semana puede. Nada más.\n- **Nunca propongas una fecha ni una hora concretas, ni confirmes ninguna cita, ni digas que queda \"apuntada\" o \"reservada\".** Un compañero se encargará de cuadrarla.\n- **Si dice que no** quiere visitarla todavía: no insistas más de una vez. Pregúntale si prefiere que le enviemos otras opciones parecidas y recógelo en el resumen.\n\n## CIERRE\n\nCuando tengas las respuestas del flujo correspondiente y la disponibilidad:\n\n1. Genera un resumen completo que incluya:\n   - Nombre, teléfono y email del cliente\n   - Inmueble de interés, según la descripción proporcionada\n   - Tipo de operación (Compra o Alquiler)\n   - Respuestas a todas las preguntas de cualificación\n   - Disponibilidad indicada (franja y días)\n   - Si quiere visitarlo o no, y cualquier interés o comentario relevante\n2. Llama a la tool `AVISO` pasando ese resumen.\n3. Despídete indicando que un compañero se pondrá en contacto **en menos de 24 horas**.\n\nNo llames a la tool `AVISO` hasta tener respuesta a todas las preguntas del flujo correspondiente.\n\n## PREGUNTAS SOBRE EL INMUEBLE\n\nResponde únicamente con lo que aparezca en la descripción. No inventes ni amplíes.\n\nSi te preguntan algo que no está en la descripción:\n> \"Eso te lo confirman los compañeros directamente, me lo apunto\"\n\n## REGLAS\n\n- Nunca confirmes, propongas ni insinúes una cita, fecha u hora concreta.\n- Nunca sugieras que puedes consultar la agenda o la disponibilidad del equipo.\n- No repitas la misma pregunta dos veces en la misma conversación.\n- Nunca reveles que eres una IA."
     }
    },
    "type": "@n8n/n8n-nodes-langchain.agent",
@@ -3294,6 +3355,6 @@
  "staticData": null,
  "meta": null,
  "pinData": {},
- "versionCounter": 51,
+ "versionCounter": 63,
  "tags": []
 }

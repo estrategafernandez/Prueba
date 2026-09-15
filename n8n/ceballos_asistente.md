@@ -366,6 +366,71 @@ Al eliminar los filtros de Vivalta, `Fijamos agente a conver` y
 corregidos, así que no se borran, pero **hoy no se ejecutan**: hay que decidir
 dónde engancharlos.
 
+## 2026-09-15 — Pruebas en real: 4 bugs encontrados y corregidos
+
+Se probó el asistente de punta a punta con la conversación real de Jaime
+(+34608563923), simulando un caso de alquiler y otro de compra. **Los dos
+flujos funcionan y los mensajes llegan a WhatsApp.** Por el camino salieron
+cuatro fallos que no se ven leyendo el código.
+
+### 1. Los nodos de envío usaban el id equivocado
+
+`Envio 1º … 5º Mensaje` construían la URL con
+`$('Webhook').item.json.body.id`, pero en el webhook `message_created` de
+Chatwoot ese campo es **el id del mensaje, no el de la conversación**. El envío
+daba 404. Corregido a `body.messages[0].conversation_id`, que es lo que ya usaba
+`Envió Mensaje Total`. Afectaba a producción, no era artefacto de la prueba.
+
+### 2. La tool AVISO llegaba sin datos
+
+El agente la llamaba, pero el sub-workflow recibía los seis campos a `null`.
+La causa: `workflowInputs.schema` estaba vacío. Las tools originales llevaban
+una entrada por campo, y sin eso n8n no mapea los valores. Relleno el schema y
+el aviso ya llega completo, con resumen, disponibilidad, operación e inmueble.
+
+### 3. `rowExists` se comía filas sin avisar
+
+El inventario guardó 143 de 190 inmuebles: justo los de compra, ninguno de
+alquiler. El nodo `rowExists` devolvía 143 items de los 190 que entraban, sin
+error. Se elimina ese nodo y **la deduplicación se hace en JavaScript** contra
+un `get` previo de la tabla: determinista y probable con Node.
+
+### 4. Estilo de escritura
+
+Se retiran los puntos finales y los signos de apertura `¿` `¡`, en dos capas:
+una regla en el prompt y una limpieza determinista en los seis nodos de envío,
+porque el modelo recae en la puntuación estándar. La limpieza respeta los puntos
+suspensivos. Probada con 8 casos.
+
+### Lo que se comprobó que funciona
+
+- El agente recibe el inmueble correcto desde `InventarioWeb` vía los atributos
+  del contacto, y lo menciona con naturalidad («el piso de alquiler del centro»).
+- **Alquiler**: las 4 preguntas en orden (tiempo buscando, habitaciones,
+  personas, contrato y duración), después disponibilidad por franjas sin
+  proponer fecha, y cierre prometiendo contacto en menos de 24 h.
+- **Compra**: las 3 preguntas en orden, incluida la nueva de zonas de interés.
+  No pregunta por financiación.
+- Al cerrar, el bot se apaga solo (`bot: Off` en el contacto), que es el traspaso
+  a humano previsto.
+- Los mensajes salen troceados en varios envíos, como una persona.
+
+### `Borrar Memoria (utilidad de pruebas)` (`kcCVHlcMkSFHS27S`, 4 nodos, activo)
+
+`POST /webhook/borrar-memoria` con `{"telefono":"+34..."}` borra el historial de
+ese teléfono en `n8n_chat_histories`. Hizo falta porque la memoria va por
+teléfono y arrastraba el cierre del alquiler a la prueba de compra, apagando el
+bot antes de tiempo. Útil para cualquier prueba futura.
+
+### Avisos de las pruebas
+
+- Los envíos fuera de la ventana de 24 h fallan con `131047: Re-engagement
+  message`, y los de plantilla con `132001`. Es lo esperado mientras Meta no
+  apruebe las plantillas.
+- La tabla `InventarioWeb` se rellenó a mano con las 47 filas de alquiler para
+  poder probar, ya que el workflow corre cada hora. La próxima ejecución no las
+  duplicará.
+
 ## Etiquetas de Chatwoot
 
 Existen las 6 y son correctas, pero **ningún nodo las asigna todavía**.

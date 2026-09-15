@@ -1,0 +1,122 @@
+{
+ "id": "kcCVHlcMkSFHS27S",
+ "name": "Borrar Memoria (utilidad de pruebas)",
+ "description": null,
+ "active": true,
+ "isArchived": false,
+ "nodes": [
+  {
+   "parameters": {
+    "httpMethod": "POST",
+    "path": "borrar-memoria",
+    "responseMode": "responseNode",
+    "options": {}
+   },
+   "type": "n8n-nodes-base.webhook",
+   "typeVersion": 2.1,
+   "position": [
+    0,
+    0
+   ],
+   "id": "wh",
+   "name": "Peticion",
+   "webhookId": "a9f34c4b-4f5e-4c1a-9c77-f045bc1e463d"
+  },
+  {
+   "parameters": {
+    "jsCode": "// Normaliza el telefono al formato de session_id que usa la memoria: +34...\nconst b = $input.first().json.body || $input.first().json || {};\nlet t = String(b.telefono ?? '').replace(/[^0-9]/g, '');\nif (/^\\d{9}$/.test(t)) t = '34' + t;\nif (!t) throw new Error('Falta el telefono');\nreturn [{ json: { session_id: '+' + t } }];"
+   },
+   "type": "n8n-nodes-base.code",
+   "typeVersion": 2,
+   "position": [
+    220,
+    0
+   ],
+   "id": "nm",
+   "name": "Normaliza"
+  },
+  {
+   "parameters": {
+    "operation": "executeQuery",
+    "query": "DELETE FROM n8n_chat_histories WHERE session_id = $1;",
+    "options": {
+     "queryReplacement": "={{ $json.session_id }}"
+    }
+   },
+   "type": "n8n-nodes-base.postgres",
+   "typeVersion": 2.6,
+   "position": [
+    440,
+    0
+   ],
+   "id": "del",
+   "name": "Borra el historial",
+   "credentials": {
+    "postgres": {
+     "id": "oI4RP6JIhAdG4B51",
+     "name": "Postgres account"
+    }
+   }
+  },
+  {
+   "parameters": {
+    "respondWith": "text",
+    "responseBody": "=Memoria borrada para {{ $('Normaliza').item.json.session_id }}",
+    "options": {}
+   },
+   "type": "n8n-nodes-base.respondToWebhook",
+   "typeVersion": 1.1,
+   "position": [
+    660,
+    0
+   ],
+   "id": "rs",
+   "name": "Responder"
+  }
+ ],
+ "connections": {
+  "Peticion": {
+   "main": [
+    [
+     {
+      "node": "Normaliza",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Normaliza": {
+   "main": [
+    [
+     {
+      "node": "Borra el historial",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Borra el historial": {
+   "main": [
+    [
+     {
+      "node": "Responder",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  }
+ },
+ "settings": {
+  "executionOrder": "v1",
+  "callerPolicy": "workflowsFromSameOwner",
+  "availableInMCP": false
+ },
+ "staticData": null,
+ "meta": null,
+ "pinData": null,
+ "versionCounter": 3,
+ "tags": []
+}
