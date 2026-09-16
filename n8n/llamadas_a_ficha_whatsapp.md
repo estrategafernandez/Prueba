@@ -5,7 +5,29 @@ contacto: nota privada con resumen y la grabación adjunta.
 
 - **Workflow:** `yJz2L79337Pjijlh` · **activo, en modo prueba**
 - **Cuenta Chatwoot:** 5 (Franquicias) · inbox 9 (Voice) → inbox 7 (WhatsApp)
-- **Webhook de prueba:** `https://n8n-tendenze.serversvisionarius.com/webhook/b3d81f27-5c64-4a19-91e2-7f0a6d4c8e35`
+- **Webhook de Chatwoot (instantáneo):** `.../webhook/4e9a1c60-8b73-4d52-a0f6-1d5e73b9c284`
+  — suscripción `message_created`, webhook id 3 de la cuenta 5.
+- **Webhook de prueba manual:** `.../webhook/b3d81f27-5c64-4a19-91e2-7f0a6d4c8e35`
+
+## Cuándo se dispara
+
+**Instantáneo.** Chatwoot avisa por `message_created` en cuanto empieza la
+llamada. En ese momento todavía no hay grabación —el mensaje nace con
+`status: ringing` y `recording_url: null`—, así que el workflow **sondea cada
+30 s** hasta que cuelgan y aparece el audio. La nota cae segundos después de
+colgar, no minutos.
+
+Límites del sondeo: hasta 30 intentos (15 min, cubre la llamada más larga
+registrada, de 11 min) y, una vez colgado, 3 min más por si Twilio tarda en
+subir la grabación.
+
+**Barrido cada 10 min.** Red de seguridad, no la vía principal. Recoge lo que
+el webhook se haya perdido: caída de n8n, entrega fallida, o una grabación que
+tardó más de la cuenta. Si todo va bien no hace nada.
+
+El nodo `Configuracion` decide la vía: si el nodo `Webhook Chatwoot` se ejecutó,
+es instantánea; si no, es barrido. Y descarta de entrada lo que no sea una
+llamada del inbox 9, que es casi todo el tráfico de la cuenta.
 
 ## Cómo se enlaza la llamada con el WhatsApp
 
@@ -102,6 +124,14 @@ de 183 s:
 | volcar (tienen grabación) | 28 |
 | sin audio (borrables al activar) | 10 |
 | revisar a mano (atendidas sin grabación) | 4 |
+
+## Coste de tener el webhook
+
+La suscripción es `message_created` sobre toda la cuenta 5, porque Chatwoot no
+deja filtrar por inbox. Eso significa que **cada mensaje de WhatsApp de la
+cuenta crea una ejecución** que muere en el primer nodo al ver que no es una
+llamada. No consume nada relevante, pero ensucia el historial de ejecuciones.
+Si molesta, se puede poner el workflow en *Save successful executions: none*.
 
 ## Para pasar a producción
 
