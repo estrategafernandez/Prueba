@@ -12,7 +12,7 @@
           ]
         }
       },
-      "id": "c216ff89-a0f3-4a57-9c39-629cf3898425",
+      "id": "a2df0cd1-1648-48e2-a9ea-e110c46b0761",
       "name": "Programador",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.3,
@@ -27,7 +27,7 @@
         "path": "b3d81f27-5c64-4a19-91e2-7f0a6d4c8e35",
         "options": {}
       },
-      "id": "f5f16581-5991-4bd3-beaa-f2731defbc0f",
+      "id": "ad0441f4-c0dd-4e89-8cbf-a359d59b907e",
       "name": "Prueba Manual",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2.1,
@@ -39,15 +39,247 @@
     },
     {
       "parameters": {
-        "jsCode": "// ===================================================================\n//  Vuelca las llamadas del inbox de voz a la conversacion de WhatsApp\n//  del mismo contacto: nota privada con el resumen y el audio adjunto.\n// ===================================================================\n\n// --- Que cuenta e inboxes de Chatwoot\nconst CUENTA          = 5;   // Franquicias\nconst INBOX_LLAMADAS  = 9;   // Voice (+34872437354)\nconst INBOX_WHATSAPP  = 7;   // WhatsApp\n\n// --- MODO PRUEBA -----------------------------------------------------\n// Con un numero, solo se procesa esa conversacion del inbox de llamadas.\n// Con null, se procesan todas. Dejalo fijado mientras se valida.\nconst SOLO_ESTA_CONVERSACION = 44;   // conversacion de prueba (contacto Coral, +34000000000)\n\n// --- BORRADO ---------------------------------------------------------\n// Cuando una llamada no deja grabacion (no la cogen, falla), la conversacion\n// del inbox de llamadas no aporta nada y se puede borrar. El CONTACTO NUNCA\n// se borra: solo la conversacion.\n// De momento en false: el nodo BorrarLlamadaSinAudio ademas esta desactivado.\n// Para activarlo hay que poner esto en true Y habilitar ese nodo.\nconst BORRAR_LLAMADAS_SIN_AUDIO = false;\n\n// --- Margen antes de dar una llamada por \"sin audio\" ------------------\n// Twilio tarda un poco en subir la grabacion despues de colgar. Si damos la\n// llamada por perdida antes de tiempo, borrariamos conversaciones que si\n// tenian audio.\nconst MINUTOS_DE_GRACIA = 15;\n\n// --- Cuando se considera que la llamada SI se atendio ------------------\n// Hay llamadas que Twilio marca \"completed\" y duran 12-21 s pero no dejan\n// grabacion: esas se cogieron y hablaron. Borrarlas perderia el unico\n// rastro de una llamada real, asi que se apartan para revisar a mano en\n// lugar de tratarlas como no atendidas.\nconst SEGUNDOS_PARA_CONSIDERAR_ATENDIDA = 5;\n\nreturn [{ json: {\n  CUENTA, INBOX_LLAMADAS, INBOX_WHATSAPP,\n  SOLO_ESTA_CONVERSACION, BORRAR_LLAMADAS_SIN_AUDIO, MINUTOS_DE_GRACIA,\n  SEGUNDOS_PARA_CONSIDERAR_ATENDIDA,\n} }];\n"
+        "httpMethod": "POST",
+        "path": "4e9a1c60-8b73-4d52-a0f6-1d5e73b9c284",
+        "options": {}
       },
-      "id": "87f47f26-7372-485c-87cc-3797f2d42fc8",
+      "id": "46eea749-e540-44d6-b54e-ee58a0e129d6",
+      "name": "Webhook Chatwoot",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -220,
+        -20
+      ],
+      "webhookId": "4e9a1c60-8b73-4d52-a0f6-1d5e73b9c284"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ===================================================================\n//  Vuelca las llamadas del inbox de voz a la conversacion de WhatsApp\n//  del mismo contacto: nota privada con el resumen y el audio adjunto.\n// ===================================================================\n\n// --- Que cuenta e inboxes de Chatwoot\nconst CUENTA          = 5;   // Franquicias\nconst INBOX_LLAMADAS  = 9;   // Voice (+34872437354)\nconst INBOX_WHATSAPP  = 7;   // WhatsApp\n\n// --- MODO PRUEBA -----------------------------------------------------\n// Con un numero, solo se procesa esa conversacion del inbox de llamadas.\n// Con null, se procesan todas. Dejalo fijado mientras se valida.\nconst SOLO_ESTA_CONVERSACION = 44;   // conversacion de prueba (contacto Coral, +34000000000)\n\n// --- BORRADO ---------------------------------------------------------\n// Cuando una llamada no deja grabacion (no la cogen, falla), la conversacion\n// del inbox de llamadas no aporta nada y se puede borrar. El CONTACTO NUNCA\n// se borra: solo la conversacion.\n// De momento en false: el nodo BorrarLlamadaSinAudio ademas esta desactivado.\n// Para activarlo hay que poner esto en true Y habilitar ese nodo.\nconst BORRAR_LLAMADAS_SIN_AUDIO = false;\n\n// --- Margen antes de dar una llamada por \"sin audio\" ------------------\n// Twilio tarda un poco en subir la grabacion despues de colgar. Si damos la\n// llamada por perdida antes de tiempo, borrariamos conversaciones que si\n// tenian audio.\nconst MINUTOS_DE_GRACIA = 15;\n\n// --- Cuando se considera que la llamada SI se atendio ------------------\n// Hay llamadas que Twilio marca \"completed\" y duran 12-21 s pero no dejan\n// grabacion: esas se cogieron y hablaron. Borrarlas perderia el unico\n// rastro de una llamada real, asi que se apartan para revisar a mano en\n// lugar de tratarlas como no atendidas.\nconst SEGUNDOS_PARA_CONSIDERAR_ATENDIDA = 5;\n\n// --- Espera de la ruta instantanea -----------------------------------\n// El webhook de Chatwoot avisa cuando la llamada EMPIEZA, asi que aun no hay\n// grabacion. Se sondea cada 30 s hasta que cuelgan y aparece el audio.\nconst MAX_ESPERAS = 30;                    // 30 x 30 s = 15 min de margen\nconst SEGUNDOS_ESPERANDO_GRABACION = 180;  // tras colgar, 3 min por si tarda en subir\n\n// --- De donde viene esta ejecucion ------------------------------------\n// Si el nodo del webhook no llego a ejecutarse, $() lanza: eso significa que\n// venimos del programador o de la prueba manual.\nlet evento = null;\ntry { evento = $('Webhook Chatwoot').first().json?.body ?? null; } catch (e) { evento = null; }\n\nlet ruta = 'barrido';\nlet conversacion_del_evento = null;\n\nif (evento) {\n  conversacion_del_evento = evento.conversation?.id ?? null;\n  const esDeLlamada = evento.inbox?.id === INBOX_LLAMADAS && evento.content_type === 'voice_call';\n  const enPruebas   = SOLO_ESTA_CONVERSACION !== null\n                   && conversacion_del_evento !== SOLO_ESTA_CONVERSACION;\n\n  if (!esDeLlamada)   ruta = 'ignorar';   // mensaje normal de WhatsApp: no es asunto nuestro\n  else if (enPruebas) ruta = 'ignorar';   // modo prueba: solo la conversacion fijada\n  else                ruta = 'instantaneo';\n}\n\nreturn [{ json: {\n  CUENTA, INBOX_LLAMADAS, INBOX_WHATSAPP,\n  SOLO_ESTA_CONVERSACION, BORRAR_LLAMADAS_SIN_AUDIO, MINUTOS_DE_GRACIA,\n  SEGUNDOS_PARA_CONSIDERAR_ATENDIDA, MAX_ESPERAS, SEGUNDOS_ESPERANDO_GRABACION,\n  ruta, conversacion_del_evento,\n  evento_recibido: evento ? { event: evento.event, content_type: evento.content_type,\n                              inbox: evento.inbox?.id, conversacion: conversacion_del_evento } : null,\n} }];\n"
+      },
+      "id": "588965c7-cd2b-4a09-a6ba-8c8639de9e16",
       "name": "Configuracion",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
         20,
         300
+      ]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "b7aab16c-5e8e-409e-8329-7cc1994195f5",
+                    "leftValue": "={{ $json.ruta }}",
+                    "rightValue": "instantaneo",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "instantaneo"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "4a03d143-c400-4339-ab60-ebc8d3bd3ea2",
+                    "leftValue": "={{ $json.ruta }}",
+                    "rightValue": "barrido",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "barrido"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "04249644-28e0-4ee8-a623-2a98f74456dc",
+                    "leftValue": "={{ $json.ruta }}",
+                    "rightValue": "ignorar",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "ignorar"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "130bf3f0-5c01-4060-9bdd-3f1cf32e337e",
+      "name": "ComoHemosLlegado",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        240,
+        200
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "154ad33d-3c59-45d5-86d3-7a40f160cab0",
+      "name": "NoEsUnaLlamada",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        460,
+        620
+      ]
+    },
+    {
+      "parameters": {
+        "amount": 30,
+        "unit": "seconds"
+      },
+      "id": "0b293afb-97a0-4f01-8eee-b552aff97e2d",
+      "name": "EsperarAQueTermine",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        460,
+        -60
+      ],
+      "webhookId": "d8c21513-e392-4d4a-873c-af61b5556ffb"
+    },
+    {
+      "parameters": {
+        "url": "=https://tendenze-panel.serversvisionarius.com/api/v1/accounts/{{ $('Configuracion').first().json.CUENTA }}/conversations/{{ $('Configuracion').first().json.conversacion_del_evento }}/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "api_access_token",
+              "value": "__CHATWOOT_API_ACCESS_TOKEN__"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "dc4d00ce-54cc-488e-adf4-c620b6bd9579",
+      "name": "MirarLaLlamada",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        680,
+        -60
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Sondeo de la ruta instantanea. El webhook salta cuando la llamada empieza,\n// asi que aqui se espera a que cuelguen y a que Twilio suba la grabacion.\nconst cfg = $('Configuracion').first().json;\nconst mensajes = $input.first().json.payload || [];\nconst llamadas = mensajes.filter(m => m.call).map(m => m.call);\n\nconst enCurso = llamadas.some(c =>\n  ['ringing', 'in-progress', 'queued', 'initiated'].includes(c.status));\nconst hayGrabacion = llamadas.some(c => c.recording_url);\n\nconst finMasReciente = llamadas.reduce((max, c) => Math.max(max, c.ended_at || 0), 0);\nconst desdeColgar = finMasReciente ? Math.floor(Date.now() / 1000) - finMasReciente : 0;\n\nconst intentos = $runIndex + 1;\nconst seguir = intentos < cfg.MAX_ESPERAS && (\n  enCurso ||\n  (!hayGrabacion && desdeColgar < cfg.SEGUNDOS_ESPERANDO_GRABACION)\n);\n\nconst motivo = enCurso ? 'La llamada sigue en curso.'\n  : hayGrabacion ? 'Grabacion disponible.'\n  : seguir ? `Colgaron hace ${desdeColgar} s, esperando a que suba la grabacion.`\n  : 'Se agota la espera: lo recoge el barrido.';\n\nreturn [{ json: { seguir, intentos, en_curso: enCurso, hay_grabacion: hayGrabacion,\n                  segundos_desde_colgar: desdeColgar, motivo } }];\n"
+      },
+      "id": "82de0e42-874c-4119-8ab7-d196a5144b26",
+      "name": "SigueEnCurso",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        900,
+        -60
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "08ee8c79-84ce-448f-a657-32d5d7cf2603",
+              "leftValue": "={{ $json.seguir }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "dffe83be-cd66-4a5a-a151-c97360c5d83d",
+      "name": "VolverAEsperar",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1120,
+        -60
+      ]
+    },
+    {
+      "parameters": {
+        "url": "=https://tendenze-panel.serversvisionarius.com/api/v1/accounts/{{ $('Configuracion').first().json.CUENTA }}/conversations/{{ $('Configuracion').first().json.conversacion_del_evento }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "api_access_token",
+              "value": "__CHATWOOT_API_ACCESS_TOKEN__"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "68293401-16b9-4834-a566-2342c1a2ca2d",
+      "name": "RecogerConversacionLlamada",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        1340,
+        -200
       ]
     },
     {
@@ -91,7 +323,7 @@
           }
         }
       },
-      "id": "16d7cd5e-c45f-49a5-a642-1c99c4814ed8",
+      "id": "79cc8212-b948-4194-8936-0e9f67d6c2a8",
       "name": "BuscarConversacionesLlamada",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
@@ -105,7 +337,7 @@
         "fieldToSplitOut": "payload",
         "options": {}
       },
-      "id": "c38b84c1-2da1-4dfc-9c3d-99175e557901",
+      "id": "53631029-a974-4a66-b8a3-8e44cd7c810a",
       "name": "SepararConversaciones",
       "type": "n8n-nodes-base.splitOut",
       "typeVersion": 1,
@@ -125,7 +357,7 @@
           },
           "conditions": [
             {
-              "id": "bfb43857-ba20-40b2-a233-e3dba2e63a6d",
+              "id": "32abf713-eb47-4541-91cf-8b8f01e49fe5",
               "leftValue": "={{ $('Configuracion').first().json.SOLO_ESTA_CONVERSACION === null || $json.id === $('Configuracion').first().json.SOLO_ESTA_CONVERSACION }}",
               "rightValue": "",
               "operator": {
@@ -139,7 +371,7 @@
         },
         "options": {}
       },
-      "id": "e32ba45a-299d-464b-8561-5c25fc3a383e",
+      "id": "660bfe21-6b4a-4ded-a954-ea4babd7c50b",
       "name": "FiltrarConversaciones",
       "type": "n8n-nodes-base.filter",
       "typeVersion": 2.3,
@@ -152,23 +384,23 @@
       "parameters": {
         "options": {}
       },
-      "id": "2c5221e5-7db5-4960-b7fd-03a010892109",
+      "id": "44f73456-7665-43c0-8e3e-83e0495341f0",
       "name": "Por Cada Llamada",
       "type": "n8n-nodes-base.splitInBatches",
       "typeVersion": 3,
       "position": [
-        900,
+        1560,
         300
       ]
     },
     {
       "parameters": {},
-      "id": "f86af2f8-1956-4ab1-a308-2d538a23f758",
+      "id": "039982ea-e392-4174-86ea-d77564d4c155",
       "name": "Fin",
       "type": "n8n-nodes-base.noOp",
       "typeVersion": 1,
       "position": [
-        1120,
+        1780,
         120
       ]
     },
@@ -190,12 +422,12 @@
         },
         "options": {}
       },
-      "id": "b050f6c8-7eb3-4f34-b06c-88ce81d039d9",
+      "id": "7caf4ac8-dd91-43db-9d35-a270857d4885",
       "name": "RecogerMensajesLlamada",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
       "position": [
-        1120,
+        1780,
         440
       ]
     },
@@ -203,12 +435,12 @@
       "parameters": {
         "jsCode": "const cfg  = $('Configuracion').first().json;\nconst conv = $('Por Cada Llamada').first().json;\nconst mensajes = $input.first().json.payload || [];\nconst ahora = Math.floor(Date.now() / 1000);\n\n// Llamadas ya volcadas, guardadas como atributo de la conversacion de llamada.\nconst yaVolcadas = String(conv.custom_attributes?.llamadas_volcadas || '')\n  .split(',').map(s => s.trim()).filter(Boolean);\n\n// Cada mensaje de tipo voice_call trae su objeto `call`.\nconst llamadas = mensajes.filter(m => m.call).map(m => m.call);\n\nconst base = {\n  conv_llamada: conv.id,\n  contacto_id: conv.meta?.sender?.id ?? null,\n  nombre: conv.meta?.sender?.name ?? null,\n  telefono: conv.meta?.sender?.phone_number ?? null,\n  llamadas_en_conversacion: llamadas.length,\n  ya_volcadas: yaVolcadas,\n};\nconst salida = (accion, motivo, extra) => [{ json: { ...base, accion, motivo, ...(extra || {}) } }];\n\nif (!llamadas.length) {\n  return salida('esperar', 'La conversacion no tiene ninguna llamada registrada.');\n}\n\n// Una llamada esta terminada cuando ya no suena ni esta en curso.\nconst terminada = (c) => !['ringing', 'in-progress', 'queued', 'initiated'].includes(c.status);\nconst pasoLaGracia = (c) => {\n  const fin = c.ended_at || c.started_at;\n  return fin ? (ahora - fin) >= cfg.MINUTOS_DE_GRACIA * 60 : false;\n};\n\n// 1) Llamadas con grabacion que todavia no se han volcado, la mas antigua primero.\nconst pendientes = llamadas\n  .filter(c => c.recording_url && !yaVolcadas.includes(String(c.id)))\n  .sort((a, b) => (a.started_at || 0) - (b.started_at || 0));\n\nif (pendientes.length) {\n  const c = pendientes[0];\n  const inicio = c.started_at ? new Date(c.started_at * 1000) : null;\n  return salida('volcar', `Llamada ${c.id} con grabacion de ${c.duration_seconds || 0} s.`, {\n    call_id: c.id,\n    grabacion_url: c.recording_url,\n    duracion_segundos: c.duration_seconds || 0,\n    estado_llamada: c.status,\n    direccion: c.direction,\n    agente: c.accepted_by_agent_name || null,\n    transcripcion_previa: c.transcript || null,\n    fecha_llamada: inicio ? inicio.toISOString() : null,\n    pendientes_restantes: pendientes.length - 1,\n  });\n}\n\n// 2) Sin grabacion en ninguna llamada. Solo entonces la conversacion es\n//    candidata a borrarse: si alguna llamada tuvo audio, no se toca.\nconst algunaConGrabacion = llamadas.some(c => c.recording_url);\nconst todasTerminadas    = llamadas.every(terminada);\nconst todasConGracia     = llamadas.every(pasoLaGracia);\n\nif (!algunaConGrabacion && todasTerminadas && todasConGracia) {\n  // Una llamada que conecto y duro lo suficiente SI se atendio, aunque no\n  // haya grabacion. Esa conversacion no se borra: se aparta para revisar.\n  const atendidas = llamadas.filter(c =>\n    c.status === 'completed' && (c.duration_seconds || 0) >= cfg.SEGUNDOS_PARA_CONSIDERAR_ATENDIDA);\n\n  if (atendidas.length) {\n    const segs = atendidas.map(c => `${c.duration_seconds}s`).join(', ');\n    return salida('esperar',\n      `Atendida (${segs}) pero sin grabacion. No se borra: revisar a mano.`, {\n      call_id: atendidas[atendidas.length - 1].id,\n      estado_llamada: atendidas[atendidas.length - 1].status,\n      revisar_a_mano: true,\n    });\n  }\n\n  const estados = [...new Set(llamadas.map(c => c.status))].join(', ');\n  return salida('sin_audio', `Ninguna de las ${llamadas.length} llamadas se atendio (${estados}).`, {\n    call_id: llamadas[llamadas.length - 1].id,\n    estado_llamada: llamadas[llamadas.length - 1].status,\n  });\n}\n\nif (!todasTerminadas)  return salida('esperar', 'Hay una llamada todavia en curso.');\nif (!todasConGracia)   return salida('esperar', `Aun dentro del margen de ${cfg.MINUTOS_DE_GRACIA} min por si sube la grabacion.`);\nreturn salida('esperar', 'Todas las llamadas con grabacion ya estaban volcadas.');\n"
       },
-      "id": "d3920cf3-4a7f-4281-a92f-ea6a328a35ab",
+      "id": "227ca5b4-30f6-4741-b1db-68deb97b8d6a",
       "name": "AnalizarLlamada",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1340,
+        2000,
         440
       ]
     },
@@ -226,7 +458,7 @@
                 },
                 "conditions": [
                   {
-                    "id": "f470d7b7-95f8-4a51-bf77-35e6759f7222",
+                    "id": "e298c3a8-659f-456f-b0d3-bdef24081139",
                     "leftValue": "={{ $json.accion }}",
                     "rightValue": "volcar",
                     "operator": {
@@ -250,7 +482,7 @@
                 },
                 "conditions": [
                   {
-                    "id": "8ccf4741-7bb3-4729-8bd1-130580e24895",
+                    "id": "71178b9b-cfc5-4f67-86b8-609fcb5204a2",
                     "leftValue": "={{ $json.accion }}",
                     "rightValue": "sin_audio",
                     "operator": {
@@ -274,7 +506,7 @@
                 },
                 "conditions": [
                   {
-                    "id": "7347fac8-118d-4e64-a417-61acfb0b7a05",
+                    "id": "eab8ec5f-d44d-4350-a213-c159ea2ead4a",
                     "leftValue": "={{ $json.accion }}",
                     "rightValue": "esperar",
                     "operator": {
@@ -292,12 +524,12 @@
         },
         "options": {}
       },
-      "id": "48309108-409d-4241-ab45-c70b2eec9449",
+      "id": "efd3f238-321e-40cb-b62e-16f600eb7af3",
       "name": "QueHacemos",
       "type": "n8n-nodes-base.switch",
       "typeVersion": 3.2,
       "position": [
-        1560,
+        2220,
         440
       ]
     },
@@ -319,12 +551,12 @@
         },
         "options": {}
       },
-      "id": "1e527ffb-4089-468c-a411-47a83e2357da",
+      "id": "e5535257-4007-4b09-84e8-f964e1e006c5",
       "name": "BuscarConversacionWhatsApp",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
       "position": [
-        1780,
+        2440,
         240
       ]
     },
@@ -332,12 +564,12 @@
       "parameters": {
         "jsCode": "const cfg     = $('Configuracion').first().json;\nconst llamada = $('AnalizarLlamada').first().json;\nconst lista   = $input.first().json.payload || [];\n\n// Se busca la conversacion de WhatsApp del MISMO contacto. En Chatwoot el\n// contacto es unico por cuenta y tiene una conversacion por inbox, asi que\n// el enlace llamada -> WhatsApp es directo.\nconst deWhatsapp = lista\n  .filter(c => c.inbox_id === cfg.INBOX_WHATSAPP)\n  .sort((a, b) => (b.last_activity_at || 0) - (a.last_activity_at || 0));\n\n// Si el contacto no tiene WhatsApp, la nota se queda en la propia\n// conversacion de la llamada. Nunca se pierde el resumen.\nconst destino = deWhatsapp[0];\n\nreturn [{ json: {\n  ...llamada,\n  conversacion_destino: destino ? destino.id : llamada.conv_llamada,\n  hay_whatsapp: Boolean(destino),\n  inbox_destino: destino ? destino.inbox_id : cfg.INBOX_LLAMADAS,\n} }];\n"
       },
-      "id": "22f96065-b613-45f0-8996-b35044ad7c15",
+      "id": "45b49712-3d40-4545-b7a2-cd6f7779630f",
       "name": "LocalizarDestino",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        2000,
+        2660,
         240
       ]
     },
@@ -353,12 +585,12 @@
           }
         }
       },
-      "id": "6558fbfc-2201-4a97-b29d-76715729b2a8",
+      "id": "4ef7b479-1352-48fa-b4e6-d2e69f2441d4",
       "name": "DescargarGrabacion",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
       "position": [
-        2220,
+        2880,
         240
       ]
     },
@@ -366,12 +598,12 @@
       "parameters": {
         "jsCode": "// La grabacion se descarga con un nombre sin extension (RE649258...) y eso\n// hace que la API de transcripcion la rechace por formato desconocido.\n// Aqui se le pone nombre, extension y tipo correctos.\nconst items = $input.all();\n\nfor (const item of items) {\n  const bin = item.binary?.data;\n  if (!bin) continue;\n  bin.fileName      = `llamada-${item.json.call_id || 's-n'}.wav`;\n  bin.fileExtension = 'wav';\n  bin.mimeType      = 'audio/wav';\n}\n\nreturn items;\n"
       },
-      "id": "106b212e-6676-4849-b34f-710110b9d9f6",
+      "id": "ea86d9d4-935d-44b7-987a-6c53f7fd85a8",
       "name": "NombrarAudio",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        2330,
+        2990,
         240
       ]
     },
@@ -379,12 +611,12 @@
       "parameters": {
         "jsCode": "// La grabacion se descarga con un nombre sin extension (RE649258...) y eso\n// hace que la API de transcripcion la rechace por formato desconocido.\n// Aqui se le pone nombre, extension y tipo correctos.\nconst items = $input.all();\n\nfor (const item of items) {\n  const bin = item.binary?.data;\n  if (!bin) continue;\n  bin.fileName      = `llamada-${item.json.call_id || 's-n'}.wav`;\n  bin.fileExtension = 'wav';\n  bin.mimeType      = 'audio/wav';\n}\n\nreturn items;\n"
       },
-      "id": "535f31eb-6b4c-4b4d-a5cb-0bbca29ccb33",
+      "id": "62f5ef11-c2be-4e2b-bf5e-24e38c4b58d4",
       "name": "NombrarAudioAdjunto",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        3210,
+        3870,
         240
       ]
     },
@@ -396,12 +628,12 @@
           "language": "es"
         }
       },
-      "id": "d4105088-a6c3-4c9e-a41b-77fa0b8d4c4e",
+      "id": "ede9a692-cb96-41a2-9a09-ef954a1ffb7b",
       "name": "TranscribirGrabacion",
       "type": "@n8n/n8n-nodes-langchain.openAi",
       "typeVersion": 1.7,
       "position": [
-        2460,
+        3120,
         240
       ],
       "credentials": {
@@ -423,12 +655,12 @@
           "temperature": 0
         }
       },
-      "id": "928e17e5-297b-402b-9288-b5a0e014d4b2",
+      "id": "cb33964a-0ff5-4307-8769-ef05c9281089",
       "name": "Modelo Resumen",
       "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
       "typeVersion": 1.2,
       "position": [
-        2660,
+        3320,
         60
       ],
       "credentials": {
@@ -450,12 +682,12 @@
           ]
         }
       },
-      "id": "f19b0110-faac-4380-9231-b5683b09889e",
+      "id": "ffcf25b8-13aa-4776-820d-f60fd2dfdb9a",
       "name": "ResumirLlamada",
       "type": "@n8n/n8n-nodes-langchain.chainLlm",
       "typeVersion": 1.5,
       "position": [
-        2660,
+        3320,
         240
       ]
     },
@@ -463,12 +695,12 @@
       "parameters": {
         "jsCode": "const d = $('LocalizarDestino').first().json;\nconst resumen = ($input.first().json.text || $input.first().json.output || '').trim();\n\nconst fecha = d.fecha_llamada ? new Date(d.fecha_llamada) : null;\nconst cuando = fecha\n  ? fecha.toLocaleString('es-ES', { timeZone: 'Europe/Madrid', day: '2-digit', month: '2-digit',\n                                    year: 'numeric', hour: '2-digit', minute: '2-digit' })\n  : 'fecha desconocida';\n\nconst seg = d.duracion_segundos || 0;\nconst dur = seg >= 60 ? `${Math.floor(seg / 60)} min ${seg % 60} s` : `${seg} s`;\nconst sentido = d.direccion === 'outgoing' ? 'saliente' : d.direccion === 'incoming' ? 'entrante' : (d.direccion || '');\n\nconst cabecera = [\n  `LLAMADA ${sentido} · ${cuando} · ${dur}`,\n  d.agente ? `Atendida por ${d.agente}` : null,\n].filter(Boolean).join('\\n');\n\nconst pie = `Grabacion adjunta · llamada #${d.call_id}`;\nconst aviso = d.hay_whatsapp ? null\n  : 'Este contacto no tiene conversacion de WhatsApp, asi que la nota se queda aqui.';\n\nconst contenido = [cabecera, '', resumen, '', aviso, pie].filter(x => x !== null).join('\\n');\n\nreturn [{ json: { ...d, resumen, contenido_nota: contenido } }];\n"
       },
-      "id": "9984b508-d532-4577-9e06-c432f70348e1",
+      "id": "3fe58a39-55e3-4e64-b25e-8d564e6f9e59",
       "name": "PrepararNota",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        2880,
+        3540,
         240
       ]
     },
@@ -484,12 +716,12 @@
           }
         }
       },
-      "id": "44ef724b-615c-442b-bee8-df81622e7b55",
+      "id": "7373d8de-8478-4112-84cd-142b62e966c9",
       "name": "DescargarAudioParaAdjuntar",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
       "position": [
-        3100,
+        3760,
         240
       ]
     },
@@ -531,12 +763,12 @@
         },
         "options": {}
       },
-      "id": "73b0c7f7-d419-4950-b62f-1a779f63d1f8",
+      "id": "96c5566d-14aa-4299-93d4-8c050e37d6da",
       "name": "PublicarNotaConAudio",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
       "position": [
-        3400,
+        4060,
         240
       ]
     },
@@ -562,12 +794,12 @@
         "jsonBody": "={{ JSON.stringify({ custom_attributes: { llamadas_volcadas: [...$('AnalizarLlamada').item.json.ya_volcadas, String($('AnalizarLlamada').item.json.call_id)].join(',') } }) }}",
         "options": {}
       },
-      "id": "eb821c7c-15dc-498c-a9d8-745cff7c2602",
+      "id": "534221a3-98c8-4ac4-8018-5e420588ceaf",
       "name": "MarcarLlamadaVolcada",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
       "position": [
-        3620,
+        4280,
         240
       ]
     },
@@ -593,12 +825,12 @@
         "jsonBody": "={{ JSON.stringify({ custom_attributes: { llamada_sin_audio: $json.motivo } }) }}",
         "options": {}
       },
-      "id": "3f27bcb8-7114-4a69-a963-3346aad4a6f3",
+      "id": "48e5e7b1-8c0a-4b85-83b5-ea80322d8dd5",
       "name": "MarcarSinAudio",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
       "position": [
-        1780,
+        2440,
         620
       ]
     },
@@ -613,7 +845,7 @@
           },
           "conditions": [
             {
-              "id": "10f5ef0a-3c52-4573-af45-fa4e0ab97d17",
+              "id": "d831665b-f8e2-4f57-be54-6df4ffd779ef",
               "leftValue": "={{ $('Configuracion').first().json.BORRAR_LLAMADAS_SIN_AUDIO }}",
               "rightValue": "",
               "operator": {
@@ -627,12 +859,12 @@
         },
         "options": {}
       },
-      "id": "8e61ccc7-e5c4-481d-93ab-ffb084308422",
+      "id": "0eab58cb-7d5c-43b8-95aa-34c6fb8445ae",
       "name": "DebeBorrar",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3,
       "position": [
-        2000,
+        2660,
         620
       ]
     },
@@ -655,12 +887,12 @@
         },
         "options": {}
       },
-      "id": "1f5ad68e-50f3-409f-8fa8-9efdd3df41f9",
+      "id": "344857f7-7cbc-4db6-a955-4622f97bc583",
       "name": "BorrarLlamadaSinAudio",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
       "position": [
-        2220,
+        2880,
         620
       ],
       "disabled": true,
@@ -668,23 +900,23 @@
     },
     {
       "parameters": {},
-      "id": "5a66b19c-6614-4f9e-a3a3-59f3815521a8",
+      "id": "29cbc42c-8728-4336-afa8-5a6e70cd02a4",
       "name": "NoBorrarTodavia",
       "type": "n8n-nodes-base.noOp",
       "typeVersion": 1,
       "position": [
-        2220,
+        2880,
         800
       ]
     },
     {
       "parameters": {
-        "content": "## Llamadas a la ficha de WhatsApp — cuenta Franquicias\n\nCada 10 min revisa las conversaciones del **inbox 9 (Voice)** y, por cada llamada:\n\n- **Con grabacion** → transcribe, resume y deja una **nota privada con el audio adjunto**\n  en la conversacion de **WhatsApp (inbox 7)** del mismo contacto.\n- **Sin grabacion** (no la cogen, falla) → la conversacion de llamada es candidata a\n  borrarse. **El contacto NUNCA se borra, solo la conversacion.**\n\n### Estado actual: EN PRUEBAS\n- `SOLO_ESTA_CONVERSACION = 44` → solo toca la conversacion de prueba (contacto Coral,\n  +34000000000). Ponlo a `null` para que procese todas.\n- `BORRAR_LLAMADAS_SIN_AUDIO = false` y el nodo `BorrarLlamadaSinAudio` esta **desactivado**.\n  Hacen falta las dos cosas para que borre algo.\n\n### Como no se duplica\nCada llamada volcada se anota en el atributo `llamadas_volcadas` de la conversacion de\nllamada. Una conversacion con varias llamadas vuelca una por ciclo.\n\n### Margen de 15 minutos\nTwilio tarda en subir la grabacion tras colgar. Una llamada no se da por \"sin audio\"\nhasta que han pasado 15 min desde que termino; asi no se borra algo que si tenia audio.\n\n### Llamadas atendidas sin grabacion\nHay llamadas que Twilio marca `completed` y duran 12-21 s pero no dejan grabacion:\nesas se cogieron. **No se borran**: se apartan como \"revisar a mano\".",
+        "content": "## Llamadas a la ficha de WhatsApp — cuenta Franquicias\n\n### Dos vias de entrada\n- **Instantanea** — el webhook de Chatwoot avisa en cuanto empieza la llamada.\n  El workflow sondea cada 30 s hasta que cuelgan y aparece la grabacion, y\n  entonces vuelca. La nota cae segundos despues de colgar.\n- **Barrido cada 10 min** — red de seguridad. Recoge lo que el webhook se haya\n  perdido (caida de n8n, webhook fallido, grabacion que tardo mucho en subir).\n\nPor cada llamada:\n\n- **Con grabacion** → transcribe, resume y deja una **nota privada con el audio adjunto**\n  en la conversacion de **WhatsApp (inbox 7)** del mismo contacto.\n- **Sin grabacion** (no la cogen, falla) → la conversacion de llamada es candidata a\n  borrarse. **El contacto NUNCA se borra, solo la conversacion.**\n\n### Estado actual: EN PRUEBAS\n- `SOLO_ESTA_CONVERSACION = 44` → solo toca la conversacion de prueba (contacto Coral,\n  +34000000000). Ponlo a `null` para que procese todas.\n- `BORRAR_LLAMADAS_SIN_AUDIO = false` y el nodo `BorrarLlamadaSinAudio` esta **desactivado**.\n  Hacen falta las dos cosas para que borre algo.\n\n### Como no se duplica\nCada llamada volcada se anota en el atributo `llamadas_volcadas` de la conversacion de\nllamada. Una conversacion con varias llamadas vuelca una por ciclo.\n\n### Margen de 15 minutos\nTwilio tarda en subir la grabacion tras colgar. Una llamada no se da por \"sin audio\"\nhasta que han pasado 15 min desde que termino; asi no se borra algo que si tenia audio.\n\n### Llamadas atendidas sin grabacion\nHay llamadas que Twilio marca `completed` y duran 12-21 s pero no dejan grabacion:\nesas se cogieron. **No se borran**: se apartan como \"revisar a mano\".",
         "width": 900,
         "height": 560,
         "color": 4
       },
-      "id": "7a8f4b0d-8df8-4685-b479-b454c08bf43f",
+      "id": "c311ccbb-bae2-43fa-af52-d5b4b5e19c2d",
       "name": "Nota Principal",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
@@ -700,12 +932,12 @@
         "height": 200,
         "color": 3
       },
-      "id": "ef938510-30d2-48d3-bfaa-241dcde3007f",
+      "id": "24c1b074-1421-4640-aed8-cc20831521c9",
       "name": "Nota Privacidad",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        3280,
+        3940,
         440
       ]
     }
@@ -733,11 +965,109 @@
         ]
       ]
     },
+    "Webhook Chatwoot": {
+      "main": [
+        [
+          {
+            "node": "Configuracion",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
     "Configuracion": {
       "main": [
         [
           {
+            "node": "ComoHemosLlegado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ComoHemosLlegado": {
+      "main": [
+        [
+          {
+            "node": "EsperarAQueTermine",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
             "node": "BuscarConversacionesLlamada",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "NoEsUnaLlamada",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "EsperarAQueTermine": {
+      "main": [
+        [
+          {
+            "node": "MirarLaLlamada",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "MirarLaLlamada": {
+      "main": [
+        [
+          {
+            "node": "SigueEnCurso",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SigueEnCurso": {
+      "main": [
+        [
+          {
+            "node": "VolverAEsperar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "VolverAEsperar": {
+      "main": [
+        [
+          {
+            "node": "EsperarAQueTermine",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "RecogerConversacionLlamada",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "RecogerConversacionLlamada": {
+      "main": [
+        [
+          {
+            "node": "Por Cada Llamada",
             "type": "main",
             "index": 0
           }
