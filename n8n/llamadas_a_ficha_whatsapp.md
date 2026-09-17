@@ -106,16 +106,43 @@ contacto ficticio.
 `llamadas_volcadas` de la conversación de llamada. Una conversación con varias
 llamadas vuelca una por ciclo.
 
-## Prueba realizada
+## Pruebas realizadas
 
-Contra la conversación 44 (contacto Coral, +34000000000, ficticio), llamada #1
-de 183 s:
+### 1. Volcado completo (conversación 44 · Coral · +34000000000 · 183 s)
+Transcripción y resumen correctos. Nota en la conversación de WhatsApp 4 con
+`private: true` y adjunto `audio/wav` de 2,83 MB. Atributo
+`llamadas_volcadas: "1"` escrito. Relanzado: decide `esperar`, no duplica.
 
-- Transcripción y resumen correctos.
-- Nota publicada en la conversación de WhatsApp 4: `private: true`, adjunto
-  `audio/wav` de 2,83 MB, remitente `IA TENDENZE`.
-- Atributo `llamadas_volcadas: "1"` escrito en la conversación 44.
-- Relanzado: decide `esperar` y **no duplica** — sigue habiendo una sola nota.
+### 2. Volcado completo por la vía instantánea (conversación 143 · Mila · 6 s)
+Entró por el webhook, sondeó, vio la grabación y volcó. Nota en la conversación
+133 con `private: true` y wav de 57 KB. La grabación de 6 s no tenía contenido
+útil y el resumen respondió lo previsto para ese caso: *"Grabacion sin contenido
+aprovechable."* en vez de inventarse algo.
+
+### 3. Rama sin audio (conversación 145 · llamada `no-answer`)
+Decidió `sin_audio`, escribió la marca, pasó por `DebeBorrar` y salió por
+`NoBorrarTodavia`. **El nodo de borrado no llegó a ejecutarse.** Comprobado
+después: la conversación 145 sigue existiendo y el contacto 1777 intacto. La
+marca de prueba se revirtió.
+
+### 4. El webhook con tráfico real
+Tres entregas reales de Chatwoot (mensajes de WhatsApp del inbox 7) llegaron al
+workflow y salieron por `ignorar` en cuatro nodos, sin tocar nada.
+
+### 5. Pruebas locales de lo que no se puede probar contra producción
+Trece comprobaciones, todas correctas: destino de la nota (con WhatsApp, sin
+WhatsApp, varias conversaciones, contacto sin ninguna), formato de la nota
+(duración en minutos, llamada entrante, aviso de que no hay WhatsApp, marca de
+la llamada) e idempotencia con dos llamadas en la misma conversación (vuelca la
+más antigua primero, luego la siguiente, luego nada) y el caso mixto de una
+perdida junto a una grabada ya volcada, que **no** se marca para borrar.
+
+## El workflow se oye a sí mismo
+
+La nota que publica es un mensaje, así que Chatwoot dispara `message_created` y
+vuelve a entrar. Se descarta correctamente, porque el filtro exige inbox 9 y
+`content_type: voice_call`, y las notas van al inbox 7 como texto. No hay bucle
+posible mientras ese filtro no se toque.
 
 ## Reparto actual de las 42 conversaciones del inbox de voz
 
