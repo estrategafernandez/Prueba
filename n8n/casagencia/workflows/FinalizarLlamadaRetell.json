@@ -1,0 +1,571 @@
+{
+  "name": "FinalizarLlamadaRetell",
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Europe/Madrid"
+  },
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "finalizarllamada",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -3312,
+        1088
+      ],
+      "id": "fcc62f44-3ee0-40fe-9ef0-82126d3fcb39",
+      "name": "Webhook",
+      "webhookId": "0c2cb72c-401d-4cd5-8155-3cb04a6149a7"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "6231bf06-a62e-47bc-a0b1-f64acfb7d54c",
+              "leftValue": "={{ $json.body.event }}",
+              "rightValue": "call_analyzed",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -2848,
+        1088
+      ],
+      "id": "b36ceb1f-5ef3-4619-9f04-77c6a4f05196",
+      "name": "Llamada Finalizada"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "3714b9de-7b31-44a6-9626-9ffed455621f",
+              "leftValue": "={{ $json.body.call.direction }}",
+              "rightValue": "inbound",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -2448,
+        1072
+      ],
+      "id": "695c164a-025d-4477-a2af-65fbf150689d",
+      "name": "Outbound / Inbound"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "43883d70-375e-4ad7-b110-fdf6802de2bd",
+                    "leftValue": "={{ $json.body.event }}",
+                    "rightValue": "call_analyzed",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "call_analyzed"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        -1984,
+        944
+      ],
+      "id": "3bc6a6c6-b2ce-4f6e-9577-831fef4aa21c",
+      "name": "Switch"
+    },
+    {
+      "parameters": {
+        "content": "# FILTRO PARA DURACIÓN MINIMA Y. AGENTE PARA HACER RESUMEN",
+        "height": 288,
+        "width": 800
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -1376,
+        -208
+      ],
+      "typeVersion": 1,
+      "id": "dd21d7dc-2ace-424f-a35e-7a07459287b6",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "inputDataFieldName": "Llamada",
+        "name": "=Llamada - {{ $now.setZone('Europe/Madrid').format('dd-MM-yyyy HH-mm') }} - {{ $('Webhook').item.json.body.call.from_number }}",
+        "driveId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "My Drive"
+        },
+        "folderId": {
+          "__rl": true,
+          "value": "1wXbWYPIi_6vBVjxvUbY5AEnzhVlvFf86",
+          "mode": "list",
+          "cachedResultName": "AUDIOS LLAMADAS ENTRANTES",
+          "cachedResultUrl": "https://drive.google.com/drive/folders/1wXbWYPIi_6vBVjxvUbY5AEnzhVlvFf86"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        -1360,
+        960
+      ],
+      "id": "b06106b3-b549-42f6-8b03-b878b2debeae",
+      "name": "Upload file",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "plV3uEAgDlMohiVr",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "share",
+        "fileId": {
+          "__rl": true,
+          "value": "={{ $json.id }}",
+          "mode": "id"
+        },
+        "permissionsUi": {
+          "permissionsValues": {
+            "role": "writer",
+            "type": "anyone"
+          }
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        -1104,
+        960
+      ],
+      "id": "010d798d-0019-42b3-ab23-0883574aec03",
+      "name": "Share file",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "plV3uEAgDlMohiVr",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "# BUSQUEDA CARPETA, DESCARGA AUDIO Y AÑADIMOS A CARPETA. DAMOS PERMISOS Y ENVIAMOS ENLACE POR GMAIL\n",
+        "height": 288,
+        "width": 800
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -208,
+        -144
+      ],
+      "typeVersion": 1,
+      "id": "7501a94f-3fdb-4082-89b1-12a6e09f8424",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "url": "={{ $('Webhook').item.json.body.call.recording_url }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file",
+              "outputPropertyName": "Llamada"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -1584,
+        960
+      ],
+      "id": "b10f3171-5569-43d9-bed2-a86f7eb14f4b",
+      "name": "HTTP Request1"
+    },
+    {
+      "parameters": {
+        "content": "# 3 PRIMEROS CONTESTA LLAMADA# RESTO ES NIO RESPONDIDA\n",
+        "height": 288,
+        "width": 800
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -2400,
+        592
+      ],
+      "typeVersion": 1,
+      "id": "e009a4a5-53da-4b16-8412-d722055f9f52",
+      "name": "Sticky Note2"
+    },
+    {
+      "parameters": {
+        "sendTo": " paco@casagencia.com",
+        "subject": "=NUEVA LLAMADA ENTRANTE RECIBIDA - Teléfono: {{ $('Webhook').item.json.body.call.from_number }}",
+        "message": "=Hola! Aquí un nuevo resumen de una llamada de un lead!<br><br>\n\n- Teléfono: {{ $('Webhook').item.json.body.call.from_number }}<br><br>\n- Resumen de la llamada:<br>{{ $('Webhook').item.json.body.call.call_analysis?.call_summary || '' }}<br><br>\n\nAcceso a llamada:<br>{{ $('Upload file').item.json.webViewLink }}<br><br>\nUn saludo!",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        -880,
+        960
+      ],
+      "id": "63e8981f-584a-498d-90ce-7450fee0208b",
+      "name": "Send a message",
+      "webhookId": "9ca225ce-8d6b-43b6-b35d-7ec55ec57a14",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "mKh6b4I1hwDsBwOd",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $('Webhook').item.json.body.call.call_analysis?.custom_analysis_data?.asesora || '' }}",
+                    "rightValue": "Carmen",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "47d3ded6-a6de-473f-ab9a-976ca3ac8815"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "carmen"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "4aec5d20-f71a-47fd-83ef-146978149102",
+                    "leftValue": "={{ $('Webhook').item.json.body.call.call_analysis?.custom_analysis_data?.asesora || '' }}",
+                    "rightValue": "Gisela",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "gisela"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "9ce53453-234f-434e-8ae5-1f50f74647d8",
+                    "leftValue": "={{ $('Webhook').item.json.body.call.call_analysis?.custom_analysis_data?.asesora || '' }}",
+                    "rightValue": "Laurence",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "laurence"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        -672,
+        960
+      ],
+      "id": "bb627daa-8462-4683-8ce5-ac928347d0f8",
+      "name": "Switch1"
+    },
+    {
+      "parameters": {
+        "sendTo": "carmen@casagencia.com",
+        "subject": "=NUEVA LLAMADA ENTRANTE RECIBIDA - Teléfono: {{ $('Webhook').item.json.body.call.from_number }}",
+        "message": "=Hola! Aquí un nuevo resumen de una llamada de un lead!<br><br>\n\n- Teléfono: {{ $('Webhook').item.json.body.call.from_number }}<br><br>\n- Resumen de la llamada:<br>{{ $('Webhook').item.json.body.call.call_analysis?.call_summary || '' }}<br><br>\n\nAcceso a llamada:<br>{{ $('Upload file').item.json.webViewLink }}<br><br>\nUn saludo!",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        -384,
+        848
+      ],
+      "id": "a44f5e4a-3c2c-41a8-82c4-882ac51b383b",
+      "name": "Send a message1",
+      "webhookId": "9ca225ce-8d6b-43b6-b35d-7ec55ec57a14",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "mKh6b4I1hwDsBwOd",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "gisela@casagencia.com",
+        "subject": "=NUEVA LLAMADA ENTRANTE RECIBIDA - Teléfono: {{ $('Webhook').item.json.body.call.from_number }}",
+        "message": "=Hola! Aquí un nuevo resumen de una llamada de un lead!<br><br>\n- Teléfono: {{ $('Webhook').item.json.body.call.from_number }}<br><br>\n- Resumen de la llamada:<br>{{ $('Webhook').item.json.body.call.call_analysis?.call_summary || '' }}<br><br>\n\nAcceso a llamada:<br>{{ $('Upload file').item.json.webViewLink }}<br><br>\nUn saludo!",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        -384,
+        1008
+      ],
+      "id": "e91dba00-f21a-4dab-a3bc-26732e0d0e30",
+      "name": "Send a message3",
+      "webhookId": "9ca225ce-8d6b-43b6-b35d-7ec55ec57a14",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "mKh6b4I1hwDsBwOd",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "laurence@casagencia.com",
+        "subject": "=NUEVA LLAMADA ENTRANTE RECIBIDA - Teléfono: {{ $('Webhook').item.json.body.call.from_number }}",
+        "message": "=Hola! Aquí un nuevo resumen de una llamada de un lead!<br><br>\n- Teléfono: {{ $('Webhook').item.json.body.call.from_number }}<br><br>\n- Resumen de la llamada:<br>{{ $('Webhook').item.json.body.call.call_analysis?.call_summary || '' }}<br><br>\n\nAcceso a llamada:<br>{{ $('Upload file').item.json.webViewLink }}<br><br>\nUn saludo!",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        -368,
+        1168
+      ],
+      "id": "355bfdd9-0a0c-403b-818e-b92e8b5f798f",
+      "name": "Send a message4",
+      "webhookId": "9ca225ce-8d6b-43b6-b35d-7ec55ec57a14",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "mKh6b4I1hwDsBwOd",
+          "name": "Gmail account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Llamada Finalizada",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Llamada Finalizada": {
+      "main": [
+        [
+          {
+            "node": "Outbound / Inbound",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Outbound / Inbound": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload file": {
+      "main": [
+        [
+          {
+            "node": "Share file",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Share file": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request1": {
+      "main": [
+        [
+          {
+            "node": "Upload file",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a message": {
+      "main": [
+        [
+          {
+            "node": "Switch1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch1": {
+      "main": [
+        [
+          {
+            "node": "Send a message1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send a message3",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send a message4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}
