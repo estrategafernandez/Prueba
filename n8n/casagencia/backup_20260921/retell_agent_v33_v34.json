@@ -1,0 +1,158 @@
+[
+  {
+    "agent_id": "agent_56db2b3a1d32800c9734bb59f9",
+    "channel": "voice",
+    "last_modification_timestamp": 1789032115626,
+    "agent_name": "Agente Casagencia VOZ BUENA",
+    "response_engine": {
+      "llm_id": "llm_1a81c0ae161db34f33a2ae20375d",
+      "type": "retell-llm",
+      "version": 34
+    },
+    "webhook_url": "https://n8n-casagencia.serversvisionarius.com/webhook/finalizarllamada",
+    "language": "es-ES",
+    "data_storage_setting": "everything",
+    "opt_in_signed_url": false,
+    "end_call_after_silence_ms": 49000,
+    "version": 34,
+    "base_version": 33,
+    "assigned_tags": [],
+    "is_published": false,
+    "post_call_analysis_model": "gpt-4.1",
+    "pii_config": {
+      "mode": "post_call",
+      "categories": []
+    },
+    "handbook_config": {
+      "default_personality": true,
+      "ai_disclosure": true
+    },
+    "post_call_analysis_data": [
+      {
+        "name": "call_summary",
+        "description": "Redacta en español de España un resumen de 1 a 3 frases de la llamada, basándote en la transcripción. Debe recoger la información importante y las acciones realizadas durante la llamada. Escribe siempre en español, independientemente del idioma de la conversación.",
+        "type": "system-presets",
+        "required": true
+      },
+      {
+        "type": "string",
+        "name": "asesora",
+        "description": "Indica qué asesora corresponde a esta llamada: \"Carmen\" si se habló de Benicasim, Oropesa, Torreblanca, Onda, Borriol o Vilafamés; \"Gisela\" si se habló de Castellón, Vila-real, Burriana, Almazora o Alquerías del Niño Perdido; \"Laurence\" en cualquier otro caso. Responde solo el nombre."
+      }
+    ],
+    "voice_id": "custom_voice_a3be227ff910447f017c214298",
+    "voice_model": "eleven_v3",
+    "voice_temperature": 0.64,
+    "voice_speed": 1.06,
+    "volume": 1.22,
+    "enable_expressive_mode": true,
+    "expressive_emotion_tags": [
+      "empathetic",
+      "excited",
+      "sigh",
+      "clear throat",
+      "emphasis"
+    ],
+    "reminder_trigger_ms": 5000,
+    "reminder_max_count": 2,
+    "max_call_duration_ms": 1206000,
+    "interruption_sensitivity": 0.7,
+    "ambient_sound": "call-center",
+    "ambient_sound_volume": 0.3,
+    "responsiveness": 0.85,
+    "enable_dynamic_responsiveness": false,
+    "begin_message_delay_ms": 3000,
+    "ring_duration_ms": 20000,
+    "voicemail_option": {
+      "action": {
+        "type": "hangup"
+      }
+    },
+    "allow_user_dtmf": false,
+    "allow_dtmf_interruption": false,
+    "user_dtmf_options": {},
+    "webhook_events": [
+      "call_ended",
+      "call_analyzed"
+    ]
+  },
+  {
+    "agent_id": "agent_56db2b3a1d32800c9734bb59f9",
+    "channel": "voice",
+    "last_modification_timestamp": 1789028088989,
+    "agent_name": "Agente Casagencia VOZ BUENA",
+    "version_description": "",
+    "response_engine": {
+      "type": "retell-llm",
+      "llm_id": "llm_1a81c0ae161db34f33a2ae20375d",
+      "version": 33
+    },
+    "webhook_url": "https://n8n-casagencia.serversvisionarius.com/webhook/finalizarllamada",
+    "language": "es-ES",
+    "data_storage_setting": "everything",
+    "opt_in_signed_url": false,
+    "end_call_after_silence_ms": 49000,
+    "version": 33,
+    "base_version": 32,
+    "assigned_tags": [],
+    "is_published": true,
+    "version_title": "",
+    "post_call_analysis_model": "gpt-4.1",
+    "pii_config": {
+      "mode": "post_call",
+      "categories": []
+    },
+    "handbook_config": {
+      "default_personality": true,
+      "ai_disclosure": true
+    },
+    "post_call_analysis_data": [
+      {
+        "name": "call_summary",
+        "description": "Redacta en español de España un resumen de 1 a 3 frases de la llamada, basándote en la transcripción. Debe recoger la información importante y las acciones realizadas durante la llamada. Escribe siempre en español, independientemente del idioma de la conversación.",
+        "type": "system-presets",
+        "required": true
+      },
+      {
+        "name": "asesora",
+        "description": "Indica qué asesora corresponde a esta llamada: \"Carmen\" si se habló de Benicasim, Oropesa, Torreblanca, Onda, Borriol o Vilafamés; \"Gisela\" si se habló de Castellón, Vila-real, Burriana, Almazora o Alquerías del Niño Perdido; \"Laurence\" en cualquier otro caso. Responde solo el nombre.",
+        "type": "string"
+      }
+    ],
+    "voice_id": "custom_voice_a3be227ff910447f017c214298",
+    "voice_model": "eleven_v3",
+    "voice_temperature": 0.64,
+    "voice_speed": 1.06,
+    "volume": 1.22,
+    "enable_expressive_mode": true,
+    "expressive_emotion_tags": [
+      "empathetic",
+      "excited",
+      "sigh",
+      "clear throat",
+      "emphasis"
+    ],
+    "reminder_trigger_ms": 5000,
+    "reminder_max_count": 2,
+    "max_call_duration_ms": 1206000,
+    "interruption_sensitivity": 0.7,
+    "ambient_sound": "call-center",
+    "ambient_sound_volume": 0.3,
+    "responsiveness": 0.85,
+    "enable_dynamic_responsiveness": false,
+    "begin_message_delay_ms": 3000,
+    "ring_duration_ms": 20000,
+    "voicemail_option": {
+      "action": {
+        "type": "hangup"
+      }
+    },
+    "allow_user_dtmf": false,
+    "allow_dtmf_interruption": false,
+    "user_dtmf_options": {},
+    "webhook_events": [
+      "call_ended",
+      "call_analyzed"
+    ]
+  }
+]
