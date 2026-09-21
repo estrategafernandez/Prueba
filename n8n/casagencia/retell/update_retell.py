@@ -88,15 +88,25 @@ def construir_tools(actuales):
                 "visita ha quedado registrada si 'cita_confirmada' es true.")
 
     out.append(por_nombre["registrarMensaje"])
-    out.append(por_nombre["buscarInmuebles"])
+
+    bi = json.loads(json.dumps(por_nombre["buscarInmuebles"]))
+    bi["description"] = (
+        "Busca en el CRM inmuebles reales disponibles por municipio y caracteristicas. Es una busqueda "
+        "APROXIMADA: usala solo cuando ya le hayas preguntado UNA vez por la referencia del anuncio y no la "
+        "tenga, y cuando ya conozcas la operacion, un municipio valido y el numero minimo de habitaciones. "
+        "Si al cliente le da igual el numero de habitaciones, envia 0. No usar cuando el cliente "
+        "proporciona una referencia: en ese caso usa buscarPorReferencia. Si el cliente ha dado una calle o "
+        "una direccion, usa antes buscarPorDireccion. No envies otros filtros.")
+    out.append(bi)
 
     # --- NUEVA: busqueda por direccion --------------------------------------
     out.append(tool_http(
         "buscarPorDireccion", "buscarpordireccion",
-        "Busca un inmueble a partir de la direccion o la calle que dice el cliente. Usala SIEMPRE que el "
-        "cliente identifique el inmueble por una calle, plaza, avenida o direccion, antes de preguntarle "
-        "nada mas. Devuelve 'encontrado', 'fiabilidad' y 'mensaje_para_sara'. Si 'encontrado' es false, NO "
-        "le leas al cliente un listado de inmuebles: pidele la referencia del anuncio.",
+        "Busca un inmueble a partir de la direccion o la calle que dice el cliente. Usala cuando el cliente "
+        "identifique el inmueble por una calle, plaza, avenida o direccion Y ya le hayas preguntado UNA vez "
+        "por la referencia del anuncio sin que la tenga. La referencia es exacta y la direccion es "
+        "aproximada, asi que la referencia siempre va primero. Devuelve 'encontrado', 'fiabilidad' y "
+        "'mensaje_para_sara'. Si 'encontrado' es false, NO le leas al cliente un listado de inmuebles.",
         {"direccion": {"type": "string", "minLength": 2, "maxLength": 200,
                        "description": "La direccion tal y como la ha dicho el cliente, con el numero si lo ha dado. Ejemplo: calle del Mestre Falla 39."},
          "municipio": {"type": "string", "maxLength": 80,

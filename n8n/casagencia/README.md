@@ -39,6 +39,7 @@ respuesta vacía**, así que Sara confirmaba citas sin saber si se habían cread
 | 9 | Borrados los nodos sobrantes de otro cliente (Club Pilates) | `FinalizarLlamadaRetell` |
 | 10 | Teléfonos normalizados a E.164 | `normalizarTelefono()` |
 | 11 | Consultar una cita ya concertada por teléfono | `BuscarCitaPorTelefono` (nuevo) |
+| 13 | La referencia se pide siempre antes de una búsqueda aproximada | `retell/general_prompt.md` |
 | 12 | Tiempos de escucha: Sara ya no se pisa con el cliente ni insiste a los 5 segundos | agente de Retell |
 
 Extras que aparecieron por el camino:
@@ -53,6 +54,22 @@ Extras que aparecieron por el camino:
   se nombran con la hora española y el teléfono del llamante.
 - Arreglada la condición rota de `Switch1` en `FinalizarLlamadaRetell`
   (le faltaba el `||`, así que la rama de Laurence no enrutaba).
+
+## Orden de búsqueda
+
+La referencia es la única forma exacta de localizar un inmueble; la dirección,
+la zona y las características son aproximadas y pueden acabar enseñándole al
+cliente un piso que no es el suyo. Por eso Sara pregunta **una sola vez**:
+
+> "¿Tiene a mano la referencia del anuncio? Si la tiene, voy directa a ese inmueble."
+
+- La tiene → `buscarPorReferencia`, y no se le pregunta nada más.
+- No la tiene → se da por hecho que no hay referencia **el resto de la llamada**
+  y se pasa a `buscarPorDireccion` (si ha dado una calle) o a `buscarInmuebles`
+  (municipio y características).
+
+La pregunta se hace **una vez por llamada**. Insistir después de un "no" es lo
+que generó la queja original de la agencia.
 
 ## Estructura
 

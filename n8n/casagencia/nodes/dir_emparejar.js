@@ -83,7 +83,7 @@ candidatos = candidatos.filter(c => c.casan.length > 0 && c.total >= MIN)
 if (candidatos.length > 8 && candidatos[0].total <= MIN) {
   return [{ json: { respuesta: {
     encontrado: false, motivo: 'demasiado_generico',
-    mensaje_para_sara: 'Con esa direccion me encajan demasiados inmuebles. Pidele al cliente la calle exacta con el numero, o la referencia del anuncio. NO le leas un listado.'
+    mensaje_para_sara: 'Con esa direccion me encajan demasiados inmuebles. Pidele la calle exacta con el numero. Si todavia no le has preguntado por la referencia del anuncio, pidesela tambien; si ya te ha dicho que no la tiene, no insistas. NO le leas un listado.'
   } } }];
 }
 
@@ -92,7 +92,7 @@ candidatos = candidatos.slice(0, 3);
 if (!candidatos.length) {
   return [{ json: { respuesta: {
     encontrado: false, motivo: 'sin_coincidencias',
-    mensaje_para_sara: 'No localizo ningun inmueble por esa direccion. Dile al cliente que no la encuentras por la calle y preguntale si tiene la referencia del anuncio. Si no la tiene, ofrecele buscar por municipio o registrar un mensaje para la asesora. NO le leas un listado de inmuebles que no ha pedido.'
+    mensaje_para_sara: 'No localizo ningun inmueble por esa direccion. Dile al cliente que por la calle no te aparece. Si todavia no le has preguntado por la referencia del anuncio, pidesela ahora; si ya te ha dicho que no la tiene, NO se la vuelvas a pedir: ofrecele buscar por municipio y caracteristicas, o registrar un mensaje para que la asesora localice el inmueble y le llame. NO le leas un listado de inmuebles que no ha pedido.'
   } } }];
 }
 
