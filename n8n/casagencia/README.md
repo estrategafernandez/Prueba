@@ -40,6 +40,9 @@ respuesta vacía**, así que Sara confirmaba citas sin saber si se habían cread
 | 10 | Teléfonos normalizados a E.164 | `normalizarTelefono()` |
 | 11 | Consultar una cita ya concertada por teléfono | `BuscarCitaPorTelefono` (nuevo) |
 | 13 | La referencia se pide siempre antes de una búsqueda aproximada | `retell/general_prompt.md` |
+| 14 | `buscarInmuebles` devolvía una respuesta VACÍA cuando no había resultados | `buscarInmuebles` |
+| 15 | `XMLCacheo` vaciaba la hoja antes de descargar el feed | `XMLCacheo` |
+| 16 | Direcciones reales de los 93 inmuebles, sacadas de eGO | pestaña *Direcciones* |
 | 12 | Tiempos de escucha: Sara ya no se pisa con el cliente ni insiste a los 5 segundos | agente de Retell |
 
 Extras que aparecieron por el camino:
@@ -54,6 +57,33 @@ Extras que aparecieron por el camino:
   se nombran con la hora española y el teléfono del llamante.
 - Arreglada la condición rota de `Switch1` en `FinalizarLlamadaRetell`
   (le faltaba el `||`, así que la rama de Laurence no enrutaba).
+- `singleEvents: true` también evita reservar encima de eventos periódicos que
+  antes eran invisibles para el sistema.
+- Las coordenadas de la hoja están corruptas (Google Sheets se come el punto
+  decimal: `39.977276046` se guarda como `39977276046`). Hoy no las usa nadie,
+  así que se deja documentado en vez de arriesgar el formato de `precio`.
+
+## De dónde salen las direcciones
+
+Ni el feed XML de Janela ni la web pública de casagencia.com publican la calle:
+solo municipio, zona, código postal y coordenadas. **Pero el CRM de eGO sí la
+tiene, y para los 93 inmuebles de la cartera.**
+
+Están volcadas en la pestaña **Direcciones** de la hoja *Inmuebles*
+(`ref`, `direccion`, `numero`, `cp`, `origen`, …), que `XMLCacheo` nunca toca.
+`BuscarPorDireccion` la lee y le da el peso más alto.
+
+Para refrescarlas cuando entre cartera nueva:
+
+```bash
+python3 ego_direcciones.py     # lee eGO y reescribe la pestaña Direcciones
+```
+
+El script entra en eGO con las credenciales del CRM (variables de entorno
+`EGO_USER` y `EGO_PASS`), pagina el listado para sacar el mapa
+referencia -> id y lee de cada ficha `location[address]`,
+`realestate[details][building_number]` y `location[zipcode]`. **Solo hace GET:
+no modifica nada en eGO.**
 
 ## Orden de búsqueda
 
@@ -82,6 +112,9 @@ retell/general_prompt.md  el prompt de Sara
 retell/update_retell.py   despliega prompt, herramientas y ajustes del agente
 tests_logica.js           30 tests de horarios, festivos, teléfonos y routing
 tests_busquedas.js        tests de búsqueda por dirección y de cita por teléfono
+tests_direccion_produccion.py   consulta las direcciones reales contra producción
+tests_busquedas_produccion.py   referencia, municipio, negativos y consultas vagas
+ego_direcciones.py        relee las direcciones desde eGO y reescribe la pestaña
 backup_20260921/          el estado anterior, por si hay que revertir
 ```
 
@@ -104,15 +137,37 @@ El número de teléfono de Retell usa `latest_published`, así que un cambio en 
 agente **no entra en producción hasta que se publica**. `update_retell.py` lo
 publica al final.
 
+## Cómo va la búsqueda ahora
+
+Medido contra producción con las 93 direcciones reales de eGO:
+
+| | |
+|---|---|
+| Acierto en primera posición | **85 / 93 (91 %)** |
+| El inmueble está entre las 3 opciones | **92 / 93 (98 %)** |
+| Devuelve fiabilidad alta (Sara puede confirmarlo directamente) | 62 / 93 |
+| No lo encuentra | 1 / 93 |
+
+Los 7 casos en los que el correcto no sale el primero son **ambigüedad real**:
+hay dos inmuebles en la misma calle (Rey Don Jaime, Cardona Vives, Estatut,
+Sequiota, Ferrandis Salvador, les Useres, Pedrapiquers). Ahí lo correcto es
+justo lo que hace: enseñar los dos y preguntar cuál es.
+
+Las calles que no existen en la cartera devuelven `sin_coincidencias`, y las
+consultas vagas ("el centro", "calle") devuelven `demasiado_generico`: en
+ningún caso se le lee al cliente un listado que no ha pedido.
+
+> Ojo al medir: la hoja de cálculo tiene límite de lecturas por minuto. Lanzar
+> las 93 consultas seguidas y sin pausa provoca errores que **no** son fallos de
+> la búsqueda. Los scripts de prueba dejan 1,5 s entre consultas.
+
 ## Pendiente
 
 - **Festivos locales.** `FESTIVOS.TODOS` trae los de fecha fija (nacionales y
   9 d'Octubre). Las fiestas locales de Benicàssim, Oropesa, Castellón y
   Vila-real están vacías: hay que rellenarlas en `lib/casagencia_comun.js`.
-- **Columna `direccion`.** El feed XML de Janela no trae la calle, solo
-  municipio, zona, CP y coordenadas. `BuscarPorDireccion` puntúa contra la
-  descripción y la zona, que cubre parte de la cartera. Si se añade una columna
-  `direccion` a la hoja *Inmuebles*, el código la usa automáticamente y con el
-  peso más alto, sin tocar nada.
+- **Direcciones de la cartera nueva.** Las 93 actuales están cargadas desde
+  eGO. Cuando entren inmuebles nuevos hay que volver a lanzar
+  `ego_direcciones.py`, o apuntar la dirección a mano en la pestaña.
 - **Permisos de las grabaciones.** `Share file` sigue publicando cada audio con
   `role: writer, type: anyone`: cualquiera con el enlace puede editarlas.

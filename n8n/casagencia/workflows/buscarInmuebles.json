@@ -1,0 +1,208 @@
+{
+  "name": "buscarInmuebles",
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Europe/Madrid"
+  },
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "buscarinmuebles",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -16,
+        80
+      ],
+      "id": "9ba05a0f-2d7c-4708-a546-0d15512f25be",
+      "name": "Webhook",
+      "webhookId": "1dd0759e-44f9-4385-8199-bf3d9ecfa1bb"
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ $json.result }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        976,
+        64
+      ],
+      "id": "0fa1fc2c-f3d1-4c84-9fc4-52c4292282c1",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1cB2UI-ScDI34QS57k-UD2ZE79P5XhpyPJu78A5zPs3Q",
+          "mode": "list",
+          "cachedResultName": "Inmuebles",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1cB2UI-ScDI34QS57k-UD2ZE79P5XhpyPJu78A5zPs3Q/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Hoja 1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1cB2UI-ScDI34QS57k-UD2ZE79P5XhpyPJu78A5zPs3Q/edit#gid=0"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        224,
+        64
+      ],
+      "id": "d1e562c9-d330-4157-86bc-da086a3379af",
+      "name": "BuscarInmuebles",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "TPExRnq8a9FlEXAh",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "9feb2a5b-0cfc-460b-8a5f-529d3975a7b8",
+              "leftValue": "={{ Number($json.habitaciones ?? 0) }}",
+              "rightValue": "={{ Number($('Webhook').first().json.body.habitaciones ?? 0) }}",
+              "operator": {
+                "type": "number",
+                "operation": "gte"
+              }
+            },
+            {
+              "id": "d17146bc-fcca-42a5-8953-26c530d00588",
+              "leftValue": "={{\n  String($json.municipio ?? '')\n    .normalize('NFD')\n    .replace(/[\\u0300-\\u036f]/g, '')\n    .toLowerCase()\n}}",
+              "rightValue": "={{\n  String($('Webhook').first().json.body.municipio ?? '')\n    .normalize('NFD')\n    .replace(/[\\u0300-\\u036f]/g, '')\n    .toLowerCase()\n}}",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            },
+            {
+              "id": "8e44feb2-ba70-4870-8557-1d51cc1b95b2",
+              "leftValue": "={{ $json.precio }}",
+              "rightValue": "={{ $('Webhook').first().json.body.precio_min }}",
+              "operator": {
+                "type": "number",
+                "operation": "gte"
+              }
+            },
+            {
+              "id": "0440ba0a-2618-4010-a852-04a8a33a4722",
+              "leftValue": "={{ String($json.tipo_transaccion ?? '').toLowerCase() }}",
+              "rightValue": "={{ String($('Webhook').first().json.body.operacion ?? '').toLowerCase() }}",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.3,
+      "position": [
+        432,
+        64
+      ],
+      "id": "1b3ba1dc-08ca-4b2f-a67c-cfaa93769d17",
+      "name": "FiltrarHabitacionesMunicipio",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        -80
+      ],
+      "id": "410b3458-4a7b-47b0-ad07-8b375ab2a00d",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "jsCode": "// alwaysOutputData en el Filter hace que n8n mande un item vacio cuando no\n// hay resultados. Sin ese item, este nodo y el Respond no llegaban a\n// ejecutarse y Retell recibia una respuesta vacia.\nconst items = $input.all().filter(i => i.json && i.json.ref);\n\nif (items.length === 0) {\n  return [{ json: { result: \"No he encontrado inmuebles con esos criterios de búsqueda.\" } }];\n}\n\n// Ordena por precio ascendente. Los que no tienen precio van al final.\nconst ordenados = [...items].sort((a, b) => {\n  const pa = Number(a.json.precio) || Infinity;\n  const pb = Number(b.json.precio) || Infinity;\n  return pa - pb;\n});\n\n// devuelve solo los 5 primeros inmuebles (los mas baratos)\nconst limitados = ordenados.slice(0, 5);\n\nconst lista = limitados.map((item, i) => {\n  const d = item.json;\n  const precio = d.precio ? `${Number(d.precio).toLocaleString('es-ES')}€` : 'precio a consultar';\n  const hab = d.habitaciones ? `${d.habitaciones} habitaciones` : '';\n  const ban = d.banos ? `${d.banos} baños` : '';\n  const sup = d.superficie && d.superficie > 0 ? `${d.superficie}m²` : '';\n  const zona = d.zona ? ` en ${d.zona}` : '';\n  const detalles = [hab, ban, sup].filter(Boolean).join(', ');\n  const caract = d.caracteristicas ? `Características: ${d.caracteristicas}.` : '';\n  const desc = d.descripcion \n    ? `Descripción: ${d.descripcion.replace(/\\\\r\\\\n|\\\\r|\\\\n|\\r\\n|\\r|\\n/g, ' ').trim()}.` \n    : '';\n  return `Opción ${i+1}: ${d.tipo_inmueble}${zona}, referencia ${d.ref}, ${detalles}, ${precio}. ${caract} ${desc}`;\n}).join(' | ');\n\nconst total = items.length > 5 ? ` He encontrado ${items.length} en total, ordenados de menor a mayor precio, y te muestro los 5 más económicos.` : '';\n\nreturn [{ json: { result: `He encontrado ${items.length} inmueble${items.length !== 1 ? 's' : ''}.${total} ${lista}` } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        720,
+        64
+      ],
+      "id": "98cf10de-cf2a-4acb-bc8e-658cb1627d4c",
+      "name": "FormatearSalidaParaAgenteTelefónico"
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "BuscarInmuebles",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "BuscarInmuebles": {
+      "main": [
+        [
+          {
+            "node": "FiltrarHabitacionesMunicipio",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "FiltrarHabitacionesMunicipio": {
+      "main": [
+        [
+          {
+            "node": "FormatearSalidaParaAgenteTelefónico",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "FormatearSalidaParaAgenteTelefónico": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

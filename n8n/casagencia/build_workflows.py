@@ -212,18 +212,25 @@ def wf_direccion():
                 "documentId": {"__rl": True, "value": SHEET_ID, "mode": "id"},
                 "sheetName": {"__rl": True, "value": "gid=0", "mode": "id"},
                 "options": {}}, [200, 0], 4.7, credentials=CRED_SHEETS, alwaysOutputData=True),
-            code_node("EmparejarDireccion", "dir_emparejar.js", [440, 0]),
-            respond("Respond to Webhook", [680, 0]),
+            node("LeerDirecciones", "n8n-nodes-base.googleSheets", {
+                "documentId": {"__rl": True, "value": SHEET_ID, "mode": "id"},
+                "sheetName": {"__rl": True, "value": "Direcciones", "mode": "name"},
+                "options": {}}, [420, 0], 4.7, credentials=CRED_SHEETS,
+                alwaysOutputData=True, executeOnce=True, onError="continueRegularOutput"),
+            code_node("EmparejarDireccion", "dir_emparejar.js", [640, 0]),
+            respond("Respond to Webhook", [860, 0]),
             node("Nota", "n8n-nodes-base.stickyNote", {"content":
-                 "## Busqueda por calle\nEl feed XML no trae la direccion: se puntua contra zona, descripcion y "
-                 "municipio.\n\nSi se anade una columna 'direccion' a la hoja Inmuebles, se usa automaticamente "
-                 "y con el peso mas alto, sin tocar el codigo.\n\nSi no hay coincidencia clara devuelve "
-                 "'no encontrado' a proposito, para que Sara no suelte un listado generico.",
-                 "height": 240, "width": 430}, [200, -280], 1),
+                 "## Busqueda por calle\nNi el feed XML ni la web de Casagencia publican la calle.\n\n"
+                 "Fuentes, de mas a menos peso:\n1. Pestana *Direcciones* de la hoja (a mano, la rellena "
+                 "la agencia; XMLCacheo no la toca).\n2. Zona del CRM.\n3. Vias mencionadas en la "
+                 "descripcion.\n\nSi no hay coincidencia clara devuelve 'no encontrado' a proposito, "
+                 "para que Sara no suelte un listado generico.",
+                 "height": 280, "width": 430}, [200, -320], 1),
         ],
         "connections": conn(
             ("Webhook", 0, "LeerInmuebles", 0),
-            ("LeerInmuebles", 0, "EmparejarDireccion", 0),
+            ("LeerInmuebles", 0, "LeerDirecciones", 0),
+            ("LeerDirecciones", 0, "EmparejarDireccion", 0),
             ("EmparejarDireccion", 0, "Respond to Webhook", 0)),
     }
 
@@ -290,6 +297,81 @@ def wf_finalizar(orig):
 
 
 # =========================================================================
+# 6) buscarInmuebles -> arreglar la respuesta vacia cuando no hay resultados
+# =========================================================================
+def wf_buscar_inmuebles(orig):
+    """El nodo Filter no sacaba items cuando no habia resultados, asi que n8n no
+    ejecutaba ni el Code ni el Respond y Retell recibia una respuesta VACIA."""
+    nodes = json.loads(json.dumps(orig["nodes"]))
+    for n in nodes:
+        if n["name"] == "FiltrarHabitacionesMunicipio":
+            n["alwaysOutputData"] = True
+        if n["name"] == "FormatearSalidaParaAgenteTelefónico":
+            js = n["parameters"]["jsCode"]
+            viejo = "const items = $input.all();"
+            assert viejo in js, "no encuentro la linea de entrada en buscarInmuebles"
+            js = js.replace(viejo,
+                "// alwaysOutputData en el Filter hace que n8n mande un item vacio cuando no\n"
+                "// hay resultados. Sin ese item, este nodo y el Respond no llegaban a\n"
+                "// ejecutarse y Retell recibia una respuesta vacia.\n"
+                "const items = $input.all().filter(i => i.json && i.json.ref);", 1)
+            n["parameters"]["jsCode"] = js
+    s = {k: v for k, v in (orig.get("settings") or {}).items() if k in SETTINGS_OK}
+    s["timezone"] = "Europe/Madrid"
+    return {"name": orig["name"], "settings": s, "nodes": nodes,
+            "connections": orig["connections"]}
+
+
+# =========================================================================
+# 7) XMLCacheo -> no vaciar la hoja antes de tener el feed en la mano
+# =========================================================================
+def wf_xmlcacheo(orig):
+    """Vaciaba la hoja ANTES de descargar el feed, asi que durante los ~8s que
+    dura el refresco las tres busquedas devolvian 'no encontrado'; y si el feed
+    fallaba, la cartera se quedaba vacia hasta la hora siguiente.
+
+    Ahora: descargar -> comprobar -> vaciar -> escribir."""
+    nodes = json.loads(json.dumps(orig["nodes"]))
+    for n in nodes:
+        # el Code ya no cuelga del XML directamente: lee el nodo por su nombre
+        if n["name"] == "FiltraMapeoVariables":
+            js = n["parameters"]["jsCode"]
+            viejo = "const properties = $input.first().json.root.property;"
+            assert viejo in js, "no encuentro la entrada de FiltraMapeoVariables"
+            n["parameters"]["jsCode"] = js.replace(
+                viejo, "const properties = $('XML5').first().json.root.property;", 1)
+
+    nodes.append(node("ComprobarFeed", "n8n-nodes-base.code", {"jsCode": (
+        "// Guardafuegos: si el feed viene vacio o a medias, se aborta ANTES de\n"
+        "// vaciar la hoja, para no dejar a Sara sin cartera que ofrecer.\n"
+        "const props = $('XML5').first().json?.root?.property;\n"
+        "const lista = Array.isArray(props) ? props : (props ? [props] : []);\n"
+        "if (lista.length < 5) {\n"
+        "  throw new Error(`El feed ha devuelto ${lista.length} inmuebles. No se vacia la hoja.`);\n"
+        "}\n"
+        "return [{ json: { total: lista.length } }];"
+    )}, [400, 200], 2))
+
+    nodes.append(node("NotaCacheo", "n8n-nodes-base.stickyNote", {"content":
+        "## Orden importante\nDescargar -> comprobar -> vaciar -> escribir.\n\n"
+        "Si se vacia la hoja antes de tener el feed, durante el refresco (y una hora "
+        "entera si el feed falla) las busquedas de inmuebles no devuelven nada.",
+        "height": 190, "width": 420}, [400, 380], 1))
+
+    conns = conn(
+        ("Schedule Trigger", 0, "RecogerInmuebles", 0),
+        ("RecogerInmuebles", 0, "XML5", 0),
+        ("XML5", 0, "ComprobarFeed", 0),
+        ("ComprobarFeed", 0, "Clear sheet", 0),
+        ("Clear sheet", 0, "FiltraMapeoVariables", 0),
+        ("FiltraMapeoVariables", 0, "EscribirInmuebles", 0))
+
+    s = {k: v for k, v in (orig.get("settings") or {}).items() if k in SETTINGS_OK}
+    s["timezone"] = "Europe/Madrid"
+    return {"name": orig["name"], "settings": s, "nodes": nodes, "connections": conns}
+
+
+# =========================================================================
 def api(method, path, payload=None):
     key = os.environ["N8N_API_KEY"]
     req = urllib.request.Request(
@@ -311,6 +393,8 @@ def main():
         "FinalizarLlamadaRetell":         ("lZB8brQbbybkDllL", wf_finalizar(load("wf_lZB8brQbbybkDllL.json"))),
         "BuscarPorDireccion":             ("ucw4dMYsUYEeEFVZ", wf_direccion()),
         "BuscarCitaPorTelefono":          ("G5tNbLJgATbL7Bsc", wf_cita_telefono()),
+        "buscarInmuebles":                ("3hevfnxUkmxhl8qH", wf_buscar_inmuebles(load("wf_3hevfnxUkmxhl8qH.json"))),
+        "XMLCacheo":                      ("MNuaSmtxlFmA3eTe", wf_xmlcacheo(load("wf_MNuaSmtxlFmA3eTe.json"))),
     }
 
     (BASE / "workflows").mkdir(exist_ok=True)
