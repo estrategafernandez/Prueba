@@ -15,6 +15,9 @@ if (!d.asesora_conocida) {
   return rechazo('referencia_desconocida',
     'No he podido registrar la cita porque no identifico la asesora de esa referencia. Explicaselo al cliente y registra un mensaje para que le llamen.');
 }
+if (esPeticionAlquiler(d.referencia, d.tipo_transaccion)) {
+  return rechazo('alquiler_sin_agenda', MSG_ALQUILER_SIN_AGENDA);
+}
 if (!d.fecha_ok || !d.hora_ok) {
   return rechazo('formato',
     'No he podido registrar la cita porque no me cuadra la fecha o la hora. Pidele al cliente que la repita.');

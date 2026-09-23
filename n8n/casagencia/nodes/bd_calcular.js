@@ -12,6 +12,12 @@ if (!d.asesora_conocida) {
     mensaje_para_sara: 'No consigo identificar a que asesora corresponde esa referencia. Confirma la referencia con el cliente; si sigue sin cuadrar, registra un mensaje para que le llamen.'
   });
 }
+if (esPeticionAlquiler(d.referencia, d.tipo_transaccion)) {
+  return salida({
+    disponible: false, motivo: 'alquiler_sin_agenda', asesora: d.asesora,
+    mensaje_para_sara: MSG_ALQUILER_SIN_AGENDA
+  });
+}
 if (!d.fecha_ok || !d.hora_ok) {
   return salida({
     disponible: false, motivo: 'formato',

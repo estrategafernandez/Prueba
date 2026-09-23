@@ -78,16 +78,45 @@ def construir_tools(actuales):
                 "referencia, el tipo de transaccion y una fecha y hora concretas. Solo consulta: no crea la "
                 "cita. Devuelve 'disponible' (true/false), 'alternativas' con las horas libres reales y "
                 "'mensaje_para_sara' con lo que tienes que hacer. Si 'disponible' es false, ofrece unicamente "
-                "las horas de 'alternativas'.")
+                "las horas de 'alternativas'. NO la uses para inmuebles en ALQUILER o traspaso: en alquiler "
+                "no se agenda visita, se cualifica al cliente y llama la asesora (flujo 8-TER).")
         if t.get("name") == "confirmarCitaCalendario":
             t["description"] = (
                 "Crea la cita de visita en el Google Calendar de la asesora. Usala solo despues de que "
                 "BuscarDisponibilidadCalendario haya dicho que hay hueco y el cliente haya aceptado esa fecha "
                 "y hora. Vuelve a validar horario, festivo y ocupacion antes de guardar. Devuelve "
                 "'cita_confirmada' (true/false) y 'mensaje_para_sara'. Solo puedes decirle al cliente que la "
-                "visita ha quedado registrada si 'cita_confirmada' es true.")
+                "visita ha quedado registrada si 'cita_confirmada' es true. NO la uses para inmuebles en "
+                "ALQUILER o traspaso: esas visitas las agenda la asesora (flujo 8-TER).")
 
-    out.append(por_nombre["registrarMensaje"])
+    # registrarMensaje: se anade la cualificacion de los leads de alquiler
+    rm = json.loads(json.dumps(por_nombre["registrarMensaje"]))
+    props = rm["parameters"]["properties"]
+    props["tipo_llamada"]["enum"] = ["consulta_info", "venta_en_curso", "alquiler_en_curso",
+                                     "queja_problema", "derivacion_asesora",
+                                     "visita_pendiente_agendar", "lead_alquiler", "otro"]
+    props["tipo_llamada"]["description"] = (
+        "Clasificacion principal de la llamada. Usa 'lead_alquiler' siempre que el cliente quiera "
+        "ver un inmueble en alquiler o traspaso: en alquiler no se agenda visita, se cualifica y "
+        "llama la asesora.")
+    props["alquiler_personas"] = {"type": "string", "maxLength": 80,
+        "description": "Solo en lead_alquiler. Para cuantas personas seria la vivienda. Si no lo facilita, pon 'no facilitado'."}
+    props["alquiler_ingresos"] = {"type": "string", "maxLength": 200,
+        "description": "Solo en lead_alquiler. Si cuenta con ingresos fijos demostrables, nomina o contrato de trabajo, tal y como lo haya dicho el cliente. Si no lo facilita, pon 'no facilitado'. No valores ni juzgues la respuesta."}
+    props["alquiler_mascotas"] = {"type": "string", "maxLength": 120,
+        "description": "Solo en lead_alquiler. Si conviven con mascotas y cuales. Si no lo facilita, pon 'no facilitado'."}
+    props["alquiler_entrada"] = {"type": "string", "maxLength": 120,
+        "description": "Solo en lead_alquiler. Para que fecha necesitaria entrar a vivir. Si no lo facilita, pon 'no facilitado'."}
+    props["alquiler_duracion"] = {"type": "string", "maxLength": 120,
+        "description": "Solo en lead_alquiler. Si lo quiere para todo el ano o por temporada, y cuanto tiempo."}
+    rm["description"] = (
+        "Registra un aviso y envia una notificacion a Laurence, Carmen o Gisela. Usala siempre que "
+        "Sara diga que va a tomar nota, avisar o pedir que devuelvan la llamada, y SIEMPRE al cerrar "
+        "un lead de alquiler (tipo_llamada 'lead_alquiler') con los datos de cualificacion. Antes de "
+        "usarla, obten al menos el telefono y, si es posible, el nombre. Devuelve 'mensaje_registrado' "
+        "y 'mensaje_para_sara': solo di que el aviso se ha enviado si es true.")
+    rm["timeout_ms"] = 15000
+    out.append(rm)
 
     bi = json.loads(json.dumps(por_nombre["buscarInmuebles"]))
     bi["description"] = (

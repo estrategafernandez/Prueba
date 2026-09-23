@@ -43,6 +43,8 @@ respuesta vacía**, así que Sara confirmaba citas sin saber si se habían cread
 | 14 | `buscarInmuebles` devolvía una respuesta VACÍA cuando no había resultados | `buscarInmuebles` |
 | 15 | `XMLCacheo` vaciaba la hoja antes de descargar el feed | `XMLCacheo` |
 | 16 | Direcciones reales de los 93 inmuebles, sacadas de eGO | pestaña *Direcciones* |
+| 17 | En alquiler ya no se agenda: se cualifica al cliente y llama la asesora | ambos calendarios + prompt |
+| 18 | `registrarMensaje` mandaba 3 correos por un Switch que podía no casar con nada | `registrarMensaje` |
 | 12 | Tiempos de escucha: Sara ya no se pisa con el cliente ni insiste a los 5 segundos | agente de Retell |
 
 Extras que aparecieron por el camino:
@@ -85,6 +87,38 @@ referencia -> id y lee de cada ficha `location[address]`,
 `realestate[details][building_number]` y `location[zipcode]`. **Solo hace GET:
 no modifica nada en eGO.**
 
+## Alquiler: no se agenda
+
+Petición de Casagencia (septiembre 2026). El mercado de alquiler está muy
+tensionado y buena parte de los interesados no pasa la criba de la asesora; si
+Sara agendase todas las visitas, el calendario se llenaría de citas que luego
+hay que deshacer.
+
+En alquiler o traspaso, Sara **no consulta el calendario ni crea citas**.
+Cualifica al cliente y registra un aviso; la asesora de la zona llama y agenda
+ella la visita ya cribada.
+
+Las preguntas de cualificación (una a una, sin insistir si no quiere contestar):
+
+1. ¿Para cuántas personas sería la vivienda?
+2. ¿Cuentan con ingresos fijos demostrables, como una nómina o un contrato de trabajo?
+3. ¿Conviven con alguna mascota?
+4. ¿Para qué fecha necesitarían entrar a vivir?
+5. ¿Lo buscan para todo el año o para una temporada? (si no se sabe ya)
+
+Sara no valora las respuestas ni le dice al cliente si cumple requisitos: eso lo
+decide la asesora. En locales, oficinas y traspasos se salta las preguntas de
+personas y mascotas.
+
+El aviso llega con el asunto `LEAD ALQUILER (sin agendar)` y la cualificación en
+el cuerpo. Como con el horario, **el bloqueo está en el servidor**: aunque el
+modelo se despistara e intentara agendar, las dos herramientas de calendario
+rechazan la petición con `alquiler_sin_agenda`.
+
+Se considera alquiler si la operación lo dice **o** si la referencia acaba en
+`-A`. Basta una de las dos señales: hay un traspaso de local marcado como
+alquiler cuya referencia acaba en `-V`.
+
 ## Orden de búsqueda
 
 La referencia es la única forma exacta de localizar un inmueble; la dirección,
@@ -111,6 +145,7 @@ workflows/*.json          lo que hay desplegado ahora mismo
 retell/general_prompt.md  el prompt de Sara
 retell/update_retell.py   despliega prompt, herramientas y ajustes del agente
 tests_logica.js           30 tests de horarios, festivos, teléfonos y routing
+tests_alquiler.js         tests del bloqueo de agenda en alquiler y del aviso
 tests_busquedas.js        tests de búsqueda por dirección y de cita por teléfono
 tests_direccion_produccion.py   consulta las direcciones reales contra producción
 tests_busquedas_produccion.py   referencia, municipio, negativos y consultas vagas

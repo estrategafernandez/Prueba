@@ -372,6 +372,56 @@ def wf_xmlcacheo(orig):
 
 
 # =========================================================================
+# 8) registrarMensaje -> un solo correo, con la cualificacion de alquiler
+# =========================================================================
+def wf_registrar_mensaje(orig):
+    """Antes: Switch de 3 salidas + 3 nodos de Gmail. Si el destinatario no
+    casaba con ninguna rama, nadie respondia y Sara se quedaba esperando.
+    Ahora el destinatario se normaliza en el Code y sale un unico correo."""
+    wh = next(n for n in orig["nodes"] if n["type"] == "n8n-nodes-base.webhook")
+    return {
+        "name": "registrarMensaje",
+        "settings": SETTINGS,
+        "nodes": [
+            webhook("Webhook", "registrarmensaje", [-40, 0], wh.get("webhookId"), wh.get("id")),
+            code_node("ComponerAviso", "rm_componer.js", [200, 0]),
+            node("EnviarAviso", "n8n-nodes-base.gmail", {
+                "sendTo": "={{ $json.para }}",
+                "subject": "={{ $json.asunto }}",
+                "message": "={{ $json.cuerpo }}",
+                "options": {"appendAttribution": False},
+            }, [440, 0], 2.2, credentials=CRED_GMAIL, onError="continueErrorOutput"),
+            node("RespuestaOK", "n8n-nodes-base.set", {"assignments": {"assignments": [
+                {"id": "ok", "name": "respuesta", "type": "object",
+                 "value": "={{ $('ComponerAviso').item.json.respuesta }}"}]}, "options": {}},
+                 [680, -80], 3.4),
+            respond("RespondOK", [900, -80]),
+            node("RespuestaError", "n8n-nodes-base.set", {"assignments": {"assignments": [
+                {"id": "err", "name": "respuesta", "type": "object",
+                 "value": "={{ { mensaje_registrado: false, motivo: 'error_envio', "
+                          "mensaje_para_sara: 'No he podido enviar el aviso por un problema tecnico. "
+                          "NO le digas al cliente que se ha enviado: explicale que ha habido una "
+                          "incidencia y recomiendale llamar a la oficina.' } }}"}]}, "options": {}},
+                 [680, 120], 3.4),
+            respond("RespondError", [900, 120]),
+            node("Nota", "n8n-nodes-base.stickyNote", {"content":
+                 "## Avisos a las asesoras\nUn solo correo, con el destinatario normalizado "
+                 "(si no cuadra, va a Laurence).\n\nLos leads de ALQUILER llegan marcados en el "
+                 "asunto y con la cualificacion del cliente: personas, ingresos, mascotas, fecha "
+                 "de entrada y duracion.",
+                 "height": 210, "width": 430}, [200, -240], 1),
+        ],
+        "connections": conn(
+            ("Webhook", 0, "ComponerAviso", 0),
+            ("ComponerAviso", 0, "RespuestaOK" if SIN_EMAIL else "EnviarAviso", 0),
+            *([] if SIN_EMAIL else [("EnviarAviso", 0, "RespuestaOK", 0),
+                                    ("EnviarAviso", 1, "RespuestaError", 0)]),
+            ("RespuestaOK", 0, "RespondOK", 0),
+            ("RespuestaError", 0, "RespondError", 0)),
+    }
+
+
+# =========================================================================
 def api(method, path, payload=None):
     key = os.environ["N8N_API_KEY"]
     req = urllib.request.Request(
@@ -395,6 +445,7 @@ def main():
         "BuscarCitaPorTelefono":          ("G5tNbLJgATbL7Bsc", wf_cita_telefono()),
         "buscarInmuebles":                ("3hevfnxUkmxhl8qH", wf_buscar_inmuebles(load("wf_3hevfnxUkmxhl8qH.json"))),
         "XMLCacheo":                      ("MNuaSmtxlFmA3eTe", wf_xmlcacheo(load("wf_MNuaSmtxlFmA3eTe.json"))),
+        "registrarMensaje":               ("uUzJlWHmCKm1xZGX", wf_registrar_mensaje(load("wf_uUzJlWHmCKm1xZGX.json"))),
     }
 
     (BASE / "workflows").mkdir(exist_ok=True)

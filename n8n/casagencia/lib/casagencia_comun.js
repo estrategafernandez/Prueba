@@ -89,6 +89,29 @@ function resolverAsesora(ref) {
 }
 
 // ---------------------------------------------------------------------------
+// Alquiler: NO se agenda visita (peticion de Casagencia, sept. 2026)
+// ---------------------------------------------------------------------------
+// El mercado de alquiler esta muy tensionado y la mitad de los interesados no
+// pasa la criba de la asesora. Si Sara agendase todas las visitas, el calendario
+// se llenaria de citas que luego hay que deshacer. Asi que en alquiler Sara
+// cualifica al cliente y pasa el aviso: la asesora llama y agenda ella.
+//
+// Las referencias de alquiler acaban en -A y las de venta en -V, pero hay algun
+// caso suelto (un traspaso de local marcado como alquiler con referencia -V).
+// Por eso basta con que CUALQUIERA de las dos senales diga alquiler.
+function esPeticionAlquiler(referencia, tipoTransaccion) {
+  const t = String(tipoTransaccion ?? '').toLowerCase();
+  if (t.includes('alquiler') || t.includes('traspaso') || t.includes('rent')) return true;
+  return /-A$/i.test(String(referencia ?? '').trim());
+}
+
+const MSG_ALQUILER_SIN_AGENDA =
+  'En alquiler NO se agenda la visita desde aqui. Explicale al cliente con naturalidad que, ' +
+  'por la cantidad de solicitudes que hay, es la asesora de la zona quien organiza las visitas ' +
+  'de alquiler y le va a llamar para concretarla. Antes de despedirte, hazle las preguntas de ' +
+  'cualificacion de alquiler y registra el aviso con registrarMensaje.';
+
+// ---------------------------------------------------------------------------
 // Horario / festivos
 // ---------------------------------------------------------------------------
 function esFestivo(fecha, prefijo) {

@@ -1,0 +1,239 @@
+{
+  "name": "registrarMensaje",
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Europe/Madrid"
+  },
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "registrarmensaje",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -40,
+        0
+      ],
+      "id": "6a491e30-6b62-4ebb-bd6c-dc9c74e72952",
+      "name": "Webhook",
+      "webhookId": "e67489c2-7dfb-417a-a910-9f0cbd97bd26"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ===========================================================================\n// CASAGENCIA · LIBRERIA COMUN DEL ASISTENTE TELEFONICO\n// ---------------------------------------------------------------------------\n// Este bloque se inyecta automaticamente al principio de los nodos Code de\n// los workflows BuscarDisponibilidadCalendario, ConfirmarCitaCalendario y\n// BuscarCitaPorTelefono.\n//\n// NO editar a mano dentro de n8n: editar este fichero y volver a desplegar\n// con  python3 n8n/casagencia/build_workflows.py --deploy\n// ===========================================================================\n\nconst ZONA = 'Europe/Madrid';\n\n// --- Horario de oficina de cada asesora ------------------------------------\n// La visita dura 1 hora y tiene que caber ENTERA dentro de un bloque.\nconst HORARIOS = {\n  Carmen: { lv: [['09:30', '14:00'], ['16:00', '19:30']], sab: [['10:00', '14:00']], dom: null },\n  Gisela: { lv: [['09:00', '14:00'], ['16:00', '19:00']], sab: null,                 dom: null }\n};\n\n// --- Festivos ---------------------------------------------------------------\n// GUARDAFUEGOS: no depende de que la comercial bloquee nada en su calendario.\n// TODOS  = festivos nacionales y de la Comunitat Valenciana (fecha fija).\n// BN/OR/CS/VR = fiestas locales de cada zona. RELLENAR CADA ANO.\nconst FESTIVOS = {\n  TODOS: [\n    '2026-10-09', // Dia de la Comunitat Valenciana\n    '2026-10-12', // Fiesta Nacional\n    '2026-11-01', // Todos los Santos\n    '2026-12-06', // Constitucion\n    '2026-12-08', // Inmaculada\n    '2026-12-25', // Navidad\n    '2027-01-01', '2027-01-06', '2027-05-01', '2027-08-15',\n    '2027-10-09', '2027-10-12', '2027-11-01', '2027-12-06', '2027-12-08', '2027-12-25'\n  ],\n  BN: [], // Benicasim  -> fiestas locales: ANADIR\n  OR: [], // Oropesa    -> fiestas locales: ANADIR\n  CS: [], // Castellon  -> fiestas locales (Magdalena, etc.): ANADIR\n  VR: []  // Vila-real  -> fiestas locales: ANADIR\n};\n\n// --- Routing de asesora (ARREGLO #7: mapeo explicito, sin fallback silencioso)\nconst ASESORA_POR_PREFIJO = { BN: 'Carmen', OR: 'Carmen', CS: 'Gisela', VR: 'Gisela' };\nconst CALENDARIO_POR_ASESORA = {\n  Carmen: 'carmen@casagencia.com',\n  Gisela: 'gisela@casagencia.com'\n};\nconst CALENDARIO_POR_DEFECTO = 'gisela@casagencia.com'; // solo para que el nodo no reviente\n\n// --- Titulos de eventos de dia completo que SI bloquean el dia (ARREGLO #8) --\nconst RE_DIA_BLOQUEANTE = /vacacion|vacanc|baja|festiv|cerrad|ausent|no disponible|libranza|asuntos propios/i;\n\n// ---------------------------------------------------------------------------\n// Telefonos (ARREGLO #12)\n// ---------------------------------------------------------------------------\nfunction normalizarTelefono(raw) {\n  let s = String(raw ?? '').trim();\n  const teniaMas = s.startsWith('+');\n  s = s.replace(/\\D/g, '');\n  if (!teniaMas && s.startsWith('00')) s = s.slice(2);\n  if (/^[6789]\\d{8}$/.test(s)) s = '34' + s;          // movil/fijo espanol sin prefijo\n  const nacional = s.startsWith('34') ? s.slice(2) : s;\n  return {\n    e164: s ? '+' + s : '',\n    nacional,\n    digitos: s,\n    valido: s.length >= 8 && s.length <= 15,\n    original: String(raw ?? '')\n  };\n}\n\n// ---------------------------------------------------------------------------\n// Referencias y asesora\n// ---------------------------------------------------------------------------\nfunction prefijoDeReferencia(ref) {\n  const m = String(ref ?? '').toUpperCase().match(/[A-Z]{2}/);\n  return m ? m[0] : '';\n}\n\nfunction resolverAsesora(ref) {\n  const prefijo = prefijoDeReferencia(ref);\n  const asesora = ASESORA_POR_PREFIJO[prefijo] || null;\n  return {\n    prefijo,\n    asesora,\n    conocida: !!asesora,\n    calendario: asesora ? CALENDARIO_POR_ASESORA[asesora] : CALENDARIO_POR_DEFECTO\n  };\n}\n\n// ---------------------------------------------------------------------------\n// Alquiler: NO se agenda visita (peticion de Casagencia, sept. 2026)\n// ---------------------------------------------------------------------------\n// El mercado de alquiler esta muy tensionado y la mitad de los interesados no\n// pasa la criba de la asesora. Si Sara agendase todas las visitas, el calendario\n// se llenaria de citas que luego hay que deshacer. Asi que en alquiler Sara\n// cualifica al cliente y pasa el aviso: la asesora llama y agenda ella.\n//\n// Las referencias de alquiler acaban en -A y las de venta en -V, pero hay algun\n// caso suelto (un traspaso de local marcado como alquiler con referencia -V).\n// Por eso basta con que CUALQUIERA de las dos senales diga alquiler.\nfunction esPeticionAlquiler(referencia, tipoTransaccion) {\n  const t = String(tipoTransaccion ?? '').toLowerCase();\n  if (t.includes('alquiler') || t.includes('traspaso') || t.includes('rent')) return true;\n  return /-A$/i.test(String(referencia ?? '').trim());\n}\n\nconst MSG_ALQUILER_SIN_AGENDA =\n  'En alquiler NO se agenda la visita desde aqui. Explicale al cliente con naturalidad que, ' +\n  'por la cantidad de solicitudes que hay, es la asesora de la zona quien organiza las visitas ' +\n  'de alquiler y le va a llamar para concretarla. Antes de despedirte, hazle las preguntas de ' +\n  'cualificacion de alquiler y registra el aviso con registrarMensaje.';\n\n// ---------------------------------------------------------------------------\n// Horario / festivos\n// ---------------------------------------------------------------------------\nfunction esFestivo(fecha, prefijo) {\n  const lista = [].concat(FESTIVOS.TODOS || [], FESTIVOS[prefijo] || []);\n  return lista.includes(fecha);\n}\n\nfunction bloquesDelDia(fecha, asesora) {\n  const h = HORARIOS[asesora] || HORARIOS.Gisela;\n  const wd = DateTime.fromFormat(fecha, 'yyyy-MM-dd', { zone: ZONA }).weekday;\n  if (wd === 7) return h.dom;\n  if (wd === 6) return h.sab;\n  return h.lv;\n}\n\n// Devuelve { valido, motivo } para una fecha+hora concretas.\n// motivo: ok | formato | pasado | cerrado | festivo | fuera_horario\nfunction validarFranja(fecha, hora, asesora, prefijo, ahora) {\n  const ini = DateTime.fromFormat(`${fecha} ${hora}`, 'yyyy-MM-dd HH:mm', { zone: ZONA });\n  if (!ini.isValid) return { valido: false, motivo: 'formato' };\n  if (ini < ahora) return { valido: false, motivo: 'pasado' };\n  if (esFestivo(fecha, prefijo)) return { valido: false, motivo: 'festivo' };\n\n  const bloques = bloquesDelDia(fecha, asesora);\n  if (!bloques || !bloques.length) return { valido: false, motivo: 'cerrado' };\n\n  const fin = ini.plus({ hours: 1 });\n  const cabe = bloques.some(([a, b]) => {\n    const ba = DateTime.fromFormat(`${fecha} ${a}`, 'yyyy-MM-dd HH:mm', { zone: ZONA });\n    const bb = DateTime.fromFormat(`${fecha} ${b}`, 'yyyy-MM-dd HH:mm', { zone: ZONA });\n    return ini >= ba && fin <= bb;\n  });\n  return cabe ? { valido: true, motivo: 'ok' } : { valido: false, motivo: 'fuera_horario' };\n}\n\n// ---------------------------------------------------------------------------\n// Ocupacion del calendario (ARREGLO #8)\n// ---------------------------------------------------------------------------\n// Un evento de dia completo (cumpleanos, recordatorio, calendario de festivos\n// importado...) ya NO borra el dia entero. Solo bloquea si su titulo indica\n// ausencia real. Tambien se respeta transparency='transparent' (marcado Libre).\nfunction rangosOcupados(items) {\n  const out = [];\n  for (const it of items) {\n    const j = (it && it.json) ? it.json : it;\n    if (!j || !j.start) continue;\n    if (j.status === 'cancelled') continue;\n    if (j.transparency === 'transparent') continue;\n\n    if (!j.start.dateTime) {\n      if (!RE_DIA_BLOQUEANTE.test(String(j.summary || ''))) continue; // no bloquea\n      const d0 = DateTime.fromISO(j.start.date, { zone: ZONA }).startOf('day');\n      const d1 = j.end && j.end.date\n        ? DateTime.fromISO(j.end.date, { zone: ZONA }).startOf('day')\n        : d0.plus({ days: 1 });\n      out.push({ start: d0, end: d1, titulo: j.summary || '', diaCompleto: true });\n      continue;\n    }\n\n    const s = DateTime.fromISO(j.start.dateTime, { zone: ZONA });\n    const e = j.end && j.end.dateTime\n      ? DateTime.fromISO(j.end.dateTime, { zone: ZONA })\n      : s.plus({ hours: 1 });\n    out.push({ start: s, end: e, titulo: j.summary || '', diaCompleto: false });\n  }\n  return out;\n}\n\nfunction estaLibre(fecha, hora, ocupados) {\n  const ini = DateTime.fromFormat(`${fecha} ${hora}`, 'yyyy-MM-dd HH:mm', { zone: ZONA });\n  const fin = ini.plus({ hours: 1 });\n  return !ocupados.some(o => ini < o.end && fin > o.start);\n}\n\n// Huecos validos de un dia (respeta horario, festivos y ocupacion)\nfunction huecosDelDia(fecha, asesora, prefijo, ocupados, ahora) {\n  if (esFestivo(fecha, prefijo)) return [];\n  const bloques = bloquesDelDia(fecha, asesora);\n  if (!bloques || !bloques.length) return [];\n  const huecos = [];\n  for (const [a, b] of bloques) {\n    let cursor = DateTime.fromFormat(`${fecha} ${a}`, 'yyyy-MM-dd HH:mm', { zone: ZONA });\n    const finBloque = DateTime.fromFormat(`${fecha} ${b}`, 'yyyy-MM-dd HH:mm', { zone: ZONA });\n    while (cursor.plus({ hours: 1 }) <= finBloque) {\n      if (cursor >= ahora && estaLibre(fecha, cursor.toFormat('HH:mm'), ocupados)) {\n        huecos.push(cursor.toFormat('HH:mm'));\n      }\n      cursor = cursor.plus({ minutes: 30 });\n    }\n  }\n  return huecos;\n}\n\nconst DIAS = ['', 'lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo'];\nconst MESES = ['', 'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio',\n               'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];\nfunction nombreDia(fecha) {\n  const d = DateTime.fromFormat(fecha, 'yyyy-MM-dd', { zone: ZONA });\n  if (!d.isValid) return fecha;\n  return `${DIAS[d.weekday]} ${d.day} de ${MESES[d.month]}`;\n}\n// ======================= FIN LIBRERIA COMUN ================================\n\n\n// registrarMensaje · ComponerAviso\n// Arma el correo que reciben Carmen, Gisela o Laurence. Antes habia un Switch\n// con tres nodos de Gmail: si el destinatario no casaba con ninguno, no\n// respondia nadie y Sara se quedaba colgada. Ahora se normaliza aqui.\nconst b = ($input.first().json.body) ?? {};\n\nconst BUZON = {\n  Carmen: 'carmen@casagencia.com',\n  Gisela: 'gisela@casagencia.com',\n  Laurence: 'laurence@casagencia.com'\n};\nconst destinatario = BUZON[b.destinatario] ? b.destinatario : 'Laurence';\nconst para = `${BUZON[destinatario]}, paco@casagencia.com`;\n\nconst tel = normalizarTelefono(b.telefono);\nconst nombre = String(b.nombre || '').trim() || 'Sin nombre';\nconst tipo = String(b.tipo_llamada || '').trim();\nconst esLeadAlquiler = tipo === 'lead_alquiler';\n\n// Cualificacion de alquiler (solo viene en los leads de alquiler)\nconst cualificacion = [\n  ['Nº de personas', b.alquiler_personas],\n  ['Ingresos fijos / contrato', b.alquiler_ingresos],\n  ['Mascotas', b.alquiler_mascotas],\n  ['Fecha de entrada', b.alquiler_entrada],\n  ['Duración', b.alquiler_duracion]\n].filter(([, v]) => String(v || '').trim());\n\nconst lineas = [\n  `Cliente: ${nombre}`,\n  `Teléfono: ${tel.e164 || b.telefono || '-'}`,\n];\nif (b.email) lineas.push(`Email: ${b.email}`);\nlineas.push(`Motivo: ${b.motivo || '-'}`);\nif (b.urgencia) lineas.push(`Urgencia: ${b.urgencia}`);\n\nif (cualificacion.length) {\n  lineas.push('', '--- CUALIFICACIÓN DEL ALQUILER ---');\n  for (const [k, v] of cualificacion) lineas.push(`${k}: ${v}`);\n}\n\nlineas.push('', '--- RESUMEN DE LA LLAMADA ---', String(b.resumen_conversacion || '-'));\n\nif (esLeadAlquiler) {\n  lineas.push('',\n    'NOTA: en alquiler la IA no agenda la visita. Se le ha dicho al cliente que',\n    'le llamarás tú para organizarla una vez valorado el perfil.');\n}\n\nconst asunto = esLeadAlquiler\n  ? `LEAD ALQUILER (sin agendar) - ${nombre} - ${tel.nacional || b.telefono || ''} - ${b.motivo || ''}`\n  : `${nombre} - ${tel.nacional || b.telefono || ''} - ${b.motivo || ''}`;\n\nreturn [{\n  json: {\n    destinatario, para, asunto,\n    cuerpo: lineas.join('\\n'),\n    es_lead_alquiler: esLeadAlquiler,\n    respuesta: {\n      mensaje_registrado: true,\n      destinatario,\n      mensaje_para_sara: `Aviso enviado a ${destinatario}. Diselo al cliente y despidete.`\n    }\n  }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        200,
+        0
+      ],
+      "id": "1aee54ef-33c5-58e6-9310-697c12760fc2",
+      "name": "ComponerAviso"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.para }}",
+        "subject": "={{ $json.asunto }}",
+        "message": "={{ $json.cuerpo }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        440,
+        0
+      ],
+      "id": "0530607f-7e4c-59c0-983a-089d1057b13a",
+      "name": "EnviarAviso",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "mKh6b4I1hwDsBwOd",
+          "name": "Gmail account"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "ok",
+              "name": "respuesta",
+              "type": "object",
+              "value": "={{ $('ComponerAviso').item.json.respuesta }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        680,
+        -80
+      ],
+      "id": "ed2cea7e-df2c-5afb-9825-0939e0d62915",
+      "name": "RespuestaOK"
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ JSON.stringify($json.respuesta) }}",
+        "options": {
+          "responseCode": 200,
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "application/json; charset=utf-8"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        900,
+        -80
+      ],
+      "id": "202852b6-5bb5-5c5a-b17f-bcccab8d1e02",
+      "name": "RespondOK"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "err",
+              "name": "respuesta",
+              "type": "object",
+              "value": "={{ { mensaje_registrado: false, motivo: 'error_envio', mensaje_para_sara: 'No he podido enviar el aviso por un problema tecnico. NO le digas al cliente que se ha enviado: explicale que ha habido una incidencia y recomiendale llamar a la oficina.' } }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        680,
+        120
+      ],
+      "id": "8bc66489-a8b3-5b27-a065-67fa8cf803ba",
+      "name": "RespuestaError"
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ JSON.stringify($json.respuesta) }}",
+        "options": {
+          "responseCode": 200,
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "application/json; charset=utf-8"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        900,
+        120
+      ],
+      "id": "d73c6256-ab5d-5f3a-9baa-dbebe2412328",
+      "name": "RespondError"
+    },
+    {
+      "parameters": {
+        "content": "## Avisos a las asesoras\nUn solo correo, con el destinatario normalizado (si no cuadra, va a Laurence).\n\nLos leads de ALQUILER llegan marcados en el asunto y con la cualificacion del cliente: personas, ingresos, mascotas, fecha de entrada y duracion.",
+        "height": 210,
+        "width": 430
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        200,
+        -240
+      ],
+      "id": "0ec985e4-952f-5d79-ad17-3177e24b19c1",
+      "name": "Nota"
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "ComponerAviso",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ComponerAviso": {
+      "main": [
+        [
+          {
+            "node": "EnviarAviso",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "EnviarAviso": {
+      "main": [
+        [
+          {
+            "node": "RespuestaOK",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "RespuestaError",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "RespuestaOK": {
+      "main": [
+        [
+          {
+            "node": "RespondOK",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "RespuestaError": {
+      "main": [
+        [
+          {
+            "node": "RespondError",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}
