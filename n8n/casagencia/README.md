@@ -45,6 +45,11 @@ respuesta vacía**, así que Sara confirmaba citas sin saber si se habían cread
 | 16 | Direcciones reales de los 93 inmuebles, sacadas de eGO | pestaña *Direcciones* |
 | 17 | En alquiler ya no se agenda: se cualifica al cliente y llama la asesora | ambos calendarios + prompt |
 | 18 | `registrarMensaje` mandaba 3 correos por un Switch que podía no casar con nada | `registrarMensaje` |
+| 19 | El aviso se registra en cuanto hay nombre y teléfono, no al final | prompt |
+| 20 | Sara ya sabe desde qué número llaman: lo confirma en vez de pedirlo | `SaludoInicial` + prompt |
+| 21 | Saludo más corto y espera de 3,5 s (después del aviso de Idealista) | agente de Retell |
+| 22 | Sara puede dar la dirección exacta cuando se la piden | `buscarPorReferencia` + prompt |
+| 23 | El saludo de cada comercial no llegaba a usarse nunca | `SaludoInicial` |
 | 12 | Tiempos de escucha: Sara ya no se pisa con el cliente ni insiste a los 5 segundos | agente de Retell |
 
 Extras que aparecieron por el camino:
@@ -86,6 +91,23 @@ El script entra en eGO con las credenciales del CRM (variables de entorno
 referencia -> id y lee de cada ficha `location[address]`,
 `realestate[details][building_number]` y `location[zipcode]`. **Solo hace GET:
 no modifica nada en eGO.**
+
+## El saludo de cada número
+
+El `Diversion` de la llamada trae la cadena de desvíos: **primero** el número de
+Twilio y **después** el número original que desvió (el de la comercial o el de
+la oficina). El código se quedaba con el primero, así que todas las llamadas
+resolvían a "general" y el saludo personalizado de cada comercial no se usaba
+nunca. Ahora se toma el último.
+
+De paso se cayeron dos fallos más del Switch de 8 salidas que había: la rama de
+Carmen estaba cableada al texto de Gisela, y una llamada sin cabecera de desvío
+no casaba con ninguna rama, así que nadie respondía y el asistente arrancaba sin
+saludo. Los textos viven ahora en `nodes/sal_datos.js`, con genérico por defecto.
+
+Ahí también se recoge el **teléfono del cliente** y se pasa al asistente como
+`{{telefono_cliente_hablado}}`, para que Sara lo confirme ("¿le llamamos a este
+mismo número?") en vez de pedirlo cifra a cifra.
 
 ## Alquiler: no se agenda
 

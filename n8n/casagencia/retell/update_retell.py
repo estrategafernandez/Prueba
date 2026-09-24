@@ -160,7 +160,12 @@ def construir_tools(actuales):
 
 
 # Ajustes de conversacion. Se mantiene el sonido ambiente a peticion del cliente.
+# El saludo se acorta y la espera sube a 3,5 s: el aviso de Idealista termina
+# sobre el segundo 3, asi que Sara arranca justo despues y ya no se pisan.
+BEGIN_MESSAGE = "Hola, {{saludovariable}} ¿En qué puedo ayudarte?"
+
 AGENTE = {
+    "begin_message_delay_ms": 3500,
     "responsiveness": 0.55,          # antes 0.85: arrancaba antes de que el cliente terminara
     "interruption_sensitivity": 0.45,  # antes 0.7: cualquier ruido la cortaba
     "reminder_trigger_ms": 10000,    # antes 5000: insistia a los 5 segundos
@@ -184,6 +189,8 @@ def main():
     tools = construir_tools(llm["general_tools"])
 
     print(f"  prompt      {len(llm['general_prompt'])} -> {len(prompt)} caracteres")
+    print(f"  saludo      {llm.get('begin_message')!r}")
+    print(f"           -> {BEGIN_MESSAGE!r}")
     print(f"  tools       {[t['name'] for t in llm['general_tools']]}")
     print(f"           -> {[t['name'] for t in tools]}")
     for k, v in AGENTE.items():
@@ -194,7 +201,8 @@ def main():
         return
 
     nuevo_llm = call("PATCH", f"/update-retell-llm/{LLM_ID}",
-                     {"general_prompt": prompt, "general_tools": tools})
+                     {"general_prompt": prompt, "general_tools": tools,
+                      "begin_message": BEGIN_MESSAGE})
     v = nuevo_llm["version"]
     print(f"\n  LLM actualizado -> version {v}")
 

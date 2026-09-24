@@ -180,7 +180,8 @@ if (!candidatos.length) {
 const fmt = (c) => {
   const r = c.r;
   const precio = r.precio ? `${Number(r.precio).toLocaleString('es-ES')} euros` : 'precio a consultar';
-  return `${r.tipo_inmueble || 'Inmueble'} en ${r.zona || r.municipio}, referencia ${r.ref}, ` +
+  const dir = manual[String(r.ref).trim().toUpperCase()] || r.direccion || '';
+  return `${r.tipo_inmueble || 'Inmueble'} en ${dir || r.zona || r.municipio}, referencia ${r.ref}, ` +
          `${r.habitaciones || '?'} habitaciones, ${precio} (${r.tipo_transaccion})`;
 };
 
@@ -194,6 +195,7 @@ return [{ json: { respuesta: {
   fiabilidad: fiable ? 'alta' : 'media',
   coincidencias: candidatos.map(c => ({
     ref: c.r.ref, municipio: c.r.municipio, zona: c.r.zona,
+    direccion: manual[String(c.r.ref).trim().toUpperCase()] || c.r.direccion || '',
     tipo: c.r.tipo_inmueble, precio: c.r.precio,
     operacion: c.r.tipo_transaccion, habitaciones: c.r.habitaciones,
     puntuacion: c.total

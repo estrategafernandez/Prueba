@@ -422,6 +422,85 @@ def wf_registrar_mensaje(orig):
 
 
 # =========================================================================
+# 9) buscarPorReferencia -> que devuelva tambien la direccion
+# =========================================================================
+def wf_buscar_referencia(orig):
+    wh = next(n for n in orig["nodes"] if n["type"] == "n8n-nodes-base.webhook")
+    sheets = next(n for n in orig["nodes"] if n["type"] == "n8n-nodes-base.googleSheets")
+    sheets = json.loads(json.dumps(sheets))
+    sheets["alwaysOutputData"] = True
+    sheets["onError"] = "continueRegularOutput"
+    return {
+        "name": "buscarPorReferencia",
+        "settings": SETTINGS,
+        "nodes": [
+            webhook("Webhook", "buscardisponibilidadporreferencia", [-40, 0],
+                    wh.get("webhookId"), wh.get("id")),
+            sheets,
+            node("LeerDirecciones", "n8n-nodes-base.googleSheets", {
+                "documentId": {"__rl": True, "value": SHEET_ID, "mode": "id"},
+                "sheetName": {"__rl": True, "value": "Direcciones", "mode": "name"},
+                "options": {}}, [420, 0], 4.7, credentials=CRED_SHEETS,
+                alwaysOutputData=True, executeOnce=True, onError="continueRegularOutput"),
+            code_node("FormatearSalidaParaAgenteTelefónico", "ref_formatear.js", [640, 0]),
+            node("Respond to Webhook", "n8n-nodes-base.respondToWebhook", {
+                "respondWith": "text", "responseBody": "={{ $json.result }}",
+                "options": {"responseCode": 200, "responseHeaders": {"entries": [
+                    {"name": "Content-Type", "value": "text/plain; charset=utf-8"}]}},
+            }, [860, 0], 1.5),
+            node("Nota", "n8n-nodes-base.stickyNote", {"content":
+                 "## Busqueda por referencia\nTolera guiones, mayusculas y que se pierdan letras por "
+                 "telefono: casa por prefijo + numero.\n\nDevuelve tambien la direccion de la pestana "
+                 "*Direcciones*, para que Sara pueda confirmarla cuando se la pidan.",
+                 "height": 200, "width": 420}, [200, -240], 1),
+        ],
+        "connections": conn(
+            ("Webhook", 0, "BuscarInmueblesTodos", 0),
+            ("BuscarInmueblesTodos", 0, "LeerDirecciones", 0),
+            ("LeerDirecciones", 0, "FormatearSalidaParaAgenteTelefónico", 0),
+            ("FormatearSalidaParaAgenteTelefónico", 0, "Respond to Webhook", 0)),
+    }
+
+
+# =========================================================================
+# 10) SaludoInicial -> saludo corto, desvio bien leido y telefono del cliente
+# =========================================================================
+def wf_saludo(orig):
+    """El Switch de 8 salidas se sustituye por un Code: tenia la rama de Carmen
+    cableada al texto de Gisela y ninguna salida por defecto, asi que una llamada
+    sin cabecera de desvio se quedaba sin respuesta."""
+    wh = next(n for n in orig["nodes"] if n["type"] == "n8n-nodes-base.webhook")
+    return {
+        "name": "SaludoInicial",
+        "settings": SETTINGS,
+        "nodes": [
+            webhook("Webhook", "llamadasentrantes", [-40, 0], wh.get("webhookId"), wh.get("id")),
+            code_node("ComponerSaludo", "sal_datos.js", [200, 0]),
+            node("Respond to Webhook", "n8n-nodes-base.respondToWebhook", {
+                "respondWith": "json",
+                "responseBody": '={\n  "dynamic_variables": {\n'
+                                '    "saludovariable": "{{ $json.saludo }}",\n'
+                                '    "telefono_cliente": "{{ $json.telefono_cliente }}",\n'
+                                '    "telefono_cliente_hablado": "{{ $json.telefono_cliente_hablado }}"\n'
+                                '  }\n}',
+                "options": {"responseCode": 200},
+            }, [440, 0], 1.5),
+            node("Nota", "n8n-nodes-base.stickyNote", {"content":
+                 "## El saludo de cada numero\nLos textos estan en el nodo ComponerSaludo.\n\n"
+                 "El Diversion trae la cadena de desvios: el numero de Twilio primero y el ORIGINAL "
+                 "despues. Hay que quedarse con el ultimo; si no, todas las llamadas suenan a "
+                 "'general' y el saludo de cada comercial no se usa nunca.\n\n"
+                 "Aqui tambien se recoge el telefono del cliente, para que Sara lo confirme en vez "
+                 "de pedirlo cifra a cifra.",
+                 "height": 260, "width": 430}, [200, -300], 1),
+        ],
+        "connections": conn(
+            ("Webhook", 0, "ComponerSaludo", 0),
+            ("ComponerSaludo", 0, "Respond to Webhook", 0)),
+    }
+
+
+# =========================================================================
 def api(method, path, payload=None):
     key = os.environ["N8N_API_KEY"]
     req = urllib.request.Request(
@@ -446,6 +525,8 @@ def main():
         "buscarInmuebles":                ("3hevfnxUkmxhl8qH", wf_buscar_inmuebles(load("wf_3hevfnxUkmxhl8qH.json"))),
         "XMLCacheo":                      ("MNuaSmtxlFmA3eTe", wf_xmlcacheo(load("wf_MNuaSmtxlFmA3eTe.json"))),
         "registrarMensaje":               ("uUzJlWHmCKm1xZGX", wf_registrar_mensaje(load("wf_uUzJlWHmCKm1xZGX.json"))),
+        "buscarPorReferencia":            ("JeYBaWXMzYvLi1e3", wf_buscar_referencia(load("wf_JeYBaWXMzYvLi1e3.json"))),
+        "SaludoInicial":                  ("cDQHP3chcEGPkTgX", wf_saludo(load("wf_cDQHP3chcEGPkTgX.json"))),
     }
 
     (BASE / "workflows").mkdir(exist_ok=True)
