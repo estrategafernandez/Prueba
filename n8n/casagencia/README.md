@@ -94,16 +94,32 @@ no modifica nada en eGO.**
 
 ## El saludo de cada número
 
-El `Diversion` de la llamada trae la cadena de desvíos: **primero** el número de
-Twilio y **después** el número original que desvió (el de la comercial o el de
-la oficina). El código se quedaba con el primero, así que todas las llamadas
-resolvían a "general" y el saludo personalizado de cada comercial no se usaba
-nunca. Ahora se toma el último.
+La cabecera `Diversion` lista los desvíos **del más reciente al original**, así
+que el **último** es el número que marcó el cliente. Ese es el que manda el
+saludo. El código leía el primero, que siempre es el de Twilio: por eso todas
+las llamadas sonaban a "general" y el saludo de cada comercial no se usó nunca.
 
-De paso se cayeron dos fallos más del Switch de 8 salidas que había: la rama de
-Carmen estaba cableada al texto de Gisela, y una llamada sin cabecera de desvío
-no casaba con ninguna rama, así que nadie respondía y el asistente arrancaba sin
-saludo. Los textos viven ahora en `nodes/sal_datos.js`, con genérico por defecto.
+Cadenas que aparecen de verdad en las llamadas:
+
+| Cadena de desvío | El cliente marcó | Saludo |
+| --- | --- | --- |
+| general ← Carmen ← Idealista | Idealista (864870199) | genérico |
+| general ← Gisela | móvil de Gisela (690027772) | "…la IA de Gisela" |
+| general ← Carmen | móvil de Carmen (654907386) | "…la IA de Carmen" |
+| general ← Carmen ← Fotocasa | Fotocasa (936060117) | genérico |
+| general | número general (864893794) | genérico |
+| general ← Gisela ← 864870288 | un portal sin identificar | genérico |
+
+Las líneas de portal entran por el móvil de una comercial, pero el cliente
+llama por un anuncio y no la conoce: por eso saludo genérico, como estaba
+configurado. El nodo guarda en `linea_comercial` por quién entró, por si algún
+día hace falta.
+
+**Cualquier número que no sea de los nuestros, o una llamada sin cabecera de
+desvío, recibe el saludo genérico.** Antes no casaba con ninguna rama del
+Switch, nadie respondía y el asistente arrancaba sin saludo.
+
+Los textos viven en `nodes/sal_datos.js`. `tests_saludo.js` cubre los 19 casos.
 
 Ahí también se recoge el **teléfono del cliente** y se pasa al asistente como
 `{{telefono_cliente_hablado}}`, para que Sara lo confirme ("¿le llamamos a este
@@ -168,6 +184,7 @@ retell/general_prompt.md  el prompt de Sara
 retell/update_retell.py   despliega prompt, herramientas y ajustes del agente
 tests_logica.js           30 tests de horarios, festivos, teléfonos y routing
 tests_alquiler.js         tests del bloqueo de agenda en alquiler y del aviso
+tests_saludo.js           19 tests del saludo de cada número y de las cadenas de desvío
 tests_busquedas.js        tests de búsqueda por dirección y de cita por teléfono
 tests_direccion_produccion.py   consulta las direcciones reales contra producción
 tests_busquedas_produccion.py   referencia, municipio, negativos y consultas vagas
@@ -226,5 +243,8 @@ ningún caso se le lee al cliente un listado que no ha pedido.
 - **Direcciones de la cartera nueva.** Las 93 actuales están cargadas desde
   eGO. Cuando entren inmuebles nuevos hay que volver a lanzar
   `ego_direcciones.py`, o apuntar la dirección a mano en la pestaña.
+- **Qué es el número 864870288.** Aparece en 2 llamadas, siempre con aviso de
+  portal y entrando por el móvil de Gisela. Recibe el saludo genérico, que es
+  lo razonable, pero conviene que Paco confirme de qué portal es.
 - **Permisos de las grabaciones.** `Share file` sigue publicando cada audio con
   `role: writer, type: anyone`: cualquiera con el enlace puede editarlas.
