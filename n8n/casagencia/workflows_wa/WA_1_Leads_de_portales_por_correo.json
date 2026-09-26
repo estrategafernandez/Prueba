@@ -1,0 +1,491 @@
+{
+  "name": "[WA] 1 · Leads de portales por correo",
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Europe/Madrid"
+  },
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "simple": false,
+        "filters": {
+          "q": "(from:idealista.com OR from:fotocasa.es OR from:habitaclia.com OR subject:(solicitud OR contacto)) is:unread"
+        },
+        "options": {
+          "downloadAttachments": false
+        }
+      },
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -40,
+        0
+      ],
+      "id": "6339f45b-662c-51d5-bf21-ada619e46f26",
+      "name": "CorreoNuevo",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "mKh6b4I1hwDsBwOd",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// ===========================================================================\n// CASAGENCIA · WHATSAPP — CONFIGURACION COMUN\n// ---------------------------------------------------------------------------\n// Se inyecta al principio de los nodos Code de los workflows [WA].\n// Editar aqui y volver a desplegar:  python3 build_whatsapp.py --deploy\n// ===========================================================================\n\n// --- PENDIENTE DE DESPLIEGUE ------------------------------------------------\n// Rellenar cuando esten montados Chatwoot y el numero de WhatsApp. Hasta\n// entonces los workflows quedan DESACTIVADOS: no se dispara nada.\nconst CHATWOOT_URL    = 'https://PENDIENTE-chatwoot-casagencia';  // sin barra final\nconst CHATWOOT_CUENTA = 1;                                        // id de la cuenta\nconst CHATWOOT_INBOX  = 0;                                        // id del inbox de WhatsApp\nconst META_WABA_ID    = 'PENDIENTE-id-de-la-cuenta-de-whatsapp';   // waba_id de Meta\nconst PLANTILLA_LEAD  = 'PENDIENTE-nombre-de-la-plantilla';        // plantilla aprobada en Meta\nconst PLANTILLA_IDIOMA = 'es';\nconst BUZON_LEADS     = 'PENDIENTE@casagencia.com';                // buzon donde entran los avisos\n\n// El token de Chatwoot y el de Meta NO viven aqui: van en las credenciales\n// \"Chatwoot Casagencia\" y \"Meta WhatsApp Casagencia\" de n8n.\n\n// --- Asesoras ---------------------------------------------------------------\n// Mismo reparto que el asistente telefonico: la referencia manda.\nconst ASESORA_POR_PREFIJO = { BN: 'Carmen', OR: 'Carmen', CS: 'Gisela', VR: 'Gisela' };\nconst EMAIL_POR_ASESORA = {\n  Carmen: 'carmen@casagencia.com',\n  Gisela: 'gisela@casagencia.com',\n  Laurence: 'laurence@casagencia.com',\n};\nconst EMAIL_DIRECCION = 'paco@casagencia.com';   // copia de todos los avisos\n\n// --- Portales de los que llegan los leads por correo ------------------------\n// Cada uno manda el aviso con un formato distinto. `de` casa contra el\n// remitente y `asunto` contra el asunto; basta con que case uno de los dos.\nconst PORTALES = [\n  { nombre: 'Idealista',  de: /idealista\\.com/i,   asunto: /idealista/i },\n  { nombre: 'Fotocasa',   de: /fotocasa\\.es/i,     asunto: /fotocasa/i },\n  { nombre: 'Habitaclia', de: /habitaclia\\.com/i,  asunto: /habitaclia/i },\n  { nombre: 'Web',        de: /casagencia\\.com/i,  asunto: /formulario|contacto/i },\n];\n\n// --- Etiquetas de Chatwoot --------------------------------------------------\n// Con ellas Paco ve de un vistazo en que punto esta cada conversacion.\nconst ETIQUETAS = {\n  nueva:        'ia-nueva',\n  cualificando: 'ia-cualificando',\n  cualificado:  'ia-cualificado',\n  cita:         'ia-cita-agendada',\n  alquiler:     'ia-lead-alquiler',\n  humano:       'intervenir',\n};\n\n// --- Herramientas que ya existen y se reutilizan ----------------------------\n// El asistente de WhatsApp NO duplica la cartera ni el calendario: usa los\n// mismos webhooks que el asistente telefonico, con sus guardafuegos de\n// horario, festivos y \"en alquiler no se agenda\".\nconst N8N = 'https://n8n-casagencia.serversvisionarius.com/webhook';\nconst TOOLS = {\n  buscarInmuebles:     N8N + '/buscarinmuebles',\n  buscarPorReferencia: N8N + '/buscardisponibilidadporreferencia',\n  buscarPorDireccion:  N8N + '/buscarpordireccion',\n  disponibilidad:      N8N + '/buscardisponibilidad',\n  confirmarCita:       N8N + '/confirmarcitacalendario',\n  citaPorTelefono:     N8N + '/buscarcitaportelefono',\n  registrarMensaje:    N8N + '/registrarmensaje',\n};\n\n// Segundos que se espera antes de contestar, para juntar los mensajes que el\n// cliente manda seguidos (\"hola\" / \"es por el piso\" / \"el de la calle X\").\nconst BUFFER_SEGUNDOS = 60;\n\n// Lo que se le dice a un lead de alquiler: no se le agenda nada.\nconst MSG_ALQUILER_SIN_AGENDA =\n  'En los inmuebles de alquiler la visita la concierta directamente la asesora. ' +\n  'Recojo tus datos y te llama ella.';\n\n// ---------------------------------------------------------------------------\n// Utilidades\n// ---------------------------------------------------------------------------\nfunction normalizarTelefono(raw) {\n  let s = String(raw ?? '').trim();\n  const teniaMas = s.startsWith('+');\n  s = s.replace(/\\D/g, '');\n  if (!teniaMas && s.startsWith('00')) s = s.slice(2);\n  if (/^[6789]\\d{8}$/.test(s)) s = '34' + s;\n  return {\n    e164: s ? '+' + s : '',\n    wa_id: s,                                   // como lo quiere Meta: solo digitos\n    nacional: s.startsWith('34') ? s.slice(2) : s,\n    valido: s.length >= 8 && s.length <= 15,\n  };\n}\n\nfunction prefijoDeReferencia(ref) {\n  const m = String(ref ?? '').toUpperCase().match(/[A-Z]{2}/);\n  return m ? m[0] : '';\n}\n\nfunction resolverAsesora(ref) {\n  const prefijo = prefijoDeReferencia(ref);\n  const asesora = ASESORA_POR_PREFIJO[prefijo] || null;\n  return {\n    prefijo,\n    asesora,\n    conocida: !!asesora,\n    email: asesora ? EMAIL_POR_ASESORA[asesora] : EMAIL_POR_ASESORA.Laurence,\n  };\n}\n\n// Alquiler o compra. Mismo criterio que el asistente telefonico: basta con que\n// lo diga la operacion O que la referencia acabe en -A.\nfunction esAlquiler(referencia, operacion) {\n  const o = String(operacion ?? '').toLowerCase();\n  if (o.includes('alquiler') || o.includes('traspaso') || o.includes('rent')) return true;\n  if (o.includes('venta') || o.includes('compra')) return false;\n  return /-A$/i.test(String(referencia ?? '').trim());\n}\n\nfunction detectarPortal(remitente, asunto) {\n  for (const p of PORTALES) {\n    if (p.de.test(String(remitente ?? '')) || p.asunto.test(String(asunto ?? ''))) return p.nombre;\n  }\n  return 'Otro';\n}\n\n\n// [WA] 1 · Entrada de leads · ParsearEmail\n// Los portales avisan de cada solicitud por correo, cada uno con su formato.\n// Se saca lo imprescindible: telefono (sin el no hay WhatsApp), nombre,\n// referencia del inmueble y operacion.\nconst msg = $input.first().json;\nconst h = msg.headers ?? {};\n\nconst cabeceras = {};\nfor (const c of msg.payload?.headers ?? []) cabeceras[String(c.name ?? '').toLowerCase()] = c.value;\n\nconst asunto = String(msg.subject ?? h.subject ?? h.Subject ?? cabeceras.subject ?? '');\nconst remitente = String(\n  msg.from?.value?.[0]?.address ?? msg.from?.text ?? msg.From ?? h.from ?? h.From\n  ?? cabeceras.from ?? ''\n);\n// Ultimo recurso: si el correo llega sin parsear, se saca el texto de las\n// partes en base64 del payload de Gmail.\nfunction textoDelPayload(payload) {\n  if (!payload) return '';\n  const trozos = [];\n  const recorrer = (p) => {\n    const datos = p?.body?.data;\n    if (datos && /^text\\//.test(String(p.mimeType ?? ''))) {\n      try { trozos.push(Buffer.from(datos, 'base64url').toString('utf8')); } catch (e) { /* se ignora */ }\n    }\n    for (const hijo of p?.parts ?? []) recorrer(hijo);\n  };\n  recorrer(payload);\n  return trozos.join(' ');\n}\n\nconst cuerpo = String(msg.text ?? msg.textAsHtml ?? msg.html ?? msg.snippet\n  ?? textoDelPayload(msg.payload) ?? '')\n  .replace(/<[^>]+>/g, ' ')\n  .replace(/&nbsp;?/g, ' ')\n  .replace(/&amp;/g, '&')\n  .replace(/\\s+/g, ' ');\n\nconst portal = detectarPortal(remitente, asunto);\nconst todo = cuerpo + ' ' + asunto;\n\nconst buscar = (...res) => {\n  for (const re of res) {\n    const m = cuerpo.match(re) || asunto.match(re);\n    if (m && m[1]) return m[1].trim();\n  }\n  return '';\n};\n\n// Telefono: se acepta con prefijo, con espacios o pegado.\nconst telBruto = buscar(\n  /(?:tel[eé]fono|m[oó]vil|movil|phone|tlf)\\s*[:\\-]?\\s*((?:\\+?\\d[\\d\\s().-]{7,})\\d)/i,\n  /((?:\\+34|0034)?[\\s.-]?[6789]\\d{2}[\\s.-]?\\d{2}[\\s.-]?\\d{2}[\\s.-]?\\d{2})/\n);\nconst tel = normalizarTelefono(telBruto);\n\n// Los portales mandan todo en una linea (\"Nombre: Ana Marti Telefono: 600...\"),\n// asi que el nombre se corta en cuanto asoma la siguiente etiqueta.\nconst SIGUIENTE_ETIQUETA = new RegExp(\n  '\\\\s*\\\\b(?:tel[eé]fono|m[oó]vil|movil|tlf|phone|e-?mail|correo|ref(?:erencia)?|' +\n  'c[oó]digo|mensaje|comentario|observaciones|direcci[oó]n|inmueble|anuncio|zona|precio|' +\n  'operaci[oó]n|fecha)\\\\b.*$', 'i');\n\nconst nombre = buscar(\n  /(?:nombre|contacto|de parte de|cliente)\\s*[:\\-]\\s*([A-Za-zÁÉÍÓÚÑáéíóúñ][\\wÁÉÍÓÚÑáéíóúñ'’.\\- ]{1,60})/i\n).replace(SIGUIENTE_ETIQUETA, '').replace(/\\s{2,}/g, ' ').replace(/[\\s:\\-]+$/, '').trim();\n\nconst email = buscar(/([\\w.+-]+@[\\w-]+\\.[\\w.]{2,})/);\n\n// Referencia del inmueble: formatos BN-1543-V, CS-G-397-V, BN1543V...\nconst referencia = buscar(\n  /(?:ref(?:erencia)?|c[oó]digo)\\s*[:\\-]?\\s*([A-Z]{2}[-\\s]?[A-Z0-9][-\\s]?[A-Z0-9-]{1,12})/i,\n  /\\b([A-Z]{2}-(?:[A-Z]-)?\\d{1,5}(?:-[A-Z])?)\\b/\n).toUpperCase().replace(/\\s+/g, '');\n\n// Operacion: lo que diga el correo y, si no, el sufijo de la referencia.\nconst dicePortal = /alquil|arrend|rent/i.test(todo) ? 'alquiler'\n  : (/venta|compra|sale/i.test(todo) ? 'venta' : '');\nconst alquiler = esAlquiler(referencia, dicePortal);\n\nconst r = resolverAsesora(referencia);\n\nreturn [{\n  json: {\n    portal,\n    recibido_en: new Date().toISOString(),\n    asunto,\n    remitente,\n    nombre,\n    telefono_e164: tel.e164,\n    telefono_wa: tel.wa_id,\n    telefono_valido: tel.valido,\n    email_cliente: email,\n    referencia,\n    operacion: alquiler ? 'alquiler' : 'venta',\n    es_alquiler: alquiler,\n    asesora: r.asesora || '',\n    asesora_conocida: r.conocida,\n    email_asesora: r.email,\n    // Sin telefono no se puede arrancar la conversacion: se avisa por correo\n    // a la asesora y no se intenta mandar nada.\n    se_puede_contactar: tel.valido,\n    cuerpo_recortado: cuerpo.slice(0, 1500),\n    // Lo que se le pone a la plantilla: {{1}} el nombre, {{2}} el inmueble.\n    param1: nombre || 'hola',\n    param2: referencia || 'que nos pediste',\n  }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        200,
+        0
+      ],
+      "id": "3bedd104-2d8d-5f88-98fa-e7879be20f9c",
+      "name": "ParsearEmail"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "6ec36cca-e449-528b-a7b4-09e5c4798375",
+              "leftValue": "={{ $json.se_puede_contactar }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        420,
+        0
+      ],
+      "id": "5808c11c-da69-5f1b-bf94-ebe7ef03d4bf",
+      "name": "¿Hay telefono?"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "insert into wa_leads\n  (telefono_wa, telefono_e164, referencia, nombre, email_cliente, portal,\n   operacion, es_alquiler, asesora, asunto, estado)\nvalues ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,'nuevo')\non conflict (telefono_wa, referencia) do update\n   set nombre        = case when wa_leads.nombre = '' then excluded.nombre else wa_leads.nombre end,\n       portal        = excluded.portal,\n       asunto        = excluded.asunto,\n       estado        = 'nuevo',\n       actualizado_en = now()\n where wa_leads.actualizado_en < now() - interval '30 days'\nreturning id, telefono_wa, referencia;",
+        "options": {
+          "queryReplacement": "={{ [ $json.telefono_wa, $json.telefono_e164, $json.referencia, $json.nombre, $json.email_cliente, $json.portal, $json.operacion, $json.es_alquiler, $json.asesora, $json.asunto ] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        660,
+        -120
+      ],
+      "id": "41a09a64-137f-5712-b405-f2234aae6a54",
+      "name": "AltaDelLead",
+      "credentials": {
+        "postgres": {
+          "id": "yvym0TdlOebNMzsm",
+          "name": "Postgres Casagencia"
+        }
+      },
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "886e3fc1-d07d-583b-93b1-4590456a02d5",
+              "leftValue": "={{ $json.id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "number",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        880,
+        -120
+      ],
+      "id": "aade87c9-42f3-553d-b784-d14aa03299c5",
+      "name": "¿Es un lead nuevo?"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        1100,
+        20
+      ],
+      "id": "80681ccc-0f3b-56c6-aa60-3907e70e80c4",
+      "name": "YaLeEscribimos"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "",
+          "mode": "list",
+          "cachedResultName": "[WA][SUB] EnviarPlantilla"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "telefono": "={{ $('ParsearEmail').first().json.telefono_e164 }}",
+            "nombre": "={{ $('ParsearEmail').first().json.nombre }}",
+            "plantilla": "PENDIENTE-nombre-de-la-plantilla",
+            "idioma": "es",
+            "param1": "={{ $('ParsearEmail').first().json.param1 }}",
+            "param2": "={{ $('ParsearEmail').first().json.param2 }}",
+            "referencia": "={{ $('ParsearEmail').first().json.referencia }}",
+            "operacion": "={{ $('ParsearEmail').first().json.operacion }}",
+            "portal": "={{ $('ParsearEmail').first().json.portal }}",
+            "conversacion_id": 0
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "telefono",
+              "displayName": "telefono",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "nombre",
+              "displayName": "nombre",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "plantilla",
+              "displayName": "plantilla",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "idioma",
+              "displayName": "idioma",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "param1",
+              "displayName": "param1",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "param2",
+              "displayName": "param2",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "referencia",
+              "displayName": "referencia",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "operacion",
+              "displayName": "operacion",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "portal",
+              "displayName": "portal",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "conversacion_id",
+              "displayName": "conversacion_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "number"
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        1100,
+        -220
+      ],
+      "id": "ff740a5e-a989-5ac6-8c2b-5cc19d7aa89f",
+      "name": "EnviarPrimeraPlantilla",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "update wa_leads\n   set estado = 'plantilla_enviada', conversacion_id = $2, actualizado_en = now()\n where telefono_wa = $1 and referencia = $3;",
+        "options": {
+          "queryReplacement": "={{ [ $('ParsearEmail').first().json.telefono_wa, $json.conversacion_id || 0, $('ParsearEmail').first().json.referencia ] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1340,
+        -220
+      ],
+      "id": "456d7aa6-7c1b-52f1-a692-453d69db509d",
+      "name": "MarcarPlantillaEnviada",
+      "credentials": {
+        "postgres": {
+          "id": "yvym0TdlOebNMzsm",
+          "name": "Postgres Casagencia"
+        }
+      },
+      "onError": "continueRegularOutput",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// ===========================================================================\n// CASAGENCIA · WHATSAPP — CONFIGURACION COMUN\n// ---------------------------------------------------------------------------\n// Se inyecta al principio de los nodos Code de los workflows [WA].\n// Editar aqui y volver a desplegar:  python3 build_whatsapp.py --deploy\n// ===========================================================================\n\n// --- PENDIENTE DE DESPLIEGUE ------------------------------------------------\n// Rellenar cuando esten montados Chatwoot y el numero de WhatsApp. Hasta\n// entonces los workflows quedan DESACTIVADOS: no se dispara nada.\nconst CHATWOOT_URL    = 'https://PENDIENTE-chatwoot-casagencia';  // sin barra final\nconst CHATWOOT_CUENTA = 1;                                        // id de la cuenta\nconst CHATWOOT_INBOX  = 0;                                        // id del inbox de WhatsApp\nconst META_WABA_ID    = 'PENDIENTE-id-de-la-cuenta-de-whatsapp';   // waba_id de Meta\nconst PLANTILLA_LEAD  = 'PENDIENTE-nombre-de-la-plantilla';        // plantilla aprobada en Meta\nconst PLANTILLA_IDIOMA = 'es';\nconst BUZON_LEADS     = 'PENDIENTE@casagencia.com';                // buzon donde entran los avisos\n\n// El token de Chatwoot y el de Meta NO viven aqui: van en las credenciales\n// \"Chatwoot Casagencia\" y \"Meta WhatsApp Casagencia\" de n8n.\n\n// --- Asesoras ---------------------------------------------------------------\n// Mismo reparto que el asistente telefonico: la referencia manda.\nconst ASESORA_POR_PREFIJO = { BN: 'Carmen', OR: 'Carmen', CS: 'Gisela', VR: 'Gisela' };\nconst EMAIL_POR_ASESORA = {\n  Carmen: 'carmen@casagencia.com',\n  Gisela: 'gisela@casagencia.com',\n  Laurence: 'laurence@casagencia.com',\n};\nconst EMAIL_DIRECCION = 'paco@casagencia.com';   // copia de todos los avisos\n\n// --- Portales de los que llegan los leads por correo ------------------------\n// Cada uno manda el aviso con un formato distinto. `de` casa contra el\n// remitente y `asunto` contra el asunto; basta con que case uno de los dos.\nconst PORTALES = [\n  { nombre: 'Idealista',  de: /idealista\\.com/i,   asunto: /idealista/i },\n  { nombre: 'Fotocasa',   de: /fotocasa\\.es/i,     asunto: /fotocasa/i },\n  { nombre: 'Habitaclia', de: /habitaclia\\.com/i,  asunto: /habitaclia/i },\n  { nombre: 'Web',        de: /casagencia\\.com/i,  asunto: /formulario|contacto/i },\n];\n\n// --- Etiquetas de Chatwoot --------------------------------------------------\n// Con ellas Paco ve de un vistazo en que punto esta cada conversacion.\nconst ETIQUETAS = {\n  nueva:        'ia-nueva',\n  cualificando: 'ia-cualificando',\n  cualificado:  'ia-cualificado',\n  cita:         'ia-cita-agendada',\n  alquiler:     'ia-lead-alquiler',\n  humano:       'intervenir',\n};\n\n// --- Herramientas que ya existen y se reutilizan ----------------------------\n// El asistente de WhatsApp NO duplica la cartera ni el calendario: usa los\n// mismos webhooks que el asistente telefonico, con sus guardafuegos de\n// horario, festivos y \"en alquiler no se agenda\".\nconst N8N = 'https://n8n-casagencia.serversvisionarius.com/webhook';\nconst TOOLS = {\n  buscarInmuebles:     N8N + '/buscarinmuebles',\n  buscarPorReferencia: N8N + '/buscardisponibilidadporreferencia',\n  buscarPorDireccion:  N8N + '/buscarpordireccion',\n  disponibilidad:      N8N + '/buscardisponibilidad',\n  confirmarCita:       N8N + '/confirmarcitacalendario',\n  citaPorTelefono:     N8N + '/buscarcitaportelefono',\n  registrarMensaje:    N8N + '/registrarmensaje',\n};\n\n// Segundos que se espera antes de contestar, para juntar los mensajes que el\n// cliente manda seguidos (\"hola\" / \"es por el piso\" / \"el de la calle X\").\nconst BUFFER_SEGUNDOS = 60;\n\n// Lo que se le dice a un lead de alquiler: no se le agenda nada.\nconst MSG_ALQUILER_SIN_AGENDA =\n  'En los inmuebles de alquiler la visita la concierta directamente la asesora. ' +\n  'Recojo tus datos y te llama ella.';\n\n// ---------------------------------------------------------------------------\n// Utilidades\n// ---------------------------------------------------------------------------\nfunction normalizarTelefono(raw) {\n  let s = String(raw ?? '').trim();\n  const teniaMas = s.startsWith('+');\n  s = s.replace(/\\D/g, '');\n  if (!teniaMas && s.startsWith('00')) s = s.slice(2);\n  if (/^[6789]\\d{8}$/.test(s)) s = '34' + s;\n  return {\n    e164: s ? '+' + s : '',\n    wa_id: s,                                   // como lo quiere Meta: solo digitos\n    nacional: s.startsWith('34') ? s.slice(2) : s,\n    valido: s.length >= 8 && s.length <= 15,\n  };\n}\n\nfunction prefijoDeReferencia(ref) {\n  const m = String(ref ?? '').toUpperCase().match(/[A-Z]{2}/);\n  return m ? m[0] : '';\n}\n\nfunction resolverAsesora(ref) {\n  const prefijo = prefijoDeReferencia(ref);\n  const asesora = ASESORA_POR_PREFIJO[prefijo] || null;\n  return {\n    prefijo,\n    asesora,\n    conocida: !!asesora,\n    email: asesora ? EMAIL_POR_ASESORA[asesora] : EMAIL_POR_ASESORA.Laurence,\n  };\n}\n\n// Alquiler o compra. Mismo criterio que el asistente telefonico: basta con que\n// lo diga la operacion O que la referencia acabe en -A.\nfunction esAlquiler(referencia, operacion) {\n  const o = String(operacion ?? '').toLowerCase();\n  if (o.includes('alquiler') || o.includes('traspaso') || o.includes('rent')) return true;\n  if (o.includes('venta') || o.includes('compra')) return false;\n  return /-A$/i.test(String(referencia ?? '').trim());\n}\n\nfunction detectarPortal(remitente, asunto) {\n  for (const p of PORTALES) {\n    if (p.de.test(String(remitente ?? '')) || p.asunto.test(String(asunto ?? ''))) return p.nombre;\n  }\n  return 'Otro';\n}\n\n\n// [WA] 1 · Entrada de leads · AvisoSinTelefono\n// Si el correo del portal no trae un telefono usable no hay WhatsApp posible.\n// En vez de perder el lead, se le manda el aviso a la asesora que le toca.\nconst j = $input.first().json;\nconst destinos = [j.email_asesora || EMAIL_POR_ASESORA.Laurence, EMAIL_DIRECCION]\n  .filter(Boolean).join(', ');\n\nreturn [{\n  json: {\n    destinatarios: destinos,\n    asunto: `LEAD SIN TELEFONO (${j.portal}): ${j.referencia || 'sin referencia'}`,\n    cuerpo: [\n      'Ha entrado un lead de un portal pero el correo no trae un telefono valido,',\n      'asi que la IA no ha podido arrancar la conversacion de WhatsApp.',\n      '',\n      `Portal: ${j.portal}`,\n      `Inmueble: ${j.referencia || 'sin referencia'}`,\n      `Operacion: ${j.operacion}`,\n      `Nombre: ${j.nombre || 'sin nombre'}`,\n      `Email del cliente: ${j.email_cliente || 'sin email'}`,\n      '',\n      'Asunto del correo original:',\n      j.asunto,\n      '',\n      'Texto del correo (recortado):',\n      j.cuerpo_recortado,\n    ].join('\\n'),\n  }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        660,
+        200
+      ],
+      "id": "262f47ff-394e-58b1-81d1-707ed91ebb5a",
+      "name": "AvisoSinTelefono"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.destinatarios }}",
+        "subject": "={{ $json.asunto }}",
+        "message": "={{ $json.cuerpo }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        880,
+        200
+      ],
+      "id": "d561b99d-b9a5-591a-8bc5-24daa21294cc",
+      "name": "AvisarAsesoraPorCorreo",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "mKh6b4I1hwDsBwOd",
+          "name": "Gmail account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "content": "## De donde salen los leads\nCada portal avisa de la solicitud por correo. Este workflow lee el buzon **PENDIENTE@casagencia.com**, saca el telefono, el nombre y la referencia, y arranca la conversacion de WhatsApp con la primera plantilla.\n\nEl filtro de Gmail y el buzon se ajustan en el nodo CorreoNuevo y en wa/config.js.",
+        "height": 250,
+        "width": 470
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -40,
+        -300
+      ],
+      "id": "e5da7b4e-5aeb-50d1-8d57-71866644de89",
+      "name": "Nota"
+    },
+    {
+      "parameters": {
+        "content": "## No se escribe dos veces\nEl alta del lead es un insert con 'on conflict': si ya le escribimos por ese mismo inmueble no devuelve fila y no se manda nada. Pasados 30 dias si se le vuelve a escribir, porque ya es otra oportunidad.",
+        "height": 200,
+        "width": 450
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        660,
+        -400
+      ],
+      "id": "1b9bb1c5-523d-5b07-8d56-f0b006889d17",
+      "name": "Nota2"
+    },
+    {
+      "parameters": {
+        "content": "## Leads sin telefono\nAlgunos correos no traen telefono. En vez de perder el lead, el aviso se le manda por correo a la asesora que le toca por la referencia.",
+        "height": 170,
+        "width": 450
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        660,
+        380
+      ],
+      "id": "627ef422-fb26-50fe-a08e-f66809913e2b",
+      "name": "Nota3"
+    }
+  ],
+  "connections": {
+    "CorreoNuevo": {
+      "main": [
+        [
+          {
+            "node": "ParsearEmail",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ParsearEmail": {
+      "main": [
+        [
+          {
+            "node": "¿Hay telefono?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Hay telefono?": {
+      "main": [
+        [
+          {
+            "node": "AltaDelLead",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "AvisoSinTelefono",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AltaDelLead": {
+      "main": [
+        [
+          {
+            "node": "¿Es un lead nuevo?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Es un lead nuevo?": {
+      "main": [
+        [
+          {
+            "node": "EnviarPrimeraPlantilla",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "YaLeEscribimos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "EnviarPrimeraPlantilla": {
+      "main": [
+        [
+          {
+            "node": "MarcarPlantillaEnviada",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AvisoSinTelefono": {
+      "main": [
+        [
+          {
+            "node": "AvisarAsesoraPorCorreo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

@@ -1,0 +1,984 @@
+{
+  "name": "[WA][SUB] EnviarPlantilla",
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Europe/Madrid"
+  },
+  "nodes": [
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "telefono"
+            },
+            {
+              "name": "nombre"
+            },
+            {
+              "name": "plantilla"
+            },
+            {
+              "name": "idioma"
+            },
+            {
+              "name": "param1"
+            },
+            {
+              "name": "param2"
+            },
+            {
+              "name": "referencia"
+            },
+            {
+              "name": "operacion"
+            },
+            {
+              "name": "portal"
+            },
+            {
+              "name": "conversacion_id",
+              "type": "number"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -40,
+        0
+      ],
+      "id": "8bf8734f-37ff-549f-8979-175a49850a23",
+      "name": "Start"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ===========================================================================\n// CASAGENCIA · WHATSAPP — CONFIGURACION COMUN\n// ---------------------------------------------------------------------------\n// Se inyecta al principio de los nodos Code de los workflows [WA].\n// Editar aqui y volver a desplegar:  python3 build_whatsapp.py --deploy\n// ===========================================================================\n\n// --- PENDIENTE DE DESPLIEGUE ------------------------------------------------\n// Rellenar cuando esten montados Chatwoot y el numero de WhatsApp. Hasta\n// entonces los workflows quedan DESACTIVADOS: no se dispara nada.\nconst CHATWOOT_URL    = 'https://PENDIENTE-chatwoot-casagencia';  // sin barra final\nconst CHATWOOT_CUENTA = 1;                                        // id de la cuenta\nconst CHATWOOT_INBOX  = 0;                                        // id del inbox de WhatsApp\nconst META_WABA_ID    = 'PENDIENTE-id-de-la-cuenta-de-whatsapp';   // waba_id de Meta\nconst PLANTILLA_LEAD  = 'PENDIENTE-nombre-de-la-plantilla';        // plantilla aprobada en Meta\nconst PLANTILLA_IDIOMA = 'es';\nconst BUZON_LEADS     = 'PENDIENTE@casagencia.com';                // buzon donde entran los avisos\n\n// El token de Chatwoot y el de Meta NO viven aqui: van en las credenciales\n// \"Chatwoot Casagencia\" y \"Meta WhatsApp Casagencia\" de n8n.\n\n// --- Asesoras ---------------------------------------------------------------\n// Mismo reparto que el asistente telefonico: la referencia manda.\nconst ASESORA_POR_PREFIJO = { BN: 'Carmen', OR: 'Carmen', CS: 'Gisela', VR: 'Gisela' };\nconst EMAIL_POR_ASESORA = {\n  Carmen: 'carmen@casagencia.com',\n  Gisela: 'gisela@casagencia.com',\n  Laurence: 'laurence@casagencia.com',\n};\nconst EMAIL_DIRECCION = 'paco@casagencia.com';   // copia de todos los avisos\n\n// --- Portales de los que llegan los leads por correo ------------------------\n// Cada uno manda el aviso con un formato distinto. `de` casa contra el\n// remitente y `asunto` contra el asunto; basta con que case uno de los dos.\nconst PORTALES = [\n  { nombre: 'Idealista',  de: /idealista\\.com/i,   asunto: /idealista/i },\n  { nombre: 'Fotocasa',   de: /fotocasa\\.es/i,     asunto: /fotocasa/i },\n  { nombre: 'Habitaclia', de: /habitaclia\\.com/i,  asunto: /habitaclia/i },\n  { nombre: 'Web',        de: /casagencia\\.com/i,  asunto: /formulario|contacto/i },\n];\n\n// --- Etiquetas de Chatwoot --------------------------------------------------\n// Con ellas Paco ve de un vistazo en que punto esta cada conversacion.\nconst ETIQUETAS = {\n  nueva:        'ia-nueva',\n  cualificando: 'ia-cualificando',\n  cualificado:  'ia-cualificado',\n  cita:         'ia-cita-agendada',\n  alquiler:     'ia-lead-alquiler',\n  humano:       'intervenir',\n};\n\n// --- Herramientas que ya existen y se reutilizan ----------------------------\n// El asistente de WhatsApp NO duplica la cartera ni el calendario: usa los\n// mismos webhooks que el asistente telefonico, con sus guardafuegos de\n// horario, festivos y \"en alquiler no se agenda\".\nconst N8N = 'https://n8n-casagencia.serversvisionarius.com/webhook';\nconst TOOLS = {\n  buscarInmuebles:     N8N + '/buscarinmuebles',\n  buscarPorReferencia: N8N + '/buscardisponibilidadporreferencia',\n  buscarPorDireccion:  N8N + '/buscarpordireccion',\n  disponibilidad:      N8N + '/buscardisponibilidad',\n  confirmarCita:       N8N + '/confirmarcitacalendario',\n  citaPorTelefono:     N8N + '/buscarcitaportelefono',\n  registrarMensaje:    N8N + '/registrarmensaje',\n};\n\n// Segundos que se espera antes de contestar, para juntar los mensajes que el\n// cliente manda seguidos (\"hola\" / \"es por el piso\" / \"el de la calle X\").\nconst BUFFER_SEGUNDOS = 60;\n\n// Lo que se le dice a un lead de alquiler: no se le agenda nada.\nconst MSG_ALQUILER_SIN_AGENDA =\n  'En los inmuebles de alquiler la visita la concierta directamente la asesora. ' +\n  'Recojo tus datos y te llama ella.';\n\n// ---------------------------------------------------------------------------\n// Utilidades\n// ---------------------------------------------------------------------------\nfunction normalizarTelefono(raw) {\n  let s = String(raw ?? '').trim();\n  const teniaMas = s.startsWith('+');\n  s = s.replace(/\\D/g, '');\n  if (!teniaMas && s.startsWith('00')) s = s.slice(2);\n  if (/^[6789]\\d{8}$/.test(s)) s = '34' + s;\n  return {\n    e164: s ? '+' + s : '',\n    wa_id: s,                                   // como lo quiere Meta: solo digitos\n    nacional: s.startsWith('34') ? s.slice(2) : s,\n    valido: s.length >= 8 && s.length <= 15,\n  };\n}\n\nfunction prefijoDeReferencia(ref) {\n  const m = String(ref ?? '').toUpperCase().match(/[A-Z]{2}/);\n  return m ? m[0] : '';\n}\n\nfunction resolverAsesora(ref) {\n  const prefijo = prefijoDeReferencia(ref);\n  const asesora = ASESORA_POR_PREFIJO[prefijo] || null;\n  return {\n    prefijo,\n    asesora,\n    conocida: !!asesora,\n    email: asesora ? EMAIL_POR_ASESORA[asesora] : EMAIL_POR_ASESORA.Laurence,\n  };\n}\n\n// Alquiler o compra. Mismo criterio que el asistente telefonico: basta con que\n// lo diga la operacion O que la referencia acabe en -A.\nfunction esAlquiler(referencia, operacion) {\n  const o = String(operacion ?? '').toLowerCase();\n  if (o.includes('alquiler') || o.includes('traspaso') || o.includes('rent')) return true;\n  if (o.includes('venta') || o.includes('compra')) return false;\n  return /-A$/i.test(String(referencia ?? '').trim());\n}\n\nfunction detectarPortal(remitente, asunto) {\n  for (const p of PORTALES) {\n    if (p.de.test(String(remitente ?? '')) || p.asunto.test(String(asunto ?? ''))) return p.nombre;\n  }\n  return 'Otro';\n}\n\n\n// [WA][SUB] Enviar plantilla · Normalizar\n// Deja el telefono en el formato que quiere Meta y decide que plantilla toca.\nconst j = $input.first().json || {};\nconst tel = normalizarTelefono(j.telefono);\n\nreturn [{\n  json: {\n    telefono_e164: tel.e164,\n    wa_id: tel.wa_id,\n    telefono_valido: tel.valido,\n    nombre: String(j.nombre || '').trim() || 'Hola',\n    referencia: String(j.referencia || '').toUpperCase(),\n    operacion: String(j.operacion || ''),\n    portal: String(j.portal || ''),\n    plantilla: String(j.plantilla || PLANTILLA_LEAD),\n    idioma: String(j.idioma || PLANTILLA_IDIOMA),\n    param1: String(j.param1 ?? j.nombre ?? '').trim(),\n    param2: String(j.param2 ?? j.referencia ?? '').trim(),\n    conversacion_id: Number(j.conversacion_id || 0),\n    chatwoot_url: CHATWOOT_URL,\n    cuenta: CHATWOOT_CUENTA,\n    inbox: CHATWOOT_INBOX,\n  }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        180,
+        0
+      ],
+      "id": "2b4fc27c-ff40-57a7-9251-4bc4bc72e90a",
+      "name": "Normalizar"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "629460ac-6c68-5ca4-b60c-154d5cbdb4e5",
+              "leftValue": "={{ $json.telefono_valido }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        400,
+        0
+      ],
+      "id": "14e583ff-b7a4-52ec-a0f0-c891db5d753f",
+      "name": "¿Telefono valido?"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "14f24173-a55a-50f0-9d98-a9b1bec439f1",
+              "name": "resultado",
+              "type": "string",
+              "value": "Telefono no valido, no se envia nada"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        620,
+        220
+      ],
+      "id": "1fbc6590-371c-5d6e-aeac-1e962b23fedc",
+      "name": "SinTelefono"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "b6596ae8-825d-5e1a-be9f-b5df61c02233",
+              "leftValue": "={{ $json.conversacion_id }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        620,
+        -20
+      ],
+      "id": "9a25d9f4-7bd1-5518-8c09-0978e7b5ced7",
+      "name": "¿Ya tengo conversacion?"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "6b2c0772-7f22-5374-8877-4d7524243fde",
+              "name": "conversacion_id",
+              "type": "number",
+              "value": "={{ $json.conversacion_id }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        860,
+        -180
+      ],
+      "id": "e58144d5-f6cd-5e7d-b2c6-b196d9651003",
+      "name": "UsarConversacionDada"
+    },
+    {
+      "parameters": {
+        "url": "=https://PENDIENTE-chatwoot-casagencia/api/v1/accounts/1/contacts/search?q=%2B{{ $json.wa_id }}",
+        "options": {},
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        860,
+        40
+      ],
+      "id": "9a806784-cdfc-5598-b7b2-1d2edfca159d",
+      "name": "BuscarContacto",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "Wm0tmDE3FjfTx1Tu",
+          "name": "Chatwoot Casagencia"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// ===========================================================================\n// CASAGENCIA · WHATSAPP — CONFIGURACION COMUN\n// ---------------------------------------------------------------------------\n// Se inyecta al principio de los nodos Code de los workflows [WA].\n// Editar aqui y volver a desplegar:  python3 build_whatsapp.py --deploy\n// ===========================================================================\n\n// --- PENDIENTE DE DESPLIEGUE ------------------------------------------------\n// Rellenar cuando esten montados Chatwoot y el numero de WhatsApp. Hasta\n// entonces los workflows quedan DESACTIVADOS: no se dispara nada.\nconst CHATWOOT_URL    = 'https://PENDIENTE-chatwoot-casagencia';  // sin barra final\nconst CHATWOOT_CUENTA = 1;                                        // id de la cuenta\nconst CHATWOOT_INBOX  = 0;                                        // id del inbox de WhatsApp\nconst META_WABA_ID    = 'PENDIENTE-id-de-la-cuenta-de-whatsapp';   // waba_id de Meta\nconst PLANTILLA_LEAD  = 'PENDIENTE-nombre-de-la-plantilla';        // plantilla aprobada en Meta\nconst PLANTILLA_IDIOMA = 'es';\nconst BUZON_LEADS     = 'PENDIENTE@casagencia.com';                // buzon donde entran los avisos\n\n// El token de Chatwoot y el de Meta NO viven aqui: van en las credenciales\n// \"Chatwoot Casagencia\" y \"Meta WhatsApp Casagencia\" de n8n.\n\n// --- Asesoras ---------------------------------------------------------------\n// Mismo reparto que el asistente telefonico: la referencia manda.\nconst ASESORA_POR_PREFIJO = { BN: 'Carmen', OR: 'Carmen', CS: 'Gisela', VR: 'Gisela' };\nconst EMAIL_POR_ASESORA = {\n  Carmen: 'carmen@casagencia.com',\n  Gisela: 'gisela@casagencia.com',\n  Laurence: 'laurence@casagencia.com',\n};\nconst EMAIL_DIRECCION = 'paco@casagencia.com';   // copia de todos los avisos\n\n// --- Portales de los que llegan los leads por correo ------------------------\n// Cada uno manda el aviso con un formato distinto. `de` casa contra el\n// remitente y `asunto` contra el asunto; basta con que case uno de los dos.\nconst PORTALES = [\n  { nombre: 'Idealista',  de: /idealista\\.com/i,   asunto: /idealista/i },\n  { nombre: 'Fotocasa',   de: /fotocasa\\.es/i,     asunto: /fotocasa/i },\n  { nombre: 'Habitaclia', de: /habitaclia\\.com/i,  asunto: /habitaclia/i },\n  { nombre: 'Web',        de: /casagencia\\.com/i,  asunto: /formulario|contacto/i },\n];\n\n// --- Etiquetas de Chatwoot --------------------------------------------------\n// Con ellas Paco ve de un vistazo en que punto esta cada conversacion.\nconst ETIQUETAS = {\n  nueva:        'ia-nueva',\n  cualificando: 'ia-cualificando',\n  cualificado:  'ia-cualificado',\n  cita:         'ia-cita-agendada',\n  alquiler:     'ia-lead-alquiler',\n  humano:       'intervenir',\n};\n\n// --- Herramientas que ya existen y se reutilizan ----------------------------\n// El asistente de WhatsApp NO duplica la cartera ni el calendario: usa los\n// mismos webhooks que el asistente telefonico, con sus guardafuegos de\n// horario, festivos y \"en alquiler no se agenda\".\nconst N8N = 'https://n8n-casagencia.serversvisionarius.com/webhook';\nconst TOOLS = {\n  buscarInmuebles:     N8N + '/buscarinmuebles',\n  buscarPorReferencia: N8N + '/buscardisponibilidadporreferencia',\n  buscarPorDireccion:  N8N + '/buscarpordireccion',\n  disponibilidad:      N8N + '/buscardisponibilidad',\n  confirmarCita:       N8N + '/confirmarcitacalendario',\n  citaPorTelefono:     N8N + '/buscarcitaportelefono',\n  registrarMensaje:    N8N + '/registrarmensaje',\n};\n\n// Segundos que se espera antes de contestar, para juntar los mensajes que el\n// cliente manda seguidos (\"hola\" / \"es por el piso\" / \"el de la calle X\").\nconst BUFFER_SEGUNDOS = 60;\n\n// Lo que se le dice a un lead de alquiler: no se le agenda nada.\nconst MSG_ALQUILER_SIN_AGENDA =\n  'En los inmuebles de alquiler la visita la concierta directamente la asesora. ' +\n  'Recojo tus datos y te llama ella.';\n\n// ---------------------------------------------------------------------------\n// Utilidades\n// ---------------------------------------------------------------------------\nfunction normalizarTelefono(raw) {\n  let s = String(raw ?? '').trim();\n  const teniaMas = s.startsWith('+');\n  s = s.replace(/\\D/g, '');\n  if (!teniaMas && s.startsWith('00')) s = s.slice(2);\n  if (/^[6789]\\d{8}$/.test(s)) s = '34' + s;\n  return {\n    e164: s ? '+' + s : '',\n    wa_id: s,                                   // como lo quiere Meta: solo digitos\n    nacional: s.startsWith('34') ? s.slice(2) : s,\n    valido: s.length >= 8 && s.length <= 15,\n  };\n}\n\nfunction prefijoDeReferencia(ref) {\n  const m = String(ref ?? '').toUpperCase().match(/[A-Z]{2}/);\n  return m ? m[0] : '';\n}\n\nfunction resolverAsesora(ref) {\n  const prefijo = prefijoDeReferencia(ref);\n  const asesora = ASESORA_POR_PREFIJO[prefijo] || null;\n  return {\n    prefijo,\n    asesora,\n    conocida: !!asesora,\n    email: asesora ? EMAIL_POR_ASESORA[asesora] : EMAIL_POR_ASESORA.Laurence,\n  };\n}\n\n// Alquiler o compra. Mismo criterio que el asistente telefonico: basta con que\n// lo diga la operacion O que la referencia acabe en -A.\nfunction esAlquiler(referencia, operacion) {\n  const o = String(operacion ?? '').toLowerCase();\n  if (o.includes('alquiler') || o.includes('traspaso') || o.includes('rent')) return true;\n  if (o.includes('venta') || o.includes('compra')) return false;\n  return /-A$/i.test(String(referencia ?? '').trim());\n}\n\nfunction detectarPortal(remitente, asunto) {\n  for (const p of PORTALES) {\n    if (p.de.test(String(remitente ?? '')) || p.asunto.test(String(asunto ?? ''))) return p.nombre;\n  }\n  return 'Otro';\n}\n\n\n// [WA][SUB] Enviar plantilla · ElegirContacto\n// Chatwoot devuelve coincidencias parciales en la busqueda: nos quedamos solo\n// con el contacto cuyo telefono coincide EXACTAMENTE, para no escribirle a\n// quien no toca.\nconst norm = $('Normalizar').first().json;\nconst encontrados = ($input.first().json.payload) || [];\nconst digitos = (s) => String(s ?? '').replace(/\\D/g, '');\nconst exactos = encontrados.filter(c =>\n  digitos(c.phone_number) === norm.wa_id || digitos(c.identifier) === norm.wa_id);\nreturn [{ json: { payload: exactos.length ? [exactos[0]] : [] } }];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1080,
+        40
+      ],
+      "id": "b836d531-4846-5dc6-988c-fb42f8d84676",
+      "name": "ElegirContacto"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "df0749e9-5103-5a3e-98ba-0e57ffacc9c0",
+              "leftValue": "={{ $json.payload }}",
+              "rightValue": "",
+              "operator": {
+                "type": "array",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1300,
+        40
+      ],
+      "id": "2ab4916e-863a-51a3-81f5-615b0161a62b",
+      "name": "¿Existe el contacto?"
+    },
+    {
+      "parameters": {
+        "url": "=https://PENDIENTE-chatwoot-casagencia/api/v1/accounts/1/contacts/{{ $json.payload[0].id }}/conversations",
+        "options": {},
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1520,
+        -60
+      ],
+      "id": "93d934e8-8d99-5072-be72-2fbe1d6bc639",
+      "name": "ConversacionesDelContacto",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "Wm0tmDE3FjfTx1Tu",
+          "name": "Chatwoot Casagencia"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "dceefef1-770f-5535-8eea-d402f0e04dc9",
+              "leftValue": "={{ $json.payload }}",
+              "rightValue": "",
+              "operator": {
+                "type": "array",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1740,
+        -60
+      ],
+      "id": "41322f29-c5af-5066-99c6-f77a6e3b8ebc",
+      "name": "¿Tiene conversacion?"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ===========================================================================\n// CASAGENCIA · WHATSAPP — CONFIGURACION COMUN\n// ---------------------------------------------------------------------------\n// Se inyecta al principio de los nodos Code de los workflows [WA].\n// Editar aqui y volver a desplegar:  python3 build_whatsapp.py --deploy\n// ===========================================================================\n\n// --- PENDIENTE DE DESPLIEGUE ------------------------------------------------\n// Rellenar cuando esten montados Chatwoot y el numero de WhatsApp. Hasta\n// entonces los workflows quedan DESACTIVADOS: no se dispara nada.\nconst CHATWOOT_URL    = 'https://PENDIENTE-chatwoot-casagencia';  // sin barra final\nconst CHATWOOT_CUENTA = 1;                                        // id de la cuenta\nconst CHATWOOT_INBOX  = 0;                                        // id del inbox de WhatsApp\nconst META_WABA_ID    = 'PENDIENTE-id-de-la-cuenta-de-whatsapp';   // waba_id de Meta\nconst PLANTILLA_LEAD  = 'PENDIENTE-nombre-de-la-plantilla';        // plantilla aprobada en Meta\nconst PLANTILLA_IDIOMA = 'es';\nconst BUZON_LEADS     = 'PENDIENTE@casagencia.com';                // buzon donde entran los avisos\n\n// El token de Chatwoot y el de Meta NO viven aqui: van en las credenciales\n// \"Chatwoot Casagencia\" y \"Meta WhatsApp Casagencia\" de n8n.\n\n// --- Asesoras ---------------------------------------------------------------\n// Mismo reparto que el asistente telefonico: la referencia manda.\nconst ASESORA_POR_PREFIJO = { BN: 'Carmen', OR: 'Carmen', CS: 'Gisela', VR: 'Gisela' };\nconst EMAIL_POR_ASESORA = {\n  Carmen: 'carmen@casagencia.com',\n  Gisela: 'gisela@casagencia.com',\n  Laurence: 'laurence@casagencia.com',\n};\nconst EMAIL_DIRECCION = 'paco@casagencia.com';   // copia de todos los avisos\n\n// --- Portales de los que llegan los leads por correo ------------------------\n// Cada uno manda el aviso con un formato distinto. `de` casa contra el\n// remitente y `asunto` contra el asunto; basta con que case uno de los dos.\nconst PORTALES = [\n  { nombre: 'Idealista',  de: /idealista\\.com/i,   asunto: /idealista/i },\n  { nombre: 'Fotocasa',   de: /fotocasa\\.es/i,     asunto: /fotocasa/i },\n  { nombre: 'Habitaclia', de: /habitaclia\\.com/i,  asunto: /habitaclia/i },\n  { nombre: 'Web',        de: /casagencia\\.com/i,  asunto: /formulario|contacto/i },\n];\n\n// --- Etiquetas de Chatwoot --------------------------------------------------\n// Con ellas Paco ve de un vistazo en que punto esta cada conversacion.\nconst ETIQUETAS = {\n  nueva:        'ia-nueva',\n  cualificando: 'ia-cualificando',\n  cualificado:  'ia-cualificado',\n  cita:         'ia-cita-agendada',\n  alquiler:     'ia-lead-alquiler',\n  humano:       'intervenir',\n};\n\n// --- Herramientas que ya existen y se reutilizan ----------------------------\n// El asistente de WhatsApp NO duplica la cartera ni el calendario: usa los\n// mismos webhooks que el asistente telefonico, con sus guardafuegos de\n// horario, festivos y \"en alquiler no se agenda\".\nconst N8N = 'https://n8n-casagencia.serversvisionarius.com/webhook';\nconst TOOLS = {\n  buscarInmuebles:     N8N + '/buscarinmuebles',\n  buscarPorReferencia: N8N + '/buscardisponibilidadporreferencia',\n  buscarPorDireccion:  N8N + '/buscarpordireccion',\n  disponibilidad:      N8N + '/buscardisponibilidad',\n  confirmarCita:       N8N + '/confirmarcitacalendario',\n  citaPorTelefono:     N8N + '/buscarcitaportelefono',\n  registrarMensaje:    N8N + '/registrarmensaje',\n};\n\n// Segundos que se espera antes de contestar, para juntar los mensajes que el\n// cliente manda seguidos (\"hola\" / \"es por el piso\" / \"el de la calle X\").\nconst BUFFER_SEGUNDOS = 60;\n\n// Lo que se le dice a un lead de alquiler: no se le agenda nada.\nconst MSG_ALQUILER_SIN_AGENDA =\n  'En los inmuebles de alquiler la visita la concierta directamente la asesora. ' +\n  'Recojo tus datos y te llama ella.';\n\n// ---------------------------------------------------------------------------\n// Utilidades\n// ---------------------------------------------------------------------------\nfunction normalizarTelefono(raw) {\n  let s = String(raw ?? '').trim();\n  const teniaMas = s.startsWith('+');\n  s = s.replace(/\\D/g, '');\n  if (!teniaMas && s.startsWith('00')) s = s.slice(2);\n  if (/^[6789]\\d{8}$/.test(s)) s = '34' + s;\n  return {\n    e164: s ? '+' + s : '',\n    wa_id: s,                                   // como lo quiere Meta: solo digitos\n    nacional: s.startsWith('34') ? s.slice(2) : s,\n    valido: s.length >= 8 && s.length <= 15,\n  };\n}\n\nfunction prefijoDeReferencia(ref) {\n  const m = String(ref ?? '').toUpperCase().match(/[A-Z]{2}/);\n  return m ? m[0] : '';\n}\n\nfunction resolverAsesora(ref) {\n  const prefijo = prefijoDeReferencia(ref);\n  const asesora = ASESORA_POR_PREFIJO[prefijo] || null;\n  return {\n    prefijo,\n    asesora,\n    conocida: !!asesora,\n    email: asesora ? EMAIL_POR_ASESORA[asesora] : EMAIL_POR_ASESORA.Laurence,\n  };\n}\n\n// Alquiler o compra. Mismo criterio que el asistente telefonico: basta con que\n// lo diga la operacion O que la referencia acabe en -A.\nfunction esAlquiler(referencia, operacion) {\n  const o = String(operacion ?? '').toLowerCase();\n  if (o.includes('alquiler') || o.includes('traspaso') || o.includes('rent')) return true;\n  if (o.includes('venta') || o.includes('compra')) return false;\n  return /-A$/i.test(String(referencia ?? '').trim());\n}\n\nfunction detectarPortal(remitente, asunto) {\n  for (const p of PORTALES) {\n    if (p.de.test(String(remitente ?? '')) || p.asunto.test(String(asunto ?? ''))) return p.nombre;\n  }\n  return 'Otro';\n}\n\n\n// [WA][SUB] Enviar plantilla · ElegirConversacion\n// De todas las conversaciones del contacto se elige la mas adecuada: primero\n// las abiertas y, entre ellas, la de actividad mas reciente.\nconst conversaciones = $input.first().json.payload || [];\nconst abiertas = conversaciones.filter(c => c.status === 'open');\nconst candidatas = abiertas.length ? abiertas : conversaciones;\ncandidatas.sort((a, b) => (b.last_activity_at || 0) - (a.last_activity_at || 0));\nreturn [{ json: { conversacion_id: candidatas.length ? candidatas[0].id : 0 } }];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1960,
+        -160
+      ],
+      "id": "15459c72-ce9e-5a1e-8f29-01f2f9a49d9f",
+      "name": "ElegirConversacion"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://PENDIENTE-chatwoot-casagencia/api/v1/accounts/1/conversations",
+        "options": {},
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ source_id: $('ElegirContacto').first().json.payload[0].phone_number.replace('+',''), inbox_id: 0, contact_id: $('ElegirContacto').first().json.payload[0].id }) }}"
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1960,
+        40
+      ],
+      "id": "00785d71-2572-57b7-89e0-5ae68e335155",
+      "name": "CrearConversacion",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "Wm0tmDE3FjfTx1Tu",
+          "name": "Chatwoot Casagencia"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "948166dc-f822-58f3-8cfb-501f93c6829b",
+              "name": "conversacion_id",
+              "type": "number",
+              "value": "={{ $json.id }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2180,
+        40
+      ],
+      "id": "84e7925d-3334-526a-bce7-8d65d52c8cee",
+      "name": "IdConversacionCreada"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://PENDIENTE-chatwoot-casagencia/api/v1/accounts/1/contacts",
+        "options": {},
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ name: $('Normalizar').first().json.nombre || $('Normalizar').first().json.telefono_e164, phone_number: $('Normalizar').first().json.telefono_e164, identifier: $('Normalizar').first().json.wa_id, inbox_id: 0, source_id: $('Normalizar').first().json.wa_id, custom_attributes: { bot: 'On' } }) }}"
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1520,
+        200
+      ],
+      "id": "be793d68-eb12-5471-af52-a4bf6d624116",
+      "name": "CrearContacto",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "Wm0tmDE3FjfTx1Tu",
+          "name": "Chatwoot Casagencia"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "amount": 3
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        1740,
+        200
+      ],
+      "id": "3e456b33-bd8f-53e9-994e-d4fa7ebb83b7",
+      "name": "EsperaAltaContacto",
+      "webhookId": "87a480a8-7ce0-4321-8c5b-075491407eee"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://PENDIENTE-chatwoot-casagencia/api/v1/accounts/1/conversations",
+        "options": {},
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ source_id: $('CrearContacto').first().json.payload.contact.contact_inboxes[0].source_id, inbox_id: $('CrearContacto').first().json.payload.contact.contact_inboxes[0].inbox.id, contact_id: $('CrearContacto').first().json.payload.contact.id }) }}"
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1960,
+        200
+      ],
+      "id": "ec9ffdf2-dc7f-5995-b21c-43a678fb9160",
+      "name": "CrearConversacionContactoNuevo",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "Wm0tmDE3FjfTx1Tu",
+          "name": "Chatwoot Casagencia"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "0bbc3c06-2af6-5155-8744-8a16f779c97c",
+              "name": "conversacion_id",
+              "type": "number",
+              "value": "={{ $json.id }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2180,
+        200
+      ],
+      "id": "b9c6b857-3301-52cc-8439-2cbc29eb231b",
+      "name": "IdConversacionNueva"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "c5cdc0fb-d45d-5ce3-bde4-41708ba97ce8",
+              "name": "conversacion_id",
+              "type": "number",
+              "value": "={{ $json.conversacion_id }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2400,
+        0
+      ],
+      "id": "0e7b1902-78a6-5b7f-8156-4e77357c39dc",
+      "name": "ConversacionLista"
+    },
+    {
+      "parameters": {
+        "url": "https://graph.facebook.com/v22.0/PENDIENTE-id-de-la-cuenta-de-whatsapp/message_templates",
+        "options": {},
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "name",
+              "value": "={{ $('Normalizar').first().json.plantilla }}"
+            },
+            {
+              "name": "language",
+              "value": "={{ $('Normalizar').first().json.idioma }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2620,
+        0
+      ],
+      "id": "01dfa15c-51d1-5065-93c8-b67b1515e8e3",
+      "name": "PlantillaMeta",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "P4xswu9i9E4RILJN",
+          "name": "Meta WhatsApp Casagencia"
+        }
+      },
+      "onError": "continueRegularOutput",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// ===========================================================================\n// CASAGENCIA · WHATSAPP — CONFIGURACION COMUN\n// ---------------------------------------------------------------------------\n// Se inyecta al principio de los nodos Code de los workflows [WA].\n// Editar aqui y volver a desplegar:  python3 build_whatsapp.py --deploy\n// ===========================================================================\n\n// --- PENDIENTE DE DESPLIEGUE ------------------------------------------------\n// Rellenar cuando esten montados Chatwoot y el numero de WhatsApp. Hasta\n// entonces los workflows quedan DESACTIVADOS: no se dispara nada.\nconst CHATWOOT_URL    = 'https://PENDIENTE-chatwoot-casagencia';  // sin barra final\nconst CHATWOOT_CUENTA = 1;                                        // id de la cuenta\nconst CHATWOOT_INBOX  = 0;                                        // id del inbox de WhatsApp\nconst META_WABA_ID    = 'PENDIENTE-id-de-la-cuenta-de-whatsapp';   // waba_id de Meta\nconst PLANTILLA_LEAD  = 'PENDIENTE-nombre-de-la-plantilla';        // plantilla aprobada en Meta\nconst PLANTILLA_IDIOMA = 'es';\nconst BUZON_LEADS     = 'PENDIENTE@casagencia.com';                // buzon donde entran los avisos\n\n// El token de Chatwoot y el de Meta NO viven aqui: van en las credenciales\n// \"Chatwoot Casagencia\" y \"Meta WhatsApp Casagencia\" de n8n.\n\n// --- Asesoras ---------------------------------------------------------------\n// Mismo reparto que el asistente telefonico: la referencia manda.\nconst ASESORA_POR_PREFIJO = { BN: 'Carmen', OR: 'Carmen', CS: 'Gisela', VR: 'Gisela' };\nconst EMAIL_POR_ASESORA = {\n  Carmen: 'carmen@casagencia.com',\n  Gisela: 'gisela@casagencia.com',\n  Laurence: 'laurence@casagencia.com',\n};\nconst EMAIL_DIRECCION = 'paco@casagencia.com';   // copia de todos los avisos\n\n// --- Portales de los que llegan los leads por correo ------------------------\n// Cada uno manda el aviso con un formato distinto. `de` casa contra el\n// remitente y `asunto` contra el asunto; basta con que case uno de los dos.\nconst PORTALES = [\n  { nombre: 'Idealista',  de: /idealista\\.com/i,   asunto: /idealista/i },\n  { nombre: 'Fotocasa',   de: /fotocasa\\.es/i,     asunto: /fotocasa/i },\n  { nombre: 'Habitaclia', de: /habitaclia\\.com/i,  asunto: /habitaclia/i },\n  { nombre: 'Web',        de: /casagencia\\.com/i,  asunto: /formulario|contacto/i },\n];\n\n// --- Etiquetas de Chatwoot --------------------------------------------------\n// Con ellas Paco ve de un vistazo en que punto esta cada conversacion.\nconst ETIQUETAS = {\n  nueva:        'ia-nueva',\n  cualificando: 'ia-cualificando',\n  cualificado:  'ia-cualificado',\n  cita:         'ia-cita-agendada',\n  alquiler:     'ia-lead-alquiler',\n  humano:       'intervenir',\n};\n\n// --- Herramientas que ya existen y se reutilizan ----------------------------\n// El asistente de WhatsApp NO duplica la cartera ni el calendario: usa los\n// mismos webhooks que el asistente telefonico, con sus guardafuegos de\n// horario, festivos y \"en alquiler no se agenda\".\nconst N8N = 'https://n8n-casagencia.serversvisionarius.com/webhook';\nconst TOOLS = {\n  buscarInmuebles:     N8N + '/buscarinmuebles',\n  buscarPorReferencia: N8N + '/buscardisponibilidadporreferencia',\n  buscarPorDireccion:  N8N + '/buscarpordireccion',\n  disponibilidad:      N8N + '/buscardisponibilidad',\n  confirmarCita:       N8N + '/confirmarcitacalendario',\n  citaPorTelefono:     N8N + '/buscarcitaportelefono',\n  registrarMensaje:    N8N + '/registrarmensaje',\n};\n\n// Segundos que se espera antes de contestar, para juntar los mensajes que el\n// cliente manda seguidos (\"hola\" / \"es por el piso\" / \"el de la calle X\").\nconst BUFFER_SEGUNDOS = 60;\n\n// Lo que se le dice a un lead de alquiler: no se le agenda nada.\nconst MSG_ALQUILER_SIN_AGENDA =\n  'En los inmuebles de alquiler la visita la concierta directamente la asesora. ' +\n  'Recojo tus datos y te llama ella.';\n\n// ---------------------------------------------------------------------------\n// Utilidades\n// ---------------------------------------------------------------------------\nfunction normalizarTelefono(raw) {\n  let s = String(raw ?? '').trim();\n  const teniaMas = s.startsWith('+');\n  s = s.replace(/\\D/g, '');\n  if (!teniaMas && s.startsWith('00')) s = s.slice(2);\n  if (/^[6789]\\d{8}$/.test(s)) s = '34' + s;\n  return {\n    e164: s ? '+' + s : '',\n    wa_id: s,                                   // como lo quiere Meta: solo digitos\n    nacional: s.startsWith('34') ? s.slice(2) : s,\n    valido: s.length >= 8 && s.length <= 15,\n  };\n}\n\nfunction prefijoDeReferencia(ref) {\n  const m = String(ref ?? '').toUpperCase().match(/[A-Z]{2}/);\n  return m ? m[0] : '';\n}\n\nfunction resolverAsesora(ref) {\n  const prefijo = prefijoDeReferencia(ref);\n  const asesora = ASESORA_POR_PREFIJO[prefijo] || null;\n  return {\n    prefijo,\n    asesora,\n    conocida: !!asesora,\n    email: asesora ? EMAIL_POR_ASESORA[asesora] : EMAIL_POR_ASESORA.Laurence,\n  };\n}\n\n// Alquiler o compra. Mismo criterio que el asistente telefonico: basta con que\n// lo diga la operacion O que la referencia acabe en -A.\nfunction esAlquiler(referencia, operacion) {\n  const o = String(operacion ?? '').toLowerCase();\n  if (o.includes('alquiler') || o.includes('traspaso') || o.includes('rent')) return true;\n  if (o.includes('venta') || o.includes('compra')) return false;\n  return /-A$/i.test(String(referencia ?? '').trim());\n}\n\nfunction detectarPortal(remitente, asunto) {\n  for (const p of PORTALES) {\n    if (p.de.test(String(remitente ?? '')) || p.asunto.test(String(asunto ?? ''))) return p.nombre;\n  }\n  return 'Otro';\n}\n\n\n// [WA][SUB] Enviar plantilla · RenderizarTexto\n// Construye el texto que se ve en el panel y el cuerpo del mensaje de Chatwoot.\n// El texto se coge de la plantilla REAL de Meta; si la API de Meta falla se usa\n// el respaldo de aqui abajo para no dejar al lead sin contestar.\nconst norm = $('Normalizar').first().json;\n\n// Respaldo: el mismo texto que se apruebe en Meta. Al cambiar la plantilla,\n// cambiar tambien este texto para que el panel muestre lo que se ha enviado.\nconst RESPALDO = {};\nconst RESPALDO_GENERICO =\n  'Hola {{1}}, soy Sara, la asistente virtual de Casagencia. ' +\n  'Nos has dejado una solicitud de informacion sobre el inmueble {{2}}. ' +\n  '¿Te va bien que te haga un par de preguntas por aqui para ayudarte mejor?';\n\nlet cuerpo = null;\ntry {\n  const respuesta = $input.first().json || {};\n  const plantillas = respuesta.data || [];\n  const plantilla = plantillas.find(t => t.name === norm.plantilla && t.language === norm.idioma)\n                 || plantillas[0];\n  cuerpo = plantilla.components.find(c => c.type === 'BODY').text;\n} catch (e) {\n  cuerpo = null;\n}\nif (!cuerpo) cuerpo = RESPALDO[norm.plantilla] || RESPALDO_GENERICO;\n\n// Los parametros van por posicion, como los numera Meta: {{1}}, {{2}}...\nconst params = { 1: norm.param1 };\nif (norm.param2 !== '') params['2'] = norm.param2;\n\nlet contenido = cuerpo;\nfor (const [clave, valor] of Object.entries(params)) {\n  contenido = contenido.split('{{' + clave + '}}').join(valor);\n}\n\nconst conversacionId = $('ConversacionLista').first().json.conversacion_id;\n\nreturn [{\n  json: {\n    conversacion_id: conversacionId,\n    contenido,\n    body_mensaje: JSON.stringify({\n      content: contenido,\n      message_type: 'outgoing',\n      template_params: {\n        name: norm.plantilla,\n        category: 'MARKETING',\n        language: norm.idioma,\n        processed_params: params,\n      },\n    }),\n  }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2840,
+        0
+      ],
+      "id": "d9256615-581a-5eab-8192-9d496fb62a00",
+      "name": "RenderizarTexto"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://PENDIENTE-chatwoot-casagencia/api/v1/accounts/1/conversations/{{ $json.conversacion_id }}/messages",
+        "options": {},
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.body_mensaje }}"
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3060,
+        0
+      ],
+      "id": "b033b8ac-db95-5ac2-8b17-d151686908d1",
+      "name": "EnviarPlantilla",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "Wm0tmDE3FjfTx1Tu",
+          "name": "Chatwoot Casagencia"
+        }
+      },
+      "retryOnFail": true,
+      "waitBetweenTries": 3000
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "insert into n8n_chat_histories (session_id, message) values ($1, $2);",
+        "options": {
+          "queryReplacement": "={{ [ $('Normalizar').first().json.telefono_e164, JSON.stringify({ type: 'ai', content: $('RenderizarTexto').first().json.contenido, tool_calls: [], additional_kwargs: {}, response_metadata: {}, invalid_tool_calls: [] }) ] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        3280,
+        0
+      ],
+      "id": "f7624028-7e7f-5b69-98d7-0fc53c49221e",
+      "name": "GuardarEnMemoriaAgente",
+      "credentials": {
+        "postgres": {
+          "id": "yvym0TdlOebNMzsm",
+          "name": "Postgres Casagencia"
+        }
+      },
+      "onError": "continueRegularOutput",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "b71e131b-85cb-53bc-86ef-f0c15124e2f1",
+              "name": "resultado",
+              "type": "string",
+              "value": "Plantilla enviada"
+            },
+            {
+              "id": "824e153d-dc07-51c3-baed-63a8f63ede17",
+              "name": "conversacion_id",
+              "type": "number",
+              "value": "={{ $('ConversacionLista').first().json.conversacion_id }}"
+            },
+            {
+              "id": "1a33e1b3-5501-57d9-aae1-0bc90b2d6bb9",
+              "name": "contenido",
+              "type": "string",
+              "value": "={{ $('RenderizarTexto').first().json.contenido }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        3500,
+        0
+      ],
+      "id": "c2256bbd-1968-546f-89b0-f6356b753303",
+      "name": "Resultado"
+    },
+    {
+      "parameters": {
+        "content": "## El primer mensaje\nLa plantilla se manda POR CHATWOOT (no directamente a Meta) para que la conversacion nazca en el panel y las asesoras la vean desde el minuto uno.\n\nA Meta solo se le pide el TEXTO de la plantilla aprobada, para que en el panel se lea lo mismo que le ha llegado al cliente. Si Meta falla se usa el respaldo del nodo RenderizarTexto.\n\nAl final se siembra la memoria del agente con ese primer mensaje: asi Sara sabe lo que ya le ha dicho al cliente y no se vuelve a presentar.",
+        "height": 260,
+        "width": 520
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        2620,
+        -300
+      ],
+      "id": "e5da7b4e-5aeb-50d1-8d57-71866644de89",
+      "name": "Nota"
+    },
+    {
+      "parameters": {
+        "content": "## Tokens\nNi el de Chatwoot ni el de Meta estan escritos aqui: van en las credenciales 'Chatwoot Casagencia' y 'Meta WhatsApp Casagencia'.",
+        "height": 150,
+        "width": 420
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        180,
+        -230
+      ],
+      "id": "1b9bb1c5-523d-5b07-8d56-f0b006889d17",
+      "name": "Nota2"
+    }
+  ],
+  "connections": {
+    "Start": {
+      "main": [
+        [
+          {
+            "node": "Normalizar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalizar": {
+      "main": [
+        [
+          {
+            "node": "¿Telefono valido?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Telefono valido?": {
+      "main": [
+        [
+          {
+            "node": "¿Ya tengo conversacion?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "SinTelefono",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Ya tengo conversacion?": {
+      "main": [
+        [
+          {
+            "node": "UsarConversacionDada",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "BuscarContacto",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "BuscarContacto": {
+      "main": [
+        [
+          {
+            "node": "ElegirContacto",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ElegirContacto": {
+      "main": [
+        [
+          {
+            "node": "¿Existe el contacto?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Existe el contacto?": {
+      "main": [
+        [
+          {
+            "node": "ConversacionesDelContacto",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "CrearContacto",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ConversacionesDelContacto": {
+      "main": [
+        [
+          {
+            "node": "¿Tiene conversacion?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Tiene conversacion?": {
+      "main": [
+        [
+          {
+            "node": "ElegirConversacion",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "CrearConversacion",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CrearConversacion": {
+      "main": [
+        [
+          {
+            "node": "IdConversacionCreada",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CrearContacto": {
+      "main": [
+        [
+          {
+            "node": "EsperaAltaContacto",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "EsperaAltaContacto": {
+      "main": [
+        [
+          {
+            "node": "CrearConversacionContactoNuevo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CrearConversacionContactoNuevo": {
+      "main": [
+        [
+          {
+            "node": "IdConversacionNueva",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "UsarConversacionDada": {
+      "main": [
+        [
+          {
+            "node": "ConversacionLista",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ElegirConversacion": {
+      "main": [
+        [
+          {
+            "node": "ConversacionLista",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IdConversacionCreada": {
+      "main": [
+        [
+          {
+            "node": "ConversacionLista",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IdConversacionNueva": {
+      "main": [
+        [
+          {
+            "node": "ConversacionLista",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ConversacionLista": {
+      "main": [
+        [
+          {
+            "node": "PlantillaMeta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PlantillaMeta": {
+      "main": [
+        [
+          {
+            "node": "RenderizarTexto",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "RenderizarTexto": {
+      "main": [
+        [
+          {
+            "node": "EnviarPlantilla",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "EnviarPlantilla": {
+      "main": [
+        [
+          {
+            "node": "GuardarEnMemoriaAgente",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GuardarEnMemoriaAgente": {
+      "main": [
+        [
+          {
+            "node": "Resultado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

@@ -1,0 +1,69 @@
+{
+  "name": "[WA] 0 · Esquema de base de datos",
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Europe/Madrid"
+  },
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -40,
+        0
+      ],
+      "id": "ac2accd4-6b51-5f31-a65c-f92f0949d697",
+      "name": "EjecutarAMano"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "-- Memoria del agente (la usa el nodo Postgres Chat Memory)\ncreate table if not exists n8n_chat_histories (\n  id         serial primary key,\n  session_id varchar(255) not null,\n  message    jsonb        not null,\n  created_at timestamptz  not null default now()\n);\ncreate index if not exists n8n_chat_histories_sesion on n8n_chat_histories (session_id, id);\n\n-- Ficha de cada lead que entra por correo desde un portal\ncreate table if not exists wa_leads (\n  id              serial primary key,\n  telefono_wa     text not null,\n  telefono_e164   text not null default '',\n  referencia      text not null default '',\n  nombre          text not null default '',\n  email_cliente   text not null default '',\n  portal          text not null default '',\n  operacion       text not null default '',\n  es_alquiler     boolean not null default false,\n  asesora         text not null default '',\n  estado          text not null default 'nuevo',\n  conversacion_id bigint,\n  asunto          text not null default '',\n  q_personas      text not null default '',\n  q_ingresos      text not null default '',\n  q_mascotas      text not null default '',\n  q_entrada       text not null default '',\n  q_duracion      text not null default '',\n  q_cuando        text not null default '',\n  q_zona          text not null default '',\n  q_presupuesto   text not null default '',\n  q_financiacion  text not null default '',\n  notas           text not null default '',\n  creado_en       timestamptz not null default now(),\n  actualizado_en  timestamptz not null default now()\n);\n-- Un lead por telefono e inmueble: asi el mismo cliente puede preguntar por\n-- dos inmuebles distintos, pero no se le escribe dos veces por el mismo.\ncreate unique index if not exists wa_leads_unico on wa_leads (telefono_wa, referencia);\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        200,
+        0
+      ],
+      "id": "3ac4b63b-dc83-5f62-bb2a-d42acad528d7",
+      "name": "CrearTablas",
+      "credentials": {
+        "postgres": {
+          "id": "yvym0TdlOebNMzsm",
+          "name": "Postgres Casagencia"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "## Ejecutar UNA vez\nCrea las dos tablas que necesita el asistente de WhatsApp:\n\n- **n8n_chat_histories**: la memoria del agente, una fila por mensaje.\n- **wa_leads**: la ficha de cada lead que entra de un portal, con la referencia, la operacion, la asesora y las respuestas de cualificacion.\n\nSe puede volver a ejecutar sin miedo: todo es 'create if not exists'.",
+        "height": 230,
+        "width": 470
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        200,
+        -260
+      ],
+      "id": "e5da7b4e-5aeb-50d1-8d57-71866644de89",
+      "name": "Nota"
+    }
+  ],
+  "connections": {
+    "EjecutarAMano": {
+      "main": [
+        [
+          {
+            "node": "CrearTablas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

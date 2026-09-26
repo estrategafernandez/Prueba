@@ -1,0 +1,214 @@
+{
+  "name": "[WA][SUB] CualificarLead",
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Europe/Madrid"
+  },
+  "nodes": [
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "telefono"
+            },
+            {
+              "name": "nombre"
+            },
+            {
+              "name": "referencia"
+            },
+            {
+              "name": "operacion"
+            },
+            {
+              "name": "personas"
+            },
+            {
+              "name": "ingresos"
+            },
+            {
+              "name": "mascotas"
+            },
+            {
+              "name": "entrada"
+            },
+            {
+              "name": "duracion"
+            },
+            {
+              "name": "cuando"
+            },
+            {
+              "name": "zona"
+            },
+            {
+              "name": "presupuesto"
+            },
+            {
+              "name": "financiacion"
+            },
+            {
+              "name": "resumen"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -40,
+        0
+      ],
+      "id": "8bf8734f-37ff-549f-8979-175a49850a23",
+      "name": "Start"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ===========================================================================\n// CASAGENCIA · WHATSAPP — CONFIGURACION COMUN\n// ---------------------------------------------------------------------------\n// Se inyecta al principio de los nodos Code de los workflows [WA].\n// Editar aqui y volver a desplegar:  python3 build_whatsapp.py --deploy\n// ===========================================================================\n\n// --- PENDIENTE DE DESPLIEGUE ------------------------------------------------\n// Rellenar cuando esten montados Chatwoot y el numero de WhatsApp. Hasta\n// entonces los workflows quedan DESACTIVADOS: no se dispara nada.\nconst CHATWOOT_URL    = 'https://PENDIENTE-chatwoot-casagencia';  // sin barra final\nconst CHATWOOT_CUENTA = 1;                                        // id de la cuenta\nconst CHATWOOT_INBOX  = 0;                                        // id del inbox de WhatsApp\nconst META_WABA_ID    = 'PENDIENTE-id-de-la-cuenta-de-whatsapp';   // waba_id de Meta\nconst PLANTILLA_LEAD  = 'PENDIENTE-nombre-de-la-plantilla';        // plantilla aprobada en Meta\nconst PLANTILLA_IDIOMA = 'es';\nconst BUZON_LEADS     = 'PENDIENTE@casagencia.com';                // buzon donde entran los avisos\n\n// El token de Chatwoot y el de Meta NO viven aqui: van en las credenciales\n// \"Chatwoot Casagencia\" y \"Meta WhatsApp Casagencia\" de n8n.\n\n// --- Asesoras ---------------------------------------------------------------\n// Mismo reparto que el asistente telefonico: la referencia manda.\nconst ASESORA_POR_PREFIJO = { BN: 'Carmen', OR: 'Carmen', CS: 'Gisela', VR: 'Gisela' };\nconst EMAIL_POR_ASESORA = {\n  Carmen: 'carmen@casagencia.com',\n  Gisela: 'gisela@casagencia.com',\n  Laurence: 'laurence@casagencia.com',\n};\nconst EMAIL_DIRECCION = 'paco@casagencia.com';   // copia de todos los avisos\n\n// --- Portales de los que llegan los leads por correo ------------------------\n// Cada uno manda el aviso con un formato distinto. `de` casa contra el\n// remitente y `asunto` contra el asunto; basta con que case uno de los dos.\nconst PORTALES = [\n  { nombre: 'Idealista',  de: /idealista\\.com/i,   asunto: /idealista/i },\n  { nombre: 'Fotocasa',   de: /fotocasa\\.es/i,     asunto: /fotocasa/i },\n  { nombre: 'Habitaclia', de: /habitaclia\\.com/i,  asunto: /habitaclia/i },\n  { nombre: 'Web',        de: /casagencia\\.com/i,  asunto: /formulario|contacto/i },\n];\n\n// --- Etiquetas de Chatwoot --------------------------------------------------\n// Con ellas Paco ve de un vistazo en que punto esta cada conversacion.\nconst ETIQUETAS = {\n  nueva:        'ia-nueva',\n  cualificando: 'ia-cualificando',\n  cualificado:  'ia-cualificado',\n  cita:         'ia-cita-agendada',\n  alquiler:     'ia-lead-alquiler',\n  humano:       'intervenir',\n};\n\n// --- Herramientas que ya existen y se reutilizan ----------------------------\n// El asistente de WhatsApp NO duplica la cartera ni el calendario: usa los\n// mismos webhooks que el asistente telefonico, con sus guardafuegos de\n// horario, festivos y \"en alquiler no se agenda\".\nconst N8N = 'https://n8n-casagencia.serversvisionarius.com/webhook';\nconst TOOLS = {\n  buscarInmuebles:     N8N + '/buscarinmuebles',\n  buscarPorReferencia: N8N + '/buscardisponibilidadporreferencia',\n  buscarPorDireccion:  N8N + '/buscarpordireccion',\n  disponibilidad:      N8N + '/buscardisponibilidad',\n  confirmarCita:       N8N + '/confirmarcitacalendario',\n  citaPorTelefono:     N8N + '/buscarcitaportelefono',\n  registrarMensaje:    N8N + '/registrarmensaje',\n};\n\n// Segundos que se espera antes de contestar, para juntar los mensajes que el\n// cliente manda seguidos (\"hola\" / \"es por el piso\" / \"el de la calle X\").\nconst BUFFER_SEGUNDOS = 60;\n\n// Lo que se le dice a un lead de alquiler: no se le agenda nada.\nconst MSG_ALQUILER_SIN_AGENDA =\n  'En los inmuebles de alquiler la visita la concierta directamente la asesora. ' +\n  'Recojo tus datos y te llama ella.';\n\n// ---------------------------------------------------------------------------\n// Utilidades\n// ---------------------------------------------------------------------------\nfunction normalizarTelefono(raw) {\n  let s = String(raw ?? '').trim();\n  const teniaMas = s.startsWith('+');\n  s = s.replace(/\\D/g, '');\n  if (!teniaMas && s.startsWith('00')) s = s.slice(2);\n  if (/^[6789]\\d{8}$/.test(s)) s = '34' + s;\n  return {\n    e164: s ? '+' + s : '',\n    wa_id: s,                                   // como lo quiere Meta: solo digitos\n    nacional: s.startsWith('34') ? s.slice(2) : s,\n    valido: s.length >= 8 && s.length <= 15,\n  };\n}\n\nfunction prefijoDeReferencia(ref) {\n  const m = String(ref ?? '').toUpperCase().match(/[A-Z]{2}/);\n  return m ? m[0] : '';\n}\n\nfunction resolverAsesora(ref) {\n  const prefijo = prefijoDeReferencia(ref);\n  const asesora = ASESORA_POR_PREFIJO[prefijo] || null;\n  return {\n    prefijo,\n    asesora,\n    conocida: !!asesora,\n    email: asesora ? EMAIL_POR_ASESORA[asesora] : EMAIL_POR_ASESORA.Laurence,\n  };\n}\n\n// Alquiler o compra. Mismo criterio que el asistente telefonico: basta con que\n// lo diga la operacion O que la referencia acabe en -A.\nfunction esAlquiler(referencia, operacion) {\n  const o = String(operacion ?? '').toLowerCase();\n  if (o.includes('alquiler') || o.includes('traspaso') || o.includes('rent')) return true;\n  if (o.includes('venta') || o.includes('compra')) return false;\n  return /-A$/i.test(String(referencia ?? '').trim());\n}\n\nfunction detectarPortal(remitente, asunto) {\n  for (const p of PORTALES) {\n    if (p.de.test(String(remitente ?? '')) || p.asunto.test(String(asunto ?? ''))) return p.nombre;\n  }\n  return 'Otro';\n}\n\n\n// [WA][SUB] Cualificar lead · Preparar\n// Recoge lo que el agente ha averiguado, lo deja listo para guardar en la ficha\n// del lead y redacta el aviso para la asesora.\n//\n// Regla de Paco: en ALQUILER no se agenda visita. Se cualifica con las cuatro\n// preguntas y llama la asesora. Aqui es donde se cierra ese circulo.\nconst j = $input.first().json || {};\nconst tel = normalizarTelefono(j.telefono);\nconst referencia = String(j.referencia ?? '').toUpperCase().trim();\nconst alquiler = esAlquiler(referencia, j.operacion);\nconst r = resolverAsesora(referencia);\nconst asesora = r.asesora || 'Laurence';\n\nconst limpio = (v) => {\n  const s = String(v ?? '').trim();\n  return s && s.toLowerCase() !== 'undefined' ? s : '';\n};\n\nconst campos = {\n  q_personas:     limpio(j.personas),\n  q_ingresos:     limpio(j.ingresos),\n  q_mascotas:     limpio(j.mascotas),\n  q_entrada:      limpio(j.entrada),\n  q_duracion:     limpio(j.duracion),\n  q_cuando:       limpio(j.cuando),\n  q_zona:         limpio(j.zona),\n  q_presupuesto:  limpio(j.presupuesto),\n  q_financiacion: limpio(j.financiacion),\n};\n\nconst etiquetas = alquiler\n  ? [['Personas', campos.q_personas], ['Ingresos / contrato', campos.q_ingresos],\n     ['Mascotas', campos.q_mascotas], ['Cuando quiere entrar', campos.q_entrada],\n     ['Todo el ano o temporada', campos.q_duracion]]\n  : [['Para cuando quiere comprar', campos.q_cuando], ['Zona', campos.q_zona],\n     ['Presupuesto', campos.q_presupuesto], ['Financiacion', campos.q_financiacion]];\n\nconst cuerpo = [\n  alquiler\n    ? 'LEAD DE ALQUILER CUALIFICADO POR WHATSAPP. En alquiler no se agenda visita: hay que llamarle.'\n    : 'LEAD DE COMPRA CUALIFICADO POR WHATSAPP.',\n  '',\n  `Cliente: ${limpio(j.nombre) || 'sin nombre'}`,\n  `Telefono: ${tel.e164}`,\n  `Inmueble: ${referencia || 'sin referencia'}`,\n  `Operacion: ${alquiler ? 'alquiler' : 'venta'}`,\n  `Asesora: ${asesora}`,\n  '',\n  ...etiquetas.map(([k, v]) => `${k}: ${v || 'no facilitado'}`),\n  '',\n  `Resumen de la conversacion: ${limpio(j.resumen) || 'sin resumen'}`,\n  '',\n  'Aviso generado por Sara (IA) desde WhatsApp.',\n].join('\\n');\n\n// Solo se escriben en la ficha los campos que traen dato: asi una segunda\n// llamada a la herramienta no borra lo que ya habiamos apuntado.\nconst conDato = Object.entries(campos).filter(([, v]) => v !== '');\n\nreturn [{\n  json: {\n    telefono_e164: tel.e164,\n    telefono_wa: tel.wa_id,\n    telefono_valido: tel.valido,\n    nombre: limpio(j.nombre),\n    referencia,\n    operacion: alquiler ? 'alquiler' : 'venta',\n    es_alquiler: alquiler,\n    asesora,\n    estado: alquiler ? 'cualificado_alquiler' : 'cualificado',\n    etiqueta: alquiler ? ETIQUETAS.alquiler : ETIQUETAS.cualificado,\n    ...campos,\n    hay_datos: conDato.length > 0,\n    campos_con_dato: conDato.map(([k]) => k),\n    destinatarios: [r.email, EMAIL_DIRECCION].filter(Boolean).join(', '),\n    email_asunto: `${alquiler ? 'LEAD ALQUILER' : 'LEAD COMPRA'} (WhatsApp): `\n      + `${referencia || 'sin referencia'} - ${limpio(j.nombre) || 'sin nombre'} - ${tel.e164}`,\n    email_cuerpo: cuerpo,\n    respuesta: alquiler\n      ? 'Ficha guardada y aviso enviado a ' + asesora + '. Recuerdale al cliente que en alquiler '\n        + 'la visita la concierta la asesora y que ella le llama. NO le ofrezcas fecha ni hora.'\n      : 'Ficha guardada y aviso enviado a ' + asesora + '. Ya puedes seguir con la visita: '\n        + 'consulta los huecos y confirmala.',\n  }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        180,
+        0
+      ],
+      "id": "d9f39a4e-6fa1-5a08-a4c0-6d8338243679",
+      "name": "Preparar"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "insert into wa_leads\n  (telefono_wa, telefono_e164, referencia, nombre, operacion, es_alquiler,\n   asesora, estado, q_personas, q_ingresos, q_mascotas, q_entrada, q_duracion, q_cuando, q_zona, q_presupuesto, q_financiacion)\nvalues ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)\non conflict (telefono_wa, referencia) do update set\n  nombre      = case when excluded.nombre  <> '' then excluded.nombre  else wa_leads.nombre  end,\n  asesora     = case when excluded.asesora <> '' then excluded.asesora else wa_leads.asesora end,\n  operacion   = excluded.operacion,\n  es_alquiler = excluded.es_alquiler,\n  estado      = excluded.estado,\n  q_personas = case when excluded.q_personas <> '' then excluded.q_personas else wa_leads.q_personas end,\n  q_ingresos = case when excluded.q_ingresos <> '' then excluded.q_ingresos else wa_leads.q_ingresos end,\n  q_mascotas = case when excluded.q_mascotas <> '' then excluded.q_mascotas else wa_leads.q_mascotas end,\n  q_entrada = case when excluded.q_entrada <> '' then excluded.q_entrada else wa_leads.q_entrada end,\n  q_duracion = case when excluded.q_duracion <> '' then excluded.q_duracion else wa_leads.q_duracion end,\n  q_cuando = case when excluded.q_cuando <> '' then excluded.q_cuando else wa_leads.q_cuando end,\n  q_zona = case when excluded.q_zona <> '' then excluded.q_zona else wa_leads.q_zona end,\n  q_presupuesto = case when excluded.q_presupuesto <> '' then excluded.q_presupuesto else wa_leads.q_presupuesto end,\n  q_financiacion = case when excluded.q_financiacion <> '' then excluded.q_financiacion else wa_leads.q_financiacion end,\n  actualizado_en = now()\nreturning id;",
+        "options": {
+          "queryReplacement": "={{ [ $json.telefono_wa, $json.telefono_e164, $json.referencia, $json.nombre, $json.operacion, $json.es_alquiler, $json.asesora, $json.estado, $json.q_personas, $json.q_ingresos, $json.q_mascotas, $json.q_entrada, $json.q_duracion, $json.q_cuando, $json.q_zona, $json.q_presupuesto, $json.q_financiacion ] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        400,
+        0
+      ],
+      "id": "554abab7-959d-548d-b1d5-b04920b3aefc",
+      "name": "GuardarFicha",
+      "credentials": {
+        "postgres": {
+          "id": "yvym0TdlOebNMzsm",
+          "name": "Postgres Casagencia"
+        }
+      },
+      "onError": "continueRegularOutput",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Preparar').first().json.destinatarios }}",
+        "subject": "={{ $('Preparar').first().json.email_asunto }}",
+        "message": "={{ $('Preparar').first().json.email_cuerpo }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        620,
+        0
+      ],
+      "id": "9b63e873-8484-5586-8b3e-e0ce0171f65a",
+      "name": "AvisarAsesora",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "mKh6b4I1hwDsBwOd",
+          "name": "Gmail account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "2ef66929-074d-5485-bff3-f8d8183c7e69",
+              "name": "respuesta",
+              "type": "string",
+              "value": "={{ $('Preparar').first().json.respuesta }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        840,
+        0
+      ],
+      "id": "f51ac4f7-3d1c-5398-821b-289246e99418",
+      "name": "Respuesta"
+    },
+    {
+      "parameters": {
+        "content": "## La regla de Paco\nEn ALQUILER no se agenda visita: se cualifica con las cuatro preguntas (personas, ingresos demostrables, mascotas y cuando quiere entrar) y llama la asesora. Esta herramienta guarda las respuestas en la ficha del lead y le manda el aviso por correo a la asesora que le toca por la referencia.\n\nSolo se sobreescriben los campos que traen dato: llamarla dos veces no borra lo que ya se habia apuntado.",
+        "height": 230,
+        "width": 470
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        180,
+        -260
+      ],
+      "id": "e5da7b4e-5aeb-50d1-8d57-71866644de89",
+      "name": "Nota"
+    }
+  ],
+  "connections": {
+    "Start": {
+      "main": [
+        [
+          {
+            "node": "Preparar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar": {
+      "main": [
+        [
+          {
+            "node": "GuardarFicha",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GuardarFicha": {
+      "main": [
+        [
+          {
+            "node": "AvisarAsesora",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AvisarAsesora": {
+      "main": [
+        [
+          {
+            "node": "Respuesta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

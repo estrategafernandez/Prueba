@@ -18,7 +18,15 @@ ck('OR-1313-V + venta -> NO es alquiler', esAlq('OR-1313-V','venta') === false);
 ck('referencia vacia + compra -> NO', esAlq('','compra') === false);
 
 console.log('\n== El calendario rechaza los alquileres ==');
-const base = { nombre:'X', telefono:'600111222', fecha:'2026-09-24', hora:'11:00' };
+// Fecha relativa: con una fecha fija, en cuanto pasa el dia todo contesta
+// 'pasado' y los casos de compra aprueban sin probar nada.
+const FESTIVOS = Function('DateTime', LIB + '; return FESTIVOS;')(DateTime);
+let proximo = DateTime.now().setZone('Europe/Madrid').startOf('day').plus({ days: 1 });
+while (proximo.weekday > 5 || FESTIVOS.TODOS.includes(proximo.toFormat('yyyy-MM-dd'))) {
+  proximo = proximo.plus({ days: 1 });
+}
+const base = { nombre:'X', telefono:'600111222',
+               fecha: proximo.toFormat('yyyy-MM-dd'), hora:'11:00' };
 for (const [ref,tipo,debeRechazar] of [
     ['CS-1479-A','alquiler',true], ['BN-1541-V','alquiler',true],
     ['BN-1547-V','compra',false], ['OR-1313-V','compra',false]]) {

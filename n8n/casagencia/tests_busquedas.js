@@ -7,7 +7,12 @@ function run(fname, $input, $) {
   return Function('DateTime','$input','$','"use strict";'+src)(DateTime,$input,$);
 }
 const inputOf = (a) => ({ first: () => a[0], all: () => a });
-const nodeOf = (m) => (n) => ({ first: () => ({ json: m[n] }), item: { json: m[n] } });
+const nodeOf = (m) => (n) => {
+  if (!(n in m)) throw new Error('el test no simula el nodo ' + n);
+  const v = m[n];
+  const items = Array.isArray(v) ? v.map(j => ({ json: j })) : [{ json: v }];
+  return { first: () => items[0], item: items[0], all: () => items };
+};
 let fallos=0; const check=(n,c,e='')=>{console.log((c?'  OK   ':'  FALLA')+'  '+n+(e?'  -> '+e:''));if(!c)fallos++;};
 
 // Filas como las que hay hoy en la hoja Inmuebles (sin columna direccion)
@@ -22,8 +27,11 @@ const filas = [
     habitaciones:3, precio:178000, tipo_transaccion:'venta',
     descripcion:'Piso en el centro del pueblo de Benicasim, junto a la calle Santo Tomás.' },
 ];
-const dir = (texto, extra={}) => run('dir_emparejar.js', inputOf(filas.map(f=>({json:f}))),
-  nodeOf({ Webhook: { body: { direccion: texto, ...extra } } })
+const dir = (texto, extra={}, direcciones=[]) => run('dir_emparejar.js',
+  inputOf(filas.map(f=>({json:f}))),
+  nodeOf({ Webhook: { body: { direccion: texto, ...extra } },
+           LeerInmuebles: filas,
+           LeerDirecciones: direcciones })
 )[0].json.respuesta;
 
 console.log('\n== Busqueda por direccion (#5) ==');
@@ -39,8 +47,17 @@ check('"avenida Valencia" + operacion venta', r.encontrado && r.coincidencias[0]
 check('"calle" a secas NO devuelve nada', dir('calle').encontrado === false);
 // una columna direccion futura debe mandar sobre la descripcion
 const conDir = filas.map(f => f.ref==='CS-1479-A' ? {...f, direccion:'Calle Mestre Falla 39'} : f);
-r = run('dir_emparejar.js', inputOf(conDir.map(f=>({json:f}))), nodeOf({ Webhook:{ body:{ direccion:'Mestre Falla 39' } } }))[0].json.respuesta;
+r = run('dir_emparejar.js', inputOf(conDir.map(f=>({json:f}))),
+  nodeOf({ Webhook:{ body:{ direccion:'Mestre Falla 39' } },
+           LeerInmuebles: conDir, LeerDirecciones: [] }))[0].json.respuesta;
 check('si algun dia hay columna "direccion", se usa sola', r.encontrado && r.coincidencias[0].ref === 'CS-1479-A' && r.fiabilidad === 'alta');
+
+// La pestana "Direcciones" es la que se rellena a mano (y la que se cargo con
+// las 93 calles de eGO): tiene que mandar sobre la descripcion.
+r = dir('Mestre Falla 39', {}, [{ ref:'CS-1479-A', direccion:'Calle Maestro Falla 37' }]);
+check('la pestana Direcciones manda',
+  r.encontrado && r.coincidencias[0].ref === 'CS-1479-A' && r.fiabilidad === 'alta',
+  JSON.stringify(r.coincidencias?.map(c=>c.ref)) + ' fiabilidad=' + r.fiabilidad);
 
 console.log('\n== Consultar cita por telefono (nuevo) ==');
 const norm = run('tel_normalizar.js', inputOf([{ json:{ body:{ telefono:'643 97 43 53' } } }]))[0].json;

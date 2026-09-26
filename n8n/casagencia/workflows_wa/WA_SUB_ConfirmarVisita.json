@@ -1,0 +1,260 @@
+{
+  "name": "[WA][SUB] ConfirmarVisita",
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Europe/Madrid"
+  },
+  "nodes": [
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "nombre"
+            },
+            {
+              "name": "telefono"
+            },
+            {
+              "name": "referencia"
+            },
+            {
+              "name": "tipo_transaccion"
+            },
+            {
+              "name": "fecha"
+            },
+            {
+              "name": "hora"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -40,
+        0
+      ],
+      "id": "8bf8734f-37ff-549f-8979-175a49850a23",
+      "name": "Start"
+    },
+    {
+      "parameters": {
+        "content": "## Puente a la herramienta del telefono\nEste sub-workflow NO tiene logica propia: llama al mismo webhook que usa Sara por telefono, asi que los horarios, los festivos, la cartera y la regla de 'en alquiler no se agenda' son exactamente los mismos en los dos canales. Si hay que cambiar una regla, se cambia en n8n/casagencia/lib/casagencia_comun.js, no aqui.\n\nAqui SI se escribe en la agenda de la asesora.",
+        "height": 190,
+        "width": 460
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -40,
+        -230
+      ],
+      "id": "e5da7b4e-5aeb-50d1-8d57-71866644de89",
+      "name": "Nota"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ===========================================================================\n// CASAGENCIA · WHATSAPP — CONFIGURACION COMUN\n// ---------------------------------------------------------------------------\n// Se inyecta al principio de los nodos Code de los workflows [WA].\n// Editar aqui y volver a desplegar:  python3 build_whatsapp.py --deploy\n// ===========================================================================\n\n// --- PENDIENTE DE DESPLIEGUE ------------------------------------------------\n// Rellenar cuando esten montados Chatwoot y el numero de WhatsApp. Hasta\n// entonces los workflows quedan DESACTIVADOS: no se dispara nada.\nconst CHATWOOT_URL    = 'https://PENDIENTE-chatwoot-casagencia';  // sin barra final\nconst CHATWOOT_CUENTA = 1;                                        // id de la cuenta\nconst CHATWOOT_INBOX  = 0;                                        // id del inbox de WhatsApp\nconst META_WABA_ID    = 'PENDIENTE-id-de-la-cuenta-de-whatsapp';   // waba_id de Meta\nconst PLANTILLA_LEAD  = 'PENDIENTE-nombre-de-la-plantilla';        // plantilla aprobada en Meta\nconst PLANTILLA_IDIOMA = 'es';\nconst BUZON_LEADS     = 'PENDIENTE@casagencia.com';                // buzon donde entran los avisos\n\n// El token de Chatwoot y el de Meta NO viven aqui: van en las credenciales\n// \"Chatwoot Casagencia\" y \"Meta WhatsApp Casagencia\" de n8n.\n\n// --- Asesoras ---------------------------------------------------------------\n// Mismo reparto que el asistente telefonico: la referencia manda.\nconst ASESORA_POR_PREFIJO = { BN: 'Carmen', OR: 'Carmen', CS: 'Gisela', VR: 'Gisela' };\nconst EMAIL_POR_ASESORA = {\n  Carmen: 'carmen@casagencia.com',\n  Gisela: 'gisela@casagencia.com',\n  Laurence: 'laurence@casagencia.com',\n};\nconst EMAIL_DIRECCION = 'paco@casagencia.com';   // copia de todos los avisos\n\n// --- Portales de los que llegan los leads por correo ------------------------\n// Cada uno manda el aviso con un formato distinto. `de` casa contra el\n// remitente y `asunto` contra el asunto; basta con que case uno de los dos.\nconst PORTALES = [\n  { nombre: 'Idealista',  de: /idealista\\.com/i,   asunto: /idealista/i },\n  { nombre: 'Fotocasa',   de: /fotocasa\\.es/i,     asunto: /fotocasa/i },\n  { nombre: 'Habitaclia', de: /habitaclia\\.com/i,  asunto: /habitaclia/i },\n  { nombre: 'Web',        de: /casagencia\\.com/i,  asunto: /formulario|contacto/i },\n];\n\n// --- Etiquetas de Chatwoot --------------------------------------------------\n// Con ellas Paco ve de un vistazo en que punto esta cada conversacion.\nconst ETIQUETAS = {\n  nueva:        'ia-nueva',\n  cualificando: 'ia-cualificando',\n  cualificado:  'ia-cualificado',\n  cita:         'ia-cita-agendada',\n  alquiler:     'ia-lead-alquiler',\n  humano:       'intervenir',\n};\n\n// --- Herramientas que ya existen y se reutilizan ----------------------------\n// El asistente de WhatsApp NO duplica la cartera ni el calendario: usa los\n// mismos webhooks que el asistente telefonico, con sus guardafuegos de\n// horario, festivos y \"en alquiler no se agenda\".\nconst N8N = 'https://n8n-casagencia.serversvisionarius.com/webhook';\nconst TOOLS = {\n  buscarInmuebles:     N8N + '/buscarinmuebles',\n  buscarPorReferencia: N8N + '/buscardisponibilidadporreferencia',\n  buscarPorDireccion:  N8N + '/buscarpordireccion',\n  disponibilidad:      N8N + '/buscardisponibilidad',\n  confirmarCita:       N8N + '/confirmarcitacalendario',\n  citaPorTelefono:     N8N + '/buscarcitaportelefono',\n  registrarMensaje:    N8N + '/registrarmensaje',\n};\n\n// Segundos que se espera antes de contestar, para juntar los mensajes que el\n// cliente manda seguidos (\"hola\" / \"es por el piso\" / \"el de la calle X\").\nconst BUFFER_SEGUNDOS = 60;\n\n// Lo que se le dice a un lead de alquiler: no se le agenda nada.\nconst MSG_ALQUILER_SIN_AGENDA =\n  'En los inmuebles de alquiler la visita la concierta directamente la asesora. ' +\n  'Recojo tus datos y te llama ella.';\n\n// ---------------------------------------------------------------------------\n// Utilidades\n// ---------------------------------------------------------------------------\nfunction normalizarTelefono(raw) {\n  let s = String(raw ?? '').trim();\n  const teniaMas = s.startsWith('+');\n  s = s.replace(/\\D/g, '');\n  if (!teniaMas && s.startsWith('00')) s = s.slice(2);\n  if (/^[6789]\\d{8}$/.test(s)) s = '34' + s;\n  return {\n    e164: s ? '+' + s : '',\n    wa_id: s,                                   // como lo quiere Meta: solo digitos\n    nacional: s.startsWith('34') ? s.slice(2) : s,\n    valido: s.length >= 8 && s.length <= 15,\n  };\n}\n\nfunction prefijoDeReferencia(ref) {\n  const m = String(ref ?? '').toUpperCase().match(/[A-Z]{2}/);\n  return m ? m[0] : '';\n}\n\nfunction resolverAsesora(ref) {\n  const prefijo = prefijoDeReferencia(ref);\n  const asesora = ASESORA_POR_PREFIJO[prefijo] || null;\n  return {\n    prefijo,\n    asesora,\n    conocida: !!asesora,\n    email: asesora ? EMAIL_POR_ASESORA[asesora] : EMAIL_POR_ASESORA.Laurence,\n  };\n}\n\n// Alquiler o compra. Mismo criterio que el asistente telefonico: basta con que\n// lo diga la operacion O que la referencia acabe en -A.\nfunction esAlquiler(referencia, operacion) {\n  const o = String(operacion ?? '').toLowerCase();\n  if (o.includes('alquiler') || o.includes('traspaso') || o.includes('rent')) return true;\n  if (o.includes('venta') || o.includes('compra')) return false;\n  return /-A$/i.test(String(referencia ?? '').trim());\n}\n\nfunction detectarPortal(remitente, asunto) {\n  for (const p of PORTALES) {\n    if (p.de.test(String(remitente ?? '')) || p.asunto.test(String(asunto ?? ''))) return p.nombre;\n  }\n  return 'Otro';\n}\n\n\n// [WA][SUB] Agenda · GuardiaDeAlquiler\n// Regla de Paco: en alquiler y en traspaso NO se agenda visita. Se cualifica al\n// cliente y llama la asesora. El prompt ya se lo dice al agente, pero si el\n// modelo se despista, aqui se para: no se llega a tocar el calendario.\nconst j = $input.first().json || {};\nconst referencia = String(j.referencia ?? '').toUpperCase().trim();\nconst alquiler = esAlquiler(referencia, j.tipo_transaccion ?? j.operacion);\n\nreturn [{\n  json: {\n    ...j,\n    referencia,\n    es_alquiler: alquiler,\n    seguir: !alquiler,\n    respuesta: alquiler\n      ? 'BLOQUEADO: ' + referencia + ' es un inmueble de ALQUILER y en alquiler no se agenda visita. '\n        + MSG_ALQUILER_SIN_AGENDA + ' Haz las cuatro preguntas de cualificacion y llama a '\n        + 'CualificarLead. No ofrezcas fecha ni hora.'\n      : '',\n  }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        180,
+        0
+      ],
+      "id": "807fc85f-152e-5a8b-acff-ec575ad4d5c0",
+      "name": "GuardiaDeAlquiler"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "a364366b-cd56-5edf-a529-b674381ba71a",
+              "leftValue": "={{ $json.seguir }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        400,
+        0
+      ],
+      "id": "47a59593-a58d-5a0a-9cd2-c2e5fc48b1b9",
+      "name": "¿Se puede agendar?"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "23f36d3c-a2f1-5e23-bd63-24f9ff464be3",
+              "name": "respuesta",
+              "type": "string",
+              "value": "={{ $json.respuesta }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        620,
+        160
+      ],
+      "id": "fd68a38e-109d-575d-9e96-aab4edb636f5",
+      "name": "Bloqueado"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://n8n-casagencia.serversvisionarius.com/webhook/confirmarcitacalendario",
+        "options": {},
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ nombre: $json.nombre || '', telefono: $json.telefono, referencia: $json.referencia, tipo_transaccion: $json.tipo_transaccion || 'compra', fecha: $json.fecha, hora: $json.hora || '11:00' }) }}"
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        620,
+        -40
+      ],
+      "id": "0919e53a-2882-5704-a628-501d25bb7ccf",
+      "name": "Llamar",
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "waitBetweenTries": 2000
+    },
+    {
+      "parameters": {
+        "jsCode": "// ===========================================================================\n// CASAGENCIA · WHATSAPP — CONFIGURACION COMUN\n// ---------------------------------------------------------------------------\n// Se inyecta al principio de los nodos Code de los workflows [WA].\n// Editar aqui y volver a desplegar:  python3 build_whatsapp.py --deploy\n// ===========================================================================\n\n// --- PENDIENTE DE DESPLIEGUE ------------------------------------------------\n// Rellenar cuando esten montados Chatwoot y el numero de WhatsApp. Hasta\n// entonces los workflows quedan DESACTIVADOS: no se dispara nada.\nconst CHATWOOT_URL    = 'https://PENDIENTE-chatwoot-casagencia';  // sin barra final\nconst CHATWOOT_CUENTA = 1;                                        // id de la cuenta\nconst CHATWOOT_INBOX  = 0;                                        // id del inbox de WhatsApp\nconst META_WABA_ID    = 'PENDIENTE-id-de-la-cuenta-de-whatsapp';   // waba_id de Meta\nconst PLANTILLA_LEAD  = 'PENDIENTE-nombre-de-la-plantilla';        // plantilla aprobada en Meta\nconst PLANTILLA_IDIOMA = 'es';\nconst BUZON_LEADS     = 'PENDIENTE@casagencia.com';                // buzon donde entran los avisos\n\n// El token de Chatwoot y el de Meta NO viven aqui: van en las credenciales\n// \"Chatwoot Casagencia\" y \"Meta WhatsApp Casagencia\" de n8n.\n\n// --- Asesoras ---------------------------------------------------------------\n// Mismo reparto que el asistente telefonico: la referencia manda.\nconst ASESORA_POR_PREFIJO = { BN: 'Carmen', OR: 'Carmen', CS: 'Gisela', VR: 'Gisela' };\nconst EMAIL_POR_ASESORA = {\n  Carmen: 'carmen@casagencia.com',\n  Gisela: 'gisela@casagencia.com',\n  Laurence: 'laurence@casagencia.com',\n};\nconst EMAIL_DIRECCION = 'paco@casagencia.com';   // copia de todos los avisos\n\n// --- Portales de los que llegan los leads por correo ------------------------\n// Cada uno manda el aviso con un formato distinto. `de` casa contra el\n// remitente y `asunto` contra el asunto; basta con que case uno de los dos.\nconst PORTALES = [\n  { nombre: 'Idealista',  de: /idealista\\.com/i,   asunto: /idealista/i },\n  { nombre: 'Fotocasa',   de: /fotocasa\\.es/i,     asunto: /fotocasa/i },\n  { nombre: 'Habitaclia', de: /habitaclia\\.com/i,  asunto: /habitaclia/i },\n  { nombre: 'Web',        de: /casagencia\\.com/i,  asunto: /formulario|contacto/i },\n];\n\n// --- Etiquetas de Chatwoot --------------------------------------------------\n// Con ellas Paco ve de un vistazo en que punto esta cada conversacion.\nconst ETIQUETAS = {\n  nueva:        'ia-nueva',\n  cualificando: 'ia-cualificando',\n  cualificado:  'ia-cualificado',\n  cita:         'ia-cita-agendada',\n  alquiler:     'ia-lead-alquiler',\n  humano:       'intervenir',\n};\n\n// --- Herramientas que ya existen y se reutilizan ----------------------------\n// El asistente de WhatsApp NO duplica la cartera ni el calendario: usa los\n// mismos webhooks que el asistente telefonico, con sus guardafuegos de\n// horario, festivos y \"en alquiler no se agenda\".\nconst N8N = 'https://n8n-casagencia.serversvisionarius.com/webhook';\nconst TOOLS = {\n  buscarInmuebles:     N8N + '/buscarinmuebles',\n  buscarPorReferencia: N8N + '/buscardisponibilidadporreferencia',\n  buscarPorDireccion:  N8N + '/buscarpordireccion',\n  disponibilidad:      N8N + '/buscardisponibilidad',\n  confirmarCita:       N8N + '/confirmarcitacalendario',\n  citaPorTelefono:     N8N + '/buscarcitaportelefono',\n  registrarMensaje:    N8N + '/registrarmensaje',\n};\n\n// Segundos que se espera antes de contestar, para juntar los mensajes que el\n// cliente manda seguidos (\"hola\" / \"es por el piso\" / \"el de la calle X\").\nconst BUFFER_SEGUNDOS = 60;\n\n// Lo que se le dice a un lead de alquiler: no se le agenda nada.\nconst MSG_ALQUILER_SIN_AGENDA =\n  'En los inmuebles de alquiler la visita la concierta directamente la asesora. ' +\n  'Recojo tus datos y te llama ella.';\n\n// ---------------------------------------------------------------------------\n// Utilidades\n// ---------------------------------------------------------------------------\nfunction normalizarTelefono(raw) {\n  let s = String(raw ?? '').trim();\n  const teniaMas = s.startsWith('+');\n  s = s.replace(/\\D/g, '');\n  if (!teniaMas && s.startsWith('00')) s = s.slice(2);\n  if (/^[6789]\\d{8}$/.test(s)) s = '34' + s;\n  return {\n    e164: s ? '+' + s : '',\n    wa_id: s,                                   // como lo quiere Meta: solo digitos\n    nacional: s.startsWith('34') ? s.slice(2) : s,\n    valido: s.length >= 8 && s.length <= 15,\n  };\n}\n\nfunction prefijoDeReferencia(ref) {\n  const m = String(ref ?? '').toUpperCase().match(/[A-Z]{2}/);\n  return m ? m[0] : '';\n}\n\nfunction resolverAsesora(ref) {\n  const prefijo = prefijoDeReferencia(ref);\n  const asesora = ASESORA_POR_PREFIJO[prefijo] || null;\n  return {\n    prefijo,\n    asesora,\n    conocida: !!asesora,\n    email: asesora ? EMAIL_POR_ASESORA[asesora] : EMAIL_POR_ASESORA.Laurence,\n  };\n}\n\n// Alquiler o compra. Mismo criterio que el asistente telefonico: basta con que\n// lo diga la operacion O que la referencia acabe en -A.\nfunction esAlquiler(referencia, operacion) {\n  const o = String(operacion ?? '').toLowerCase();\n  if (o.includes('alquiler') || o.includes('traspaso') || o.includes('rent')) return true;\n  if (o.includes('venta') || o.includes('compra')) return false;\n  return /-A$/i.test(String(referencia ?? '').trim());\n}\n\nfunction detectarPortal(remitente, asunto) {\n  for (const p of PORTALES) {\n    if (p.de.test(String(remitente ?? '')) || p.asunto.test(String(asunto ?? ''))) return p.nombre;\n  }\n  return 'Otro';\n}\n\n\n// [WA][SUB] · RespuestaParaElAgente\n// Los webhooks del asistente telefonico contestan con un objeto que ya trae\n// 'mensaje_para_sara': la instruccion de que hacer. Al agente de WhatsApp se le\n// da eso mismo, en texto plano, para que no tenga que interpretar JSON.\nlet r = $input.first().json;\nif (typeof r === 'string') { try { r = JSON.parse(r); } catch (e) { r = { texto: r }; } }\nif (r && typeof r.data === 'string') { try { r = JSON.parse(r.data); } catch (e) { /* se deja */ } }\nr = r?.respuesta ?? r ?? {};\n\nconst partes = [];\nif (r.mensaje_para_sara) partes.push(String(r.mensaje_para_sara));\n\n// Los datos utiles que no siempre caben en el mensaje\nconst extra = {};\nfor (const k of ['encontrado', 'fiabilidad', 'disponible', 'alternativas', 'cita_confirmada',\n                 'motivo', 'referencia', 'asesora', 'fecha', 'hora', 'inmuebles', 'citas',\n                 'total', 'mensaje_registrado', 'evento_id', 'inmueble']) {\n  if (r[k] !== undefined && r[k] !== null && r[k] !== '') extra[k] = r[k];\n}\nif (Object.keys(extra).length) partes.push('Datos: ' + JSON.stringify(extra));\n\nif (!partes.length) partes.push('La herramienta no ha devuelto nada. No te inventes el dato: ' +\n  'dile al cliente que lo comprueba la asesora y deja un aviso.');\n\nreturn [{ json: { respuesta: partes.join('\\n') } }];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        840,
+        -40
+      ],
+      "id": "ce3251c7-8537-5aea-9c96-b29767099566",
+      "name": "RespuestaParaElAgente"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "update wa_leads\n   set estado = 'cita_agendada', actualizado_en = now()\n where telefono_wa = $1;",
+        "options": {
+          "queryReplacement": "={{ [ $('GuardiaDeAlquiler').first().json.telefono.replace(/\\D/g,'') ] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1060,
+        -40
+      ],
+      "id": "0b39d1f8-bc18-5211-8e48-48da7ac738d5",
+      "name": "MarcarCitaEnLaFicha",
+      "credentials": {
+        "postgres": {
+          "id": "yvym0TdlOebNMzsm",
+          "name": "Postgres Casagencia"
+        }
+      },
+      "onError": "continueRegularOutput",
+      "alwaysOutputData": true
+    }
+  ],
+  "connections": {
+    "Start": {
+      "main": [
+        [
+          {
+            "node": "GuardiaDeAlquiler",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GuardiaDeAlquiler": {
+      "main": [
+        [
+          {
+            "node": "¿Se puede agendar?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Se puede agendar?": {
+      "main": [
+        [
+          {
+            "node": "Llamar",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Bloqueado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Llamar": {
+      "main": [
+        [
+          {
+            "node": "RespuestaParaElAgente",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "RespuestaParaElAgente": {
+      "main": [
+        [
+          {
+            "node": "MarcarCitaEnLaFicha",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}
