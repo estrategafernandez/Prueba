@@ -30,7 +30,16 @@ const FESTIVOS = {
     '2026-12-06', // Constitucion
     '2026-12-08', // Inmaculada
     '2026-12-25', // Navidad
-    '2027-01-01', '2027-01-06', '2027-05-01', '2027-08-15',
+    // Las 12 fiestas de la Comunitat Valenciana de 2027, aprobadas por la
+    // Generalitat. OJO: las tres de marzo son MOVIBLES (dependen de la Pascua),
+    // asi que cada ano hay que volver a mirarlas; no vale copiar las del ano
+    // anterior. El 15 de agosto de 2027 cae en domingo y no esta en la lista
+    // oficial, por eso no aparece aqui.
+    '2027-01-01', '2027-01-06',
+    '2027-03-19',  // San Jose
+    '2027-03-26',  // Viernes Santo
+    '2027-03-29',  // Lunes de Pascua
+    '2027-05-01',
     '2027-10-09', '2027-10-12', '2027-11-01', '2027-12-06', '2027-12-08', '2027-12-25'
   ],
   BN: [], // Benicasim  -> fiestas locales: ANADIR

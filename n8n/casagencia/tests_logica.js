@@ -113,6 +113,22 @@ for (const [f,h,ref,esp,desc] of casos) {
   check(desc, r.disponible === esp, `disponible=${r.disponible} motivo=${r.motivo}`);
 }
 
+// ---------- 4-BIS. Que la lista de festivos este completa ----------
+console.log('\n== Festivos oficiales de la Comunitat Valenciana ==');
+// Las 12 de 2027 segun la Generalitat. Las tres de marzo son movibles: si
+// alguien actualiza el ano sin mirarlas, este test lo canta.
+const OFICIALES_2027 = ['2027-01-01','2027-01-06','2027-03-19','2027-03-26','2027-03-29',
+  '2027-05-01','2027-10-09','2027-10-12','2027-11-01','2027-12-06','2027-12-08','2027-12-25'];
+const faltan = OFICIALES_2027.filter(f => !FESTIVOS.TODOS.includes(f));
+const sobran = FESTIVOS.TODOS.filter(f => f.startsWith('2027-') && !OFICIALES_2027.includes(f));
+check('estan las 12 fiestas de 2027', faltan.length === 0, 'faltan: ' + faltan.join(', '));
+check('y no hay ninguna de mas en 2027', sobran.length === 0, 'sobran: ' + sobran.join(', '));
+check('Viernes Santo de 2027 bloquea la agenda',
+  run(null,'bd_calcular.js',{ $input: inputOf([]), $: nodeOf({ PrepararDatos:
+    run(null,'bd_preparar.js',{ $input: inputOf([{ json:{ body:{...bodyCompra,
+      fecha:'2027-03-26', hora:'11:00', referencia:'BN-1547-V'} } }]) })[0].json })
+  })[0].json.respuesta.motivo === 'festivo');
+
 // ---------- 5. Eventos de dia completo (#8) ----------
 console.log('\n== Eventos de dia completo (#8) ==');
 const ev = (s) => ({ json: s });

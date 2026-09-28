@@ -349,9 +349,16 @@ ningún caso se le lee al cliente un listado que no ha pedido.
 
 ## Pendiente
 
-- **Festivos locales.** `FESTIVOS.TODOS` trae los de fecha fija (nacionales y
-  9 d'Octubre). Las fiestas locales de Benicàssim, Oropesa, Castellón y
-  Vila-real están vacías: hay que rellenarlas en `lib/casagencia_comun.js`.
+- **Festivos locales.** `FESTIVOS.TODOS` ya trae las 12 fiestas oficiales de la
+  Comunitat Valenciana de 2027, incluidas las tres movibles de marzo (San José,
+  Viernes Santo y Lunes de Pascua), que antes faltaban. Lo que sigue vacío son
+  las **dos fiestas locales de cada municipio**: Benicàssim, Oropesa, Castellón
+  y Vila-real. Cada ayuntamiento las decide por su cuenta y todavía no están
+  publicadas para 2027; hay que rellenarlas en `lib/casagencia_comun.js`.
+
+  > Cuidado al actualizar el año: las tres de marzo **cambian de fecha** porque
+  > dependen de la Pascua. Copiar las del año anterior es un error. Hay un test
+  > en `tests_logica.js` que compara la lista contra las 12 oficiales.
 - **Direcciones de la cartera nueva.** Las 93 actuales están cargadas desde
   eGO. Cuando entren inmuebles nuevos hay que volver a lanzar
   `ego_direcciones.py`, o apuntar la dirección a mano en la pestaña.
