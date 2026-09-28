@@ -24,6 +24,12 @@ LIB = (BASE / "lib" / "casagencia_comun.js").read_text(encoding="utf-8")
 # --sin-email: despliega ConfirmarCita saltandose el aviso (solo para pruebas)
 SIN_EMAIL = "--sin-email" in sys.argv
 
+# En n8n todo cuelga del mismo proyecto personal y los proyectos y las carpetas
+# estan bloqueados por licencia. Para que las dos lineas de trabajo no se
+# mezclen en la lista, los del telefono llevan este prefijo y la etiqueta
+# "Asistente telefonico"; los de WhatsApp llevan [WA] y su propia etiqueta.
+PREFIJO = "[TEL] "
+
 
 def code(fname):
     """Nodo Code = libreria comun + el cuerpo concreto."""
@@ -528,6 +534,10 @@ def main():
         "buscarPorReferencia":            ("JeYBaWXMzYvLi1e3", wf_buscar_referencia(load("wf_JeYBaWXMzYvLi1e3.json"))),
         "SaludoInicial":                  ("cDQHP3chcEGPkTgX", wf_saludo(load("wf_cDQHP3chcEGPkTgX.json"))),
     }
+
+    for name, (wid, wf) in built.items():
+        if not wf["name"].startswith(PREFIJO):
+            wf["name"] = PREFIJO + wf["name"]
 
     (BASE / "workflows").mkdir(exist_ok=True)
     for name, (wid, wf) in built.items():

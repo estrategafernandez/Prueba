@@ -33,7 +33,7 @@
       "credentials": {
         "postgres": {
           "id": "yvym0TdlOebNMzsm",
-          "name": "Postgres Casagencia"
+          "name": "Postgres account"
         }
       }
     },

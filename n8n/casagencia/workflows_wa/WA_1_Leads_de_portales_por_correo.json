@@ -103,7 +103,7 @@
       "credentials": {
         "postgres": {
           "id": "yvym0TdlOebNMzsm",
-          "name": "Postgres Casagencia"
+          "name": "Postgres account"
         }
       },
       "alwaysOutputData": true,
@@ -158,7 +158,7 @@
       "parameters": {
         "workflowId": {
           "__rl": true,
-          "value": "",
+          "value": "PUb89z0Kfp8V1HFd",
           "mode": "list",
           "cachedResultName": "[WA][SUB] EnviarPlantilla"
         },
@@ -305,7 +305,7 @@
       "credentials": {
         "postgres": {
           "id": "yvym0TdlOebNMzsm",
-          "name": "Postgres Casagencia"
+          "name": "Postgres account"
         }
       },
       "onError": "continueRegularOutput",

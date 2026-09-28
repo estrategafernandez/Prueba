@@ -25,8 +25,8 @@ N8N = "https://n8n-casagencia.serversvisionarius.com"
 SETTINGS = {"executionOrder": "v1", "timezone": "Europe/Madrid"}
 
 # --- Credenciales de Casagencia --------------------------------------------
-CRED_PG      = {"postgres": {"id": "yvym0TdlOebNMzsm", "name": "Postgres Casagencia"}}
-CRED_REDIS   = {"redis": {"id": "hddla0B9Wo7BsMpy", "name": "Redis Casagencia"}}
+CRED_PG      = {"postgres": {"id": "yvym0TdlOebNMzsm", "name": "Postgres account"}}
+CRED_REDIS   = {"redis": {"id": "hddla0B9Wo7BsMpy", "name": "Redis account"}}
 CRED_GMAIL   = {"gmailOAuth2": {"id": "mKh6b4I1hwDsBwOd", "name": "Gmail account"}}
 CRED_CHATWOOT = {"httpHeaderAuth": {"id": "Wm0tmDE3FjfTx1Tu", "name": "Chatwoot Casagencia"}}
 CRED_META     = {"httpHeaderAuth": {"id": "P4xswu9i9E4RILJN", "name": "Meta WhatsApp Casagencia"}}

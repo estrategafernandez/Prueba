@@ -96,7 +96,7 @@
       "credentials": {
         "redis": {
           "id": "hddla0B9Wo7BsMpy",
-          "name": "Redis Casagencia"
+          "name": "Redis account"
         }
       }
     },
@@ -132,7 +132,7 @@
       "credentials": {
         "redis": {
           "id": "hddla0B9Wo7BsMpy",
-          "name": "Redis Casagencia"
+          "name": "Redis account"
         }
       },
       "alwaysOutputData": true
@@ -197,7 +197,7 @@
       "credentials": {
         "redis": {
           "id": "hddla0B9Wo7BsMpy",
-          "name": "Redis Casagencia"
+          "name": "Redis account"
         }
       },
       "onError": "continueRegularOutput"
@@ -234,7 +234,7 @@
       "credentials": {
         "postgres": {
           "id": "yvym0TdlOebNMzsm",
-          "name": "Postgres Casagencia"
+          "name": "Postgres account"
         }
       },
       "alwaysOutputData": true,
@@ -310,7 +310,7 @@
       "credentials": {
         "postgres": {
           "id": "yvym0TdlOebNMzsm",
-          "name": "Postgres Casagencia"
+          "name": "Postgres account"
         }
       }
     },
@@ -472,7 +472,7 @@
         "description": "Devuelve los datos reales de un inmueble a partir de su referencia. Usala en cuanto tengas la referencia, antes de contestar cualquier duda del inmueble. La referencia es el dato exacto: si la tienes, esta es la herramienta que toca.",
         "workflowId": {
           "__rl": true,
-          "value": "",
+          "value": "bm3N5PD2SzgriUNR",
           "mode": "list",
           "cachedResultName": "[WA][SUB] BuscarPorReferencia"
         },
@@ -511,7 +511,7 @@
         "description": "Busca un inmueble por la calle o la direccion que dice el cliente. Usala SOLO cuando ya le hayas preguntado una vez por la referencia y no la tenga. Devuelve 'encontrado' y 'fiabilidad': si 'encontrado' es false, no le sueltes un listado de inmuebles.",
         "workflowId": {
           "__rl": true,
-          "value": "",
+          "value": "5gULfLEpcSVoyvAS",
           "mode": "list",
           "cachedResultName": "[WA][SUB] BuscarPorDireccion"
         },
@@ -570,7 +570,7 @@
         "description": "Busca inmuebles disponibles por municipio y caracteristicas. Es una busqueda APROXIMADA: usala solo cuando no haya referencia ni direccion, y cuando ya conozcas la operacion, un municipio valido y el numero minimo de habitaciones. Si al cliente le da igual el numero de habitaciones, manda 0. No mandes otros filtros.",
         "workflowId": {
           "__rl": true,
-          "value": "",
+          "value": "ooMZsBree06RZ6ir",
           "mode": "list",
           "cachedResultName": "[WA][SUB] BuscarInmuebles"
         },
@@ -639,7 +639,7 @@
         "description": "SOLO EN COMPRA. Dice si se puede hacer una visita de una hora en una fecha y hora concretas, y devuelve en 'alternativas' las horas que quedan LIBRES ese dia en la agenda de la asesora. Valida el horario de oficina y los festivos. Solo consulta: no reserva nada. Si 'disponible' es false, ofrece unicamente las horas de 'alternativas'. En ALQUILER esta bloqueada: no la llames.",
         "workflowId": {
           "__rl": true,
-          "value": "",
+          "value": "fCwynaiCqobOlNIf",
           "mode": "list",
           "cachedResultName": "[WA][SUB] ConsultarHuecos"
         },
@@ -728,7 +728,7 @@
         "description": "SOLO EN COMPRA. Crea la visita en la agenda de la asesora. Usala solo despues de que ConsultarHuecos haya dicho que hay hueco y el cliente haya aceptado esa fecha y hora concretas. Devuelve 'cita_confirmada': solo puedes decirle al cliente que la visita esta puesta si es true, y siempre como PRE-RESERVA pendiente de que la asesora la confirme. En ALQUILER esta bloqueada: no la llames.",
         "workflowId": {
           "__rl": true,
-          "value": "",
+          "value": "3UcEuOOW9LpFTYz6",
           "mode": "list",
           "cachedResultName": "[WA][SUB] ConfirmarVisita"
         },
@@ -817,7 +817,7 @@
         "description": "Guarda en la ficha del cliente las respuestas de cualificacion y manda el aviso a la asesora. OBLIGATORIA: en alquiler, en cuanto tengas las cuatro respuestas (personas, ingresos, mascotas y cuando quiere entrar); en compra, antes de ofrecer la visita. Puedes llamarla mas de una vez: solo se sobreescribe lo que mandes con dato.",
         "workflowId": {
           "__rl": true,
-          "value": "",
+          "value": "6F1AaH1qIPRF1a8X",
           "mode": "list",
           "cachedResultName": "[WA][SUB] CualificarLead"
         },
@@ -986,7 +986,7 @@
         "description": "Busca en las agendas de Carmen y Gisela las visitas que hay a nombre del telefono de este cliente. Usala cuando pregunte cuando tiene la visita, si esta confirmada, o quiera cambiarla o anularla. No modifica ni borra nada: para cambiar o anular hay que avisar a la asesora.",
         "workflowId": {
           "__rl": true,
-          "value": "",
+          "value": "MFugjc9m4A7SXD92",
           "mode": "list",
           "cachedResultName": "[WA][SUB] ConsultarCita"
         },
@@ -1025,7 +1025,7 @@
         "description": "Deja un aviso y se lo manda por correo a Laurence, Carmen o Gisela. Usala siempre que digas que vas a tomar nota o que van a llamar al cliente, cuando el cliente pida hablar con una persona, y cuando te pregunten algo que tu no puedes contestar (direccion exacta, gastos, hipoteca, condiciones del propietario).",
         "workflowId": {
           "__rl": true,
-          "value": "",
+          "value": "LwkRcec6VuTUxgrm",
           "mode": "list",
           "cachedResultName": "[WA][SUB] AvisarAsesora"
         },
@@ -1124,7 +1124,7 @@
         "description": "Marca el estado de esta conversacion en el panel de las asesoras. Usala cuando cambie el estado del cliente: ia-cualificando al empezar a preguntar, ia-cualificado o ia-lead-alquiler al terminar, ia-cita-agendada cuando la visita quede puesta, e intervenir cuando el cliente pida hablar con una persona o se enfade.",
         "workflowId": {
           "__rl": true,
-          "value": "",
+          "value": "nxjE5XZzqkioNBCM",
           "mode": "list",
           "cachedResultName": "[WA][SUB] Etiquetar"
         },

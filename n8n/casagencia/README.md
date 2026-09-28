@@ -173,6 +173,21 @@ cliente un piso que no es el suyo. Por eso Sara pregunta **una sola vez**:
 La pregunta se hace **una vez por llamada**. Insistir después de un "no" es lo
 que generó la queja original de la agencia.
 
+## Cómo está organizado en n8n
+
+En esta instancia **los proyectos y las carpetas están bloqueados por licencia**
+(`/api/v1/projects` contesta 403), así que las dos líneas de trabajo se separan
+con lo que sí hay:
+
+- **Etiqueta** `Asistente telefonico` o `Asistente WhatsApp`, que en n8n sale
+  como filtro en la barra lateral.
+- **Prefijo en el nombre**: `[TEL] …` y `[WA] …`, para que la lista se agrupe
+  sola aunque no se filtre.
+
+Los dos constructores ponen el prefijo solos, así que no hay que acordarse.
+Si algún día se activa la licencia con proyectos, se pasan a dos proyectos de
+verdad y los prefijos se pueden quitar.
+
 ## Asistente de WhatsApp (nuevo, sin activar)
 
 Montado a partir del escenario principal de Blue Inmobiliaria (Chatwoot + Meta
