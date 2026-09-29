@@ -1,7 +1,6 @@
 # Biban Gestió — Cambios preparados (29/09/2026)
 
-**Estado:** preparados y validados, **pendientes de subir a n8n**. La escritura en producción
-necesita permiso explícito.
+**Estado:** subidos a n8n el 29/09 (~23:30 UTC) con aprobación del cliente. Los tres workflows siguen activos.
 
 Copias de seguridad creadas en n8n (inactivas):
 - `w90KKMR3iCeOHKvr` — BACKUP Agente AT 29-09 (no activar)
@@ -67,3 +66,24 @@ Ya hecho: borrada la memoria del agente para +34608563923 (6 registros en `n8n_c
 ## Sin cambios, por decisión del cliente
 - Consulta Llavero: si hay llavero se agenda, aunque la llave esté "En uso".
 - Presentación "Bibán Assessors" en Instagram (intencionada).
+
+## Test del embudo Instagram alquiler (conv 215, Jaime)
+
+Mensajes entrantes simulados enviando al webhook `Chatwoot-n8n` el mismo payload que Chatwoot
+(cada mensaje simulado queda como nota privada "🧪 TEST" en la conversación).
+
+| # | Cliente | Resultado |
+|---|---|---|
+| 1 | Mensaje del reel con `ref-1204` | ✅ `inst_1204` añadida, `ref_actual=1204`, apertura + 1ª pregunta |
+| 2 | "Tiene ascensor?" | ✅ responde con la ref guardada · ⚠️ repite la pregunta casi literal |
+| 3 | "Y cuándo se podría ir a verlo?" | ✅ tras 2 intentos, la da por no respondida y pasa a la 2ª |
+| 4 | "¿Para qué tantas preguntas?" | ✅ explicación pedida · ⚠️ repite la pregunta literal |
+| 5 | Asalariados, indefinido y temporal | ✅ no repregunta el contrato · ⚠️ "gracias por compartirlo" |
+| 6-7 | Ingresos x3 / nacionales | ✅ |
+| 7 | — | ✅ enlace real y "1.250 €/mes" · ⚠️ enlace en formato Markdown `[url](url)` |
+| 8 | "Me encaja, quiero visitarlo" | ✅ Llavero funciona: NO disponible → pide día |
+| 9 | "El jueves por la tarde, desde las 17h" | ✅ `aviso_insta` con resumen completo (361 car.) · ⚠️ no manda el formulario |
+| 10 | "Genial, gracias!" | 🔴 segundo `aviso_insta` a la oficina (duplicado) + Llavero otra vez; manda el formulario |
+| 11-13 | Cambio a `ref-1203` y vuelta a `ref-1204` | ✅ etiquetas acumuladas, `ref_actual` cambia y la pregunta sin ref usa la 1204 |
+
+Sin probar: rama con llave (Agendar) y fallback de respuesta vacía (no se puede forzar sin tocar el flujo).
