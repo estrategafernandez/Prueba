@@ -87,3 +87,46 @@ Mensajes entrantes simulados enviando al webhook `Chatwoot-n8n` el mismo payload
 | 11-13 | Cambio a `ref-1203` y vuelta a `ref-1204` | ✅ etiquetas acumuladas, `ref_actual` cambia y la pregunta sin ref usa la 1204 |
 
 Sin probar: rama con llave (Agendar) y fallback de respuesta vacía (no se puede forzar sin tocar el flujo).
+
+## Segunda tanda (30/09, madrugada)
+
+Subida con aprobación del cliente. Copias previas: las de la primera tanda siguen en n8n (inactivas).
+
+**Aviso_insta (`8zxiYZJE3BIHePAN`)** — un solo aviso por conversación y referencia:
+`Code` → `Conversación actual` (GET) → `¿Aviso ya enviado?` (compara `aviso_insta_ref` de la conversación con la
+referencia; las alertas `error_ia` siempre pasan) → sí: `Aviso duplicado bloqueado` · no: `Telefono Oficina1` →
+`Marcar aviso enviado` (guarda `aviso_insta_ref` y `aviso_insta_fecha` fusionando atributos) → `Aviso enviado`.
+La plantilla usa ahora el motivo limpio del nodo Code (antes usaba el del disparador, sin limpiar).
+
+**Aviso (`jjJkk3l6Z6fzW64u`)** — los tres nodos de WhatsApp usan el motivo limpio del nodo Code.
+
+**Agente AT**
+- `Ficha web` (GET `propietats.bibangestio.com/es/ref-<ref>`) → `Extraer ficha web` (descripción completa y
+  características) entre `Referencia Instagram` y `Buscar ref. y descripción`; `Edit Fields8` pasa `ficha_web` al prompt.
+- Prompt Instagram: bloque "Ficha publicada en la web" (manda sobre el resumen interno); cada pregunta tiene frase de
+  1ª vez y de 2º intento; el precio y el enlace solo se envían al terminar las preguntas y siempre antes de hablar de
+  visita; el formulario va en el mismo turno que el aviso; gestión cerrada tras avisar; sin nueva presentación
+  si cambia de referencia; resumen del aviso en una línea por campos, solo con datos de cualificación y cifras reales.
+- Tool `Aviso_insta`: máximo una llamada por referencia; formato del resumen en la descripción del parámetro.
+- Los enlaces Markdown no se tocan: Chatwoot ya los convierte para WhatsApp (comprobado por el cliente).
+
+### Test final (conv 215, memoria y atributos reiniciados)
+
+| # | Cliente | Resultado |
+|---|---|---|
+| 1 | Mensaje del reel `ref-1204` | ✅ etiqueta + `ref_actual`, apertura |
+| 2 | ¿Ascensor? ¿Mascotas? | ✅ responde y retoma la 1ª pregunta **reformulada** |
+| 3 | ¿Cuándo se puede ver? | ✅ no adelanta precio; 1ª sin respuesta → 2ª |
+| 4 | ¿Para qué tantas preguntas? | ✅ explicación pedida + 2ª con otra frase |
+| 5 | Asalariados, indefinido y temporal | ✅ pasa a la 3ª · ⚠️ "gracias por la información" |
+| 6 | ¿Incluye gastos? | ✅ responde con la ficha web · ⚠️ repite la 3ª literal |
+| 7-8 | 4.500 €/mes · nacionales | ✅ características + precio + enlace al terminar |
+| 9 | Me encaja, quiero verlo | ✅ Llavero: no disponible → pide día |
+| 10 | Jueves tarde desde las 17h | ✅ **1 aviso** con resumen completo + formulario en el mismo turno |
+| 11 | Genial, gracias! | ✅ intento de 2º aviso **bloqueado**; nada raro al cliente |
+| 12 | ¿Amueblado? ¿Trastero? | ✅ responde con la ficha web (amueblado, 2 trasteros) |
+
+Resumen recibido por la oficina:
+`Ref 1204 alquiler 1.250 €/mes | Personas: mi pareja y yo | Buscando desde: no respondió | Situación laboral:
+asalariado (indefinido), asalariado (temporal) | Ingresos x3 renta: sí, unos 4.500 €/mes entre los dos |
+Ingresos: nacionales | Disponibilidad: jueves por la tarde, a partir de las 17h | Observaciones: -`
