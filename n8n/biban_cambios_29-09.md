@@ -130,3 +130,13 @@ Resumen recibido por la oficina:
 `Ref 1204 alquiler 1.250 €/mes | Personas: mi pareja y yo | Buscando desde: no respondió | Situación laboral:
 asalariado (indefinido), asalariado (temporal) | Ingresos x3 renta: sí, unos 4.500 €/mes entre los dos |
 Ingresos: nacionales | Disponibilidad: jueves por la tarde, a partir de las 17h | Observaciones: -`
+
+## Intento de cambio a gpt-5.6-luna (30/09, 09:15-09:21 UTC) — revertido
+
+- Con Chat Completions: OpenAI rechaza herramientas + razonamiento en `gpt-5.6-luna`
+  ("use /v1/responses or set reasoning_effort to 'none'").
+- Con `responsesApiEnabled: true`: el nodo `Agente Bibán` (typeVersion 2) no admite el modelo
+  ("upgrade the Agent node to the latest version").
+- Vuelto a `gpt-4o` a las 09:21. Solo se vieron afectadas dos ejecuciones de prueba (conv 215).
+- Arreglado de paso: `Aviso equipo (sin respuesta IA)` fallaba por tipos (`id_conver` numérico); ahora convierte a texto.
+  Probado en real: la oficina recibió una alerta `error_ia` de la prueba (ejecución 3531 de Aviso_insta).
