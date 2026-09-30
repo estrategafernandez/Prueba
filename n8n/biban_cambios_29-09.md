@@ -140,3 +140,16 @@ Ingresos: nacionales | Disponibilidad: jueves por la tarde, a partir de las 17h 
 - Vuelto a `gpt-4o` a las 09:21. Solo se vieron afectadas dos ejecuciones de prueba (conv 215).
 - Arreglado de paso: `Aviso equipo (sin respuesta IA)` fallaba por tipos (`id_conver` numérico); ahora convierte a texto.
   Probado en real: la oficina recibió una alerta `error_ia` de la prueba (ejecución 3531 de Aviso_insta).
+
+## gpt-5.6-luna en producción (30/09, ~09:35 UTC) — opción A
+
+- Probado antes en un workflow temporal aislado (webhook de prueba, sin clientes ni oficina): agente v3 y v3.1 +
+  `gpt-5.6-luna` por Responses API + memoria Postgres + tool Llavero → OK. La 3.1 es la última versión del nodo
+  en esta instancia (3.2 no existe).
+- Producción: `Agente Bibán` typeVersion 2 → **3.1**; `OpenAI Chat Model` → `gpt-5.6-luna`, `responsesApiEnabled: true`,
+  `reasoningEffort: low`. Para volver atrás: agente v2 + `gpt-4o` con Chat Completions.
+- Borrada la memoria de +34625682589 (Isac, 20 registros) para que pueda probar.
+
+Test con Luna (mensajes 1-5): apertura y reformulación correctas, pero **no respeta el límite de 2 intentos**:
+repite la 1ª pregunta hasta 4 veces e insiste en la parte no respondida. Ajuste de prompt preparado
+(límite estricto, respuestas parciales y respuestas múltiples), pendiente de aprobación para subirlo.
