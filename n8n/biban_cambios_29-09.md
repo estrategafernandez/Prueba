@@ -153,3 +153,22 @@ Ingresos: nacionales | Disponibilidad: jueves por la tarde, a partir de las 17h 
 Test con Luna (mensajes 1-5): apertura y reformulación correctas, pero **no respeta el límite de 2 intentos**:
 repite la 1ª pregunta hasta 4 veces e insiste en la parte no respondida. Ajuste de prompt preparado
 (límite estricto, respuestas parciales y respuestas múltiples), pendiente de aprobación para subirlo.
+
+### Test completo con gpt-5.6-luna + límite estricto de 2 intentos (30/09, ~10:25 UTC)
+
+| # | Cliente | Resultado |
+|---|---|---|
+| 1 | Mensaje del reel `ref-1204` | ✅ apertura |
+| 2 | ¿Ascensor? ¿Mascotas? | ✅ responde + 1ª pregunta reformulada |
+| 3 | ¿Cuándo se puede ver? | ✅ no adelanta precio · ⚠️ hace la 1ª pregunta una 3ª vez |
+| 4 | ¿Para qué tantas preguntas? | ✅ explicación + pasa a la 2ª |
+| 5 | Pareja, asalariados, indefinido y temporal | ✅ da por respondidas varias y salta a la 3ª (calcula 3.750 €) |
+| 6 | ¿Incluye gastos? | ✅ ficha web + 3ª **reformulada** (gpt-4o no lo lograba) |
+| 7-8 | 4.500 €/mes · nacionales | ✅ características + precio + enlace |
+| 9 | Me encaja | ✅ Llavero no disponible → pide día |
+| 10 | Jueves tarde desde las 17h | ✅ 1 aviso + formulario en el mismo turno (URL en texto plano) |
+| 11 | Genial, gracias! | ✅ ni siquiera intenta un 2º aviso |
+| 12 | ¿Amueblado? ¿Trastero? | ✅ ficha web · ⚠️ respuesta partida en 4 trozos |
+
+Aviso recibido (1 solo WhatsApp, ejecución 3556 de Aviso_insta): completo, pero "Observaciones" incluye datos del
+piso (gastos incluidos) y un dato inventado ("no tienen mascotas": el cliente no lo dijo).
