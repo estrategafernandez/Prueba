@@ -4,13 +4,7 @@
 // el respaldo de aqui abajo para no dejar al lead sin contestar.
 const norm = $('Normalizar').first().json;
 
-// Respaldo: el mismo texto que se apruebe en Meta. Al cambiar la plantilla,
-// cambiar tambien este texto para que el panel muestre lo que se ha enviado.
-const RESPALDO = {};
-const RESPALDO_GENERICO =
-  'Hola {{1}}, soy Sara, la asistente virtual de Casagencia. ' +
-  'Nos has dejado una solicitud de informacion sobre el inmueble {{2}}. ' +
-  '¿Te va bien que te haga un par de preguntas por aqui para ayudarte mejor?';
+// Respaldo: el texto aprobado, copiado en config.js (TEXTO_PLANTILLA).
 
 let cuerpo = null;
 try {
@@ -22,7 +16,7 @@ try {
 } catch (e) {
   cuerpo = null;
 }
-if (!cuerpo) cuerpo = RESPALDO[norm.plantilla] || RESPALDO_GENERICO;
+if (!cuerpo) cuerpo = TEXTO_PLANTILLA[norm.plantilla] || '';
 
 // Los parametros van por posicion, como los numera Meta: {{1}}, {{2}}...
 const params = { 1: norm.param1 };

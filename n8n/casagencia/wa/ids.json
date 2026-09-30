@@ -1,15 +1,17 @@
 {
-  "[WA][SUB] BuscarPorReferencia": "bm3N5PD2SzgriUNR",
-  "[WA][SUB] BuscarPorDireccion": "5gULfLEpcSVoyvAS",
-  "[WA][SUB] BuscarInmuebles": "ooMZsBree06RZ6ir",
-  "[WA][SUB] ConsultarHuecos": "fCwynaiCqobOlNIf",
-  "[WA][SUB] ConfirmarVisita": "3UcEuOOW9LpFTYz6",
-  "[WA][SUB] ConsultarCita": "MFugjc9m4A7SXD92",
-  "[WA][SUB] AvisarAsesora": "LwkRcec6VuTUxgrm",
-  "[WA][SUB] CualificarLead": "6F1AaH1qIPRF1a8X",
   "[WA][SUB] Etiquetar": "nxjE5XZzqkioNBCM",
   "[WA][SUB] EnviarPlantilla": "PUb89z0Kfp8V1HFd",
   "[WA] 0 · Esquema de base de datos": "tNVaWOldP0KQt6cS",
   "[WA] 1 · Leads de portales por correo": "f1taCWlzzScT2wb4",
-  "[WA] 2 · Asistente de WhatsApp": "2SZWIdSxe8989wtd"
+  "[WA] 2 · Asistente de WhatsApp": "2SZWIdSxe8989wtd",
+  "[WA][SUB] buscarPorReferencia": "bm3N5PD2SzgriUNR",
+  "[WA][SUB] buscarPorDireccion": "5gULfLEpcSVoyvAS",
+  "[WA][SUB] buscarInmuebles": "ooMZsBree06RZ6ir",
+  "[WA][SUB] BuscarDisponibilidadCalendario": "fCwynaiCqobOlNIf",
+  "[WA][SUB] confirmarCitaCalendario": "3UcEuOOW9LpFTYz6",
+  "[WA][SUB] buscarCitaPorTelefono": "MFugjc9m4A7SXD92",
+  "[WA][SUB] AvisoEquipo": "LwkRcec6VuTUxgrm",
+  "[WA][SUB] guardarCualificacion": "6F1AaH1qIPRF1a8X",
+  "[WA][SUB] recomendarSimilares": "mKaP0YZnF33Vom28",
+  "[WA] 3 · Recordatorio 24 h al comercial": "KgR1ow6NqCdyLoL3"
 }

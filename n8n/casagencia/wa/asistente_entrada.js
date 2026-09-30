@@ -23,11 +23,15 @@ const esEntrante = tipoBruto === 0 || tipoBruto === '0' || String(tipoBruto) ===
 const quien = conv.meta?.sender ?? msg.sender ?? b.sender ?? {};
 const tel = normalizarTelefono(quien.phone_number ?? quien.identifier ?? '');
 
-// Interruptores de mano: la etiqueta 'intervenir' y el atributo bot=Off.
+// Interruptores de mano: la etiqueta 4-intervenir y el atributo bot=Off.
 const etiquetas = (conv.labels ?? b.labels ?? []).map(String);
 const atributos = conv.custom_attributes ?? b.custom_attributes ?? {};
 const botApagado = String(atributos.bot ?? 'On').toLowerCase() === 'off';
-const intervenida = etiquetas.includes(ETIQUETAS.humano) || etiquetas.includes('humano');
+const intervenida = etiquetas.includes(ETIQUETAS.intervenir) || etiquetas.includes('intervenir');
+
+// Los moviles del equipo: los avisos les llegan desde esta misma linea, y si
+// Carmen contesta "ok" al aviso, eso entra aqui. El bot no le contesta nunca.
+const esDelEquipo = Object.values(EQUIPO).some(p => p.movil === tel.wa_id);
 
 // Motivos por los que el bot NO debe contestar
 const motivos = [];
@@ -36,6 +40,7 @@ if (!esEntrante) motivos.push('mensaje_saliente');            // lo escribio la 
 if (!contenido) motivos.push('sin_texto');                    // audio o imagen: lo ve una persona
 if (!tel.valido) motivos.push('telefono_invalido');
 if (intervenida) motivos.push('conversacion_intervenida');
+if (esDelEquipo) motivos.push('numero_del_equipo');
 if (botApagado) motivos.push('bot_apagado');
 if (String(conv.status ?? b.status ?? '') === 'resolved') motivos.push('conversacion_resuelta');
 

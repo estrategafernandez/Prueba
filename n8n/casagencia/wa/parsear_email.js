@@ -80,6 +80,30 @@ const alquiler = esAlquiler(referencia, dicePortal);
 
 const r = resolverAsesora(referencia);
 
+// Enlace del anuncio para la plantilla ({{2}}). Se busca en el HTML ANTES de
+// quitar las etiquetas, porque los portales lo meten en un <a href>. Solo valen
+// enlaces a la ficha: nunca los de darse de baja, seguimiento o logos.
+const bruto = [msg.html, msg.textAsHtml, msg.text, textoDelPayload(msg.payload)].filter(Boolean).join(' ');
+const urls = [...String(bruto).matchAll(/https?:\/\/[^\s"'<>)]+/gi)].map(m => m[0].replace(/&amp;/g, '&').replace(/[.,;]+$/, ''));
+const FICHA = [
+  /idealista\.com\/inmueble\/\d+/i,
+  /fotocasa\.es\/.+\/\d{6,}\/d/i,
+  /habitaclia\.com\/.+-i\d+/i,
+  /casagencia\.com\/inmueble\//i,
+];
+let enlace = '';
+for (const patron of FICHA) {
+  const u = urls.find(x => patron.test(x));
+  if (u) { enlace = u.split('?')[0]; break; }
+}
+
+// Nombre para el saludo: el del formulario y, si no hay, el del email.
+const delEmail = (email.split('@')[0] || '').split(/[._\-\d]/)[0];
+const saludo = nombre.split(' ')[0]
+  || (delEmail.length > 2 ? delEmail[0].toUpperCase() + delEmail.slice(1).toLowerCase() : '');
+
+const plantilla = alquiler ? PLANTILLAS.alquiler : PLANTILLAS.compra;
+
 return [{
   json: {
     portal,
@@ -92,17 +116,20 @@ return [{
     telefono_valido: tel.valido,
     email_cliente: email,
     referencia,
+    enlace,
     operacion: alquiler ? 'alquiler' : 'venta',
     es_alquiler: alquiler,
-    asesora: r.asesora || '',
+    asesora: r.destinatario,
     asesora_conocida: r.conocida,
     email_asesora: r.email,
     // Sin telefono no se puede arrancar la conversacion: se avisa por correo
-    // a la asesora y no se intenta mandar nada.
+    // a la comercial y no se intenta mandar nada.
     se_puede_contactar: tel.valido,
     cuerpo_recortado: cuerpo.slice(0, 1500),
-    // Lo que se le pone a la plantilla: {{1}} el nombre, {{2}} el inmueble.
-    param1: nombre || 'hola',
-    param2: referencia || 'que nos pediste',
+    // La plantilla de bienvenida: {{1}} el nombre, {{2}} el enlace del anuncio
+    plantilla: plantilla.nombre,
+    idioma: plantilla.idioma,
+    param1: saludo || '\u{1F44B}',
+    param2: enlace || (referencia ? `ref. ${referencia}` : `tu solicitud en ${portal}`),
   }
 }];

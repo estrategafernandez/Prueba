@@ -1,9 +1,10 @@
 // [WA] 2 · Asistente · ContextoDelLead
 // Junta en un bloque de texto lo que ya sabemos de esta persona: de que portal
-// vino, que inmueble pidio, si es compra o alquiler, que asesora le toca y que
-// preguntas de cualificacion estan ya contestadas. Es lo que el agente lee
-// antes de escribir, para no volver a preguntar lo mismo.
+// vino, que inmueble pidio (y su enlace), si es compra o alquiler, que
+// comercial le toca y que preguntas de cualificacion estan ya contestadas.
+// Es lo que el agente lee antes de escribir, para no volver a preguntar.
 const d = $('JuntarMensajes').first().json;
+const e = $('EntradaMensaje').first().json;
 
 // La consulta a Postgres puede no devolver nada: el cliente puede escribir al
 // numero sin haber pasado por un portal.
@@ -13,49 +14,45 @@ const hay = (v) => v !== undefined && v !== null && String(v).trim() !== '';
 const val = (v) => (hay(v) ? String(v).trim() : 'no lo sabemos');
 
 const esAlq = fila.es_alquiler === true || esAlquiler(fila.referencia, fila.operacion);
-const r = resolverAsesora(fila.referencia);
-const asesora = hay(fila.asesora) ? fila.asesora : (r.asesora || 'sin asignar');
+const asesora = hay(fila.asesora) ? fila.asesora : resolverAsesora(fila.referencia).destinatario;
 
-const preguntasAlquiler = [
-  ['personas que van a vivir', fila.q_personas],
-  ['ingresos o contrato de trabajo', fila.q_ingresos],
-  ['mascotas', fila.q_mascotas],
-  ['cuando necesita entrar', fila.q_entrada],
-  ['todo el ano o temporada', fila.q_duracion],
+const PREGUNTAS_ALQUILER = [
+  ['personas', 'para cuantas personas seria la vivienda', fila.q_personas],
+  ['ingresos', 'ingresos fijos demostrables (nomina o contrato)', fila.q_ingresos],
+  ['mascotas', 'si conviven con alguna mascota', fila.q_mascotas],
+  ['entrada', 'para que fecha necesitan entrar a vivir', fila.q_entrada],
 ];
-const preguntasCompra = [
-  ['para cuando quiere comprar', fila.q_cuando],
-  ['zona que le interesa', fila.q_zona],
-  ['presupuesto', fila.q_presupuesto],
-  ['financiacion o hipoteca', fila.q_financiacion],
+const PREGUNTAS_COMPRA = [
+  ['tiempo_buscando', 'cuanto tiempo lleva buscando para comprar', fila.q_tiempo_buscando],
+  ['necesita_vender', 'si necesita vender una vivienda para poder comprar', fila.q_necesita_vender],
 ];
-const lista = esAlq ? preguntasAlquiler : preguntasCompra;
-
-const contestadas = lista.filter(([, v]) => hay(v) && String(v).toLowerCase() !== 'no facilitado');
-const pendientes = lista.filter(([, v]) => !hay(v));
+const lista = esAlq ? PREGUNTAS_ALQUILER : PREGUNTAS_COMPRA;
+const contestadas = lista.filter(([, , v]) => hay(v));
+const pendientes = lista.filter(([, , v]) => !hay(v));
 
 const lineas = [
   `- Cliente: ${hay(fila.nombre) ? fila.nombre : (d.nombre || 'sin nombre')}`,
-  `- Telefono: ${d.telefono_e164}`,
-  `- Ficha del lead: ${hay(fila.telefono_wa) ? 'si, vino de un portal' : 'no, ha escrito el directamente'}`,
-  `- Portal de origen: ${val(fila.portal)}`,
+  `- Telefono (ya lo tienes, no lo pidas): ${d.telefono_e164}`,
+  `- Como ha llegado: ${hay(fila.telefono_wa) ? 'solicitud de un portal (ya le mandamos la plantilla de bienvenida)' : 'ha escrito el directamente, sin solicitud previa'}`,
+  `- Portal: ${val(fila.portal)}`,
   `- Referencia del inmueble que pidio: ${val(fila.referencia)}`,
-  `- Operacion: ${esAlq ? 'ALQUILER' : (hay(fila.operacion) ? fila.operacion : 'no lo sabemos')}`,
-  `- Asesora que le corresponde: ${asesora}`,
-  `- Estado: ${val(fila.estado)}`,
+  hay(fila.enlace) ? `- Enlace del anuncio: ${fila.enlace}` : '',
+  `- Operacion: ${esAlq ? 'ALQUILER' : (hay(fila.operacion) ? 'COMPRA' : 'no lo sabemos')}`,
+  `- Comercial que le corresponde: ${asesora}`,
+  `- Estado de la conversacion: ${(e.etiquetas || []).join(', ') || 'sin etiqueta'}`,
   contestadas.length
-    ? `- Ya nos ha contestado: ${contestadas.map(([k, v]) => `${k} = ${v}`).join('; ')}`
-    : '- Todavia no nos ha contestado ninguna pregunta de cualificacion.',
+    ? `- Ya ha contestado: ${contestadas.map(([, k, v]) => `${k} = ${v}`).join('; ')}`
+    : '- Todavia no ha contestado ninguna pregunta de cualificacion.',
   pendientes.length
-    ? `- Te faltan por preguntar: ${pendientes.map(([k]) => k).join('; ')}`
-    : '- Ya tienes todas las preguntas contestadas: no vuelvas a preguntar.',
+    ? `- Te faltan: ${pendientes.map(([, k]) => k).join('; ')}`
+    : '- Ya tienes todas las preguntas: no vuelvas a preguntar.',
+  esAlq ? '- OJO: es ALQUILER. No se agenda: preguntas, guardarCualificacion y pasa al equipo.' : '',
 ];
 if (hay(fila.notas)) lineas.push(`- Notas internas: ${fila.notas}`);
-if (esAlq) lineas.push('- OJO: es ALQUILER. No se agenda visita: se cualifica y llama la asesora.');
 
 return [{
   json: {
-    contexto: lineas.join('\n'),
+    contexto: lineas.filter(Boolean).join('\n'),
     es_alquiler: esAlq,
     referencia: hay(fila.referencia) ? String(fila.referencia) : '',
     asesora,

@@ -2,7 +2,7 @@
 // Si el correo del portal no trae un telefono usable no hay WhatsApp posible.
 // En vez de perder el lead, se le manda el aviso a la asesora que le toca.
 const j = $input.first().json;
-const destinos = [j.email_asesora || EMAIL_POR_ASESORA.Laurence, EMAIL_DIRECCION]
+const destinos = [j.email_asesora || EQUIPO.Laurence.email, EMAIL_DIRECCION]
   .filter(Boolean).join(', ');
 
 return [{

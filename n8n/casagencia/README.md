@@ -188,91 +188,72 @@ Los dos constructores ponen el prefijo solos, así que no hay que acordarse.
 Si algún día se activa la licencia con proyectos, se pasan a dos proyectos de
 verdad y los prefijos se pueden quitar.
 
-## Asistente de WhatsApp (nuevo, sin activar)
+## Asistente de WhatsApp (proyecto aparte, sin activar)
 
-Montado a partir del escenario principal de Blue Inmobiliaria (Chatwoot + Meta
-+ Postgres para la memoria + Redis para juntar mensajes), pero **sin duplicar
-nada de lo que ya funciona**: las herramientas del agente de WhatsApp son los
-mismos webhooks que usa Sara por teléfono. Cartera, calendario, horario,
-festivos y la regla de «en alquiler no se agenda» se cambian en un solo sitio y
-valen para los dos canales.
+Es **otro proyecto**: sus workflows llevan `[WA]` y la etiqueta *Asistente
+WhatsApp*, y **ninguno llama a un workflow del teléfono**. Comparten los mismos
+**datos** (el Google Sheet de la cartera y los calendarios de Carmen y Gisela),
+no la ejecución. La lógica de agenda (horario, festivos, huecos y la segunda
+comprobación antes de escribir) se reutiliza inyectando los ficheros de
+`nodes/` en nodos propios de WhatsApp, sin tocarlos: un cambio de horario o de
+festivos vale para los dos canales.
 
-En el n8n de Blue no se ha tocado nada: solo se ha leído.
+### La línea y las plantillas
 
-### Cómo va el circuito
+Línea **+34 864 89 37 94** (Casa Agencia Inmobiliaria), verificada, conectada y
+en calidad verde. Chatwoot en `panel-casa-agencia.serversvisionarius.com`,
+cuenta 1, inbox 1 *WhatsApp*.
 
-1. **Entra el lead por correo.** Cada portal avisa de la solicitud por email.
-   `[WA] 1` lee el buzón, saca teléfono, nombre y referencia, y da de alta la
-   ficha del lead. Si ya le escribimos por ese mismo inmueble, no se le vuelve
-   a escribir (salvo que hayan pasado 30 días). Si el correo no trae teléfono,
-   el aviso va por correo a la asesora que le toca.
-2. **Primer mensaje.** `[WA][SUB] EnviarPlantilla` crea el contacto y la
-   conversación en Chatwoot y manda la plantilla aprobada de Meta. La
-   conversación nace en el panel, así que las asesoras la ven desde el minuto
-   uno. Ese primer mensaje se siembra en la memoria del agente para que Sara no
-   se vuelva a presentar.
-3. **Conversación.** `[WA] 2` recibe el webhook de Chatwoot, espera 60 segundos
-   para juntar los mensajes que el cliente manda seguidos, y contesta **una
-   vez** con todo el contexto. Antes de escribir lee la ficha del lead: de qué
-   portal vino, qué inmueble pidió, si es compra o alquiler, qué asesora le toca
-   y **qué preguntas están ya contestadas**, para no repetirlas.
-4. **Cualificación.** Tres o cuatro preguntas, de una en una:
-   - **Compra**: para cuándo, zona, presupuesto y financiación.
-   - **Alquiler**: personas, ingresos demostrables, mascotas y cuándo necesita
-     entrar (más «todo el año o temporada» si encaja).
-5. **Cierre.** En compra, la visita se cierra en la agenda de la asesora, como
-   pre-reserva pendiente de confirmar. En alquiler **no se agenda nada**: se
-   cualifica, se avisa a la asesora por correo y ella llama.
+| Plantilla | Idioma en Meta | `{{1}}` | `{{2}}` |
+|---|---|---|---|
+| `bienvenida_compra` | `es` | nombre del cliente | enlace del anuncio |
+| `bienvenida_alquiler` | **`en`** | nombre del cliente | enlace del anuncio |
+| `plantilla_aviso` | **`en`** | nombre del comercial | qué tiene que hacer + resumen + enlace al chat |
 
-### Los interruptores de las asesoras
+> Dos de las tres están dadas de alta en **inglés** aunque el texto sea en
+> español. Meta rechaza el envío si el código de idioma no es exactamente el
+> registrado, así que en `wa/config.js` van con `en`. Las tres son de categoría
+> *Marketing*: Meta puede frenar su entrega. Para los avisos internos sería
+> mejor *Utilidad*; mientras tanto, cada aviso sale también por correo.
 
-El bot se calla solo cuando:
+### El circuito
 
-- lo último lo ha escrito la agencia,
-- el mensaje es un audio o una imagen (sin texto),
-- la conversación está **resuelta**,
-- la conversación tiene la etiqueta **`intervenir`**,
-- o el atributo **`bot`** del contacto está en **`Off`**.
+1. **Entra el lead por correo** (`[WA] 1`): teléfono, nombre, referencia y el
+   **enlace del anuncio**. Compra → `bienvenida_compra`; alquiler →
+   `bienvenida_alquiler`. No se escribe dos veces por el mismo inmueble.
+2. **Bienvenida** (`[WA][SUB] EnviarPlantilla`): por Chatwoot, para que la
+   conversación nazca en el panel. Etiqueta `1-bienvenida_ia`.
+3. **Contesta el cliente** (`[WA] 2`): se juntan 60 s de mensajes y se contesta
+   una vez. Etiqueta `2-en_proceso`.
+4. **Compra**: dos preguntas (cuánto tiempo lleva buscando y si necesita vender
+   para comprar) y directamente la visita. Al agendarla: al calendario del
+   comercial, **aviso por WhatsApp al comercial** y etiqueta `3-agendada_ia`.
+5. **Alquiler**: las cuatro preguntas exactas del teléfono (personas, ingresos,
+   mascotas, fecha de entrada). **No se agenda**: aviso al comercial y etiqueta
+   `4-intervenir`; la IA deja de contestar y decide una persona.
+6. **24 horas antes** de cada visita agendada por WhatsApp, recordatorio al
+   comercial (`[WA] 3`, cada hora, sin repetir).
 
-Las dos últimas son el interruptor de mano: en cuanto una asesora entra a la
-conversación, Sara deja de contestar.
+La IA también resuelve dudas con la **ficha completa** del inmueble (incluida la
+descripción entera del anuncio), busca en toda la cartera con todos los filtros
+y **recomienda inmuebles parecidos** cuando el que pidió no le encaja.
 
-### Los workflows
+### Etiquetas del panel (las de Blue)
 
-| | |
-|---|---|
-| `[WA] 0 · Esquema de base de datos` | Crea las tablas. Se ejecuta a mano una vez. |
-| `[WA] 1 · Leads de portales por correo` | Lee el buzón y arranca la conversación. |
-| `[WA] 2 · Asistente de WhatsApp` | El agente: buffer de Redis, memoria en Postgres y las 9 herramientas. |
-| `[WA][SUB] EnviarPlantilla` | Contacto + conversación en Chatwoot + plantilla de Meta. |
-| `[WA][SUB] CualificarLead` | Guarda las respuestas y avisa a la asesora. |
-| `[WA][SUB] Etiquetar` | Marca el estado en el panel sin borrar las etiquetas de las personas. |
-| `[WA][SUB] BuscarPorReferencia` / `BuscarPorDireccion` / `BuscarInmuebles` | Puentes a la cartera. |
-| `[WA][SUB] ConsultarHuecos` / `ConfirmarVisita` | Puentes al calendario, con el guardarraíl de alquiler delante. |
-| `[WA][SUB] ConsultarCita` / `AvisarAsesora` | Puentes a las herramientas que ya existían. |
+`1-bienvenida_ia` · `2-en_proceso` · `3-agendada_ia` · `4-intervenir`
 
-**Todos se crean desactivados a propósito.** Nada se dispara hasta que alguien
-los active.
+Las tres primeras son el estado y nunca van hacia atrás. `4-intervenir` se suma
+y hace que la IA deje de contestar: es el interruptor de las comerciales.
+Tampoco contesta a los audios, a lo que escribe la agencia, ni a los móviles
+del equipo (los avisos salen de esta misma línea).
 
-### Lo que falta para poder activarlo
+### Lo que falta para activarlo
 
-Está todo montado menos lo que depende de infraestructura que aún no existe.
-En `wa/config.js` hay cuatro valores marcados `PENDIENTE`:
-
-1. **Chatwoot**: la URL, el id de la cuenta y el id del inbox de WhatsApp.
-2. **Meta**: el `waba_id` y el nombre de la plantilla aprobada (con su texto,
-   para que el panel muestre lo mismo que le llega al cliente).
-3. **El buzón de correo** donde entran los avisos de los portales, y el filtro
-   de Gmail del nodo `CorreoNuevo`.
-4. **La credencial de OpenAI** del nodo `ModeloOpenAI`, que se elige en n8n.
-
-Los tokens de Chatwoot y de Meta **no van en el código**: están en las
-credenciales `Chatwoot Casagencia` y `Meta WhatsApp Casagencia`, creadas ya en
-n8n con valor `PENDIENTE`.
-
-Cuando esté eso: rellenar `wa/config.js`, `python3 build_whatsapp.py --deploy`,
-ejecutar una vez `[WA] 0`, apuntar el webhook de Chatwoot al webhook de
-`[WA] 2` y activar primero `[WA] 2` y después `[WA] 1`.
+1. **La credencial de OpenAI** en el n8n de Casagencia (no hay ninguna).
+2. **La conexión al correo** donde entran las solicitudes de los portales.
+3. Ejecutar una vez `[WA] 0 · Esquema de base de datos`.
+4. En Chatwoot, un webhook a `…/webhook/wa-asistente` (evento *message_created*).
+5. Activar `[WA] 2`, `[WA] 3` y por último `[WA] 1`.
 
 ## Estructura
 
@@ -293,8 +274,10 @@ tests_whatsapp.js         tests del asistente de WhatsApp (correos, buffer, cual
 wa/config.js              configuración común de WhatsApp: Chatwoot, Meta, portales, asesoras
 wa/*.js                   el cuerpo de cada nodo Code de los workflows [WA]
 wa/prompt_asistente.md    el prompt del agente de WhatsApp
+wa/cartera.js             lectura de la cartera: ficha, búsqueda y similares
 wa/ids.json               qué id tiene cada workflow [WA] en n8n
-build_whatsapp.py         ensambla y despliega los 13 workflows [WA]
+build_whatsapp.py         ensambla y despliega los 15 workflows [WA]
+tests_datos/              la cartera real de eGO para los tests de búsqueda
 workflows_wa/*.json       lo generado para WhatsApp
 ego_direcciones.py        relee las direcciones desde eGO y reescribe la pestaña
 backup_20260921/          el estado anterior, por si hay que revertir
