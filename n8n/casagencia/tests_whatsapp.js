@@ -654,5 +654,92 @@ r = wa('llamada_nombre.js', inp([{}]), nod({ LeerLlamada: leer(llamada), NombreE
 ck('si OpenAI falla: sin nombre, y sigue', r.nombre === '' && r.telefono_e164 === '+34600000002');
 
 // ===========================================================================
+console.log('\n== 18. Leads de la web (formulario de casagencia.com) ==');
+const LEADS = fs.readFileSync(B + 'wa/leads.js', 'utf8');
+const lead = (f, $input, $) => correr(CFG + '\n' + LEADS + '\n' + fs.readFileSync(B + 'wa/' + f, 'utf8'), $input, $);
+const correoWeb = (texto, extra = {}) => ({ id: 'm1', date: '2026-10-01T10:00:00Z', subject: 'Contacto del WebSite',
+  from: { text: 'web@websites.egorealestate.com' }, text: texto, ...extra });
+r = wa('web_parsear.js', inp([{ json: correoWeb('Petición de Contacto\nOrigen del contacto: https://www.casagencia.com/contacto\n'
+  + 'Nombre: Ana Pruebas\nEmail: ana@ejemplo.com\nTeléfono: 600 11 22 33\nObservaciones: Busco un piso de unos 75 metros en '
+  + 'Voramar, presupuesto 330.000\nRGPD: Declaro que he leído...\nIP: 1.2.3.4\nUser Agent: Mozilla') }]))[0].json;
+ck('web: es de la web y saca los campos', r.es_de_la_web && r.nombre === 'Ana Pruebas' && r.email_cliente === 'ana@ejemplo.com'
+   && r.telefono_e164 === '+34600112233' && r.idioma === 'es', JSON.stringify(r).slice(0, 200));
+ck('web: el mensaje sin el RGPD ni la IP', r.mensaje === 'Busco un piso de unos 75 metros en Voramar, presupuesto 330.000', r.mensaje);
+r = wa('web_parsear.js', inp([{ json: correoWeb('Contact Form Contact Source : https://www.casagencia.com/en-gb/contacts '
+  + 'Name: John Test Email: john@example.com Phone: +44 7700 900123 Remarks: Looking for a villa in Benicassim RGPD: ok',
+  { subject: 'Contact from Website' }) }]))[0].json;
+ck('web en ingles: idioma y telefono extranjero', r.idioma === 'en' && r.telefono_e164 === '+447700900123'
+   && r.mensaje === 'Looking for a villa in Benicassim', JSON.stringify([r.idioma, r.telefono_e164, r.mensaje]));
+r = wa('web_parsear.js', inp([{ json: correoWeb('Demande de contact Origine du contact: https://www.casagencia.com/fr-fr/contacts '
+  + 'Nom et Prénom: Julie Test E-mail: julie@example.fr Téléphone: +33 6 12 34 56 78 Remarques: Je veux louer mon appartement',
+  { subject: 'Contact du site' }) }]))[0].json;
+ck('web en frances', r.idioma === 'fr' && r.nombre === 'Julie Test' && r.telefono_e164 === '+33612345678', JSON.stringify([r.idioma, r.nombre]));
+r = wa('web_parsear.js', inp([{ json: { ...correoWeb('Nuevo contacto...'), from: { text: 'forward@egorealestate.com' } } }]))[0].json;
+ck('un correo de un portal NO es de la web', r.es_de_la_web === false);
+
+const decide = (tipo, extra = {}) => correr(CFG + '\n' + LEADS
+  + '\nreturn decidirPrimerMensaje(' + JSON.stringify({ tipo, nombre: 'Ana Pruebas', idioma: 'es', ...extra }) + ');', inp([{}]), nod({}));
+r = decide('compra', { referencia: 'BN-1528-V', disponible: true, enlace: 'https://www.casagencia.com/inmueble/x/25370429' });
+ck('con inmueble disponible: bienvenida_compra con su enlace', r.plantilla === 'bienvenida_compra'
+   && r.param2.endsWith('/25370429') && r.param1 === 'Ana' && r.asesora === 'Carmen', JSON.stringify(r));
+r = decide('alquiler', { referencia: 'CS-1479-A', disponible: true, enlace: 'https://www.casagencia.com/inmueble/y/1' });
+ck('alquiler disponible: bienvenida_alquiler', r.plantilla === 'bienvenida_alquiler' && r.asesora === 'Gisela');
+r = decide('compra', { referencia: 'BN-1528-V', disponible: false });
+ck('inmueble que ya no esta: plantilla_abierta diciendo que no esta disponible',
+   r.plantilla === 'plantilla_abierta' && r.accion === 'no_disponible' && /ya no está disponible/.test(r.param2) && /BN-1528-V/.test(r.param2));
+r = decide('compra', { resumen_cliente: 'un piso de unos 75 m2 en Voramar' });
+ck('formulario general: plantilla_abierta con lo que busca', r.plantilla === 'plantilla_abierta' && r.accion === 'busqueda'
+   && /sobre un piso de unos 75 m2 en Voramar/.test(r.param2));
+r = decide('alquiler_temporada', { idioma: 'en', resumen_cliente: 'a villa for the winter' });
+ck('y en el idioma del cliente', /^I'm Sara/.test(r.param2) && r.es_alquiler === true);
+r = decide('vender_su_vivienda', { municipio: 'Oropesa' });
+ck('propietario: captacion para la asesora de su zona', r.accion === 'captacion' && r.asesora === 'Carmen'
+   && /Carmen se pondrá en contacto/.test(r.param2));
+r = decide('otro');
+ck('spam o proveedores: no se manda nada', r.accion === 'revisar' && r.plantilla === '');
+ck('los parametros nunca llevan saltos de linea', !/\n/.test(decide('compra', { resumen_cliente: 'algo\ncon salto' }).param2));
+r = lead('web_decidir.js', inp([{}]), nod({ LeerFormulario: { mensaje: '', se_puede_contactar: true, nombre: 'Ana', idioma: 'es' },
+  Clasificar: { choices: [{ message: { content: '{"tipo":"otro"}' } }] }, LeerInmueble: {} }))[0].json;
+ck('sin mensaje pero con telefono: saludo general (puede ser un cliente)', r.tipo === 'sin_mensaje' && r.accion === 'busqueda', r.accion);
+r = lead('web_decidir.js', inp([{}]), nod({ LeerFormulario: { mensaje: 'Me interesa el BN-1528-V', referencia: 'BN-1528-V',
+  se_puede_contactar: true, nombre: 'Ana', idioma: 'es' }, Clasificar: { choices: [{ message: { content: '{"tipo":"compra"}' } }] },
+  LeerInmueble: {} }))[0].json;
+ck('cita una referencia que ya no esta en la cartera: no disponible', r.accion === 'no_disponible', r.accion);
+
+console.log('\n== 19. eGO: leads de portales y ficha del CRM ==');
+const egoDec = (lead_, inm, cartera, estados = [{ id: 1, name: 'Disponible' }, { id: 3, name: 'Vendido' }]) =>
+  lead('ego_decidir.js', inp([{}]), (n) => {
+    const m = { Separar: { lead_id: '77', nombre: '', telefono: '' }, DetalleLead: { datos: lead_ }, DetalleInmueble: { datos: inm },
+      EnLaCartera: cartera, EstadosDeInmueble: { datos: estados },
+      Empleados: { datos: [{ id: 5, firstName: 'Carmen', lastName: 'X' }, { id: 4, firstName: 'Gisela', lastName: 'Y' }] } };
+    if (!(n in m)) throw new Error('no simulado ' + n);
+    return { first: () => ({ json: m[n] }), item: { json: m[n] }, all: () => [{ json: m[n] }] };
+  })[0].json;
+const leadEgo = { name: 'Ana Pruebas', phone: '0034600112233', email: 'ana@ejemplo.com', leadOrigin: { name: 'Idealista' },
+  realestateId: 25370429, potencialClientId: 9001, assignToSecurityUserId: 5, obs: 'Me gustaria visitarlo' };
+r = egoDec(leadEgo, { id: 25370429, reference: 'BN-1528-V', realestateStatusId: 1 },
+  { ref: 'BN-1528-V', enlace: 'https://www.casagencia.com/inmueble/x/25370429', tipo_transaccion: 'venta' });
+ck('eGO: disponible -> bienvenida_compra', r.plantilla === 'bienvenida_compra' && r.telefono_e164 === '+34600112233' && r.disponible === true);
+ck('eGO: contacto creado y asignacion de eGO = la de la referencia', r.contacto_creado === true && r.asignado_ego === 'Carmen X'
+   && r.asesora_por_referencia === 'Carmen' && r.asignacion_coincide === true, JSON.stringify([r.asignado_ego, r.asignacion_coincide]));
+r = egoDec(leadEgo, { id: 25370429, reference: 'BN-1528-V', realestateStatusId: 3 },
+  { ref: 'BN-1528-V', enlace: 'https://www.casagencia.com/inmueble/x/25370429' });
+ck('eGO: vendido -> plantilla_abierta (ya no esta disponible)', r.accion === 'no_disponible' && r.estado_inmueble === 'Vendido');
+r = egoDec({ ...leadEgo, assignToSecurityUserId: 4 }, { id: 1, reference: 'BN-1000-V', realestateStatusId: 1 }, {});
+ck('eGO: ya no publicado en la web -> no disponible; y avisa de asignacion distinta',
+   r.accion === 'no_disponible' && r.asignacion_coincide === false && r.asignado_ego === 'Gisela Y');
+const fichaCrm = (inm, llaves, visitas) => wa('ego_ficha.js', inp([{}]), (n) => {
+  const m = { Start: { referencia: 'BN-1528-V' }, Inmueble: { datos: inm }, Estados: { datos: [{ id: 1, name: 'Disponible' }, { id: 2, name: 'Reservado' }] },
+    Llaves: { datos: llaves }, FichasDeVisita: { datos: visitas } };
+  return { first: () => ({ json: m[n] }) };
+})[0].json;
+r = fichaCrm({ id: 1, realestateStatusId: 1, hasKey: true }, [], [{ interested: true, positivePoints: 'Luz', negativePoints: 'Ruido' }]);
+ck('ficha: disponible, con llaves y con los puntos de las visitas', r.disponible && r.tiene_llaves && r.visitas === 1
+   && r.puntos_negativos[0] === 'Ruido' && /INTERNO/.test(r.respuesta));
+r = fichaCrm({ id: 1, realestateStatusId: 2, hasKey: false }, [], []);
+ck('ficha: reservado y sin llaves -> no se ofrece ni se cierra visita', !r.disponible && !r.tiene_llaves
+   && /NO esta disponible/.test(r.respuesta) && /NO tiene las llaves/.test(r.respuesta));
+
+// ===========================================================================
 console.log(fallos ? `\n${fallos} FALLOS` : '\nTodo correcto');
 process.exit(fallos ? 1 : 0);

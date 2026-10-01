@@ -1,0 +1,304 @@
+{
+  "name": "[EGO][SUB] NotaEnEgo",
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Europe/Madrid"
+  },
+  "nodes": [
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "telefono"
+            },
+            {
+              "name": "texto"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -40,
+        0
+      ],
+      "id": "8bf8734f-37ff-549f-8979-175a49850a23",
+      "name": "Start"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "p2vGYI5OZPMw4sPl",
+          "mode": "list",
+          "cachedResultName": "[EGO][SUB] Llamar a eGO"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "metodo": "POST",
+            "ruta": "/entity/Entity/ListEntityByPageFastSearch",
+            "query": "{}",
+            "cuerpo": "={{ JSON.stringify({ searchText: String($json.telefono || '').replace(/\\D/g, '').slice(-9), pageIndex: 0, numberOfRecords: 5 }) }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "metodo",
+              "displayName": "metodo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "ruta",
+              "displayName": "ruta",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "query",
+              "displayName": "query",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "cuerpo",
+              "displayName": "cuerpo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        200,
+        0
+      ],
+      "id": "9a806784-cdfc-5598-b7b2-1d2edfca159d",
+      "name": "BuscarContacto",
+      "onError": "continueRegularOutput",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const d = $input.first().json.datos || {};\nconst lista = d.searchList || d.entities || [];\nconst c = lista[0] || {};\nreturn [{ json: { contacto_id: c.id ?? c.entityId ?? null, encontrados: lista.length } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        420,
+        0
+      ],
+      "id": "ca5b5eb6-08e5-5896-b65c-6a7a28d456c7",
+      "name": "Contacto"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "d9a11e8b-53f1-560b-9ad7-27930f589f45",
+              "leftValue": "={{ $json.contacto_id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "number",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        640,
+        0
+      ],
+      "id": "a1f80a9e-3c05-5b4b-be2d-92eca37f0378",
+      "name": "¿Existe en eGO?"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        860,
+        160
+      ],
+      "id": "a5a9170f-1313-5c66-9ef3-de0dc30722d9",
+      "name": "NoEstaEnEgo"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "p2vGYI5OZPMw4sPl",
+          "mode": "list",
+          "cachedResultName": "[EGO][SUB] Llamar a eGO"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "metodo": "POST",
+            "ruta": "/note/Note/InsertNote",
+            "query": "{}",
+            "cuerpo": "={{ JSON.stringify({ objectId: $json.contacto_id, objectName: 'Entity', description: $('Start').first().json.texto }) }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "metodo",
+              "displayName": "metodo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "ruta",
+              "displayName": "ruta",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "query",
+              "displayName": "query",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "cuerpo",
+              "displayName": "cuerpo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        860,
+        -40
+      ],
+      "id": "d87b0605-500f-5705-b2be-4d95544a7cc0",
+      "name": "InsertarNota",
+      "onError": "continueRegularOutput",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "content": "## Nota en eGO\nBusca el contacto por su telefono y le deja una nota (historial) con el resumen de la conversacion de WhatsApp o de la llamada.\n\nSIN PROBAR hasta tener la contrasena en la credencial eGO API.",
+        "height": 220,
+        "width": 500
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        200,
+        -320
+      ],
+      "id": "e5da7b4e-5aeb-50d1-8d57-71866644de89",
+      "name": "Nota"
+    }
+  ],
+  "connections": {
+    "Start": {
+      "main": [
+        [
+          {
+            "node": "BuscarContacto",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "BuscarContacto": {
+      "main": [
+        [
+          {
+            "node": "Contacto",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Contacto": {
+      "main": [
+        [
+          {
+            "node": "¿Existe en eGO?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Existe en eGO?": {
+      "main": [
+        [
+          {
+            "node": "InsertarNota",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "NoEstaEnEgo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

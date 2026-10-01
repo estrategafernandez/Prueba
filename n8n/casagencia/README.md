@@ -324,6 +324,69 @@ nada de lo que ya hacía (Drive, correos). Está también en `build_workflows.py
 para que no se pierda si se vuelve a desplegar el teléfono. Cada llamada entra
 una sola vez (tabla `tel_llamadas_panel`).
 
+### De dónde salen los leads (revisado el 1-10-2026)
+
+Buzón **formularioscasagencia@gmail.com** (credencial *Correo Formulario*),
+revisado solo en lectura:
+
+- **Formularios de la web** (`web@websites.egorealestate.com`, "Contacto del
+  WebSite"): 27 desde el 25 de mayo, 1-2 por semana. Todos son el formulario
+  general (sin inmueble). Estos **no entran en eGO**: se cogen del correo.
+- **Portales** (Idealista, Fotocasa, reenviados por `forward@egorealestate.com`):
+  cruzados correo a correo con los avisos de eGO de 5 días, **todos entran en
+  eGO** 1-3 minutos después. eGO tiene además los de Properstar, que no llegan al
+  correo. Se cogen de la API de eGO.
+- Las "llamadas atendidas" de Idealista no son leads de eGO: las coge el
+  asistente telefónico.
+
+> **Ojo:** desde esta misma cuenta sale otra automatización que ya escribe a los
+> leads: correos "Te hemos escrito por WhatsApp | Casagencia" (62 en 4 días,
+> firmados por Gisela o Carmen, con enlace a un WhatsApp) y "Contacto ha
+> solicitado visita (formulario)" a las comerciales con "notas de la
+> conversación". Antes de poner los leads en real hay que apagarla, o el cliente
+> recibirá dos WhatsApp.
+
+### `[WA] 1` · Leads de la web (correo) — ACTIVO en modo preparado
+
+Solo los correos de la web. OpenAI lee el mensaje (compra, alquiler, alquiler de
+temporada, propietario que quiere vender o alquilar, u otra cosa) y se decide el
+primer WhatsApp (`wa/leads.js`):
+
+| Caso | Primer WhatsApp |
+|---|---|
+| Habla de un inmueble disponible | `bienvenida_compra` / `bienvenida_alquiler` con su enlace |
+| El inmueble ya no está (vendido, reservado, retirado o no publicado) | `plantilla_abierta`: ya no está disponible, ¿te enseño otros? |
+| Formulario general (lo normal en la web) | `plantilla_abierta` con lo que busca, en su idioma (es/en/fr) |
+| Propietario | `plantilla_abierta` y aviso a la asesora de su zona (captación) |
+| Spam, proveedores, pruebas | nada |
+
+Las bienvenidas dicen "por este inmueble…": sin inmueble no encajan, por eso la
+web usa la plantilla abierta. Probado con los 27 formularios reales: 15
+buscadores, 6 propietarios y 9 que no eran clientes.
+
+Con `MODO_LEADS = 'preparado'` (`wa/config.js`) todo se apunta en la tabla
+`leads_entrantes` y **no se manda nada**. Con `'real'` se da de alta el lead y
+sale el WhatsApp.
+
+### eGO (API) — preparado, falta la contraseña
+
+- `[EGO][SUB] Llamar a eGO`: login con la credencial **eGO API** (usuario
+  casagencia@casagencia.com; la contraseña se pone en n8n, en la credencial) y
+  sesión guardada 50 min en Redis. Probado hasta el login.
+- `[WA] 5 · Leads de eGO (portales)`: cada 5 minutos, los leads nuevos de eGO
+  con su detalle y el estado de su inmueble; decide la plantilla igual que la
+  web (si el piso está vendido, reservado o retirado, plantilla abierta y
+  parecidos). Apunta también el comercial que asignó eGO, el que toca por la
+  referencia y si eGO creó el contacto. Inactivo y en modo preparado.
+- `[EGO][SUB] FichaCRM`: estado del inmueble, si la agencia tiene las **llaves**
+  (si no, no se cierra visita) y las **fichas de visita** (puntos positivos y
+  negativos, internos). Sin conectar a Sara hasta probarlo.
+- `[EGO][SUB] NotaEnEgo`: deja en la ficha del contacto en eGO una nota con el
+  resumen de la conversación.
+
+Reparto: manda la **referencia** (BN/OR Carmen, CS/VR Gisela), igual que el
+teléfono. Lo que asigne eGO queda apuntado al lado para comprobar que coincide.
+
 ### La cartera de WhatsApp (`[WA] 4`)
 
 La hoja del teléfono (`[TEL] XMLCacheo`) **corta las descripciones a 500
@@ -392,8 +455,8 @@ credencial *OpenAI Casagencia*. **Todo en real**: las visitas se escriben en el
 calendario de la asesora y los avisos le llegan a ella (WhatsApp) y a ella y a
 Paco (correo).
 
-Falta solo **la conexión al correo** de los portales para activar `[WA] 1`.
-Mientras tanto, los leads se pueden lanzar con `[WA] 9`.
+Los leads entrantes (web y eGO) están preparados pero sin mandar nada (ver
+arriba). Mientras tanto, los leads se pueden lanzar a mano con `[WA] 9`.
 
 ### Modo prueba
 

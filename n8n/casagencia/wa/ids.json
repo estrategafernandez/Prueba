@@ -2,7 +2,6 @@
   "[WA][SUB] Etiquetar": "nxjE5XZzqkioNBCM",
   "[WA][SUB] EnviarPlantilla": "PUb89z0Kfp8V1HFd",
   "[WA] 0 · Esquema de base de datos": "tNVaWOldP0KQt6cS",
-  "[WA] 1 · Leads de portales por correo": "f1taCWlzzScT2wb4",
   "[WA] 2 · Asistente de WhatsApp": "2SZWIdSxe8989wtd",
   "[WA][SUB] buscarPorReferencia": "bm3N5PD2SzgriUNR",
   "[WA][SUB] buscarPorDireccion": "5gULfLEpcSVoyvAS",
@@ -18,5 +17,10 @@
   "[WA] 9 · Lead a mano": "IL4AqaWHoBG7NEnz",
   "[WA] 4 · Cartera desde eGO": "MkU8OGZSyEtPPD31",
   "[WA][SUB] ConversacionDelContacto": "q2mLAnW3vQRuFXQU",
-  "[TEL] Llamada al panel": "d44pwgLuIZf8dkGw"
+  "[TEL] Llamada al panel": "d44pwgLuIZf8dkGw",
+  "[WA] 1 · Leads de la web (correo)": "f1taCWlzzScT2wb4",
+  "[EGO][SUB] Llamar a eGO": "p2vGYI5OZPMw4sPl",
+  "[EGO][SUB] FichaCRM": "0hUSeYvYM0fnFdRy",
+  "[EGO][SUB] NotaEnEgo": "4WcKHc1s3v3WfqJF",
+  "[WA] 5 · Leads de eGO (portales)": "ICAK7wYTvS8RAeWa"
 }

@@ -25,22 +25,25 @@ const META_WABA_ID    = '1791979752043585';
 // Plantillas aprobadas. OJO con el idioma: bienvenida_alquiler y plantilla_aviso
 // estan dadas de alta en INGLES ('en') aunque el texto sea en espanol. Meta
 // rechaza el envio si el codigo de idioma no es exactamente el registrado.
-// Las tres usan parametros por posicion: {{1}} y {{2}}.
+// Todas usan parametros por posicion: {{1}} y {{2}}.
 const PLANTILLAS = {
   compra:   { nombre: 'bienvenida_compra',   idioma: 'es' },  // {{1}} nombre, {{2}} enlace del inmueble
   alquiler: { nombre: 'bienvenida_alquiler', idioma: 'en' },  // {{1}} nombre, {{2}} enlace del inmueble
   aviso:    { nombre: 'plantilla_aviso',     idioma: 'en' },  // {{1}} comercial, {{2}} el aviso (una linea)
+  abierta:  { nombre: 'plantilla_abierta',   idioma: 'en' },  // {{1}} nombre, {{2}} texto libre (una linea)
 };
 
 // Texto exacto de cada plantilla, tal y como esta aprobada en Meta. Solo se usa
 // para que en el panel se lea lo mismo que le ha llegado al cliente.
 const TEXTO_PLANTILLA = {
   bienvenida_compra:
-    'Hola *{{1}}*, soy Sara de Casa Agencia.\nHemos recibido tu solicitud de información por este inmueble de compra: {{2}}\n*Quieres visitar la vivienda?*',
+    'Hola *{{1}}*, soy Sara de Casagencia.\nHemos recibido tu solicitud de información por este inmueble de compra: {{2}}\n*Quieres visitar la vivienda?*',
   bienvenida_alquiler:
-    'Hola *{{1}}*, soy Sara de Casa Agencia.\nHemos recibido tu solicitud de información por este inmueble de alquiler: {{2}}\n*Quieres visitar la vivienda?*',
+    'Hola *{{1}}*, soy Sara de Casagencia.\nHemos recibido tu solicitud de información por este inmueble de alquiler: {{2}}\n*Quieres visitar la vivienda?*',
   plantilla_aviso:
     'Hola *{{1}}*,\n*{{2}}*\nUn saludo. Tenga un buen día.',
+  plantilla_abierta:
+    'Hola *{{1}}*,\n{{2}}\nUn saludo. Buen día.',
 };
 
 // --- El equipo ---------------------------------------------------------------
@@ -62,8 +65,14 @@ const EQUIPO = {
 };
 const EMAIL_DIRECCION = 'paco@casagencia.com';   // copia por correo de todos los avisos
 
-// --- Leads por correo ----------------------------------------------------------
-const BUZON_LEADS = 'PENDIENTE@casagencia.com';   // PENDIENTE: el buzon donde entran
+// --- Leads entrantes ------------------------------------------------------------
+// De la WEB salen del buzon formularioscasagencia@gmail.com (credencial "Correo
+// Formulario"): solo los de web@websites.egorealestate.com. Los de los PORTALES
+// ya entran en eGO y se cogen de su API ([WA] 5).
+const BUZON_LEADS = 'formularioscasagencia@gmail.com';
+// 'preparado': decide que mandaria y lo apunta (tabla leads_entrantes), pero NO
+// manda nada. 'real': manda la plantilla. Se cambia aqui y se vuelve a desplegar.
+const MODO_LEADS = 'preparado';
 const PORTALES = [
   { nombre: 'Idealista',  de: /idealista\.com/i,   asunto: /idealista/i },
   { nombre: 'Fotocasa',   de: /fotocasa\.es/i,     asunto: /fotocasa/i },
