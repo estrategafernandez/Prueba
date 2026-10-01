@@ -196,3 +196,12 @@ Cambios subidos:
 Test del caso Iván (conv 215): ✅ deja de cualificar, ofrece la web de venta y, cuando dice lo que busca, el formulario.
 
 Respuesta enviada a Iván (conv 141) a petición del cliente: web de venta + formulario.
+
+## Etiqueta de intervención al avisar (01/10, ~13:05 UTC)
+
+- **Aviso** y **Aviso_insta**: tras `Marcar aviso enviado` → `Etiquetas actuales` (GET) → `¿Etiquetas leídas?` →
+  `Etiqueta intervenir` (POST etiquetas actuales + `4-intevenir`) → `Aviso enviado`. Si no se pueden leer las
+  etiquetas, no se escribe nada (Chatwoot reemplaza la lista y se perderían las demás). También se aplica a las
+  alertas `error_ia` (la IA no respondió).
+- Etiquetadas a mano (conservando sus etiquetas) las conversaciones reales con aviso enviado y sin la etiqueta:
+  211, 217, 220, 221, 226, 228, 230, 231, 232, 233. La 204 ya la tenía. No se tocan las de prueba (8, 215).
