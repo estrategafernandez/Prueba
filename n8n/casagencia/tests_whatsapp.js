@@ -94,7 +94,8 @@ const casos = [
   ['foto SI se atiende', msj({ content: '', attachments: [{ file_type: 'image', data_url: 'https://x/a.jpg' }] }), true],
   ['etiqueta 4-intervenir', msj({}, { ...conv, labels: ['2-en_proceso', '4-intervenir'] }), false],
   ['conversacion resuelta', msj({}, { ...conv, status: 'resolved' }), false],
-  ['Blue: contacto sin atributo bot -> no hacer nada', msj({}, conBot(undefined)), false],
+  ['bot sin valor ("Select value"): contesta', msj({}, conBot(undefined)), true],
+  ['bot vacio: contesta', msj({}, conBot('')), true],
   ['Blue: bot Off', msj({}, conBot('Off')), false],
   ['Blue: bot On', msj({}, conBot('On')), true],
   ['escribe Carmen (contesta a un aviso)', msj({}, { ...conv, meta: { sender: { phone_number: '+34654907386', custom_attributes: { bot: 'On' } } } }), false],
@@ -122,17 +123,17 @@ let e3 = wa('asistente_entrada.js', inp([{ json: { body: msj({}, conBot('Off')) 
 ck('bot Off: es mensaje del cliente, lo para el nodo "Bot on/off"', e3.procesar === true && e3.bot_encendido === false
    && e3.bot_asignado === true);
 e3 = wa('asistente_entrada.js', inp([{ json: { body: msj({}, conBot(undefined)) } }]))[0].json;
-ck('sin bot: lo para "Bot sin seleccionar no hacer nada"', e3.procesar === true && e3.bot_asignado === false);
+ck('sin bot: pasa los dos filtros (solo para Off)', e3.procesar === true && e3.bot_asignado === true && e3.bot_encendido === true);
 
 // Y el que mando Chatwoot de verdad el 1-10-2026 al pulsar el boton de la plantilla
-// (anonimizado). Ese contacto no tenia el atributo bot: con el estandar de Blue
-// no se le contesta hasta que la plantilla le pone bot=On.
+// (anonimizado). Ese contacto no tenia el atributo bot y se le contesta: solo
+// se calla con bot = Off.
 const REAL_CW = JSON.parse(fs.readFileSync(B + 'tests_datos/chatwoot_automatizacion_real.json', 'utf8'));
 r = wa('asistente_entrada.js', inp([{ json: { body: REAL_CW } }]))[0].json;
 ck('payload REAL: se lee bien', r.procesar === true && r.conversacion_id === 1 && r.mensaje_id === 5
    && r.telefono_e164 === '+34600000001' && r.contenido === '¡Me gustaría visitar la vivienda!' && r.tipo === 'text',
    r.motivos.join(','));
-ck('payload REAL sin atributo bot: no se contesta', r.contestar === false && r.motivos.includes('bot_sin_seleccionar'));
+ck('payload REAL sin atributo bot: se contesta', r.contestar === true, r.motivos.join(','));
 const REAL_ON = JSON.parse(JSON.stringify(REAL_CW));
 REAL_ON.meta.sender.custom_attributes = { bot: 'On' };
 r = wa('asistente_entrada.js', inp([{ json: { body: REAL_ON } }]))[0].json;
@@ -201,8 +202,15 @@ ck('la ficha del inmueble va cargada en el contexto', r.ficha_cargada === true &
 ck('con la descripcion entera del anuncio',
    r.contexto.includes(pisoVenta.descripcion.replace(/\s+/g, ' ').trim().slice(-80)));
 ck('y el precio', /Precio: [\d.]+ €/.test(r.contexto));
-ck('compra: solo le falta si necesita vender',
-   JSON.stringify(r.preguntas_pendientes) === JSON.stringify(['necesita_vender']), JSON.stringify(r.preguntas_pendientes));
+ck('compra: le faltan si necesita vender y la financiacion',
+   JSON.stringify(r.preguntas_pendientes) === JSON.stringify(['necesita_vender', 'financiacion']), JSON.stringify(r.preguntas_pendientes));
+r = contexto({ telefono_wa: '34600000001', referencia: pisoVenta.ref, operacion: 'venta',
+               q_tiempo_buscando: 'un ano', q_necesita_vender: 'Si, el mio de Castellon' });
+ck('compra: si vende, le falta donde esta su vivienda',
+   JSON.stringify(r.preguntas_pendientes) === JSON.stringify(['vivienda_a_vender', 'financiacion']), JSON.stringify(r.preguntas_pendientes));
+r = contexto({ telefono_wa: '34600000001', referencia: pisoVenta.ref, operacion: 'venta', q_tiempo_buscando: 'un ano',
+               q_necesita_vender: 'si', q_vivienda_venta: 'Grao de Castellon', q_financiacion: 'hipoteca preconcedida' });
+ck('compra: con las tres (y la zona), nada pendiente', r.preguntas_pendientes.length === 0, JSON.stringify(r.preguntas_pendientes));
 ck('compra: la comercial de la referencia', r.asesora === (/^(BN|OR)/.test(pisoVenta.ref) ? 'Carmen' : 'Gisela'), r.asesora);
 r = contexto({ telefono_wa: '34600000001', referencia: 'ZZ-1-V', operacion: 'venta' });
 ck('si ya no esta en cartera, se lo dice al agente', /ya no esta en la cartera/.test(r.contexto));
@@ -217,7 +225,21 @@ r = wa('cualificar_preparar.js', inp([{ json: { telefono: '+34600000001', nombre
   referencia: 'BN-1547-V', operacion: 'venta', tiempo_buscando: 'seis meses', necesita_vender: 'no',
   resumen: 'Le gusta la terraza.', conversacion_id: 1 } }]))[0].json;
 ck('compra: no es alquiler y ofrece la visita', !r.es_alquiler && /ofrecele directamente la visita/i.test(r.respuesta));
-ck('compra: guarda las dos respuestas', r.q_tiempo_buscando === 'seis meses' && r.q_necesita_vender === 'no');
+ck('compra: guarda las respuestas', r.q_tiempo_buscando === 'seis meses' && r.q_necesita_vender === 'no');
+ck('compra: no vende -> sin etiqueta vendedor', r.es_vendedor === false);
+ck('compra: le falta la financiacion -> que la pregunte', /Falta como lo va a financiar/.test(r.respuesta));
+r = wa('cualificar_preparar.js', inp([{ json: { telefono: '+34600000001', nombre: 'Jaime',
+  referencia: 'BN-1547-V', operacion: 'venta', tiempo_buscando: 'un ano', necesita_vender: 'si, tengo que vender el mio',
+  es_vendedor: true, vivienda_a_vender: 'calle Mayor, Castellon', financiacion: 'hipoteca preconcedida',
+  conversacion_id: 1 } }]))[0].json;
+ck('vendedor: etiqueta "vendedor"', r.es_vendedor === true && r.etiqueta_vendedor === 'vendedor');
+ck('vendedor: guarda la zona y la financiacion', r.q_vivienda_venta === 'calle Mayor, Castellon'
+   && r.q_financiacion === 'hipoteca preconcedida');
+ck('con todo contestado: directamente la visita', /Ahora ofrecele directamente la visita/.test(r.respuesta), r.respuesta);
+r = wa('cualificar_preparar.js', inp([{ json: { telefono: '+34600000001', referencia: 'BN-1547-V', operacion: 'venta',
+  tiempo_buscando: 'un mes', necesita_vender: 'Si', conversacion_id: 1 } }]))[0].json;
+ck('dice que si (aunque Sara no lo marque): vendedor, y pide la zona', r.es_vendedor === true
+   && /direccion o zona de la vivienda que tiene que vender/.test(r.respuesta));
 r = wa('cualificar_preparar.js', inp([{ json: { telefono: '+34600000001', nombre: 'Jaime',
   referencia: 'CS-1479-A', personas: '3', ingresos: 'nomina indefinida', mascotas: 'un perro',
   entrada: '1 de noviembre', resumen: 'Pregunta por el piso del centro.', conversacion_id: 7 } }]))[0].json;
@@ -310,8 +332,13 @@ ck('mismo titulo que las del telefono (asi las encuentra por telefono)',
    val.titulo.startsWith('Visita inmueble - BN-1547-V') && val.titulo.includes('+34600000001'), val.titulo);
 
 r = wa('aviso_cita.js', inp([{}]), nod({ ValidarAntesDeInsertar: val,
-  Start: { resumen: 'Lleva seis meses buscando', conversacion_id: 1 } }))[0].json;
+  Start: { resumen: 'Le gusta la terraza', conversacion_id: 1 },
+  LeerCualificacion: { cualificacion: 'Lleva buscando: seis meses · Financiacion: hipoteca' } }))[0].json;
 ck('el aviso de la cita va a Carmen con 3-agendada_ia', r.destinatario === 'Carmen' && r.etiqueta === '3-agendada_ia');
+ck('es un aviso de PRE-RESERVA con lo que sabemos del cliente', r.accion === 'PRE-RESERVA'
+   && r.resumen === 'Lleva buscando: seis meses · Financiacion: hipoteca · Le gusta la terraza', r.resumen);
+const avPre = wa('aviso_preparar.js', inp([{ json: { ...r, cliente_telefono: '+34611111111' } }]))[0].json;
+ck('el WhatsApp a Carmen le dice que llame para confirmarla', /PRE-RESERVA: llama al cliente para confirmarla/.test(avPre.aviso), avPre.aviso);
 ck('la cita escrita como la lee una persona', /^martes \d+ de \w+ a las 17:00$/.test(r.cita), r.cita);
 
 // ===========================================================================
@@ -582,6 +609,49 @@ ck(`las de venta (${porAsesora.Carmen} de Carmen, ${porAsesora.Gisela} de Gisela
 ck('y con SU horario (Carmen: sabado si y 9:00 no; Gisela: al reves)', !malas.some(m => /horario/.test(m)), malas.join(' | '));
 ck('una referencia desconocida no se agenda en ningun calendario',
    huecoA('ZZ-0001-V', MARTES, '11:00').motivo === 'referencia_desconocida');
+
+// ===========================================================================
+console.log('\n== 16. Asignacion en el panel y avisos por WhatsApp ==');
+const av = (j) => wa('aviso_preparar.js', inp([{ json: { accion: 'AVISO', cliente_telefono: '+34611111111',
+  conversacion_id: 9, ...j } }]))[0].json;
+ck('BN -> la conversacion para Carmen (agente 5)', av({ referencia: 'BN-1528-V' }).agente_id === 5);
+ck('CS -> para Gisela (agente 4)', av({ referencia: 'CS-1479-A' }).agente_id === 4);
+ck('VR -> para Gisela', av({ referencia: 'VR-1001-V' }).agente_id === 4);
+ck('sin referencia: a quien va el aviso', av({ destinatario: 'Laurence' }).agente_id === 6);
+ck('la referencia manda sobre el destinatario', av({ referencia: 'OR-1313-V', destinatario: 'Laurence' }).agente_id === 5);
+ck('los avisos normales tambien por correo', av({ referencia: 'BN-1528-V' }).enviar_correo === true);
+ck('el de una llamada, solo WhatsApp (el telefono ya manda su correo)',
+   av({ accion: 'LLAMADA', destinatario: 'Carmen' }).enviar_correo === false);
+r = wa('plantilla_normalizar.js', inp([{ json: {} }]), nod({ Start: { telefono: '600112233', referencia: 'CS-1479-A' } }))[0].json;
+ck('bienvenida: la conversacion para la asesora de la referencia', r.asesora === 'Gisela' && r.agente_id === 4);
+r = wa('cita_respuesta.js', inp([{}]), nod({ ValidarAntesDeInsertar: val, InsertarEnAgenda: { id: 'ev1' },
+  AvisarAlComercial: { mensaje_registrado: true } }))[0].json;
+ck('al cliente: NO esta confirmada hasta que le llame la asesora', /NO esta confirmada hasta que le llame Carmen/.test(r.respuesta), r.respuesta);
+const afirm = Function('DateTime', CFG + '; return esAfirmativo;')(DateTime);
+ck('"si, tengo que vender el mio" es un si; "no necesito" es un no',
+   afirm('Sí, tengo que vender el mío') && afirm('primero tengo que vender') && !afirm('No') && !afirm('no necesito vender'));
+
+console.log('\n== 17. Llamadas del telefono al panel ==');
+const llamada = { call_id: 'call_x', direction: 'inbound', from_number: '+34600000002', to_number: '+34864893794',
+  start_timestamp: DateTime.fromISO('2026-10-01T16:51:00', { zone: 'Europe/Madrid' }).toMillis(), duration_ms: 159000,
+  disconnection_reason: 'agent_hangup', recording_url: 'https://x.cloudfront.net/rec.wav',
+  transcript: 'Agent: Hola, soy Sara.\nUser: Hola, soy Ana Marti, llamo por el BN-1528-V.',
+  call_analysis: { call_summary: 'Busco un piso de alquiler para dos personas.', user_sentiment: 'Positive',
+                   custom_analysis_data: { asesora: 'Carmen' } } };
+const leer = (c) => wa('llamada_preparar.js', inp([{}]), nod({ Start: { llamada: JSON.stringify(c) } }))[0].json;
+r = leer(llamada);
+ck('nota como en el panel de las otras agencias', r.nota ===
+   'LLAMADA DE LA IA — Colgó la IA\nNos llamó · +34600000002 · 1/10 a las 16:51 · 2 min 39 s\n\n'
+   + 'Busco un piso de alquiler para dos personas.\n\nTono del cliente: positivo\nAsesora: Carmen', JSON.stringify(r.nota));
+ck('asignada a Carmen y con aviso por WhatsApp', r.agente_id === 5 && r.avisar === true && r.asesora === 'Carmen');
+ck('con la grabacion', r.grabacion.endsWith('rec.wav'));
+r = leer({ ...llamada, duration_ms: 5000, disconnection_reason: 'user_hangup', call_analysis: { call_summary: '' } });
+ck('cuelga a los 5 s: al panel si, aviso no', r.avisar === false && /Colgó el cliente/.test(r.nota) && /Sin resumen/.test(r.nota));
+r = wa('llamada_nombre.js', inp([{}]), nod({ LeerLlamada: leer(llamada),
+  NombreEnLaTranscripcion: { choices: [{ message: { content: '{"nombre": "Ana Marti", "referencia": "bn-1528-v"}' } }] } }))[0].json;
+ck('nombre y referencia de la transcripcion', r.nombre === 'Ana Marti' && r.referencia === 'BN-1528-V', r.nombre + ' ' + r.referencia);
+r = wa('llamada_nombre.js', inp([{}]), nod({ LeerLlamada: leer(llamada), NombreEnLaTranscripcion: { error: 'x' } }))[0].json;
+ck('si OpenAI falla: sin nombre, y sigue', r.nombre === '' && r.telefono_e164 === '+34600000002');
 
 // ===========================================================================
 console.log(fallos ? `\n${fallos} FALLOS` : '\nTodo correcto');

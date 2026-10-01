@@ -226,14 +226,21 @@ cuenta 1, inbox 1 *WhatsApp*.
 3. **Contesta el cliente** (`[WA] 2`, con la estructura estándar de Blue): texto,
    **notas de voz** (se transcriben) e **imágenes** (se describen); se juntan
    60 s de mensajes y se contesta una vez. Etiqueta `2-en_proceso`.
-4. **Compra**: dos preguntas (cuánto tiempo lleva buscando y si necesita vender
-   para comprar) y directamente la visita. Al agendarla: al calendario del
-   comercial, **aviso por WhatsApp al comercial** y etiqueta `3-agendada_ia`.
+4. **Compra**: tres preguntas (cuánto tiempo lleva buscando, si necesita vender
+   para comprar —y si es que sí, la dirección o zona de esa vivienda, con la
+   etiqueta `vendedor`— y cómo lo financia: hipoteca, recursos propios o
+   hipoteca preconcedida) y directamente la visita. Se **pre-reserva**: va al
+   calendario de la asesora como `PRE-RESERVA` (en amarillo, con lo que sabemos
+   del cliente), lo que bloquea el hueco; le llega un **aviso por WhatsApp** para
+   que llame al cliente y la confirme (o la mueva); al cliente se le dice que
+   *la cita NO está confirmada hasta que le llame la asesora*; etiqueta
+   `3-agendada_ia`.
 5. **Alquiler**: las cuatro preguntas exactas del teléfono (personas, ingresos,
    mascotas, fecha de entrada). **No se agenda**: aviso al comercial y etiqueta
    `4-intervenir`; la IA deja de contestar y decide una persona.
-6. **24 horas antes** de cada visita agendada por WhatsApp, recordatorio al
-   comercial (`[WA] 3`, cada hora, sin repetir).
+6. **24 horas antes** de cada visita pre-reservada por WhatsApp, recordatorio
+   por WhatsApp a la asesora (`[WA] 3`, cada hora, sin repetir): si aún no la ha
+   confirmado, que llame al cliente.
 
 La IA también resuelve dudas con la **ficha completa** del inmueble (incluida la
 descripción entera del anuncio), busca en toda la cartera con todos los filtros
@@ -246,8 +253,9 @@ Las mismas siete secciones que el *Asistente* de Blue, con los mismos nombres:
 1. **Llega el mensaje de WhatsApp**: se descarta lo que no es del cliente, y el
    aviso repetido (Chatwoot a veces avisa dos veces del mismo mensaje: Redis
    marca cada id y solo pasa una vez).
-2. **Filtrar si el bot está encendido o apagado**: `Bot sin seleccionar no hacer
-   nada` y `Bot on/off` (más la etiqueta `4-intervenir`).
+2. **Filtrar si el bot está encendido o apagado**: `Bot on/off` (más la etiqueta
+   `4-intervenir`). Blue tiene además `Bot sin seleccionar no hacer nada`;
+   Casagencia contesta también a los contactos sin valor.
 3. **Separar audio, texto e imagen**: el audio se baja de Chatwoot y lo
    transcribe OpenAI (`[nota de voz] …`); la imagen la describe OpenAI y, si es
    la captura de un anuncio, copia referencia, precio y dirección (`[imagen]
@@ -287,6 +295,35 @@ de los tests): las 93 referencias tienen asesora, los avisos van a ella y las
 72 de venta se agendan en **su** calendario con **su** horario. Una referencia
 con un prefijo desconocido no se agenda en ningún calendario.
 
+### Asignación en el panel (el reparto del teléfono)
+
+La conversación se **asigna en Chatwoot a la asesora de la referencia**, igual
+que reparte el teléfono: **BN / OR** (Benicàssim, Oropesa…) → **Carmen**;
+**CS / VR** (Castellón, Vila-real…) → **Gisela**; sin referencia, a quien vaya
+el aviso (o Laurence). Se hace al mandar la bienvenida, en cada aviso al equipo
+y en cada llamada. Si la conversación ya la tiene una comercial, no se toca: un
+cambio hecho a mano se respeta.
+
+### Llamadas del asistente telefónico en el panel (`[TEL] Llamada al panel`)
+
+Cada llamada que atiende el asistente telefónico entra en el panel, en la
+conversación del contacto (por su teléfono; si no existe se crea, con el nombre
+que OpenAI saca de la transcripción si lo dijo):
+
+- etiqueta `0-llamada_telefonica`;
+- nota privada: *LLAMADA DE LA IA — Colgó la IA / Nos llamó · teléfono · día y
+  hora · duración*, el resumen, el tono del cliente, la asesora y la
+  **grabación** para escucharla en el panel;
+- se asigna a la asesora de la llamada;
+- **aviso por WhatsApp** a esa asesora con el resumen y el enlace al chat (si la
+  llamada ha durado al menos 15 s; los correos del teléfono siguen igual).
+
+Es el **único cambio en el teléfono**: `[TEL] FinalizarLlamadaRetell` tiene un
+nodo más, *Llamada al panel*, que le pasa la llamada sin esperar. No cambia
+nada de lo que ya hacía (Drive, correos). Está también en `build_workflows.py`
+para que no se pierda si se vuelve a desplegar el teléfono. Cada llamada entra
+una sola vez (tabla `tel_llamadas_panel`).
+
 ### La cartera de WhatsApp (`[WA] 4`)
 
 La hoja del teléfono (`[TEL] XMLCacheo`) **corta las descripciones a 500
@@ -308,16 +345,19 @@ herramienta.
 
 ### Etiquetas del panel (las de Blue)
 
-`1-bienvenida_ia` · `2-en_proceso` · `3-agendada_ia` · `4-intervenir`
+`1-bienvenida_ia` · `2-en_proceso` · `3-agendada_ia` · `4-intervenir` y,
+además, `vendedor` (el comprador tiene que vender una vivienda: posible
+captación) y `0-llamada_telefonica` (la conversación tiene llamadas del
+asistente telefónico).
 
 Las tres primeras son el estado y nunca van hacia atrás. `4-intervenir` se suma
 y hace que la IA deje de contestar: es el interruptor de las comerciales.
 
 Además, como en Blue, el **atributo `bot` del contacto** (On/Off, creado en el
-panel): con `Off` la IA se calla, y un contacto **sin** atributo (escribe por su
-cuenta, no ha entrado por una plantilla de la IA) lo atiende una persona. La
-plantilla de bienvenida pone `bot = On` (si el contacto ya lo tenía en On u Off,
-no se toca). Se cambia en `SOLO_CONTACTOS_CON_BOT` de `wa/config.js`.
+panel): con `Off` la IA se calla; con `On` **o sin valor** (*Select value*)
+contesta. La plantilla de bienvenida pone `bot = On` si el contacto no lo tenía
+(un Off puesto a mano no se toca). Blue no contesta a los contactos sin valor;
+Casagencia sí (`SOLO_CONTACTOS_CON_BOT = false` en `wa/config.js`).
 
 Nunca contesta a lo que escribe la agencia ni a los móviles del equipo (los
 avisos salen de esta misma línea, y la respuesta automática del WhatsApp de una

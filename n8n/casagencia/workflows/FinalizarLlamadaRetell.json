@@ -451,6 +451,48 @@
           "name": "Gmail account"
         }
       }
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "d44pwgLuIZf8dkGw",
+          "mode": "list",
+          "cachedResultName": "[TEL] Llamada al panel"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "llamada": "={{ JSON.stringify($('Webhook').item.json.body.call) }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "llamada",
+              "displayName": "llamada",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {
+          "waitForSubWorkflow": false
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        -1584,
+        720
+      ],
+      "id": "a4567557-cbf2-5373-857d-7efb744f5cb3",
+      "name": "Llamada al panel",
+      "onError": "continueRegularOutput"
     }
   ],
   "connections": {
@@ -490,6 +532,11 @@
     "Switch": {
       "main": [
         [
+          {
+            "node": "Llamada al panel",
+            "type": "main",
+            "index": 0
+          },
           {
             "node": "HTTP Request1",
             "type": "main",

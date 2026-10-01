@@ -29,5 +29,8 @@ return [{
     param2: paramPlantilla(esUrl(j.param2) ? j.param2
       : (enlaceWeb || j.param2 || (j.referencia ? 'ref. ' + j.referencia : 'tu solicitud')), 300),
     conversacion_id: Number(j.conversacion_id || 0),
+    // En el panel, la conversacion para la asesora de la referencia (como el telefono)
+    asesora: resolverAsesora(j.referencia).destinatario,
+    agente_id: esPrueba(j.telefono) ? 0 : agenteDe(resolverAsesora(j.referencia).destinatario),
   }
 }];

@@ -87,6 +87,9 @@ ESPERA     = int(const("BUFFER_SEGUNDOS", "60"))
 RECORDAR_H = int(const("RECORDATORIO_HORAS", "24"))
 MARCA      = const("MARCA_ORIGEN")
 CW_API     = "%s/api/v1/accounts/%s" % (CW_URL, CW_CUENTA)
+# Ids de Carmen, Gisela y Laurence como agentes del panel (de AGENTES_CHATWOOT)
+COMERCIALES_CW = [int(x) for x in re.findall(r"\d+", const("AGENTES_CHATWOOT", "{}"))]
+assert len(COMERCIALES_CW) == 3, COMERCIALES_CW
 ETQ_BIENVENIDA = "1-bienvenida_ia"
 assert ETQ_BIENVENIDA in CONFIG and MARCA and PHONE_ID and WABA_ID
 
@@ -161,7 +164,7 @@ def http(name, metodo, url, pos, cred=None, body=None, query=None, **extra):
         p.pop("method")
     if cred:
         p["authentication"] = "predefinedCredentialType"
-        p["nodeCredentialType"] = "httpHeaderAuth"
+        p["nodeCredentialType"] = next(iter(cred))      # httpHeaderAuth, openAiApi...
     p["sendHeaders"] = True
     p["headerParameters"] = {"parameters": [{"name": "Content-Type", "value": "application/json"}]}
     if body is not None:
@@ -263,11 +266,20 @@ def wf(nombre, nodos, conexiones):
     return {"name": nombre, "settings": SETTINGS, "nodes": nodos, "connections": conexiones}
 
 
+def reubicar(w, posiciones):
+    """Recoloca nodos en el lienzo (solo estetica) sin tocar la logica."""
+    for n in w["nodes"]:
+        if n["name"] in posiciones:
+            n["position"] = list(posiciones[n["name"]])
+    return w
+
+
 # ===========================================================================
 # SQL
 # ===========================================================================
 _CITA_COLS = ["cita_fecha", "cita_hora"]                                # la visita agendada
 _Q = ["q_tiempo_buscando", "q_necesita_vender",                       # compra
+      "q_vivienda_venta", "q_financiacion",                            # compra (desde 10-2026)
       "q_personas", "q_ingresos", "q_mascotas", "q_entrada",           # alquiler
       "q_duracion", "q_actividad"]
 
@@ -325,6 +337,15 @@ create table if not exists wa_cartera (
   descripcion      text not null default '',
   imagen           text not null default '',
   actualizado_en   timestamptz not null default now()
+);
+
+-- Llamadas del asistente telefonico ya puestas en el panel (Retell puede
+-- mandar el mismo aviso de fin de llamada mas de una vez)
+create table if not exists tel_llamadas_panel (
+  call_id          text primary key,
+  telefono_e164    text not null default '',
+  conversacion_id  integer not null default 0,
+  creado_en        timestamptz not null default now()
 );
 
 -- Avisos ya enviados (recordatorio de 24 h), para no mandar ninguno dos veces
@@ -394,6 +415,15 @@ returning id;""" % (
     ",".join("$%d" % (10 + i) for i in range(len(_Q))),
     ",\n  ".join("%s = case when excluded.%s <> '' then excluded.%s else wa_leads.%s end"
                  % (q, q, q, q) for q in _Q))
+
+# Lo que la asesora tiene que saber del cliente, en una linea (evento y aviso)
+SQL_CUALIFICACION_TEXTO = """select concat_ws(' · ',
+  case when q_tiempo_buscando <> '' then 'Lleva buscando: ' || q_tiempo_buscando end,
+  case when q_necesita_vender <> '' then 'Necesita vender: ' || q_necesita_vender end,
+  case when q_vivienda_venta  <> '' then 'Vivienda que vende: ' || q_vivienda_venta end,
+  case when q_financiacion    <> '' then 'Financiacion: ' || q_financiacion end) as cualificacion
+  from wa_leads where telefono_wa = $1
+ order by actualizado_en desc limit 1;"""
 
 SQL_CITA = """update wa_leads
    set estado = 'cita_agendada', cita_fecha = $2, cita_hora = $3, actualizado_en = now()
@@ -556,7 +586,7 @@ def wf_confirmar(ids):
     aviso = {k: "={{ $json.%s }}" % k for k in
              ("accion", "destinatario", "referencia", "cliente_nombre", "cliente_telefono",
               "cita", "resumen", "detalle", "conversacion_id", "pasar_a_humano", "etiqueta")}
-    return wf("[WA][SUB] confirmarCitaCalendario", [
+    return reubicar(wf("[WA][SUB] confirmarCitaCalendario", [
         trigger_sub(AGENDA_IN + [("resumen", "string"), ("conversacion_id", "number")]),
         code_node("GuardiaDeAlquiler", code_wa("guardia_alquiler.js"), [200, 0]),
         if_node("¿Se puede agendar?", "={{ $json.seguir }}", "true", [420, 0]),
@@ -569,7 +599,10 @@ def wf_confirmar(ids):
                  "cita_confirmada: true. Esta visita YA estaba registrada (mismo dia y hora): no se ha vuelto a "
                  "reservar ni a avisar. Diselo al cliente: ya la tiene, pendiente de que la asesora se la confirme.")},
                  [1080, -200]),
-        code_node("RecuperarPeticion", "return [{ json: $('GuardiaDeAlquiler').first().json }];", [1080, -40]),
+        pg_query("LeerCualificacion", SQL_CUALIFICACION_TEXTO,
+                 "={{ [ String(%s.telefono || '').replace(/\\D/g,'') ] }}" % g, [1080, -40],
+                 alwaysOutputData=True, onError="continueRegularOutput"),
+        code_node("RecuperarPeticion", "return [{ json: $('GuardiaDeAlquiler').first().json }];", [1300, -40]),
         code_node("PrepararDatos", code_tel("cc_preparar.js"), [1300, -40]),
         cal_getall("LeerAgendaDelDia", "={{ $json.calendario }}", DESDE_DIA,
                    "={{ DateTime.fromFormat(%s,'yyyy-MM-dd',{zone:'Europe/Madrid'}).endOf('day').toISO() }}" % DIA,
@@ -586,14 +619,18 @@ def wf_confirmar(ids):
             "calendar": {"__rl": True, "value": "={{ $json.calendario }}", "mode": "id"},
             "start": "={{ %s.toISO() }}" % ini,
             "end": "={{ %s.plus({hours:1}).toISO() }}" % ini,
-            # Mismo titulo que las citas del telefono (asi buscarCitaPorTelefono
-            # las encuentra venga de donde venga el cliente) y la marca de origen,
-            # que es lo que mira el recordatorio de 24 h.
+            # PRE-RESERVA: bloquea el hueco (nadie mas puede coger esa hora) y la
+            # asesora la confirma llamando al cliente, o la mueve. El resto del
+            # titulo es el de las citas del telefono (asi buscarCitaPorTelefono
+            # las encuentra) y la marca de origen es lo que mira el recordatorio.
             "additionalFields": {
-                "summary": "={{ $json.titulo }}",
-                "description": ("={{ $json.descripcion + '\\n\\n%s\\nConversacion: ' + (%s.conversacion_id || '') "
-                                "+ '\\nResumen: ' + String(%s.resumen || '').replace(/\\n/g, ' ') }}"
-                                % (MARCA, s, s)),
+                "summary": "={{ 'PRE-RESERVA · ' + $json.titulo }}",
+                "color": "5",
+                "description": ("={{ $json.descripcion + '\\n\\nPara confirmarla: llama al cliente y quita "
+                                "PRE-RESERVA del titulo. Si no le va, muevela o borrala.\\n\\n%s\\nConversacion: ' "
+                                "+ (%s.conversacion_id || '') + '\\nResumen: ' + [ String($('LeerCualificacion')"
+                                ".first().json.cualificacion || ''), String(%s.resumen || '') ].filter(Boolean)"
+                                ".join(' · ').replace(/\\n/g, ' ') }}" % (MARCA, s, s)),
             },
         }, [1740, -60], 1.3, credentials=CRED_CAL, onError="continueErrorOutput"),
         set_node("RespuestaErrorCalendario", {"respuesta": ("string",
@@ -609,16 +646,20 @@ def wf_confirmar(ids):
                  onError="continueRegularOutput", alwaysOutputData=True, executeOnce=True),
         code_node("RespuestaOK", code_wa("cita_respuesta.js"), [2400, -120]),
         nota("Nota", NOTA_AGENDA, [640, -420], 520, 300),
-        nota("Nota2", "## En cuanto se agenda\n1. Se escribe en la agenda del comercial, con la "
-             "marca *%s*.\n2. Se le avisa por WhatsApp (plantilla_aviso) y por correo.\n3. La "
-             "conversacion pasa a *3-agendada_ia*.\n\n24 horas antes le llega el recordatorio: "
-             "[WA] 3." % MARCA, [1740, -440], 460, 260),
+        nota("Nota2", "## PRE-RESERVA\n1. Se escribe en la agenda de la asesora como *PRE-RESERVA* "
+             "(en amarillo), con lo que sabemos del cliente y la marca *%s*. El hueco queda "
+             "bloqueado: no se pueden dar dos citas a la misma hora.\n2. Le llega el aviso por "
+             "WhatsApp (plantilla_aviso) y por correo: que llame al cliente para confirmarla.\n3. Al "
+             "cliente se le dice que NO esta confirmada hasta que le llame la asesora.\n4. La "
+             "conversacion pasa a *3-agendada_ia*.\n\n24 horas antes, recordatorio a la asesora: "
+             "[WA] 3." % MARCA, [1740, -500], 500, 330),
     ], conn(("Start", 0, "GuardiaDeAlquiler", 0),
             ("GuardiaDeAlquiler", 0, "¿Se puede agendar?", 0),
             ("¿Se puede agendar?", 0, "¿YaReservada?", 0),
             ("¿Se puede agendar?", 1, "Bloqueado", 0),
             ("¿YaReservada?", 0, "¿Ya la tiene?", 0),
-            ("¿Ya la tiene?", 0, "RespuestaYaReservada", 0), ("¿Ya la tiene?", 1, "RecuperarPeticion", 0),
+            ("¿Ya la tiene?", 0, "RespuestaYaReservada", 0), ("¿Ya la tiene?", 1, "LeerCualificacion", 0),
+            ("LeerCualificacion", 0, "RecuperarPeticion", 0),
             ("RecuperarPeticion", 0, "PrepararDatos", 0),
             ("PrepararDatos", 0, "LeerAgendaDelDia", 0),
             ("LeerAgendaDelDia", 0, "ValidarAntesDeInsertar", 0),
@@ -631,7 +672,14 @@ def wf_confirmar(ids):
             ("InsertarEnAgenda", 1, "RespuestaErrorCalendario", 0),
             ("PrepararAvisoCita", 0, "AvisarAlComercial", 0),
             ("AvisarAlComercial", 0, "MarcarCitaEnLaFicha", 0),
-            ("MarcarCitaEnLaFicha", 0, "RespuestaOK", 0)))
+            ("MarcarCitaEnLaFicha", 0, "RespuestaOK", 0))), {
+        "¿YaReservada?": [640, 0], "¿Ya la tiene?": [860, 0], "RespuestaYaReservada": [1080, -200],
+        "LeerCualificacion": [1080, 0], "RecuperarPeticion": [1300, 0], "PrepararDatos": [1520, 0],
+        "LeerAgendaDelDia": [1740, 0], "ValidarAntesDeInsertar": [1960, 0], "¿Puede crear?": [2180, 0],
+        "RespuestaRechazo": [2400, 200], "¿Es prueba?": [2400, 0], "SimularReserva": [2620, -200],
+        "InsertarEnAgenda": [2620, 0], "RespuestaErrorCalendario": [2840, 200],
+        "PrepararAvisoCita": [2840, 0], "AvisarAlComercial": [3060, 0], "MarcarCitaEnLaFicha": [3280, 0],
+        "RespuestaOK": [3500, 0], "Nota": [640, -440], "Nota2": [2620, -560]})
 
 
 def wf_cita_telefono():
@@ -667,6 +715,8 @@ AVISO_IN = [("accion", "string"), ("destinatario", "string"), ("referencia", "st
 
 def wf_aviso(ids):
     p = "$('Preparar').first().json"
+    nodos_asig, n_if, n_post = asignar("AsignarConversacion", "%s.conversacion_id" % p, "%s.agente_id" % p,
+                                       "$json.meta?.assignee?.id", [1520, 0])
     return wf("[WA][SUB] AvisoEquipo", [
         trigger_sub(AVISO_IN),
         code_node("Preparar", code_wa("aviso_preparar.js"), [200, 0]),
@@ -680,23 +730,32 @@ def wf_aviso(ids):
             "emailType": "text",
             "message": "={{ %s.email_cuerpo }}" % p,
             "options": {"appendAttribution": False},
-        }, [640, 0], 2.2, credentials=CRED_GMAIL, onError="continueRegularOutput", alwaysOutputData=True),
+        }, [860, -120], 2.2, credentials=CRED_GMAIL, onError="continueRegularOutput", alwaysOutputData=True),
+        if_node("¿Tambien por correo?", "={{ %s.enviar_correo }}" % p, "true", [640, 0]),
         exec_sub("Etiquetar", ids.get("[WA][SUB] Etiquetar", ""), "[WA][SUB] Etiquetar",
                  {"conversacion_id": "={{ %s.conversacion_id }}" % p, "etiquetas": "={{ %s.etiquetas }}" % p},
-                 [860, 0], {"conversacion_id": "number"},
+                 [1080, 0], {"conversacion_id": "number"},
                  onError="continueRegularOutput", alwaysOutputData=True),
-        code_node("Resultado", code_wa("aviso_resultado.js"), [1080, 0]),
+        http("LeerAsignacion", "GET", "=" + CW_API + "/conversations/{{ Number(%s.conversacion_id || 0) }}" % p,
+             [1300, 0], cred=CRED_CHATWOOT, onError="continueRegularOutput", alwaysOutputData=True),
+    ] + nodos_asig + [
+        code_node("Resultado", code_wa("aviso_resultado.js"), [1960, 0]),
         nota("Nota", "## Todos los avisos al equipo salen de aqui\nVisita agendada, recordatorio de "
              "24 h, lead de alquiler que tiene que coger una persona, o lo que Sara no pueda resolver.\n\n"
              "- **WhatsApp**: plantilla_aviso directa a Meta (no por Chatwoot, para no abrir una "
              "conversacion de cliente con el comercial). {{1}} = el comercial, {{2}} = que tiene que "
              "hacer + el resumen de la conversacion + el enlace al chat.\n"
              "- **Correo**: el mismo aviso con el detalle, al comercial y a Paco. Por si Meta frena "
-             "la plantilla (es de marketing).\n\nSi hay que pasar a una persona, pone 4-intervenir "
-             "y la IA deja de contestar.", [200, -380], 560, 340),
+             "la plantilla (es de marketing). De las llamadas del telefono, solo WhatsApp (el telefono "
+             "ya manda su correo).\n\nSi hay que pasar a una persona, pone 4-intervenir y la IA deja de "
+             "contestar. La conversacion se asigna en el panel a la asesora de la referencia, salvo que "
+             "ya la tenga una comercial.", [200, -420], 600, 360),
     ], conn(("Start", 0, "Preparar", 0), ("Preparar", 0, "EnviarWhatsApp", 0),
-            ("EnviarWhatsApp", 0, "EnviarCorreo", 0), ("EnviarCorreo", 0, "Etiquetar", 0),
-            ("Etiquetar", 0, "Resultado", 0)))
+            ("EnviarWhatsApp", 0, "¿Tambien por correo?", 0),
+            ("¿Tambien por correo?", 0, "EnviarCorreo", 0), ("¿Tambien por correo?", 1, "Etiquetar", 0),
+            ("EnviarCorreo", 0, "Etiquetar", 0),
+            ("Etiquetar", 0, "LeerAsignacion", 0), ("LeerAsignacion", 0, n_if, 0),
+            (n_if, 0, n_post, 0), (n_if, 1, "Resultado", 0), (n_post, 0, "Resultado", 0)))
 
 
 def wf_etiquetar():
@@ -731,25 +790,37 @@ def wf_cualificar(ids):
     return wf("[WA][SUB] guardarCualificacion", [
         trigger_sub([("telefono", "string"), ("nombre", "string"), ("referencia", "string"),
                      ("operacion", "string"), ("tiempo_buscando", "string"),
-                     ("necesita_vender", "string"), ("personas", "string"), ("ingresos", "string"),
+                     ("necesita_vender", "string"), ("vivienda_a_vender", "string"),
+                     ("financiacion", "string"), ("es_vendedor", "boolean"),
+                     ("personas", "string"), ("ingresos", "string"),
                      ("mascotas", "string"), ("entrada", "string"), ("duracion", "string"),
                      ("actividad", "string"), ("resumen", "string"), ("conversacion_id", "number")]),
         code_node("Preparar", code_wa("cualificar_preparar.js"), [200, 0]),
         pg_query("GuardarFicha", SQL_CUALIFICAR, valores, [420, 0],
                  onError="continueRegularOutput", alwaysOutputData=True),
-        if_node("¿Es alquiler?", "={{ $('Preparar').first().json.es_alquiler }}", "true", [640, 0]),
+        if_node("¿Es vendedor?", "={{ $('Preparar').first().json.es_vendedor }}", "true", [640, 0]),
+        exec_sub("MarcarVendedor", ids.get("[WA][SUB] Etiquetar", ""), "[WA][SUB] Etiquetar",
+                 {"conversacion_id": "={{ $('Preparar').first().json.conversacion_id }}",
+                  "etiquetas": "={{ $('Preparar').first().json.etiqueta_vendedor }}"},
+                 [860, -160], {"conversacion_id": "number"}, onError="continueRegularOutput",
+                 alwaysOutputData=True),
+        if_node("¿Es alquiler?", "={{ $('Preparar').first().json.es_alquiler }}", "true", [1080, 0]),
         exec_sub("PasarAlEquipo", ids.get("[WA][SUB] AvisoEquipo", ""), "[WA][SUB] AvisoEquipo",
                  {k: "={{ %s.%s }}" % (a, k) for k, _ in AVISO_IN if k not in ("municipio", "cita")},
-                 [860, -100], {"conversacion_id": "number", "pasar_a_humano": "boolean"},
+                 [1300, -100], {"conversacion_id": "number", "pasar_a_humano": "boolean"},
                  onError="continueRegularOutput", alwaysOutputData=True),
-        code_node("Respuesta", code_wa("cualificar_respuesta.js"), [1080, 0]),
-        nota("Nota", "## Cualificacion\n**Compra**: dos preguntas (cuanto tiempo lleva buscando y si "
-             "necesita vender para comprar). Se guardan y Sara ofrece la visita.\n\n**Alquiler**: las "
+        code_node("Respuesta", code_wa("cualificar_respuesta.js"), [1520, 0]),
+        nota("Nota", "## Cualificacion\n**Compra**: tres preguntas (cuanto tiempo lleva buscando, si "
+             "necesita vender para comprar y como lo financia). Si tiene que vender, Sara le pide la "
+             "direccion o zona de esa vivienda y la conversacion se marca con la etiqueta **vendedor**. "
+             "Despues ofrece la visita.\n\n**Alquiler**: las "
              "cuatro preguntas del telefono (personas, ingresos, mascotas y cuando entrar). Se "
              "guardan, se avisa al comercial por WhatsApp y la conversacion pasa a *4-intervenir*: "
              "en alquiler la IA no agenda, decide una persona.", [200, -330], 520, 270),
     ], conn(("Start", 0, "Preparar", 0), ("Preparar", 0, "GuardarFicha", 0),
-            ("GuardarFicha", 0, "¿Es alquiler?", 0),
+            ("GuardarFicha", 0, "¿Es vendedor?", 0),
+            ("¿Es vendedor?", 0, "MarcarVendedor", 0), ("¿Es vendedor?", 1, "¿Es alquiler?", 0),
+            ("MarcarVendedor", 0, "¿Es alquiler?", 0),
             ("¿Es alquiler?", 0, "PasarAlEquipo", 0), ("¿Es alquiler?", 1, "Respuesta", 0),
             ("PasarAlEquipo", 0, "Respuesta", 0)))
 
@@ -761,7 +832,10 @@ def wf_plantilla(ids):
     contacto = "$('ElegirContacto').first().json.payload[0]"
     norm = "$('Normalizar').first().json"
     nuevo = "$('CrearContacto').first().json.payload.contact"
-    return wf("[WA][SUB] EnviarPlantilla", [
+    nodos_asig, n_if, n_post = asignar("AsignarAsesora", "$('ConversacionLista').first().json.conversacion_id",
+                                       "%s.agente_id" % norm,
+                                       "$('LeerConversacion').first().json.meta?.assignee?.id", [3060, 160])
+    return reubicar(wf("[WA][SUB] EnviarPlantilla", nodos_asig + [
         trigger_sub([("telefono", "string"), ("nombre", "string"), ("plantilla", "string"),
                      ("param1", "string"), ("param2", "string"), ("referencia", "string"),
                      ("operacion", "string"), ("portal", "string"), ("conversacion_id", "number")]),
@@ -855,10 +929,15 @@ def wf_plantilla(ids):
             ("IdConversacionCreada", 0, "ConversacionLista", 0),
             ("IdConversacionNueva", 0, "ConversacionLista", 0),
             ("ConversacionLista", 0, "LeerConversacion", 0), ("LeerConversacion", 0, "¿Contacto sin bot?", 0),
-            ("¿Contacto sin bot?", 0, "ActivarBot", 0), ("¿Contacto sin bot?", 1, "PlantillaMeta", 0),
-            ("ActivarBot", 0, "PlantillaMeta", 0), ("PlantillaMeta", 0, "RenderizarTexto", 0),
+            ("¿Contacto sin bot?", 0, "ActivarBot", 0), ("¿Contacto sin bot?", 1, n_if, 0),
+            ("ActivarBot", 0, n_if, 0), (n_if, 0, n_post, 0), (n_if, 1, "PlantillaMeta", 0),
+            (n_post, 0, "PlantillaMeta", 0), ("PlantillaMeta", 0, "RenderizarTexto", 0),
             ("RenderizarTexto", 0, "EnviarPlantilla", 0), ("EnviarPlantilla", 0, "GuardarEnMemoriaAgente", 0),
-            ("GuardarEnMemoriaAgente", 0, "MarcarBienvenida", 0), ("MarcarBienvenida", 0, "Resultado", 0)))
+            ("GuardarEnMemoriaAgente", 0, "MarcarBienvenida", 0), ("MarcarBienvenida", 0, "Resultado", 0))), {
+        "LeerConversacion": [2620, 0], "¿Contacto sin bot?": [2840, 0], "ActivarBot": [3060, -160],
+        "¿AsignarAsesora?": [3280, 0], "AsignarAsesora": [3500, -160], "PlantillaMeta": [3720, 0],
+        "RenderizarTexto": [3940, 0], "EnviarPlantilla": [4160, 0], "GuardarEnMemoriaAgente": [4380, 0],
+        "MarcarBienvenida": [4600, 0], "Resultado": [4820, 0], "Nota": [3720, -380]})
 
 
 def wf_esquema():
@@ -961,6 +1040,25 @@ def wf_recordatorio(ids):
             ("LeerAgendaGisela", 0, "Merge", 1), ("Merge", 0, "VisitasDeWhatsApp", 0),
             ("VisitasDeWhatsApp", 0, "ApuntarAvisado", 0), ("ApuntarAvisado", 0, "SoloLosNuevos", 0),
             ("SoloLosNuevos", 0, "AvisarAlComercial", 0)))
+
+
+def asignar(prefijo, conv_expr, agente_expr, asignado_expr, pos):
+    """IF + POST de asignacion en Chatwoot. Solo asigna si hay comercial para la
+    referencia y la conversacion no la tiene ya una comercial (un cambio a mano
+    se respeta). Devuelve (nodos, nombre_if, nombre_post)."""
+    x, y = pos
+    nif, npost = "¿%s?" % prefijo, prefijo
+    return [
+        if_node(nif, None, None, [x, y], conds=[
+            ("={{ Number(%s || 0) }}" % conv_expr, "gt", 0, "number"),
+            ("={{ Number(%s || 0) }}" % agente_expr, "gt", 0, "number"),
+            ("={{ %s.includes(Number(%s || 0)) }}" % (json.dumps(COMERCIALES_CW), asignado_expr),
+             "false", None, "boolean")]),
+        http(npost, "POST", "=" + CW_API + "/conversations/{{ Number(%s) }}/assignments" % conv_expr,
+             [x + 220, y - 140], cred=CRED_CHATWOOT,
+             body="={{ JSON.stringify({ assignee_id: Number(%s) }) }}" % agente_expr,
+             onError="continueRegularOutput", alwaysOutputData=True),
+    ], nif, npost
 
 
 # ===========================================================================
@@ -1066,15 +1164,22 @@ def herramientas(ids, x=1900, y=360):
             "pregunte cuando es su visita, si esta confirmada, o quiera cambiarla o anularla. No modifica nada.",
             {"telefono": TEL_CLIENTE}, [x + 2 * dx, y + 180]),
         herramienta("guardarCualificacion", ids,
-            "Guarda las respuestas de cualificacion. COMPRA: cuando tengas las dos (tiempo buscando y si "
-            "necesita vender); despues ofrece la visita. ALQUILER: cuando tengas las cuatro (personas, "
-            "ingresos, mascotas, entrada); avisa al comercial y pasa la conversacion a una persona.",
+            "Guarda las respuestas de cualificacion. COMPRA: cuando tengas las tres (tiempo buscando, si "
+            "necesita vender -y si vende, la direccion o zona de esa vivienda- y la financiacion); despues "
+            "ofrece la visita. Manda SOLO lo que el cliente te haya contestado: lo que aun no le has "
+            "preguntado va vacio. Si mas tarde te da o te corrige un dato, vuelve a usarla solo con ese "
+            "dato. ALQUILER: "
+            "cuando tengas las cuatro (personas, ingresos, mascotas, entrada); avisa al comercial y pasa la "
+            "conversacion a una persona.",
             {"telefono": TEL_CLIENTE, "conversacion_id": CONV,
              "nombre": de_la_ia("nombre", "Nombre del cliente. Vacio si no lo sabes."),
              "referencia": de_la_ia("referencia", REF_DESC),
              "operacion": de_la_ia("operacion", "venta o alquiler."),
              "tiempo_buscando": de_la_ia("tiempo_buscando", "Solo compra. Cuanto tiempo lleva buscando, con sus palabras. Vacio si no aplica."),
              "necesita_vender": de_la_ia("necesita_vender", "Solo compra. Si necesita vender para comprar, con sus palabras. Vacio si no aplica."),
+             "es_vendedor": de_la_ia("es_vendedor", "Solo compra. true si necesita vender una vivienda para comprar; false si no o si no lo sabes.", "boolean"),
+             "vivienda_a_vender": de_la_ia("vivienda_a_vender", "Solo compra y si necesita vender: direccion o zona (y municipio) de la vivienda que tiene que vender, con sus palabras. VACIO si todavia no se lo has preguntado; 'no facilitado' solo si se lo preguntaste y no quiso decirlo."),
+             "financiacion": de_la_ia("financiacion", "Solo compra. Como lo va a pagar: hipoteca, recursos propios, hipoteca ya preconcedida, o lo que diga con sus palabras. VACIO si todavia no se lo has preguntado; 'no facilitado' solo si se lo preguntaste y no quiso decirlo."),
              "personas": de_la_ia("personas", "Solo alquiler. Para cuantas personas. 'no facilitado' si no quiso decirlo."),
              "ingresos": de_la_ia("ingresos", "Solo alquiler. Lo que dijo de ingresos fijos, nomina o contrato, sin valorarlo."),
              "mascotas": de_la_ia("mascotas", "Solo alquiler. Si conviven con mascotas y cuales."),
@@ -1082,7 +1187,7 @@ def herramientas(ids, x=1900, y=360):
              "duracion": de_la_ia("duracion", "Solo alquiler. Todo el ano o temporada, si lo ha dicho."),
              "actividad": de_la_ia("actividad", "Solo locales, oficinas o traspasos: para que actividad."),
              "resumen": de_la_ia("resumen", "Resumen de la conversacion en dos o tres frases, sin saltos de linea.")},
-            [x + 3 * dx, y + 180], {"conversacion_id": "number"}),
+            [x + 3 * dx, y + 180], {"conversacion_id": "number", "es_vendedor": "boolean"}),
         herramienta("avisarEquipo", ids,
             "Manda un aviso por WhatsApp (y copia por correo) a la asesora o a Laurence, con el resumen de la "
             "conversacion y lo que tiene que hacer. Usala cuando el cliente pida una persona, cuando no puedas "
@@ -1165,12 +1270,11 @@ def wf_asistente(ids):
                 der=1, tipo="number"),
         noop("AvisoRepetido", [1100, Y + 200]),
         # --- 2. Filtrar si el bot esta encendido o apagado -------------------
-        if_node("Bot sin seleccionar no hacer nada", "={{ %s.bot_asignado }}" % ent, "true", [1280, Y]),
-        noop("ContactoSinBot", [1500, Y + 200]),
-        if_node("Bot on/off", None, None, [1500, Y], conds=[
+        # Solo se para con bot = Off (o 4-intervenir). Sin valor, contesta.
+        if_node("Bot on/off", None, None, [1400, Y], conds=[
             ("={{ %s.bot_encendido }}" % ent, "true", None, "boolean"),
             ("={{ %s.intervenida }}" % ent, "false", None, "boolean")]),
-        noop("BotApagado", [1720, Y + 200]),
+        noop("BotApagado", [1620, Y + 200]),
         # --- 3. Separar audio, texto e imagen --------------------------------
         switch_por_tipo("Switch", "={{ %s.tipo }}" % ent, ["audio", "image", "text", "otro"], [1960, Y]),
         descargar("Descarga el audio", [2220, Y - 380]),
@@ -1268,8 +1372,8 @@ def wf_asistente(ids):
              "Chatwoot a veces avisa dos veces del mismo mensaje: Redis lo marca y solo pasa una vez.",
              [-60, -300], 1100, 620, color=6),
         nota("Filtrar bot", "## Filtrar si el bot esta encendido o apagado\nAtributo **bot** del contacto, "
-             "como en Blue. Sin atributo (no ha entrado por una plantilla de la IA): no se contesta. "
-             "**Off**, o la etiqueta **4-intervenir**: la IA se calla y lo lleva una persona.",
+             "como en Blue. **Off**, o la etiqueta **4-intervenir**: la IA se calla y lo lleva una "
+             "persona. **On** o sin valor (*Select value*): contesta la IA.",
              [1220, -300], 660, 620),
         nota("Separar", "## Separar audio, texto e imagen\n- **Audio**: se baja de Chatwoot y lo transcribe "
              "OpenAI -> *[nota de voz] ...*\n- **Imagen**: la describe OpenAI (si es un anuncio, copia "
@@ -1299,10 +1403,8 @@ def wf_asistente(ids):
         ("¿Es un mensaje del cliente?", 0, "Marca el mensaje", 0),
         ("¿Es un mensaje del cliente?", 1, "NoEsDelCliente", 0),
         ("Marca el mensaje", 0, "¿Es la primera vez?", 0),
-        ("¿Es la primera vez?", 0, "Bot sin seleccionar no hacer nada", 0),
+        ("¿Es la primera vez?", 0, "Bot on/off", 0),
         ("¿Es la primera vez?", 1, "AvisoRepetido", 0),
-        ("Bot sin seleccionar no hacer nada", 0, "Bot on/off", 0),
-        ("Bot sin seleccionar no hacer nada", 1, "ContactoSinBot", 0),
         ("Bot on/off", 0, "Switch", 0), ("Bot on/off", 1, "BotApagado", 0),
         ("Switch", 0, "Descarga el audio", 0), ("Switch", 1, "Descarga la imagen", 0),
         ("Switch", 2, "Variable Response1", 0), ("Switch", 3, "Variable Otro", 0),
@@ -1330,6 +1432,224 @@ def wf_asistente(ids):
                  + [(t["name"], "ai_tool") for t in tools])
     return wf("[WA] 2 · Asistente de WhatsApp", nodos, fusionar(principal, ai))
 
+
+
+# ===========================================================================
+# CONTACTO Y CONVERSACION EN EL PANEL (lo usan las llamadas del telefono)
+# ===========================================================================
+def wf_conversacion_contacto():
+    """Busca (o crea) el contacto por su telefono y su conversacion del inbox de
+    WhatsApp. Es la misma logica que la bienvenida (EnviarPlantilla)."""
+    norm = "$('Normalizar').first().json"
+    contacto = "$('ElegirContacto').first().json.payload[0]"
+    nuevo = "$('CrearContacto').first().json.payload.contact"
+    return wf("[WA][SUB] ConversacionDelContacto", [
+        trigger_sub([("telefono", "string"), ("nombre", "string")]),
+        code_node("Normalizar", CONFIG + "\n\nconst j = $('Start').first().json;\n"
+                  "const t = normalizarTelefono(j.telefono);\n"
+                  "return [{ json: { telefono_e164: t.e164, wa_id: t.wa_id, telefono_valido: t.valido, "
+                  "nombre: String(j.nombre || '').trim() } }];", [200, 0]),
+        if_node("¿Telefono valido?", "={{ $json.telefono_valido }}", "true", [420, 0]),
+        set_node("SinTelefono", {"conversacion_id": ("number", "0")}, [640, 220]),
+        http("BuscarContacto", "GET", "=" + CW_API + "/contacts/search?q=%2B{{ $json.wa_id }}", [640, 0],
+             cred=CRED_CHATWOOT),
+        code_node("ElegirContacto", code_wa("plantilla_elegir_contacto.js"), [860, 0]),
+        if_node("¿Existe el contacto?", "={{ $json.payload }}", "notEmpty", [1080, 0], tipo="array"),
+        code_node("¿PonerNombre?", code_wa("contacto_nombre.js"), [1300, -120]),
+        if_node("¿Le falta el nombre?", "={{ $json.poner_nombre }}", "true", [1520, -120]),
+        http("PonerNombre", "PUT", "=" + CW_API + "/contacts/{{ $json.contacto_id }}", [1740, -260],
+             cred=CRED_CHATWOOT, body="={{ JSON.stringify({ name: $json.nombre }) }}",
+             onError="continueRegularOutput", alwaysOutputData=True),
+        http("ConversacionesDelContacto", "GET",
+             "=" + CW_API + "/contacts/{{ %s.id }}/conversations" % contacto, [1960, -120], cred=CRED_CHATWOOT),
+        if_node("¿Tiene conversacion?", "={{ $json.payload }}", "notEmpty", [2180, -120], tipo="array"),
+        code_node("ElegirConversacion", code_wa("plantilla_elegir_conversacion.js"), [2400, -220]),
+        http("CrearConversacion", "POST", "=" + CW_API + "/conversations", [2400, -40], cred=CRED_CHATWOOT,
+             body="={{ JSON.stringify({ source_id: %s.phone_number.replace('+',''), inbox_id: %s, "
+                  "contact_id: %s.id }) }}" % (contacto, CW_INBOX, contacto)),
+        set_node("IdConversacionCreada", {"conversacion_id": ("number", "={{ $json.id }}")}, [2620, -40]),
+        http("CrearContacto", "POST", "=" + CW_API + "/contacts", [1300, 160], cred=CRED_CHATWOOT,
+             body="={{ JSON.stringify({ name: %s.nombre || %s.telefono_e164, phone_number: %s.telefono_e164, "
+                  "identifier: %s.wa_id, inbox_id: %s, source_id: %s.wa_id }) }}"
+                  % (norm, norm, norm, norm, CW_INBOX, norm)),
+        node("EsperaAltaContacto", "n8n-nodes-base.wait", {"amount": 3}, [1520, 160], 1.1,
+             webhookId=str(uuid.uuid5(uuid.NAMESPACE_URL, "casagencia/wa/espera-alta-contacto"))),
+        http("CrearConversacionContactoNuevo", "POST", "=" + CW_API + "/conversations", [1740, 160],
+             cred=CRED_CHATWOOT,
+             body="={{ JSON.stringify({ source_id: %s.contact_inboxes[0].source_id, "
+                  "inbox_id: %s.contact_inboxes[0].inbox.id, contact_id: %s.id }) }}" % (nuevo, nuevo, nuevo)),
+        set_node("IdConversacionNueva", {"conversacion_id": ("number", "={{ $json.id }}")}, [1960, 160]),
+        set_node("ConversacionLista", {"conversacion_id": ("number", "={{ $json.conversacion_id }}")}, [2840, 0]),
+        http("LeerConversacion", "GET", "=" + CW_API + "/conversations/{{ $json.conversacion_id }}",
+             [3060, 0], cred=CRED_CHATWOOT, onError="continueRegularOutput", alwaysOutputData=True),
+        set_node("Resultado", {
+            "conversacion_id": ("number", "={{ $('ConversacionLista').first().json.conversacion_id }}"),
+            "contacto_id": ("number", "={{ $json.meta?.sender?.id || 0 }}"),
+            "asignado": ("number", "={{ $json.meta?.assignee?.id || 0 }}"),
+        }, [3280, 0]),
+        nota("Nota", "## Contacto y conversacion del panel\nPor el telefono: si el contacto existe se usa "
+             "(y si no tenia nombre, se le pone el que sepamos); si no, se crea. Despues, su conversacion "
+             "abierta mas reciente del inbox de WhatsApp, o una nueva. Misma logica que la bienvenida.",
+             [640, -460], 520, 230),
+    ], conn(("Start", 0, "Normalizar", 0), ("Normalizar", 0, "¿Telefono valido?", 0),
+            ("¿Telefono valido?", 0, "BuscarContacto", 0), ("¿Telefono valido?", 1, "SinTelefono", 0),
+            ("BuscarContacto", 0, "ElegirContacto", 0), ("ElegirContacto", 0, "¿Existe el contacto?", 0),
+            ("¿Existe el contacto?", 0, "¿PonerNombre?", 0), ("¿Existe el contacto?", 1, "CrearContacto", 0),
+            ("¿PonerNombre?", 0, "¿Le falta el nombre?", 0),
+            ("¿Le falta el nombre?", 0, "PonerNombre", 0), ("¿Le falta el nombre?", 1, "ConversacionesDelContacto", 0),
+            ("PonerNombre", 0, "ConversacionesDelContacto", 0),
+            ("ConversacionesDelContacto", 0, "¿Tiene conversacion?", 0),
+            ("¿Tiene conversacion?", 0, "ElegirConversacion", 0),
+            ("¿Tiene conversacion?", 1, "CrearConversacion", 0),
+            ("CrearConversacion", 0, "IdConversacionCreada", 0),
+            ("CrearContacto", 0, "EsperaAltaContacto", 0),
+            ("EsperaAltaContacto", 0, "CrearConversacionContactoNuevo", 0),
+            ("CrearConversacionContactoNuevo", 0, "IdConversacionNueva", 0),
+            ("ElegirConversacion", 0, "ConversacionLista", 0),
+            ("IdConversacionCreada", 0, "ConversacionLista", 0),
+            ("IdConversacionNueva", 0, "ConversacionLista", 0),
+            ("ConversacionLista", 0, "LeerConversacion", 0), ("LeerConversacion", 0, "Resultado", 0)))
+
+
+DDL_LLAMADAS = DDL[DDL.index("create table if not exists tel_llamadas_panel"):]
+DDL_LLAMADAS = DDL_LLAMADAS[:DDL_LLAMADAS.index(");") + 2]
+
+SQL_LLAMADA_NUEVA = """insert into tel_llamadas_panel (call_id, telefono_e164) values ($1, $2)
+on conflict (call_id) do nothing
+returning call_id;"""
+
+PROMPT_NOMBRE = (
+    "Te paso la transcripcion de una llamada a una inmobiliaria. 'Agent' es Sara, la asistente: NO es el "
+    "cliente. Saca el nombre del CLIENTE que llama (nombre y apellido si los dice) y la referencia del "
+    "inmueble si la menciona (formato como BN-1528-V). Responde solo con JSON: "
+    '{"nombre": "", "referencia": ""}. Si no lo dice, deja la cadena vacia. No inventes.')
+
+
+def wf_llamada_panel(ids):
+    """Cada llamada del asistente telefonico, al panel de conversaciones."""
+    l = "$('LeerLlamada').first().json"
+    d = "$('DatosDelCliente').first().json"
+    cv = "$('ConversacionDelContacto').first().json"
+    nodos_asig, n_if, n_post = asignar("AsignarAsesora", "%s.conversacion_id" % cv, "%s.agente_id" % d,
+                                       "%s.asignado" % cv, [2420, 0])
+    return wf("[TEL] Llamada al panel", nodos_asig + [
+        trigger_sub([("llamada", "string")]),
+        code_node("LeerLlamada", code_wa("llamada_preparar.js"), [200, 0]),
+        pg_query("CrearTablaSiFalta", DDL_LLAMADAS, None, [420, 0], executeOnce=True,
+                 onError="continueRegularOutput", alwaysOutputData=True),
+        pg_query("¿Es nueva?", SQL_LLAMADA_NUEVA, "={{ [ %s.call_id, %s.telefono_e164 ] }}" % (l, l), [640, 0],
+                 alwaysOutputData=True),
+        if_node("¿Se pone en el panel?", None, None, [860, 0], conds=[
+            ("={{ String($json.call_id || '') }}", "notEmpty", None, "string"),
+            ("={{ %s.telefono_valido }}" % l, "true", None, "boolean")]),
+        noop("YaEstabaOSinTelefono", [1080, 200]),
+        http("NombreEnLaTranscripcion", "POST", "https://api.openai.com/v1/chat/completions", [1080, 0],
+             cred=CRED_OPENAI, body="={{ JSON.stringify({ model: 'gpt-4.1-mini', temperature: 0, response_format: { type: "
+                  "'json_object' }, messages: [ { role: 'system', content: %s }, { role: 'user', content: "
+                  "%s.transcripcion || '(sin transcripcion)' } ] }) }}" % (json.dumps(PROMPT_NOMBRE), l),
+             onError="continueRegularOutput", alwaysOutputData=True),
+        code_node("DatosDelCliente", code_wa("llamada_nombre.js"), [1300, 0]),
+        exec_sub("ConversacionDelContacto", ids.get("[WA][SUB] ConversacionDelContacto", ""),
+                 "[WA][SUB] ConversacionDelContacto",
+                 {"telefono": "={{ $json.telefono_e164 }}", "nombre": "={{ $json.nombre }}"}, [1540, 0]),
+        exec_sub("EtiquetaLlamada", ids.get("[WA][SUB] Etiquetar", ""), "[WA][SUB] Etiquetar",
+                 {"conversacion_id": "={{ $json.conversacion_id }}", "etiquetas": const("ETIQUETA_LLAMADA")},
+                 [1760, 0], {"conversacion_id": "number"}, onError="continueRegularOutput", alwaysOutputData=True),
+        node("DescargarGrabacion", "n8n-nodes-base.httpRequest", {
+            "url": "={{ %s.grabacion }}" % l,
+            "options": {"response": {"response": {"responseFormat": "file"}}, "timeout": 60000},
+        }, [1980, 0], 4.2, onError="continueErrorOutput"),
+        node("NotaConGrabacion", "n8n-nodes-base.httpRequest", {
+            "method": "POST",
+            "url": "=" + CW_API + "/conversations/{{ %s.conversacion_id }}/messages" % cv,
+            "authentication": "predefinedCredentialType", "nodeCredentialType": "httpHeaderAuth",
+            "sendBody": True, "contentType": "multipart-form-data",
+            "bodyParameters": {"parameters": [
+                {"name": "content", "value": "={{ %s.nota }}" % d},
+                {"name": "private", "value": "true"},
+                {"name": "message_type", "value": "outgoing"},
+                {"parameterType": "formBinaryData", "name": "attachments[]", "inputDataFieldName": "data"},
+            ]},
+            "options": {},
+        }, [2200, -120], 4.2, credentials=CRED_CHATWOOT, onError="continueErrorOutput"),
+        http("NotaSinGrabacion", "POST", "=" + CW_API + "/conversations/{{ %s.conversacion_id }}/messages" % cv,
+             [2200, 140], cred=CRED_CHATWOOT,
+             body="={{ JSON.stringify({ content: %s.nota + (%s.grabacion ? '\\n\\nGrabacion: ' + %s.grabacion : ''), "
+                  "private: true, message_type: 'outgoing' }) }}" % (d, d, d),
+             onError="continueRegularOutput", alwaysOutputData=True),
+        pg_query("ApuntarConversacion", "update tel_llamadas_panel set conversacion_id = $2 where call_id = $1;",
+                 "={{ [ %s.call_id, %s.conversacion_id ] }}" % (d, cv), [2860, 0], executeOnce=True,
+                 onError="continueRegularOutput", alwaysOutputData=True),
+        if_node("¿Avisar a la comercial?", "={{ %s.avisar }}" % d, "true", [3080, 0]),
+        exec_sub("AvisoWhatsApp", ids.get("[WA][SUB] AvisoEquipo", ""), "[WA][SUB] AvisoEquipo",
+                 {"accion": "LLAMADA", "destinatario": "={{ %s.asesora }}" % d,
+                  "referencia": "={{ %s.referencia }}" % d, "municipio": "",
+                  "cliente_nombre": "={{ %s.nombre }}" % d, "cliente_telefono": "={{ %s.telefono_e164 }}" % d,
+                  "cita": "", "resumen": "={{ %s.resumen }}" % d, "detalle": "={{ %s.resumen }}" % d,
+                  "conversacion_id": "={{ %s.conversacion_id }}" % cv, "pasar_a_humano": False, "etiqueta": ""},
+                 [3300, -100], {"conversacion_id": "number", "pasar_a_humano": "boolean"},
+                 onError="continueRegularOutput", alwaysOutputData=True),
+        nota("Nota", "## Cada llamada del asistente telefonico, en el panel\nLa llama `[TEL] "
+             "FinalizarLlamadaRetell` al terminar cada llamada (sin esperar: no le cambia nada).\n\n"
+             "1. El contacto por su telefono (y su nombre, que OpenAI saca de la transcripcion si lo "
+             "dijo), y su conversacion del inbox de WhatsApp.\n2. Etiqueta **0-llamada_telefonica**.\n3. "
+             "Nota privada con el resumen, el tono y la **grabacion**.\n4. Se asigna a la asesora de la "
+             "llamada (si no la tiene ya una comercial).\n5. Aviso por WhatsApp a la asesora (si ha "
+             "durado al menos %d s).\n\nCada llamada entra una sola vez (tabla tel_llamadas_panel)."
+             % int(const("LLAMADA_AVISO_MIN_SEGUNDOS", "15")), [640, -520], 620, 360),
+    ], conn(("Start", 0, "LeerLlamada", 0), ("LeerLlamada", 0, "CrearTablaSiFalta", 0),
+            ("CrearTablaSiFalta", 0, "¿Es nueva?", 0), ("¿Es nueva?", 0, "¿Se pone en el panel?", 0),
+            ("¿Se pone en el panel?", 0, "NombreEnLaTranscripcion", 0),
+            ("¿Se pone en el panel?", 1, "YaEstabaOSinTelefono", 0),
+            ("NombreEnLaTranscripcion", 0, "DatosDelCliente", 0),
+            ("DatosDelCliente", 0, "ConversacionDelContacto", 0),
+            ("ConversacionDelContacto", 0, "EtiquetaLlamada", 0),
+            ("EtiquetaLlamada", 0, "DescargarGrabacion", 0),
+            ("DescargarGrabacion", 0, "NotaConGrabacion", 0), ("DescargarGrabacion", 1, "NotaSinGrabacion", 0),
+            ("NotaConGrabacion", 0, n_if, 0), ("NotaConGrabacion", 1, "NotaSinGrabacion", 0),
+            ("NotaSinGrabacion", 0, n_if, 0),
+            (n_if, 0, n_post, 0), (n_if, 1, "ApuntarConversacion", 0), (n_post, 0, "ApuntarConversacion", 0),
+            ("ApuntarConversacion", 0, "¿Avisar a la comercial?", 0),
+            ("¿Avisar a la comercial?", 0, "AvisoWhatsApp", 0)))
+
+
+# El unico cambio en el telefono: al terminar cada llamada, [TEL]
+# FinalizarLlamadaRetell le pasa la llamada a "[TEL] Llamada al panel" SIN
+# esperar (no cambia nada de lo que ya hace: Drive, correos...). Se coloca
+# arriba del todo para que se ejecute primero aunque algo de lo demas falle.
+GANCHO_LLAMADAS = "Llamada al panel"
+
+
+def gancho_llamadas(sub_id):
+    return {
+        "parameters": {
+            "workflowId": {"__rl": True, "value": sub_id, "mode": "list", "cachedResultName": "[TEL] Llamada al panel"},
+            "workflowInputs": {"mappingMode": "defineBelow",
+                               "value": {"llamada": "={{ JSON.stringify($('Webhook').item.json.body.call) }}"},
+                               "matchingColumns": [], "schema": [
+                                   {"id": "llamada", "displayName": "llamada", "required": False,
+                                    "defaultMatch": False, "display": True, "canBeUsedToMatch": True,
+                                    "type": "string"}],
+                               "attemptToConvertTypes": False, "convertFieldsToString": False},
+            "options": {"waitForSubWorkflow": False},
+        },
+        "type": "n8n-nodes-base.executeWorkflow", "typeVersion": 1.2,
+        "position": [-1584, 720],
+        "id": str(uuid.uuid5(uuid.NAMESPACE_URL, "casagencia/tel/gancho-llamadas")),
+        "name": GANCHO_LLAMADAS,
+        "onError": "continueRegularOutput",
+    }
+
+
+def enganchar(w, sub_id, origen="Switch"):
+    """Anade el gancho a un FinalizarLlamadaRetell (idempotente)."""
+    w["nodes"] = [n for n in w["nodes"] if n["name"] != GANCHO_LLAMADAS] + [gancho_llamadas(sub_id)]
+    salidas = w["connections"].setdefault(origen, {"main": [[]]})["main"]
+    if not salidas:
+        salidas.append([])
+    salidas[0] = [c for c in salidas[0] if c["node"] != GANCHO_LLAMADAS]
+    salidas[0].insert(0, {"node": GANCHO_LLAMADAS, "type": "main", "index": 0})
+    return w
 
 # ===========================================================================
 # [WA] 4 · Cartera desde eGO
@@ -1480,6 +1800,8 @@ ORDEN = [
     "[WA][SUB] buscarCitaPorTelefono",
     "[WA][SUB] guardarCualificacion",
     "[WA][SUB] EnviarPlantilla",
+    "[WA][SUB] ConversacionDelContacto",
+    "[TEL] Llamada al panel",
     "[WA] 0 · Esquema de base de datos",
     "[WA] 1 · Leads de portales por correo",
     "[WA] 2 · Asistente de WhatsApp",
@@ -1516,6 +1838,8 @@ def construir(ids):
         "[WA][SUB] buscarCitaPorTelefono": wf_cita_telefono(),
         "[WA][SUB] guardarCualificacion": wf_cualificar(ids),
         "[WA][SUB] EnviarPlantilla": wf_plantilla(ids),
+        "[WA][SUB] ConversacionDelContacto": wf_conversacion_contacto(),
+        "[TEL] Llamada al panel": wf_llamada_panel(ids),
         "[WA] 0 · Esquema de base de datos": wf_esquema(),
         "[WA] 1 · Leads de portales por correo": wf_leads(ids),
         "[WA] 2 · Asistente de WhatsApp": wf_asistente(ids),

@@ -23,8 +23,10 @@ const enlaceChat = conv ? `${CHATWOOT_URL}/app/accounts/${CHATWOOT_CUENTA}/conve
 
 const ACCION = String(j.accion ?? 'AVISO').toUpperCase().trim();
 const QUE_HACER = {
+  'PRE-RESERVA': 'Esta en tu calendario como PRE-RESERVA: llama al cliente para confirmarla (o muevela)',
   'VISITA AGENDADA': 'Confirmale la visita al cliente',
-  'RECORDATORIO': 'Tienes esta visita en 24 horas',
+  'RECORDATORIO': 'Tienes esta visita en 24 horas (pre-reservada por Sara): si aun no la has confirmado, llama al cliente',
+  'LLAMADA': 'Revisa la llamada en el panel y llama al cliente si hace falta',
   'INTERVENIR': 'Entra en la conversacion de WhatsApp y decide tu',
   'AVISO': 'Revisalo y contesta al cliente',
 };
@@ -85,5 +87,10 @@ return [{
     conversacion_id: conv,
     etiquetas,
     pasar_a_humano: pasarAHumano,
+    // Las llamadas del telefono ya mandan su propio correo: de esas, solo WhatsApp
+    enviar_correo: ACCION !== 'LLAMADA',
+    // La conversacion se asigna en el panel a la asesora de la referencia (o a
+    // quien va el aviso si no hay referencia). En pruebas no se toca.
+    agente_id: prueba ? 0 : agenteDe(r.conocida ? r.destinatario : quien),
   }
 }];

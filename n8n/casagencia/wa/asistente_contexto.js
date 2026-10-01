@@ -42,9 +42,13 @@ const PREGUNTAS_ALQUILER = [
   ['mascotas', 'si conviven con alguna mascota', fila.q_mascotas],
   ['entrada', 'para que fecha necesitan entrar a vivir', fila.q_entrada],
 ];
+// Si tiene que vender, la direccion o zona de esa vivienda es una pregunta mas.
+const vendedor = hay(fila.q_vivienda_venta) || esAfirmativo(fila.q_necesita_vender);
 const PREGUNTAS_COMPRA = [
   ['tiempo_buscando', 'cuanto tiempo lleva buscando para comprar', fila.q_tiempo_buscando],
   ['necesita_vender', 'si necesita vender una vivienda para poder comprar', fila.q_necesita_vender],
+  ...(vendedor ? [['vivienda_a_vender', 'direccion o zona de la vivienda que tiene que vender', fila.q_vivienda_venta]] : []),
+  ['financiacion', 'como lo va a financiar (hipoteca, recursos propios o hipoteca ya preconcedida)', fila.q_financiacion],
 ];
 const lista = esAlq ? PREGUNTAS_ALQUILER : PREGUNTAS_COMPRA;
 const contestadas = lista.filter(([, , v]) => hay(v));

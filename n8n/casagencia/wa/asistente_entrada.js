@@ -57,8 +57,8 @@ if (adjunto) {
 }
 
 // --- Interruptores del bot (los usa la seccion "Filtrar si el bot...") -------
-// Como en Blue: el atributo "bot" del CONTACTO (On/Off). Sin el atributo, el
-// contacto no ha entrado por una plantilla de la IA y la IA no le contesta.
+// Como en Blue: el atributo "bot" del CONTACTO. Off: la IA se calla. On o sin
+// valor ("Select value"): contesta (SOLO_CONTACTOS_CON_BOT en config.js).
 const atributosContacto = quien.custom_attributes ?? msg.sender?.custom_attributes ?? {};
 const atributosConversacion = conv.custom_attributes ?? {};
 const bot = String(atributosContacto.bot ?? atributosConversacion.bot ?? '').trim();

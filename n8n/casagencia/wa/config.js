@@ -82,19 +82,31 @@ const ETIQUETAS = {
   intervenir: '4-intervenir',      // tiene que entrar una persona: la IA se calla
 };
 const ESTADOS = [ETIQUETAS.bienvenida, ETIQUETAS.en_proceso, ETIQUETAS.agendada];
+// Etiquetas que se SUMAN a las de estado (no cuentan como estado):
+const ETIQUETA_VENDEDOR = 'vendedor';               // el comprador tiene que vender una vivienda
+const ETIQUETA_LLAMADA  = '0-llamada_telefonica';   // la conversacion tiene llamadas del asistente telefonico
 
 // --- El interruptor del bot (atributo "bot" del contacto, como en Blue) -------
-// On: la IA contesta. Off: la IA se calla (se cambia a mano en el panel).
-// Las plantillas de la IA lo ponen en On. Con SOLO_CONTACTOS_CON_BOT = true, a
-// quien escribe por su cuenta (sin atributo) no le contesta la IA sino una
-// persona: es el estandar de Blue ("Bot sin seleccionar no hacer nada").
-const SOLO_CONTACTOS_CON_BOT = true;
+// Off: la IA se calla (se cambia a mano en el panel). On o sin valor ("Select
+// value"): la IA contesta. Con SOLO_CONTACTOS_CON_BOT = true solo contestaria a
+// los contactos con el atributo puesto (el estandar de Blue); Casagencia quiere
+// que conteste a todos menos a los que esten en Off.
+const SOLO_CONTACTOS_CON_BOT = false;
+
+// --- Asignacion de la conversacion en Chatwoot (como el reparto del telefono) -
+// Id de cada comercial como agente del panel. La conversacion se asigna a la
+// asesora de la referencia (BN/OR Carmen, CS/VR Gisela; si no hay, Laurence),
+// salvo que ya la tenga una de ellas: un cambio hecho a mano se respeta.
+const AGENTES_CHATWOOT = { Carmen: 5, Gisela: 4, Laurence: 6 };
 
 // --- Tiempos -----------------------------------------------------------------
 const BUFFER_SEGUNDOS = 60;         // se juntan los mensajes que el cliente manda seguidos
 const RECORDATORIO_HORAS = 24;      // aviso al comercial antes de cada visita
 // Antelacion minima para agendar desde WhatsApp. 0 = la que permita el horario.
 const ANTELACION_MINIMA_HORAS = 0;
+// Llamadas del asistente telefonico: todas van al panel, pero el aviso por
+// WhatsApp a la comercial solo si la llamada ha durado al menos esto.
+const LLAMADA_AVISO_MIN_SEGUNDOS = 15;
 
 // Marca que llevan en la descripcion las visitas agendadas por WhatsApp. Con
 // ella el recordatorio sabe cuales son suyas y no avisa de las del telefono.
@@ -181,6 +193,19 @@ function fechaLegible(fecha, hora) {
   const d = DateTime.fromFormat(String(fecha), 'yyyy-MM-dd', { zone: ZONA });
   if (!d.isValid) return `${fecha} ${hora || ''}`.trim();
   return `${DIAS[d.weekday - 1]} ${d.day} de ${MESES[d.month - 1]}` + (hora ? ` a las ${hora}` : '');
+}
+
+// "Si, tengo que vender el mio" -> true. "No", "no necesito" -> false.
+function esAfirmativo(texto) {
+  const t = sinAcentos(texto).trim();
+  if (!t || /^(no\b|nop|para nada|ninguna|nada)/.test(t) || /\bno (necesito|tengo|hace falta)\b/.test(t)) return false;
+  return /^(si\b|sí\b|claro|por supuesto|correcto|exacto)/.test(t) ||
+    /\b(tengo|necesito|debo|tendria|tendre|hay) que vender\b|\bnecesito vender\b|\bvender (primero|antes|mi|el|la)\b/.test(t);
+}
+
+// Id del agente de Chatwoot de un comercial ('Carmen' -> 5). 0 si no tiene.
+function agenteDe(nombre) {
+  return Number(AGENTES_CHATWOOT[String(nombre ?? '').trim()] || 0);
 }
 
 function esPrueba(telefono) {

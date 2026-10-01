@@ -17,7 +17,7 @@ return [{ json: {
   prueba: evento.prueba === true,
   respuesta:
     `cita_confirmada: true. La visita ha quedado guardada como PRE-RESERVA el ${fechaLegible(v.fecha, v.hora)} ` +
-    `(inmueble ${v.referencia}) con ${v.asesora}. Diselo al cliente dejando claro que queda pendiente de que ` +
-    `${v.asesora} se la confirme.` +
+    `(inmueble ${v.referencia}) en el calendario de ${v.asesora}. Diselo al cliente y dile CLARAMENTE que ` +
+    `esta cita NO esta confirmada hasta que le llame ${v.asesora}, que le llamara lo antes posible para confirmarla.` +
     (avisado ? ` ${v.asesora} ya ha recibido el aviso.` : ' El aviso al comercial no ha salido: no le digas al cliente que ya esta avisado.'),
 } }];

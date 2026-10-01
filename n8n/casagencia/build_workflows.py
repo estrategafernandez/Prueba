@@ -299,7 +299,16 @@ def wf_finalizar(orig):
         v["main"] = [[c for c in (out or []) if c["node"] not in BORRAR_CLUBPILATES] for out in v.get("main", [])]
     s = {k: v for k, v in (orig.get("settings") or {}).items() if k in SETTINGS_OK}
     s["timezone"] = "Europe/Madrid"
-    return {"name": orig["name"], "settings": s, "nodes": nodes, "connections": conns}
+    w = {"name": orig["name"], "settings": s, "nodes": nodes, "connections": conns}
+    # Cada llamada tambien al panel de conversaciones (Chatwoot): un nodo que le
+    # pasa la llamada a "[TEL] Llamada al panel" sin esperar. Se monta en
+    # build_whatsapp.py; aqui solo se conserva para no perderlo al redesplegar.
+    ids_wa = BASE / "wa" / "ids.json"
+    sub = json.loads(ids_wa.read_text(encoding="utf-8")).get("[TEL] Llamada al panel") if ids_wa.exists() else None
+    if sub:
+        from build_whatsapp import enganchar
+        enganchar(w, sub)
+    return w
 
 
 # =========================================================================
@@ -374,7 +383,16 @@ def wf_xmlcacheo(orig):
 
     s = {k: v for k, v in (orig.get("settings") or {}).items() if k in SETTINGS_OK}
     s["timezone"] = "Europe/Madrid"
-    return {"name": orig["name"], "settings": s, "nodes": nodes, "connections": conns}
+    w = {"name": orig["name"], "settings": s, "nodes": nodes, "connections": conns}
+    # Cada llamada tambien al panel de conversaciones (Chatwoot): un nodo que le
+    # pasa la llamada a "[TEL] Llamada al panel" sin esperar. Se monta en
+    # build_whatsapp.py; aqui solo se conserva para no perderlo al redesplegar.
+    ids_wa = BASE / "wa" / "ids.json"
+    sub = json.loads(ids_wa.read_text(encoding="utf-8")).get("[TEL] Llamada al panel") if ids_wa.exists() else None
+    if sub:
+        from build_whatsapp import enganchar
+        enganchar(w, sub)
+    return w
 
 
 # =========================================================================
