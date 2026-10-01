@@ -80,28 +80,36 @@ ck('telefono como lo quiere Meta', r.wa_id === '34666777888', r.wa_id);
 // ===========================================================================
 console.log('\n== 3. Cuando la IA NO contesta ==');
 const conv = { id: 1, status: 'open', labels: [], custom_attributes: {},
-               meta: { sender: { id: 1, name: 'Jaime', phone_number: '+34600000001' } } };
+               meta: { sender: { id: 1, name: 'Jaime', phone_number: '+34600000001', custom_attributes: { bot: 'On' } } } };
 const msj = (extra = {}, c = conv) => ({ event: 'message_created', message_type: 'incoming', content: 'Hola',
   conversation: c, sender: c.meta.sender, ...extra });
+const conBot = (bot) => ({ ...conv, meta: { sender: { ...conv.meta.sender, custom_attributes: bot === undefined ? {} : { bot } } } });
 const casos = [
   ['mensaje normal (como el de prueba de Jaime)', msj(), true],
   ['lo escribe la agencia', msj({ message_type: 'outgoing' }), false],
   ['aviso del sistema (tipo 2)', msj({ message_type: 2 }), false],
-  ['audio sin texto', msj({ content: '' }), false],
+  ['nota privada', msj({ private: true }), false],
+  ['mensaje vacio y sin adjunto', msj({ content: '' }), false],
+  ['nota de voz (sin texto) SI se atiende', msj({ content: '', attachments: [{ file_type: 'audio', data_url: 'https://x/a.ogg' }] }), true],
+  ['foto SI se atiende', msj({ content: '', attachments: [{ file_type: 'image', data_url: 'https://x/a.jpg' }] }), true],
   ['etiqueta 4-intervenir', msj({}, { ...conv, labels: ['2-en_proceso', '4-intervenir'] }), false],
   ['conversacion resuelta', msj({}, { ...conv, status: 'resolved' }), false],
-  ['escribe Carmen (contesta a un aviso)', msj({}, { ...conv, meta: { sender: { phone_number: '+34654907386' } } }), false],
-  ['escribe Gisela', msj({}, { ...conv, meta: { sender: { phone_number: '+34 690 02 77 72' } } }), false],
+  ['Blue: contacto sin atributo bot -> no hacer nada', msj({}, conBot(undefined)), false],
+  ['Blue: bot Off', msj({}, conBot('Off')), false],
+  ['Blue: bot On', msj({}, conBot('On')), true],
+  ['escribe Carmen (contesta a un aviso)', msj({}, { ...conv, meta: { sender: { phone_number: '+34654907386', custom_attributes: { bot: 'On' } } } }), false],
+  ['escribe Gisela', msj({}, { ...conv, meta: { sender: { phone_number: '+34 690 02 77 72', custom_attributes: { bot: 'On' } } } }), false],
 ];
 // Lo que manda de verdad la automatizacion de Chatwoot (send_webhook_event):
 // la conversacion entera, con event 'automation_event.message_created'.
-const automatizacion = (extra = {}) => ({
+const automatizacion = (extra = {}, mensaje = {}) => ({
   event: 'automation_event.message_created', id: 1, inbox_id: 1, status: 'open', labels: ['1-bienvenida_ia'],
   custom_attributes: {}, channel: 'Channel::Whatsapp', can_reply: true,
-  meta: { sender: { id: 1, name: 'Jaime V. Fernández', phone_number: '+34600000001', type: 'contact' },
+  meta: { sender: { id: 1, name: 'Jaime V. Fernández', phone_number: '+34600000001', type: 'contact',
+                    custom_attributes: { bot: 'On' } },
           assignee: { id: 1, name: 'Jaime' } },
-  messages: [{ id: 9, content: '¡Me gustaría visitar la vivienda!', message_type: 0,
-               content_type: 'text', conversation_id: 1, sender: { type: 'contact' } }],
+  messages: [{ id: 9, content: '¡Me gustaría visitar la vivienda!', message_type: 0, created_at: 1790849086,
+               content_type: 'text', conversation_id: 1, sender: { type: 'contact' }, ...mensaje }],
   ...extra });
 casos.push(['automatizacion de Chatwoot: boton de la plantilla', automatizacion(), true]);
 casos.push(['automatizacion: otro evento', automatizacion({ event: 'automation_event.conversation_updated' }), false]);
@@ -109,26 +117,64 @@ for (const [t, body, esperado] of casos) {
   const e = wa('asistente_entrada.js', inp([{ json: { body } }]))[0].json;
   ck(t, e.contestar === esperado, e.motivos.join(',') || 'contesta');
 }
+// Cada filtro sale en su nodo (como en Blue): el primero solo mira si es un mensaje del cliente
+let e3 = wa('asistente_entrada.js', inp([{ json: { body: msj({}, conBot('Off')) } }]))[0].json;
+ck('bot Off: es mensaje del cliente, lo para el nodo "Bot on/off"', e3.procesar === true && e3.bot_encendido === false
+   && e3.bot_asignado === true);
+e3 = wa('asistente_entrada.js', inp([{ json: { body: msj({}, conBot(undefined)) } }]))[0].json;
+ck('sin bot: lo para "Bot sin seleccionar no hacer nada"', e3.procesar === true && e3.bot_asignado === false);
 
 // Y el que mando Chatwoot de verdad el 1-10-2026 al pulsar el boton de la plantilla
-// (anonimizado): tiene que pasar exactamente igual.
+// (anonimizado). Ese contacto no tenia el atributo bot: con el estandar de Blue
+// no se le contesta hasta que la plantilla le pone bot=On.
 const REAL_CW = JSON.parse(fs.readFileSync(B + 'tests_datos/chatwoot_automatizacion_real.json', 'utf8'));
 r = wa('asistente_entrada.js', inp([{ json: { body: REAL_CW } }]))[0].json;
-ck('payload REAL de la automatizacion: contesta', r.contestar === true && r.conversacion_id === 1
-   && r.telefono_e164 === '+34600000001' && r.contenido === '¡Me gustaría visitar la vivienda!', r.motivos.join(','));
+ck('payload REAL: se lee bien', r.procesar === true && r.conversacion_id === 1 && r.mensaje_id === 5
+   && r.telefono_e164 === '+34600000001' && r.contenido === '¡Me gustaría visitar la vivienda!' && r.tipo === 'text',
+   r.motivos.join(','));
+ck('payload REAL sin atributo bot: no se contesta', r.contestar === false && r.motivos.includes('bot_sin_seleccionar'));
+const REAL_ON = JSON.parse(JSON.stringify(REAL_CW));
+REAL_ON.meta.sender.custom_attributes = { bot: 'On' };
+r = wa('asistente_entrada.js', inp([{ json: { body: REAL_ON } }]))[0].json;
+ck('payload REAL con bot=On: contesta', r.contestar === true, r.motivos.join(','));
 r = wa('asistente_entrada.js', inp([{ json: { body: automatizacion() } }]))[0].json;
 ck('automatizacion: saca el texto del boton', r.contenido === '¡Me gustaría visitar la vivienda!', r.contenido);
 ck('automatizacion: conversacion 1 y telefono de Jaime', r.conversacion_id === 1 && r.telefono_e164 === '+34600000001');
 ck('automatizacion: ve las etiquetas', r.etiquetas.includes('1-bienvenida_ia'));
+ck('automatizacion: claves de Redis por telefono y por mensaje',
+   r.clave_buffer === 'wa:buffer:34600000001' && r.clave_visto === 'wa:visto:9', r.clave_buffer + ' ' + r.clave_visto);
+
+console.log('\n== 3b. Audio, imagen y otros adjuntos ==');
+const adj = (a, content = '') => wa('asistente_entrada.js', inp([{ json: { body:
+  automatizacion({}, { content, attachments: [{ id: 1, message_id: 9, ...a }] }) } }]))[0].json;
+r = adj({ file_type: 'audio', data_url: 'https://panel/rails/active_storage/blobs/redirect/x/audio.ogg' });
+ck('nota de voz -> rama audio con el enlace de Chatwoot', r.tipo === 'audio' && r.adjunto_url.endsWith('audio.ogg') && r.contestar);
+r = adj({ file_type: 'image', data_url: 'https://panel/foto.jpg' }, 'mira este');
+ck('foto con pie -> rama imagen y el pie como texto', r.tipo === 'image' && r.contenido === 'mira este');
+r = adj({ file_type: 'location', coordinates_lat: 40.05, coordinates_long: 0.06, fallback_title: 'Calle Mayor' });
+ck('ubicacion -> se describe para Sara', r.tipo === 'otro' && /ubicación: Calle Mayor \(40.05, 0.06\)/.test(r.descripcion_adjunto), r.descripcion_adjunto);
+r = adj({ file_type: 'file', extension: '.pdf' });
+ck('documento -> se describe', r.tipo === 'otro' && r.descripcion_adjunto === '[el cliente ha enviado un documento (pdf)]', r.descripcion_adjunto);
+r = adj({ file_type: 'video' });
+ck('video -> se describe', r.tipo === 'otro' && /vídeo/.test(r.descripcion_adjunto));
 
 // ===========================================================================
 console.log('\n== 4. Juntar mensajes y partir la respuesta ==');
 const entrada = { telefono_e164: '+34600000001', telefono_wa: '34600000001', nombre: 'Jaime',
-  contenido: 'el del centro', conversacion_id: 1, contacto_id: 1, cuenta_id: 1, etiquetas: ['1-bienvenida_ia'] };
-r = wa('asistente_juntar.js', inp([{}]), nod({ EntradaMensaje: entrada,
-  LeerBuffer: { message: ['el del centro', 'quiero verlo', '¡Me gustaría visitar la vivienda!'] } }))[0].json;
+  contenido: 'el del centro', conversacion_id: 1, contacto_id: 1, cuenta_id: 1, etiquetas: ['1-bienvenida_ia'],
+  mensaje_id: 12, creado: 1790849100 };
+const E = (id, t, ts = 1790849000 + id) => JSON.stringify({ id, ts, t });
+const sacar = (lista) => [...lista].reverse().map(x => ({ entrada: JSON.parse(x) })).concat([{ entrada: null }, { entrada: null }]);
+let cola4 = [E(12, 'el del centro'), E(11, 'quiero verlo'), E(10, '¡Me gustaría visitar la vivienda!')];
+r = wa('asistente_juntar.js', inp([{}]), nod({ EntradaMensaje: entrada, 'Saca los mensajes de Redis': sacar(cola4),
+  'Obtiene todos los Mensajes': { message: cola4 } }))[0].json;
 ck('en el orden en que los escribio',
    r.mensaje === '¡Me gustaría visitar la vivienda!\nquiero verlo\nel del centro', JSON.stringify(r.mensaje));
+r = wa('asistente_juntar.js', inp([{}]), nod({ EntradaMensaje: entrada,
+  'Obtiene todos los Mensajes': { message: ['el del centro', 'quiero verlo'] } }))[0].json;
+ck('tambien entiende la cola antigua (texto suelto)', r.mensaje === 'quiero verlo\nel del centro', JSON.stringify(r.mensaje));
+const vez = wa('asistente_vaciar.js', inp([{}]), nod({ 'Obtiene todos los Mensajes': { message: cola4 } }));
+ck('vaciar: un RPOP por mensaje y unos cuantos de sobra', vez.length === 8, String(vez.length));
 const partes = wa('asistente_dividir.js', inp([{ json: {
   output: 'Perfecto.\n\n' + 'El piso tiene tres habitaciones y dos banos. '.repeat(14) } }])).map(x => x.json);
 ck('como mucho cinco mensajes', partes.length <= 5, String(partes.length));
@@ -391,6 +437,151 @@ ck('sin numeros de prueba configurados nadie es prueba', wa('guardia_alquiler.js
 r = wa('cita_respuesta.js', inp([{}]), nod({ ValidarAntesDeInsertar: val, SimularReserva: { id: 'PRUEBA-sin-agenda', prueba: true },
   AvisarAlComercial: { mensaje_registrado: true } }))[0].json;
 ck('prueba: la cita simulada se da por confirmada', r.cita_confirmada === true && r.prueba === true && r.evento_id === 'PRUEBA-sin-agenda');
+
+// ===========================================================================
+console.log('\n== 14. Cola de Redis: mensajes seguidos, repetidos y cruzados ==');
+// Se reproduce [WA] 2 paso a paso con un Redis de mentira (incr, lpush,
+// lrange, rpop) y el codigo REAL de los nodos. Cada "turno" es una ejecucion.
+const redisFalso = () => {
+  const kv = new Map();
+  return {
+    incr: k => { const v = (kv.get(k) || 0) + 1; kv.set(k, v); return v; },
+    lpush: (k, v) => { const l = kv.get(k) || []; l.unshift(v); kv.set(k, l); },
+    lrange: k => [...(kv.get(k) || [])],
+    // como el nodo de n8n: RPOP y JSON.parse del valor
+    rpop: k => { const l = kv.get(k) || []; const v = l.pop(); if (v === undefined) return null; try { return JSON.parse(v); } catch (e) { return v; } },
+    largo: k => (kv.get(k) || []).length,
+  };
+};
+const cuerpo = (id, content, extra = {}) => automatizacion({}, { id, content, created_at: 1790850000 + id, ...extra });
+// Lo que guarda Chatwoot (para el rescate): el payload de la API de mensajes
+const enChatwoot = (...ms) => ms.map(([id, content, tipo = 0, extra = {}]) =>
+  ({ id, content, message_type: tipo, private: false, created_at: 1790850000 + id, attachments: [], ...extra }));
+const turno = (R, body, texto) => {
+  const e = wa('asistente_entrada.js', inp([{ json: { body } }]))[0].json;
+  const t = { e, vivo: e.contestar, contesta: null };
+  if (!t.vivo) return t;
+  if (R.incr(e.clave_visto) !== 1) { t.vivo = false; t.repetido = true; return t; }     // ¿Es la primera vez?
+  t.entrada = JSON.stringify({ id: e.mensaje_id, ts: e.creado, t: texto ?? e.contenido }); // Variable Mensaje
+  t.push = () => { R.lpush(e.clave_buffer, t.entrada); return t; };                      // Push Redis
+  t.despierta = (api = [], antesDeSacar = () => {}) => {                                 // tras Espera 60 segundos
+    const lista = R.lrange(e.clave_buffer);                                              // Obtiene todos los Mensajes
+    if (lista[0] !== t.entrada) return (t.contesta = false);                             // ¿Es el ultimo mensaje?
+    antesDeSacar();
+    const veces = wa('asistente_vaciar.js', inp([{}]), nod({ 'Obtiene todos los Mensajes': { message: lista } }));
+    const sacados = veces.map(() => ({ entrada: R.rpop(e.clave_buffer) }));               // Saca los mensajes de Redis
+    t.junto = wa('asistente_juntar.js', inp([{}]), nod({ EntradaMensaje: e, 'Saca los mensajes de Redis': sacados,
+      'Obtiene todos los Mensajes': { message: lista }, MensajesDeLaConversacion: { payload: api } }))[0].json;
+    return (t.contesta = true);
+  };
+  return t;
+};
+const quienes = (...ts) => ts.filter(t => t.contesta).length;
+
+// a) Tres mensajes seguidos: contesta UNA vez, el ultimo, con los tres en orden
+let R = redisFalso();
+let a1 = turno(R, cuerpo(101, 'hola')).push(), a2 = turno(R, cuerpo(102, 'me interesa el piso')).push(),
+    a3 = turno(R, cuerpo(103, 'el del centro')).push();
+a1.despierta(); a2.despierta(); a3.despierta();
+ck('tres seguidos: contesta una sola vez', quienes(a1, a2, a3) === 1 && a3.contesta === true);
+ck('tres seguidos: con los tres, en orden', a3.junto.mensaje === 'hola\nme interesa el piso\nel del centro', JSON.stringify(a3.junto.mensaje));
+ck('tres seguidos: la cola queda vacia', R.largo('wa:buffer:34600000001') === 0);
+
+// b) Dos mensajes IGUALES seguidos ("ok", "ok"): con Blue el primer turno se
+// creia el ultimo y contestaba antes de tiempo (y si los dos avisos llegan a la
+// vez, contestaban los dos). Ahora cada entrada lleva su id: contesta el segundo
+R = redisFalso();
+let b1 = turno(R, cuerpo(201, 'ok')).push(), b2 = turno(R, cuerpo(202, 'ok')).push();
+b1.despierta(); b2.despierta();
+ck('"ok" + "ok": una sola respuesta', quienes(b1, b2) === 1 && b2.contesta === true);
+ck('"ok" + "ok": no se pierde ninguno', b2.junto.mensaje === 'ok\nok', JSON.stringify(b2.junto.mensaje));
+
+// c) Chatwoot avisa DOS veces del mismo mensaje: el segundo aviso se descarta
+R = redisFalso();
+let c1 = turno(R, cuerpo(301, 'quiero visitarlo')), c2 = turno(R, cuerpo(301, 'quiero visitarlo'));
+ck('aviso repetido de Chatwoot: se descarta', c1.vivo === true && c2.repetido === true);
+c1.push().despierta();
+ck('aviso repetido: se contesta una vez', c1.contesta === true && c1.junto.numero_de_mensajes === 1);
+
+// d) Carrera de Chatwoot: dos mensajes casi a la vez y los DOS avisos traen el
+// ultimo (el 402). El 401 no llega por el webhook: se rescata de la conversacion
+R = redisFalso();
+let d1 = turno(R, cuerpo(402, 'el de la playa')), d2 = turno(R, cuerpo(402, 'el de la playa'));
+ck('carrera: el segundo aviso (mismo mensaje) se descarta', d2.repetido === true);
+d1.push().despierta(enChatwoot([400, 'Hola Jaime, soy Sara...', 1], [401, 'no me interesa ese'], [402, 'el de la playa']));
+ck('carrera: se rescata el mensaje que Chatwoot no mando', d1.junto.mensaje === 'no me interesa ese\nel de la playa'
+   && d1.junto.rescatados === 1, JSON.stringify(d1.junto.mensaje));
+
+// e) El cliente escribe JUSTO cuando el ultimo turno esta vaciando la cola: con
+// Blue (leer y borrar) ese mensaje se perdia; sacandolos uno a uno, entra en esta
+// respuesta y su propio turno ya no contesta
+R = redisFalso();
+let e1 = turno(R, cuerpo(501, 'tiene garaje?')).push(), e2 = turno(R, cuerpo(502, 'y trastero?'));
+e1.despierta([], () => e2.push());
+e2.despierta();
+ck('mensaje que entra mientras se vacia: no se pierde', e1.junto.mensaje === 'tiene garaje?\ny trastero?', JSON.stringify(e1.junto.mensaje));
+ck('y no se contesta dos veces', quienes(e1, e2) === 1);
+
+// f) Un audio y justo despues un texto: el audio tarda en transcribirse y entra
+// en la cola DESPUES. Contesta el ultimo en entrar, y en el orden en que los mando
+R = redisFalso();
+let f2 = turno(R, cuerpo(602, 'es para el de la calle Mayor')).push();
+let f1 = turno(R, cuerpo(601, '', { attachments: [{ file_type: 'audio', data_url: 'https://panel/a.ogg' }] }),
+  '[nota de voz] quiero ver el piso el martes').push();
+f2.despierta(); f1.despierta();
+ck('audio + texto: una sola respuesta', quienes(f1, f2) === 1);
+ck('audio + texto: en el orden en que los mando', f1.junto.mensaje === '[nota de voz] quiero ver el piso el martes\nes para el de la calle Mayor',
+   JSON.stringify(f1.junto.mensaje));
+
+// g) Lo que no se rescata: lo ya contestado y lo que es de un turno posterior
+R = redisFalso();
+let g1 = turno(R, cuerpo(705, 'y el precio?')).push();
+g1.despierta(enChatwoot([700, 'hola'], [701, 'Hola, soy Sara', 1], [703, 'nota interna', 1, { private: true }],
+  [705, 'y el precio?'], [706, 'otra cosa (de otro turno)']));
+ck('rescate: ni lo ya contestado ni lo posterior', g1.junto.mensaje === 'y el precio?' && g1.junto.rescatados === 0,
+   JSON.stringify(g1.junto.mensaje));
+
+// ===========================================================================
+console.log('\n== 15. Cada referencia: su asesora, su calendario y su horario ==');
+// Toda la cartera real, con el mismo codigo que usa la agenda (el del telefono)
+const resolver = Function('DateTime', CFG + '; return resolverAsesora;')(DateTime);
+const CAL = { Carmen: 'carmen@casagencia.com', Gisela: 'gisela@casagencia.com' };
+let sabado = DateTime.now().setZone('Europe/Madrid').plus({ days: 1 });
+while (sabado.weekday !== 6 || FESTIVOS.TODOS.includes(sabado.toFormat('yyyy-MM-dd'))) sabado = sabado.plus({ days: 1 });
+const SABADO = sabado.toFormat('yyyy-MM-dd');
+const malas = [];
+const huecoA = (ref, fecha, hora) => {
+  const g = guardia({ referencia: ref, tipo_transaccion: 'compra', fecha, hora, modo: 'consulta',
+                      telefono: '+34600000001', nombre: 'Prueba' });
+  const pr = tel('bd_preparar.js', inp([{ json: g }]))[0].json;
+  return tel('bd_calcular.js', inp([]), nod({ PrepararDatos: pr }))[0].json.respuesta;
+};
+const porAsesora = { Carmen: 0, Gisela: 0 };
+for (const f of REAL) {
+  const pref = f.ref.slice(0, 2);
+  const esperada = { BN: 'Carmen', OR: 'Carmen', CS: 'Gisela', VR: 'Gisela' }[pref];
+  if (!esperada) { malas.push(f.ref + ': prefijo sin asesora'); continue; }
+  const aviso = resolver(f.ref, f.municipio);
+  if (aviso.destinatario !== esperada) malas.push(`${f.ref}: los avisos irian a ${aviso.destinatario}`);
+  if (f.tipo_transaccion !== 'venta') continue;          // en alquiler no se agenda
+  const pc = tel('cc_preparar.js', inp([{ json: guardia({ referencia: f.ref, tipo_transaccion: 'compra',
+    fecha: MARTES, hora: '17:00', modo: 'reserva', telefono: '+34600000001', nombre: 'Prueba' }) }]))[0].json;
+  if (pc.asesora !== esperada || pc.calendario !== CAL[esperada])
+    malas.push(`${f.ref}: la visita iria a ${pc.asesora} / ${pc.calendario}`);
+  porAsesora[esperada]++;
+  // Horarios: Carmen abre a las 9:30 y los sabados; Gisela abre a las 9:00 y no los sabados
+  const sab = huecoA(f.ref, SABADO, '10:00'), nueve = huecoA(f.ref, MARTES, '09:00');
+  if (esperada === 'Carmen' && !(sab.disponible && !nueve.disponible))
+    malas.push(`${f.ref}: horario de Carmen mal (sabado ${sab.motivo}, 9:00 ${nueve.motivo})`);
+  if (esperada === 'Gisela' && !(!sab.disponible && nueve.disponible))
+    malas.push(`${f.ref}: horario de Gisela mal (sabado ${sab.motivo}, 9:00 ${nueve.motivo})`);
+}
+ck(`las ${REAL.length} referencias tienen asesora, y los avisos van a ella`, !malas.some(m => /prefijo|avisos/.test(m)), malas.join(' | '));
+ck(`las de venta (${porAsesora.Carmen} de Carmen, ${porAsesora.Gisela} de Gisela) se agendan en SU calendario`,
+   !malas.some(m => /visita iria/.test(m)), malas.join(' | '));
+ck('y con SU horario (Carmen: sabado si y 9:00 no; Gisela: al reves)', !malas.some(m => /horario/.test(m)), malas.join(' | '));
+ck('una referencia desconocida no se agenda en ningun calendario',
+   huecoA('ZZ-0001-V', MARTES, '11:00').motivo === 'referencia_desconocida');
 
 // ===========================================================================
 console.log(fallos ? `\n${fallos} FALLOS` : '\nTodo correcto');

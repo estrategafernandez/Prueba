@@ -83,6 +83,13 @@ const ETIQUETAS = {
 };
 const ESTADOS = [ETIQUETAS.bienvenida, ETIQUETAS.en_proceso, ETIQUETAS.agendada];
 
+// --- El interruptor del bot (atributo "bot" del contacto, como en Blue) -------
+// On: la IA contesta. Off: la IA se calla (se cambia a mano en el panel).
+// Las plantillas de la IA lo ponen en On. Con SOLO_CONTACTOS_CON_BOT = true, a
+// quien escribe por su cuenta (sin atributo) no le contesta la IA sino una
+// persona: es el estandar de Blue ("Bot sin seleccionar no hacer nada").
+const SOLO_CONTACTOS_CON_BOT = true;
+
 // --- Tiempos -----------------------------------------------------------------
 const BUFFER_SEGUNDOS = 60;         // se juntan los mensajes que el cliente manda seguidos
 const RECORDATORIO_HORAS = 24;      // aviso al comercial antes de cada visita

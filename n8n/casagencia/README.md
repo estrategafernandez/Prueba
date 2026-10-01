@@ -188,7 +188,7 @@ Los dos constructores ponen el prefijo solos, así que no hay que acordarse.
 Si algún día se activa la licencia con proyectos, se pasan a dos proyectos de
 verdad y los prefijos se pueden quitar.
 
-## Asistente de WhatsApp (proyecto aparte, sin activar)
+## Asistente de WhatsApp (proyecto aparte)
 
 Es **otro proyecto**: sus workflows llevan `[WA]` y la etiqueta *Asistente
 WhatsApp*, y **ninguno llama a un workflow del teléfono**. Comparten los mismos
@@ -223,8 +223,9 @@ cuenta 1, inbox 1 *WhatsApp*.
    `bienvenida_alquiler`. No se escribe dos veces por el mismo inmueble.
 2. **Bienvenida** (`[WA][SUB] EnviarPlantilla`): por Chatwoot, para que la
    conversación nazca en el panel. Etiqueta `1-bienvenida_ia`.
-3. **Contesta el cliente** (`[WA] 2`): se juntan 60 s de mensajes y se contesta
-   una vez. Etiqueta `2-en_proceso`.
+3. **Contesta el cliente** (`[WA] 2`, con la estructura estándar de Blue): texto,
+   **notas de voz** (se transcriben) e **imágenes** (se describen); se juntan
+   60 s de mensajes y se contesta una vez. Etiqueta `2-en_proceso`.
 4. **Compra**: dos preguntas (cuánto tiempo lleva buscando y si necesita vender
    para comprar) y directamente la visita. Al agendarla: al calendario del
    comercial, **aviso por WhatsApp al comercial** y etiqueta `3-agendada_ia`.
@@ -237,6 +238,54 @@ cuenta 1, inbox 1 *WhatsApp*.
 La IA también resuelve dudas con la **ficha completa** del inmueble (incluida la
 descripción entera del anuncio), busca en toda la cartera con todos los filtros
 y **recomienda inmuebles parecidos** cuando el que pidió no le encaja.
+
+### `[WA] 2` con la estructura estándar de Blue
+
+Las mismas siete secciones que el *Asistente* de Blue, con los mismos nombres:
+
+1. **Llega el mensaje de WhatsApp**: se descarta lo que no es del cliente, y el
+   aviso repetido (Chatwoot a veces avisa dos veces del mismo mensaje: Redis
+   marca cada id y solo pasa una vez).
+2. **Filtrar si el bot está encendido o apagado**: `Bot sin seleccionar no hacer
+   nada` y `Bot on/off` (más la etiqueta `4-intervenir`).
+3. **Separar audio, texto e imagen**: el audio se baja de Chatwoot y lo
+   transcribe OpenAI (`[nota de voz] …`); la imagen la describe OpenAI y, si es
+   la captura de un anuncio, copia referencia, precio y dirección (`[imagen]
+   …`); vídeo, documento, ubicación o contacto se le dicen a Sara tal cual.
+4. **Recolectar inputs**: `Push Redis` → `Espera 60 segundos` → `Obtiene todos
+   los Mensajes` → solo sigue el turno del **más nuevo**.
+5. **Cálculo de la fecha actual**, la ficha del lead y la del inmueble.
+6. **Generar respuesta del asistente** (Sara, `gpt-5.1`, memoria en Postgres).
+   La base de conocimiento va en el prompt (Blue la tiene en Supabase).
+7. **Se estructura y envía en varias partes** (hasta 5 mensajes, 2,5 s entre uno
+   y otro).
+
+La cola de Redis tiene tres arreglos sobre la de Blue, con un test para cada uno
+(`tests_whatsapp.js`, sección 14):
+
+- Cada entrada lleva el **id del mensaje**: dos mensajes iguales seguidos ("ok",
+  "ok") ya no se confunden, y se juntan **en el orden en que los escribió**
+  aunque el audio tarde más en transcribirse que el texto que mandó después.
+- Los mensajes se **sacan de Redis uno a uno** (RPOP) en vez de leer y borrar
+  la lista: si el cliente escribe justo en ese momento, su mensaje entra en esta
+  respuesta en lugar de perderse.
+- Si Chatwoot manda dos avisos casi a la vez puede meter en los dos el último
+  mensaje; el otro se **rescata** de la conversación (solo los entrantes de ese
+  rato, nunca lo ya contestado ni lo de un turno posterior).
+
+Probado en real el 1-10-2026: dos mensajes seguidos + el aviso repetido →
+una sola respuesta a los dos y el repetido descartado; una nota de voz + una
+foto con pie → transcrita, descrita y contestadas juntas.
+
+### Cada referencia, su asesora y su calendario
+
+La referencia manda, igual que en el teléfono: **BN** y **OR** → Carmen
+(`carmen@casagencia.com`, L-V 9:30-14:00 y 16:00-19:30, sábado 10:00-14:00);
+**CS** y **VR** → Gisela (`gisela@casagencia.com`, L-V 9:00-14:00 y
+16:00-19:00, sábado cerrado). Comprobado con toda la cartera real (sección 15
+de los tests): las 93 referencias tienen asesora, los avisos van a ella y las
+72 de venta se agendan en **su** calendario con **su** horario. Una referencia
+con un prefijo desconocido no se agenda en ningún calendario.
 
 ### La cartera de WhatsApp (`[WA] 4`)
 
@@ -263,8 +312,16 @@ herramienta.
 
 Las tres primeras son el estado y nunca van hacia atrás. `4-intervenir` se suma
 y hace que la IA deje de contestar: es el interruptor de las comerciales.
-Tampoco contesta a los audios, a lo que escribe la agencia, ni a los móviles
-del equipo (los avisos salen de esta misma línea).
+
+Además, como en Blue, el **atributo `bot` del contacto** (On/Off, creado en el
+panel): con `Off` la IA se calla, y un contacto **sin** atributo (escribe por su
+cuenta, no ha entrado por una plantilla de la IA) lo atiende una persona. La
+plantilla de bienvenida pone `bot = On` (si el contacto ya lo tenía en On u Off,
+no se toca). Se cambia en `SOLO_CONTACTOS_CON_BOT` de `wa/config.js`.
+
+Nunca contesta a lo que escribe la agencia ni a los móviles del equipo (los
+avisos salen de esta misma línea, y la respuesta automática del WhatsApp de una
+comercial entra aquí).
 
 ### Chatwoot → n8n
 
@@ -323,8 +380,6 @@ no están publicados**. Orden: primero `Etiquetar` y `AvisoEquipo`; después los
 demás `[WA][SUB]`; después `[WA] 2`, `[WA] 3` y por último `[WA] 1`. Activar un
 sub-workflow no tiene riesgo: solo se ejecuta cuando alguien lo llama.
 
-Activos ya: `[WA] 4` (cartera), `[WA] 8` (prueba), `[WA] 9` (lead a mano),
-`EnviarPlantilla` y `Etiquetar`.
 
 ## Estructura
 

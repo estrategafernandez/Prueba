@@ -144,8 +144,11 @@ def if_node(name, izq, op, pos, der=None, tipo="boolean", conds=None):
         "conditions": condiciones, "combinator": "and"}, "looseTypeValidation": True, "options": {}}, pos, 2.2)
 
 
-def nota(name, texto, pos, w=440, h=220):
-    return node(name, "n8n-nodes-base.stickyNote", {"content": texto, "height": h, "width": w}, pos, 1)
+def nota(name, texto, pos, w=440, h=220, color=None):
+    p = {"content": texto, "height": h, "width": w}
+    if color:
+        p["color"] = color
+    return node(name, "n8n-nodes-base.stickyNote", p, pos, 1)
 
 
 def noop(name, pos):
@@ -795,33 +798,43 @@ def wf_plantilla(ids):
                   "inbox_id: %s.contact_inboxes[0].inbox.id, contact_id: %s.id }) }}" % (nuevo, nuevo, nuevo)),
         set_node("IdConversacionNueva", {"conversacion_id": ("number", "={{ $json.id }}")}, [2180, 200]),
         set_node("ConversacionLista", {"conversacion_id": ("number", "={{ $json.conversacion_id }}")}, [2400, 0]),
-        http("PlantillaMeta", "GET", "%s/%s/message_templates" % (META_API, WABA_ID), [2620, 0],
+        # Como en Blue: el contacto lleva el atributo bot=On para que la IA le conteste.
+        # Si ya lo tiene (On u Off puesto a mano) no se toca.
+        http("LeerConversacion", "GET", "=" + CW_API + "/conversations/{{ $json.conversacion_id }}",
+             [2620, 0], cred=CRED_CHATWOOT, onError="continueRegularOutput", alwaysOutputData=True),
+        if_node("¿Contacto sin bot?", None, None, [2840, 0], conds=[
+            ("={{ Number($json.meta?.sender?.id || 0) }}", "gt", 0, "number"),
+            ("={{ String($json.meta?.sender?.custom_attributes?.bot ?? '') }}", "empty", None, "string")]),
+        http("ActivarBot", "PUT", "=" + CW_API + "/contacts/{{ $json.meta.sender.id }}", [3060, -140],
+             cred=CRED_CHATWOOT, body="={{ JSON.stringify({ custom_attributes: { bot: 'On' } }) }}",
+             onError="continueRegularOutput", alwaysOutputData=True),
+        http("PlantillaMeta", "GET", "%s/%s/message_templates" % (META_API, WABA_ID), [3280, 0],
              cred=CRED_META, query={"name": "={{ %s.plantilla }}" % norm},
              onError="continueRegularOutput", alwaysOutputData=True),
-        code_node("RenderizarTexto", code_wa("plantilla_renderizar.js"), [2840, 0]),
+        code_node("RenderizarTexto", code_wa("plantilla_renderizar.js"), [3500, 0]),
         http("EnviarPlantilla", "POST", "=" + CW_API + "/conversations/{{ $json.conversacion_id }}/messages",
-             [3060, 0], cred=CRED_CHATWOOT, body="={{ $json.body_mensaje }}",
+             [3720, 0], cred=CRED_CHATWOOT, body="={{ $json.body_mensaje }}",
              retryOnFail=True, waitBetweenTries=3000),
         pg_query("GuardarEnMemoriaAgente", "insert into n8n_chat_histories (session_id, message) values ($1, $2);",
                  "={{ [ %s.telefono_e164, JSON.stringify({ type: 'ai', content: "
                  "$('RenderizarTexto').first().json.contenido, tool_calls: [], additional_kwargs: {}, "
                  "response_metadata: {}, invalid_tool_calls: [] }) ] }}" % norm,
-                 [3280, 0], onError="continueRegularOutput", alwaysOutputData=True),
+                 [3940, 0], onError="continueRegularOutput", alwaysOutputData=True),
         exec_sub("MarcarBienvenida", ids.get("[WA][SUB] Etiquetar", ""), "[WA][SUB] Etiquetar",
                  {"conversacion_id": "={{ $('ConversacionLista').first().json.conversacion_id }}",
-                  "etiquetas": ETQ_BIENVENIDA}, [3500, 0], {"conversacion_id": "number"},
+                  "etiquetas": ETQ_BIENVENIDA}, [4160, 0], {"conversacion_id": "number"},
                  onError="continueRegularOutput", alwaysOutputData=True),
         set_node("Resultado", {
             "resultado": ("string", "Plantilla enviada"),
             "conversacion_id": ("number", "={{ $('ConversacionLista').first().json.conversacion_id }}"),
             "contenido": ("string", "={{ $('RenderizarTexto').first().json.contenido }}"),
-        }, [3720, 0]),
+        }, [4380, 0]),
         nota("Nota", "## El primer mensaje\nLa plantilla de bienvenida se manda POR CHATWOOT para que "
              "la conversacion nazca en el panel.\n\n- Compra: *bienvenida_compra* (es)\n- Alquiler: "
              "*bienvenida_alquiler* (en: asi esta dada de alta en Meta)\n\n{{1}} el nombre del cliente, "
              "{{2}} el enlace del anuncio. Despues se siembra la memoria del agente con ese texto (asi "
              "Sara sabe lo que ya le ha dicho) y la conversacion pasa a *1-bienvenida_ia*.",
-             [2620, -340], 540, 290),
+             [3280, -340], 540, 290),
     ], conn(("Start", 0, "EnlaceDeLaWeb", 0), ("EnlaceDeLaWeb", 0, "Normalizar", 0),
             ("Normalizar", 0, "¿Telefono valido?", 0),
             ("¿Telefono valido?", 0, "¿Ya tengo conversacion?", 0), ("¿Telefono valido?", 1, "SinTelefono", 0),
@@ -841,7 +854,9 @@ def wf_plantilla(ids):
             ("ElegirConversacion", 0, "ConversacionLista", 0),
             ("IdConversacionCreada", 0, "ConversacionLista", 0),
             ("IdConversacionNueva", 0, "ConversacionLista", 0),
-            ("ConversacionLista", 0, "PlantillaMeta", 0), ("PlantillaMeta", 0, "RenderizarTexto", 0),
+            ("ConversacionLista", 0, "LeerConversacion", 0), ("LeerConversacion", 0, "¿Contacto sin bot?", 0),
+            ("¿Contacto sin bot?", 0, "ActivarBot", 0), ("¿Contacto sin bot?", 1, "PlantillaMeta", 0),
+            ("ActivarBot", 0, "PlantillaMeta", 0), ("PlantillaMeta", 0, "RenderizarTexto", 0),
             ("RenderizarTexto", 0, "EnviarPlantilla", 0), ("EnviarPlantilla", 0, "GuardarEnMemoriaAgente", 0),
             ("GuardarEnMemoriaAgente", 0, "MarcarBienvenida", 0), ("MarcarBienvenida", 0, "Resultado", 0)))
 
@@ -978,8 +993,8 @@ REF_DESC = ("Referencia del inmueble tal y como la tengas (la de Datos del clien
             "cliente), con todas sus letras y numeros. Ejemplo: BN-1547-V.")
 
 
-def herramientas(ids):
-    x, dx, y = 1900, 200, 360
+def herramientas(ids, x=1900, y=360):
+    dx = 200
     agenda = {
         "nombre": de_la_ia("nombre", "Nombre del cliente. Vacio si no lo sabes."),
         "telefono": TEL_CLIENTE,
@@ -1092,93 +1107,221 @@ def herramientas(ids):
     ]
 
 
+def switch_por_tipo(name, expr, salidas, pos):
+    """Switch v3.2 como el de Blue: una salida con nombre por cada valor."""
+    reglas = [{"conditions": {
+        "options": {"caseSensitive": True, "leftValue": "", "typeValidation": "strict", "version": 2},
+        "conditions": [{"id": str(uuid.uuid5(uuid.NAMESPACE_URL, name + v)), "leftValue": expr,
+                        "rightValue": v, "operator": {"type": "string", "operation": "equals"}}],
+        "combinator": "and"}, "renameOutput": True, "outputKey": v} for v in salidas]
+    return node(name, "n8n-nodes-base.switch", {"rules": {"values": reglas}, "options": {}}, pos, 3.2)
+
+
+def descargar(name, pos):
+    """Baja el adjunto que ha guardado Chatwoot (enlace publico firmado)."""
+    return node(name, "n8n-nodes-base.httpRequest", {
+        "url": "={{ $('EntradaMensaje').first().json.adjunto_url }}",
+        "options": {"response": {"response": {"responseFormat": "file"}}, "timeout": 30000},
+    }, pos, 4.2, onError="continueRegularOutput")
+
+
+def redis(name, params, pos, **extra):
+    return node(name, "n8n-nodes-base.redis", params, pos, 1, credentials=CRED_REDIS, **extra)
+
+
+PROMPT_IMAGEN = (
+    "Eres el asistente de una inmobiliaria. Un cliente ha mandado esta imagen por WhatsApp. "
+    "Descríbela en español en una a tres frases, de forma objetiva y sin inventar. Si es una captura "
+    "de un anuncio, de un portal o de un mapa, copia la referencia, el precio, la dirección, la zona y "
+    "el texto importante que se lea. Si es una foto de una vivienda, di qué estancia es y lo que se ve. "
+    "Si es un documento personal (DNI, nómina, contrato, extracto), di solo qué tipo de documento es y "
+    "NO copies ningún dato personal.")
+
+
 def wf_asistente(ids):
+    """Misma estructura que el Asistente de Blue (el estandar de la agencia):
+    1 Llega el mensaje · 2 Filtrar si el bot esta encendido o apagado ·
+    3 Separar audio, texto e imagen · 4 Recolectar inputs (Redis) ·
+    5 Calculo de la fecha actual · 6 Generar respuesta · 7 Enviar en varias partes."""
     ent = "$('EntradaMensaje').first().json"
     mensajes_url = "=" + CW_API + "/conversations/{{ %s.conversacion_id }}/messages" % CTX
     modelo = node("ModeloOpenAI", "@n8n/n8n-nodes-langchain.lmChatOpenAi", {
         "model": {"__rl": True, "value": MODELO, "mode": "list", "cachedResultName": MODELO},
         "options": {"temperature": 0.3},
-    }, [1500, 360], 1.2)
-    if CRED_OPENAI:
-        modelo["credentials"] = CRED_OPENAI
-    tools = herramientas(ids)
+    }, [6200, 420], 1.2, credentials=CRED_OPENAI)
+    tools = herramientas(ids, x=6560, y=420)
+    Y = 0
     nodos = [
+        # --- 1. Llega el mensaje de WhatsApp ---------------------------------
         node("Webhook", "n8n-nodes-base.webhook", {"httpMethod": "POST", "path": "wa-asistente", "options": {}},
-             [-40, 0], 2.1, webhookId=str(uuid.uuid5(uuid.NAMESPACE_URL, "casagencia/wa/webhook"))),
-        code_node("EntradaMensaje", code_wa("asistente_entrada.js"), [180, 0]),
-        if_node("¿Contestar?", "={{ $json.contestar }}", "true", [400, 0]),
-        noop("NoContestar", [620, 180]),
-        node("GuardarBuffer", "n8n-nodes-base.redis", {
-            "operation": "push", "list": "={{ $json.clave_buffer }}", "messageData": "={{ $json.contenido }}",
-        }, [620, -60], 1, credentials=CRED_REDIS),
-        node("Espera", "n8n-nodes-base.wait", {"amount": ESPERA}, [840, -60], 1.1,
+             [0, Y], 2.1, webhookId=str(uuid.uuid5(uuid.NAMESPACE_URL, "casagencia/wa/webhook"))),
+        code_node("EntradaMensaje", code_wa("asistente_entrada.js"), [220, Y]),
+        if_node("¿Es un mensaje del cliente?", "={{ $json.procesar }}", "true", [440, Y]),
+        noop("NoEsDelCliente", [660, Y + 200]),
+        # Chatwoot puede avisar dos veces del mismo mensaje: solo se trata una
+        redis("Marca el mensaje", {"operation": "incr", "key": "={{ $json.clave_visto }}",
+                                   "expire": True, "ttl": 86400}, [660, Y]),
+        if_node("¿Es la primera vez?", "={{ $json[%s.clave_visto] }}" % ent, "equals", [880, Y],
+                der=1, tipo="number"),
+        noop("AvisoRepetido", [1100, Y + 200]),
+        # --- 2. Filtrar si el bot esta encendido o apagado -------------------
+        if_node("Bot sin seleccionar no hacer nada", "={{ %s.bot_asignado }}" % ent, "true", [1280, Y]),
+        noop("ContactoSinBot", [1500, Y + 200]),
+        if_node("Bot on/off", None, None, [1500, Y], conds=[
+            ("={{ %s.bot_encendido }}" % ent, "true", None, "boolean"),
+            ("={{ %s.intervenida }}" % ent, "false", None, "boolean")]),
+        noop("BotApagado", [1720, Y + 200]),
+        # --- 3. Separar audio, texto e imagen --------------------------------
+        switch_por_tipo("Switch", "={{ %s.tipo }}" % ent, ["audio", "image", "text", "otro"], [1960, Y]),
+        descargar("Descarga el audio", [2220, Y - 380]),
+        node("Transcribe OpenAI", "@n8n/n8n-nodes-langchain.openAi", {
+            "resource": "audio", "operation": "transcribe", "options": {"language": "es"},
+        }, [2440, Y - 380], 1.7, credentials=CRED_OPENAI, onError="continueRegularOutput"),
+        set_node("Variable Response", {"response": ("string",
+            "={{ ($json.text && String($json.text).trim() ? '[nota de voz] ' + String($json.text).trim() "
+            ": '[nota de voz: no se ha podido transcribir]') + (%s.contenido ? ' ' + %s.contenido : '') }}"
+            % (ent, ent))}, [2660, Y - 380]),
+        descargar("Descarga la imagen", [2220, Y - 160]),
+        node("Analiza la imagen", "@n8n/n8n-nodes-langchain.openAi", {
+            "resource": "image", "operation": "analyze",
+            "modelId": {"__rl": True, "value": "gpt-4.1-mini", "mode": "id"},
+            "text": PROMPT_IMAGEN, "inputType": "base64", "binaryPropertyName": "data",
+            "simplify": True, "options": {"detail": "auto", "maxTokens": 400},
+        }, [2440, Y - 160], 1.7, credentials=CRED_OPENAI, onError="continueRegularOutput"),
+        set_node("Variable Imagen", {"response": ("string",
+            "={{ '[imagen] ' + ($json.content && String($json.content).trim() ? String($json.content).trim() "
+            ": 'no se ha podido ver') + (%s.contenido ? ' · Texto que la acompaña: ' + %s.contenido : '') }}"
+            % (ent, ent))}, [2660, Y - 160]),
+        set_node("Variable Response1", {"response": ("string", "={{ %s.contenido }}" % ent)}, [2440, Y + 60]),
+        set_node("Variable Otro", {"response": ("string",
+            "={{ %s.descripcion_adjunto + (%s.contenido ? ' ' + %s.contenido : '') }}" % (ent, ent, ent))},
+            [2440, Y + 260]),
+        # --- 4. Recolectar inputs (Redis) -------------------------------------
+        set_node("Variable Mensaje", {
+            "mensaje": ("string", "={{ $json.response }}"),
+            "entrada_cola": ("string", "={{ JSON.stringify({ id: %s.mensaje_id, ts: %s.creado, t: $json.response }) }}"
+                             % (ent, ent)),
+        }, [2940, Y]),
+        redis("Push Redis", {"operation": "push", "list": "={{ %s.clave_buffer }}" % ent,
+                             "messageData": "={{ $json.entrada_cola }}"}, [3160, Y]),
+        node("Espera 60 segundos", "n8n-nodes-base.wait", {"amount": ESPERA}, [3380, Y], 1.1,
              webhookId=str(uuid.uuid5(uuid.NAMESPACE_URL, "casagencia/wa/espera"))),
-        node("LeerBuffer", "n8n-nodes-base.redis", {
-            "operation": "get", "propertyName": "message", "key": "={{ %s.clave_buffer }}" % ent, "options": {},
-        }, [1060, -60], 1, credentials=CRED_REDIS, alwaysOutputData=True),
-        if_node("¿Soy el ultimo?", "={{ $json.message[0] }}", "equals", [1280, -60],
-                der="={{ %s.contenido }}" % ent, tipo="string"),
-        noop("OtroMensajeMasNuevo", [1500, 100]),
-        node("BorrarBuffer", "n8n-nodes-base.redis", {"operation": "delete", "key": "={{ %s.clave_buffer }}" % ent},
-             [1500, -160], 1, credentials=CRED_REDIS, onError="continueRegularOutput"),
-        code_node("JuntarMensajes", code_wa("asistente_juntar.js"), [1720, -160]),
-        code_node("EstadoEnProceso", code_wa("estado_en_proceso.js"), [1940, -340]),
-        if_node("¿Marcar en proceso?", "={{ $json.marcar }}", "true", [2160, -340]),
+        redis("Obtiene todos los Mensajes", {"operation": "get", "propertyName": "message",
+                                             "key": "={{ %s.clave_buffer }}" % ent, "options": {}},
+              [3600, Y], alwaysOutputData=True),
+        if_node("¿Es el ultimo mensaje?", "={{ ($json.message || [])[0] ?? '' }}", "equals", [3820, Y],
+                der="={{ $('Variable Mensaje').first().json.entrada_cola }}", tipo="string"),
+        noop("OtroMensajeMasNuevo", [4040, Y + 200]),
+        code_node("Uno por mensaje", code_wa("asistente_vaciar.js"), [4040, Y]),
+        redis("Saca los mensajes de Redis", {"operation": "pop", "list": "={{ %s.clave_buffer }}" % ent,
+                                             "tail": True, "propertyName": "entrada", "options": {}},
+              [4260, Y], alwaysOutputData=True),
+        http("MensajesDeLaConversacion", "GET",
+             "=" + CW_API + "/conversations/{{ %s.conversacion_id }}/messages" % ent, [4480, Y],
+             cred=CRED_CHATWOOT, onError="continueRegularOutput", alwaysOutputData=True, executeOnce=True),
+        code_node("JuntarMensajes", code_wa("asistente_juntar.js"), [4700, Y]),
+        # --- 5. Calculo de la fecha actual (y todo lo que sabemos del cliente) -
+        code_node("CodeFechaHoraActual",
+                  "const ahora = DateTime.now().setZone('Europe/Madrid').setLocale('es');\n"
+                  "return [{ json: {\n"
+                  "  fecha: ahora.toFormat(\"cccc d 'de' LLLL 'de' yyyy\"),\n"
+                  "  hora: ahora.toFormat('HH:mm'),\n"
+                  "  fecha_hora: ahora.toFormat('cccc dd/MM/yyyy HH:mm'),\n"
+                  "  hoy: ahora.toISODate(),\n"
+                  "} }];", [4980, Y]),
+        pg_query("LeerFichaDelLead", SQL_FICHA, "={{ [ $('JuntarMensajes').first().json.telefono_wa ] }}",
+                 [5200, Y], alwaysOutputData=True, onError="continueRegularOutput"),
+        # La ficha completa del inmueble del lead va en el contexto de cada turno
+        leer_cartera("LeerCartera", [5420, Y]),
+        leer_hoja("LeerDirecciones", "Direcciones", [5640, Y], executeOnce=True),
+        code_node("ContextoDelLead", code_wa("asistente_contexto.js", cartera=True), [5860, Y]),
+        code_node("EstadoEnProceso", code_wa("estado_en_proceso.js"), [4980, Y - 300]),
+        if_node("¿Marcar en proceso?", "={{ $json.marcar }}", "true", [5200, Y - 300]),
         exec_sub("MarcarEnProceso", ids.get("[WA][SUB] Etiquetar", ""), "[WA][SUB] Etiquetar",
                  {"conversacion_id": "={{ $json.conversacion_id }}", "etiquetas": "={{ $json.etiquetas }}"},
-                 [2380, -400], {"conversacion_id": "number"}, onError="continueRegularOutput"),
-        pg_query("LeerFichaDelLead", SQL_FICHA, "={{ [ $('JuntarMensajes').first().json.telefono_wa ] }}",
-                 [1940, -160], alwaysOutputData=True, onError="continueRegularOutput"),
-        # La ficha completa del inmueble del lead va en el contexto de cada turno
-        leer_cartera("LeerCartera", [2160, -160]),
-        leer_hoja("LeerDirecciones", "Direcciones", [2380, -160], executeOnce=True),
-        code_node("ContextoDelLead", code_wa("asistente_contexto.js", cartera=True), [2600, -160]),
+                 [5420, Y - 360], {"conversacion_id": "number"}, onError="continueRegularOutput"),
+        # --- 6. Generar respuesta del asistente -------------------------------
         node("Agente", "@n8n/n8n-nodes-langchain.agent", {
             "promptType": "define",
             "text": "=Datos del cliente:\n{{ $json.contexto }}\n"
-                    "- Fecha y hora actual: {{ $now.setZone('Europe/Madrid').toFormat(\"cccc dd/MM/yyyy HH:mm\", "
-                    "{ locale: 'es' }) }}\n\nMensaje del cliente:\n{{ $json.mensaje }}",
+                    "- Fecha y hora actual: {{ $('CodeFechaHoraActual').first().json.fecha_hora }}"
+                    "\n\nMensaje del cliente:\n{{ $json.mensaje }}",
             "options": {"systemMessage": "=" + PROMPT, "maxIterations": 12},
-        }, [2840, -160], 1.8, onError="continueErrorOutput"),
+        }, [6280, Y], 1.8, onError="continueErrorOutput"),
         modelo,
         node("MemoriaPostgres", "@n8n/n8n-nodes-langchain.memoryPostgresChat", {
             "sessionIdType": "customKey", "sessionKey": "={{ %s.telefono_e164 }}" % CTX, "contextWindowLength": 40,
-        }, [1700, 360], 1.3, credentials=CRED_PG),
-        code_node("DividirRespuesta", code_wa("asistente_dividir.js"), [3100, -260]),
-        http("EnviarMensajes", "POST", mensajes_url, [3340, -260], cred=CRED_CHATWOOT,
+        }, [6380, 420], 1.3, credentials=CRED_PG),
+        http("AvisoDeFallo", "POST", mensajes_url, [6640, Y + 200], cred=CRED_CHATWOOT,
+             body="={{ JSON.stringify({ content: 'Te atendemos enseguida, dame un momento.', "
+                  "message_type: 'outgoing', private: false }) }}", onError="continueRegularOutput"),
+        # --- 7. Se estructura y envia en varias partes ------------------------
+        code_node("DividirRespuesta", code_wa("asistente_dividir.js"), [7560, Y]),
+        http("EnviarMensajes", "POST", mensajes_url, [7800, Y], cred=CRED_CHATWOOT,
              body="={{ JSON.stringify({ content: $json.mensaje, message_type: 'outgoing', private: false }) }}",
              retryOnFail=True, waitBetweenTries=3000,
              options={"batching": {"batch": {"batchSize": 1, "batchInterval": 2500}}}),
-        http("AvisoDeFallo", "POST", mensajes_url, [3100, -20], cred=CRED_CHATWOOT,
-             body="={{ JSON.stringify({ content: 'Te atendemos enseguida, dame un momento.', "
-                  "message_type: 'outgoing', private: false }) }}", onError="continueRegularOutput"),
-        nota("Nota", "## Como llega el mensaje\nChatwoot avisa por webhook de cada mensaje. La IA NO "
-             "contesta si: lo escribio la agencia, no hay texto (audio o imagen), la conversacion esta "
-             "resuelta, tiene la etiqueta **4-intervenir**, el atributo **bot** esta en Off, o escribe "
-             "un movil del equipo (los avisos salen de esta misma linea).", [180, -340], 480, 250),
-        nota("Nota2", "## Los %d segundos\nEl cliente escribe en varios mensajes seguidos. Se apilan en "
-             "Redis, se espera y solo sigue el turno del MAS NUEVO: se contesta una vez, con todo. Es el "
-             "mismo mecanismo que Blue." % ESPERA, [840, -360], 440, 220),
-        nota("Nota3", "## Proyecto aparte del telefono\nNinguna herramienta llama a un workflow [TEL]. "
-             "Leen el mismo Sheet de cartera y los mismos calendarios, y reutilizan la logica de agenda "
-             "del telefono inyectando sus ficheros, pero en workflows [WA][SUB] propios.\n\nMemoria en "
-             "Postgres: la sesion es el telefono y el primer mensaje lo siembra la plantilla.",
-             [1900, 820], 520, 250),
-        nota("Nota4", "## PENDIENTE antes de activar\n1. Credencial de OpenAI en ModeloOpenAI.\n2. Buzon "
-             "de correo de los leads en [WA] 1.\n3. Ejecutar una vez [WA] 0.\n4. Webhook de Chatwoot -> "
-             "este Webhook (wa-asistente).\n5. Activar [WA] 2, [WA] 3 y por ultimo [WA] 1.",
-             [-40, 300], 440, 250),
+        # --- Secciones (las mismas que el Asistente de Blue) ------------------
+        nota("Llega el mensaje", "## Llega el mensaje de WhatsApp\nLa automatizacion de Chatwoot avisa de "
+             "cada mensaje del cliente. No se atiende si lo escribio la agencia, esta vacio, la conversacion "
+             "esta resuelta o escribe un movil del equipo (los avisos salen de esta misma linea).\n\n"
+             "Chatwoot a veces avisa dos veces del mismo mensaje: Redis lo marca y solo pasa una vez.",
+             [-60, -300], 1100, 620, color=6),
+        nota("Filtrar bot", "## Filtrar si el bot esta encendido o apagado\nAtributo **bot** del contacto, "
+             "como en Blue. Sin atributo (no ha entrado por una plantilla de la IA): no se contesta. "
+             "**Off**, o la etiqueta **4-intervenir**: la IA se calla y lo lleva una persona.",
+             [1220, -300], 660, 620),
+        nota("Separar", "## Separar audio, texto e imagen\n- **Audio**: se baja de Chatwoot y lo transcribe "
+             "OpenAI -> *[nota de voz] ...*\n- **Imagen**: la describe OpenAI (si es un anuncio, copia "
+             "referencia, precio y direccion) -> *[imagen] ...*\n- **Texto**: tal cual.\n- **Otro** "
+             "(video, documento, ubicacion, contacto): se le dice a Sara que ha llegado.",
+             [1900, -620], 960, 1100, color=5),
+        nota("Recolectar", "## Recolectar inputs\nComo en Blue: cada mensaje se apila en Redis (una cola por "
+             "telefono), se esperan %d segundos y solo sigue el turno del MAS NUEVO, que contesta una vez "
+             "a todo.\n\nMejoras: cada entrada lleva el id del mensaje (dos *ok* seguidos no se pisan y se "
+             "ordenan como los escribio); los mensajes se SACAN de Redis uno a uno en vez de leer y borrar "
+             "(no se pierde el que entra justo entonces); y se rescata de Chatwoot el que no llego a la "
+             "cola." % ESPERA, [2880, -340], 1980, 660, color=4),
+        nota("Fecha", "## Calculo de la fecha actual\nFecha y hora de Madrid, la ficha del lead (inmueble, "
+             "comercial, preguntas pendientes, visita), la ficha COMPLETA del inmueble y las direcciones. "
+             "Arriba, la conversacion pasa a *2-en_proceso*.",
+             [4920, -560], 1180, 880, color=7),
+        nota("Generar", "## Generar respuesta del asistente\nSara (gpt-5.1) con memoria en Postgres (sesion = "
+             "telefono; el primer mensaje lo siembra la plantilla) y sus herramientas [WA][SUB]. Ninguna "
+             "llama a un workflow [TEL]: leen los mismos datos y calendarios.\n\nLa base de conocimiento va "
+             "dentro del prompt (Blue la tiene en Supabase).", [6160, -340], 1360, 1260, color=2),
+        nota("Enviar", "## Se estructura y envia en varias partes\nLa respuesta se parte en mensajes cortos "
+             "(como mucho 5) y se mandan por Chatwoot con 2,5 s entre uno y otro.",
+             [7500, -340], 540, 660, color=3),
     ] + tools
     principal = conn(
-        ("Webhook", 0, "EntradaMensaje", 0), ("EntradaMensaje", 0, "¿Contestar?", 0),
-        ("¿Contestar?", 0, "GuardarBuffer", 0), ("¿Contestar?", 1, "NoContestar", 0),
-        ("GuardarBuffer", 0, "Espera", 0), ("Espera", 0, "LeerBuffer", 0),
-        ("LeerBuffer", 0, "¿Soy el ultimo?", 0),
-        ("¿Soy el ultimo?", 0, "BorrarBuffer", 0), ("¿Soy el ultimo?", 1, "OtroMensajeMasNuevo", 0),
-        ("BorrarBuffer", 0, "JuntarMensajes", 0),
+        ("Webhook", 0, "EntradaMensaje", 0), ("EntradaMensaje", 0, "¿Es un mensaje del cliente?", 0),
+        ("¿Es un mensaje del cliente?", 0, "Marca el mensaje", 0),
+        ("¿Es un mensaje del cliente?", 1, "NoEsDelCliente", 0),
+        ("Marca el mensaje", 0, "¿Es la primera vez?", 0),
+        ("¿Es la primera vez?", 0, "Bot sin seleccionar no hacer nada", 0),
+        ("¿Es la primera vez?", 1, "AvisoRepetido", 0),
+        ("Bot sin seleccionar no hacer nada", 0, "Bot on/off", 0),
+        ("Bot sin seleccionar no hacer nada", 1, "ContactoSinBot", 0),
+        ("Bot on/off", 0, "Switch", 0), ("Bot on/off", 1, "BotApagado", 0),
+        ("Switch", 0, "Descarga el audio", 0), ("Switch", 1, "Descarga la imagen", 0),
+        ("Switch", 2, "Variable Response1", 0), ("Switch", 3, "Variable Otro", 0),
+        ("Descarga el audio", 0, "Transcribe OpenAI", 0), ("Transcribe OpenAI", 0, "Variable Response", 0),
+        ("Descarga la imagen", 0, "Analiza la imagen", 0), ("Analiza la imagen", 0, "Variable Imagen", 0),
+        ("Variable Response", 0, "Variable Mensaje", 0), ("Variable Imagen", 0, "Variable Mensaje", 0),
+        ("Variable Response1", 0, "Variable Mensaje", 0), ("Variable Otro", 0, "Variable Mensaje", 0),
+        ("Variable Mensaje", 0, "Push Redis", 0), ("Push Redis", 0, "Espera 60 segundos", 0),
+        ("Espera 60 segundos", 0, "Obtiene todos los Mensajes", 0),
+        ("Obtiene todos los Mensajes", 0, "¿Es el ultimo mensaje?", 0),
+        ("¿Es el ultimo mensaje?", 0, "Uno por mensaje", 0),
+        ("¿Es el ultimo mensaje?", 1, "OtroMensajeMasNuevo", 0),
+        ("Uno por mensaje", 0, "Saca los mensajes de Redis", 0),
+        ("Saca los mensajes de Redis", 0, "MensajesDeLaConversacion", 0),
+        ("MensajesDeLaConversacion", 0, "JuntarMensajes", 0),
         # primero la etiqueta (rapido) y luego el agente
-        ("JuntarMensajes", 0, "EstadoEnProceso", 0), ("JuntarMensajes", 0, "LeerFichaDelLead", 0),
+        ("JuntarMensajes", 0, "EstadoEnProceso", 0), ("JuntarMensajes", 0, "CodeFechaHoraActual", 0),
         ("EstadoEnProceso", 0, "¿Marcar en proceso?", 0), ("¿Marcar en proceso?", 0, "MarcarEnProceso", 0),
+        ("CodeFechaHoraActual", 0, "LeerFichaDelLead", 0),
         ("LeerFichaDelLead", 0, "LeerCartera", 0), ("LeerCartera", 0, "LeerDirecciones", 0),
         ("LeerDirecciones", 0, "ContextoDelLead", 0), ("ContextoDelLead", 0, "Agente", 0),
         ("Agente", 0, "DividirRespuesta", 0), ("Agente", 1, "AvisoDeFallo", 0),
