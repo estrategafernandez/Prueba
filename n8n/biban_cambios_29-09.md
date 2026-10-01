@@ -172,3 +172,27 @@ repite la 1ª pregunta hasta 4 veces e insiste en la parte no respondida. Ajuste
 
 Aviso recibido (1 solo WhatsApp, ejecución 3556 de Aviso_insta): completo, pero "Observaciones" incluye datos del
 piso (gastos incluidos) y un dato inventado ("no tienen mascotas": el cliente no lo dijo).
+
+## Preparación para la oleada de la ref 1204 (01/10)
+
+Revisión del tráfico real de la mañana: el embudo de Mobilia (solicitudes 1204) cualifica, consulta Llavero y manda
+**un** aviso con resumen completo (conv 221, 226); conv 220 y 222 en curso. Primer lead real de Instagram (Iván, conv 141).
+
+Cambios subidos:
+- **Chatwoot**: contacto de la oficina (+34977873404, id 230) con `bot = Off`. Sus respuestas automáticas a los avisos
+  ("En este momento no estamos disponibles…") estaban activando el bot (conv 227).
+- **Prompts Instagram y solicitudes**: sección "Conversación natural": responder de verdad a lo que pregunte, leer la
+  intención y adaptarse. Si busca la operación contraria: sin cualificación ni aviso; web de venta/alquiler + formulario.
+- **Instagram**: no hacer la pregunta pendiente una 3ª vez cuando el cliente pide visitar o intercala una duda.
+- **Resumen del aviso** (ambos embudos y descripción de las tools): Observaciones solo con lo que el cliente dijo expresamente.
+- **Despedida en alquiler tras el aviso** (ambos embudos): "Vamos a valorar tu situación con el propietario para ver si
+  se cumplen los requisitos y te respondemos lo antes posible para que puedas pasar a visitar el piso" (+ formulario en Instagram).
+- **Ficha web también en el embudo de solicitudes**: `Ficha web (solicitudes)` → `Extraer ficha web (solicitudes)`
+  entre `Edit Fields3` y `prompt solicitudes`.
+- **Divide Mensajes**: no partir frases ni enumeraciones, URL con su frase, sin cambiar palabras.
+- **Aviso (Mobilia)**: un solo aviso por conversación y tipo (`Conversación actual` → `¿Aviso ya enviado?` → …
+  → `Marcar aviso enviado` con `aviso_mobilia_<tipo>`). `Select rows` lee el teléfono del nodo Code.
+
+Test del caso Iván (conv 215): ✅ deja de cualificar, ofrece la web de venta y, cuando dice lo que busca, el formulario.
+
+Respuesta enviada a Iván (conv 141) a petición del cliente: web de venta + formulario.
