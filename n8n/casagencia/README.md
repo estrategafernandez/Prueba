@@ -238,6 +238,25 @@ La IA también resuelve dudas con la **ficha completa** del inmueble (incluida l
 descripción entera del anuncio), busca en toda la cartera con todos los filtros
 y **recomienda inmuebles parecidos** cuando el que pidió no le encaja.
 
+### La cartera de WhatsApp (`[WA] 4`)
+
+La hoja del teléfono (`[TEL] XMLCacheo`) **corta las descripciones a 500
+caracteres**, y ahí se pierde justo lo que pregunta un cliente: en el BN-1528-V,
+que incluye plaza de parking y trastero, cómo son los baños y los honorarios de
+la agencia. Sin tocar el teléfono, `[WA] 4` lee cada hora el mismo feed de eGO y
+lo guarda **completo** en la tabla `wa_cartera`: descripción entera, superficie,
+características en español y el **enlace de la web** de cada inmueble.
+
+El enlace se construye con el id del feed sin el `05` del principio
+(`0525370429` → `…/inmueble/…/25370429`): la web abre la ficha con el id,
+pongas lo que pongas delante. Comprobado con los 83 inmuebles que tenían enlace
+conocido. Con eso Sara puede mandar el enlace de lo que recomienda, y la
+bienvenida lleva enlace aunque el correo del portal no lo traiga.
+
+La ficha del inmueble por el que preguntó el cliente **va cargada en el
+contexto de cada turno**: Sara la tiene delante sin llamar a ninguna
+herramienta.
+
 ### Etiquetas del panel (las de Blue)
 
 `1-bienvenida_ia` · `2-en_proceso` · `3-agendada_ia` · `4-intervenir`
@@ -247,13 +266,40 @@ y hace que la IA deje de contestar: es el interruptor de las comerciales.
 Tampoco contesta a los audios, a lo que escribe la agencia, ni a los móviles
 del equipo (los avisos salen de esta misma línea).
 
+### Chatwoot → n8n
+
+Automatización de Chatwoot *"IA WhatsApp: mensajes del cliente a n8n"*: cada
+mensaje **entrante** del inbox WhatsApp se manda a `…/webhook/wa-asistente`
+(`send_webhook_event`, como en Blue). Llega como
+`event: automation_event.message_created` con la conversación entera; la
+entrada lo acepta, y hay un test con el payload real (anonimizado) en
+`tests_datos/`.
+
+### Utilidades
+
+- **`[WA] 9 · Lead a mano`**: da de alta un lead y le manda la bienvenida, como
+  si hubiera llegado por correo. `POST /webhook/wa-lead-manual` con la cabecera
+  de la credencial *WA lead a mano* y `{telefono, nombre, referencia, enlace,
+  reiniciar}`. Para leads que entran por teléfono y para pruebas.
+- **`[WA] 8 · Prueba sin IA`**: escucha en la misma ruta que `[WA] 2` y monta
+  el contexto exacto que leería Sara, sin contestar. **No puede estar activo a
+  la vez que `[WA] 2`.**
+- `POST /webhook/wa-refrescar-cartera` (misma clave) refresca la cartera al
+  momento.
+
 ### Lo que falta para activarlo
 
 1. **La credencial de OpenAI** en el n8n de Casagencia (no hay ninguna).
 2. **La conexión al correo** donde entran las solicitudes de los portales.
-3. Ejecutar una vez `[WA] 0 · Esquema de base de datos`.
-4. En Chatwoot, un webhook a `…/webhook/wa-asistente` (evento *message_created*).
-5. Activar `[WA] 2`, `[WA] 3` y por último `[WA] 1`.
+3. Desactivar `[WA] 8` y activar `[WA] 2`.
+
+Esta versión de n8n **no deja activar un workflow si los sub-workflows que usa
+no están publicados**. Orden: primero `Etiquetar` y `AvisoEquipo`; después los
+demás `[WA][SUB]`; después `[WA] 2`, `[WA] 3` y por último `[WA] 1`. Activar un
+sub-workflow no tiene riesgo: solo se ejecuta cuando alguien lo llama.
+
+Activos ya: `[WA] 4` (cartera), `[WA] 8` (prueba), `[WA] 9` (lead a mano),
+`EnviarPlantilla` y `Etiquetar`.
 
 ## Estructura
 
@@ -276,8 +322,8 @@ wa/*.js                   el cuerpo de cada nodo Code de los workflows [WA]
 wa/prompt_asistente.md    el prompt del agente de WhatsApp
 wa/cartera.js             lectura de la cartera: ficha, búsqueda y similares
 wa/ids.json               qué id tiene cada workflow [WA] en n8n
-build_whatsapp.py         ensambla y despliega los 15 workflows [WA]
-tests_datos/              la cartera real de eGO para los tests de búsqueda
+build_whatsapp.py         ensambla y despliega los 18 workflows [WA]
+tests_datos/              cartera real, muestra del feed y payload real de Chatwoot
 workflows_wa/*.json       lo generado para WhatsApp
 ego_direcciones.py        relee las direcciones desde eGO y reescribe la pestaña
 backup_20260921/          el estado anterior, por si hay que revertir

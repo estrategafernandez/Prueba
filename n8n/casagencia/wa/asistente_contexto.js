@@ -8,7 +8,27 @@ const e = $('EntradaMensaje').first().json;
 
 // La consulta a Postgres puede no devolver nada: el cliente puede escribir al
 // numero sin haber pasado por un portal.
-const fila = ($input.all().map(i => i.json).find(f => f && f.telefono_wa) ?? {});
+const fila = ($('LeerFichaDelLead').all().map(i => i.json).find(f => f && f.telefono_wa) ?? {});
+
+// La ficha COMPLETA del inmueble por el que pidio informacion va dentro del
+// contexto en cada turno: Sara la tiene siempre delante y puede contestar
+// cualquier duda sin llamar a ninguna herramienta.
+let fichaInmueble = '';
+let fichaEncontrada = false;
+if (fila.referencia) {
+  const cartera = leerCartera('LeerCartera');
+  const { filas: encontrado } = buscarReferencia(cartera, fila.referencia);
+  if (encontrado.length) {
+    fichaInmueble = fichaTexto(encontrado[0], leerDirecciones('LeerDirecciones'));
+    fichaEncontrada = true;
+  } else if (cartera.length) {
+    fichaInmueble = `${fila.referencia} ya no esta en la cartera actual: puede que se haya vendido o ` +
+      'alquilado. Diselo con tacto, sin afirmarlo, y ofrecele parecidos con recomendarSimilares.';
+  } else {
+    fichaInmueble = 'No se ha podido leer la cartera ahora mismo. Si te pregunta por el inmueble, ' +
+      'usa buscarPorReferencia; no inventes nada.';
+  }
+}
 
 const hay = (v) => v !== undefined && v !== null && String(v).trim() !== '';
 const val = (v) => (hay(v) ? String(v).trim() : 'no lo sabemos');
@@ -49,6 +69,10 @@ const lineas = [
   esAlq ? '- OJO: es ALQUILER. No se agenda: preguntas, guardarCualificacion y pasa al equipo.' : '',
 ];
 if (hay(fila.notas)) lineas.push(`- Notas internas: ${fila.notas}`);
+if (fichaInmueble) {
+  lineas.push('', 'FICHA DEL INMUEBLE POR EL QUE PIDIO INFORMACION (datos reales de la cartera; lo que ' +
+    'no este aqui, no lo sabes):', fichaInmueble);
+}
 
 return [{
   json: {
@@ -63,5 +87,6 @@ return [{
     cuenta_id: d.cuenta_id,
     mensaje: d.mensaje,
     preguntas_pendientes: pendientes.map(([k]) => k),
+    ficha_cargada: fichaEncontrada,
   }
 }];

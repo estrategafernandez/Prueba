@@ -1,6 +1,10 @@
 // [WA][SUB] EnviarPlantilla · Normalizar
 // Deja el telefono como lo quiere Meta y la plantilla con su idioma EXACTO.
-const j = $input.first().json || {};
+const j = $('Start').first().json || {};
+// {{2}} es el enlace del anuncio. Si el correo del portal no lo traia, el de la
+// web de Casagencia (sale de wa_cartera, que lo construye con el id del feed).
+const enlaceWeb = String($input.first().json?.enlace ?? '').trim();
+const esUrl = (x) => /^https?:\/\//.test(String(x ?? '').trim());
 const tel = normalizarTelefono(j.telefono);
 const alquiler = esAlquiler(j.referencia, j.operacion);
 const porDefecto = alquiler ? PLANTILLAS.alquiler : PLANTILLAS.compra;
@@ -22,7 +26,8 @@ return [{
     plantilla: plantilla.nombre,
     idioma: plantilla.idioma,
     param1: paramPlantilla(j.param1 || String(j.nombre || '').split(' ')[0] || '\u{1F44B}', 60),
-    param2: paramPlantilla(j.param2 || (j.referencia ? 'ref. ' + j.referencia : 'tu solicitud'), 300),
+    param2: paramPlantilla(esUrl(j.param2) ? j.param2
+      : (enlaceWeb || j.param2 || (j.referencia ? 'ref. ' + j.referencia : 'tu solicitud')), 300),
     conversacion_id: Number(j.conversacion_id || 0),
   }
 }];

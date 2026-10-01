@@ -1,0 +1,635 @@
+{
+ "root": {
+  "property": [
+   {
+    "id": "0526692463",
+    "date": "2026-09-30 07:31:14",
+    "ref": "VR-G-404-V",
+    "price": "245000",
+    "currency": "EUR",
+    "part_ownership": "0",
+    "leasehold": "0",
+    "new_build": "1",
+    "price_freq": "sale",
+    "type": "House",
+    "town": "Sant Joan de Moró",
+    "postcode": "",
+    "province": "Castellón",
+    "location_detail": "Sant Joan de Moró",
+    "location": {
+     "latitude": "40.074722057",
+     "longitude": "-0.1302564286"
+    },
+    "beds": "2",
+    "baths": "2",
+    "pool": "0",
+    "surface_area": {
+     "built": "0",
+     "plot": "264"
+    },
+    "energy_rating": {
+     "consumption": "AVALIACAO",
+     "emissions": ""
+    },
+    "url": {
+     "es": "",
+     "en": "",
+     "fr": "",
+     "de": "",
+     "ru": ""
+    },
+    "desc": {
+     "es": "¡CASAGENCIA INMOBILIARIA VENDE...,,\r\nTu hogar de ensueño a estrenar en San Juan de Moró! Chalet independiente de obra nueva\r\n¿Buscas tranquilidad, modernidad y espacio propio? Descubre esta espectacular vivienda de nueva construcción en una de las zonas con mayor auge y proyección de San Juan de Moró, ubicada en un entorno residencial muy tranquilo y rodeado de nuevas edificaciones. \r\n\r\nEN EL CARRUSEL DE FOTOS PODRA VER FOTOS DEL INMUEBLE VIRTUALES,PARA AYUDARLE A IMAGINAR COMO PODRIA SER ESTA CASA AMUEBLADA Y DECORADA\r\n\r\nEsta fantástica casa está diseñada completamente en una sola planta para ofrecerte el máximo confort, combinando la máxima eficiencia energética gracias a su instalación de placas solares con una distribución inteligente de sus 80 metros cuadrados. El inmueble destaca por su zona de día muy luminosa, que cuenta con una cocina abierta de concepto moderno totalmente integrada al salón comedor, desde el cual se accede directamente al gran jardín privado de la parcela de 264 metros cuadrados, un espacio ideal para disfrutar del aire libre, organizar barbacoas o diseñar tu propio oasis. La zona de noche se compone de dos habitaciones, destacando el dormitorio principal que se convertirá en tu espacio favorito gracias a su acogedora chimenea eléctrica, un baño en suite privado y un vestidor enorme con gran capacidad de almacenaje. Además, la vivienda dispone de un segundo baño completo con acabados actuales para dar servicio al resto de la casa. Todo el inmueble es completamente nuevo a estrenar y destaca por su diseño contemporáneo con suelos de cemento, aportando un toque industrial y minimalista muy elegante que combina a la perfección con el ahorro energético de la vivienda y la alta calidad de sus materiales. Es una oportunidad única de vivir en un hogar sostenible en una zona tranquila que no para de revalorizarse, disfrutando de la comodidad de tenerlo todo en una planta y con total privacidad. ¡No dejes escapar esta oportunidad!\r\n*Cláusula informativa - Publicidad inmobiliaria\r\n* El precio del inmueble no incluye los honorarios de la agencia, que ascienden al 2 % del precio final del inmueble, más el IVA correspondiente (mínimo 2.500€ más IVA ) , ni los gastos de notaría y registro de la propiedad, los cuales están sujetos a los aranceles legalmente establecidos y pueden variar en función del precio de escrituración. Tampoco se incluyen los impuestos aplicables en la Comunitat Valenciana, cuyo importe depende tanto del valor del inmueble como de las circunstancias personales del comprador.\r\n* En Casagencia trabajamos para que toda la información sea lo más clara, transparente y actualizada posible. \r\n#ref:VR-G-404-V",
+     "en": "Your brand new dream home in San Juan de Moró! Detached new build villa\r\nAre you looking for tranquillity, modernity and your own space? Discover this spectacular newly built home in one of the areas with the greatest boom and projection of San Juan de Moró, located in a very quiet residential environment and surrounded by new buildings. \r\n\r\nIN THE PHOTO CAROUSEL YOU CAN SEE VIRTUAL PHOTOS OF THE PROPERTY, TO HELP YOU IMAGINE WHAT THIS FURNISHED AND DECORATED HOUSE COULD LOOK LIKE.\r\n\r\nThis fantastic house is designed entirely on one floor to offer you maximum comfort, combining maximum energy efficiency thanks to its installation of solar panels with an intelligent distribution of its 80 square meters. The property stands out for its very bright day area, which has an open kitchen with a modern concept fully integrated into the living room, from which you can directly access the large private garden of the 264 square meter plot, an ideal space to enjoy the outdoors, organise barbecues or design your own oasis. The night area consists of two bedrooms, highlighting the master bedroom that will become your favourite space thanks to its cosy electric fireplace, a private en-suite bathroom and a huge dressing room with great storage capacity. In addition, the house has a second full bathroom with current finishes to serve the rest of the house. The entire property is brand new and stands out for its contemporary design with cement floors, providing a very elegant industrial and minimalist touch that combines perfectly with the energy savings of the house and the high quality of its materials. It is a unique opportunity to live in a sustainable home in a quiet area that is constantly being revalued, enjoying the comfort of having everything on one floor and with total privacy. Don't miss this opportunity!\r\n*Informative clause - Real estate advertising\r\n* The price of the property does not include the agency fees, which amount to 2% of the final price of the property, plus the corresponding VAT (minimum €2,500 plus VAT), nor the notary and land registry expenses, which are subject to the legally established fees and may vary depending on the price of the deed. Nor are the taxes applicable in the Valencian Community included, the amount of which depends on both the value of the property and the personal circumstances of the buyer.\r\n* At Casagencia we work to ensure that all information is as clear, transparent and up-to-date as possible. \r\n#ref:VR-G-404-V",
+     "de": "Your brand new dream home in San Juan de Moró! Detached new build villa\r\nAre you looking for tranquillity, modernity and your own space? Discover this spectacular newly built home in one of the areas with the greatest boom and projection of San Juan de Moró, located in a very quiet residential environment and surrounded by new buildings. \r\n\r\nIN THE PHOTO CAROUSEL YOU CAN SEE VIRTUAL PHOTOS OF THE PROPERTY, TO HELP YOU IMAGINE WHAT THIS FURNISHED AND DECORATED HOUSE COULD LOOK LIKE.\r\n\r\nThis fantastic house is designed entirely on one floor to offer you maximum comfort, combining maximum energy efficiency thanks to its installation of solar panels with an intelligent distribution of its 80 square meters. The property stands out for its very bright day area, which has an open kitchen with a modern concept fully integrated into the living room, from which you can directly access the large private garden of the 264 square meter plot, an ideal space to enjoy the outdoors, organise barbecues or design your own oasis. The night area consists of two bedrooms, highlighting the master bedroom that will become your favourite space thanks to its cosy electric fireplace, a private en-suite bathroom and a huge dressing room with great storage capacity. In addition, the house has a second full bathroom with current finishes to serve the rest of the house. The entire property is brand new and stands out for its contemporary design with cement floors, providing a very elegant industrial and minimalist touch that combines perfectly with the energy savings of the house and the high quality of its materials. It is a unique opportunity to live in a sustainable home in a quiet area that is constantly being revalued, enjoying the comfort of having everything on one floor and with total privacy. Don't miss this opportunity!\r\n*Informative clause - Real estate advertising\r\n* The price of the property does not include the agency fees, which amount to 2% of the final price of the property, plus the corresponding VAT (minimum €2,500 plus VAT), nor the notary and land registry expenses, which are subject to the legally established fees and may vary depending on the price of the deed. Nor are the taxes applicable in the Valencian Community included, the amount of which depends on both the value of the property and the personal circumstances of the buyer.\r\n* At Casagencia we work to ensure that all information is as clear, transparent and up-to-date as possible. \r\n#ref:VR-G-404-V",
+     "fr": "Votre toute nouvelle maison de rêve à San Juan de Moró ! Villa individuelle neuve\r\nVous cherchez la tranquillité, la modernité et votre propre espace ? Découvrez cette maison neuve spectaculaire dans l'un des quartiers les plus dynamiques et les plus promoteurs de San Juan de Moró, dans un environnement résidentiel très calme et entouré de nouveaux bâtiments. \r\n\r\nDANS LE CARROUSEL PHOTO, VOUS POUVEZ VOIR DES PHOTOS VIRTUELLES DE LA PROPRIÉTÉ, POUR VOUS AIDER À IMAGINER À QUOI POURRAIT RESSEMBLER CETTE MAISON MEUBLÉE ET DÉCORÉE.\r\n\r\nCette maison fantastique est entièrement conçue sur un seul étage pour vous offrir un confort maximal, combinant une efficacité énergétique maximale grâce à l'installation de panneaux solaires à une distribution intelligente de ses 80 mètres carrés. La propriété se distingue par son espace de jour très lumineux, avec une cuisine ouverte au concept moderne entièrement intégré au salon, d'où l'on peut accéder directement au grand jardin privé du terrain de 264 mètres carrés, un espace idéal pour profiter de l'extérieur, organiser des barbecues ou concevoir sa propre oasis. La zone nuit se compose de deux chambres, mettant en valeur la chambre principale qui deviendra votre espace préféré grâce à sa cheminée électrique douillet, une salle de bain privée attenante et un immense vestiaire avec une grande capacité de rangement. De plus, la maison dispose d'une seconde salle de bain complète aux finitions actuelles pour desservir le reste de la maison. L'ensemble de la propriété est neuf et se distingue par son design contemporain avec des sols en ciment, offrant une touche industrielle et minimaliste très élégante qui s'harmonise parfaitement avec les économies d'énergie de la maison et la haute qualité de ses matériaux. C'est une opportunité unique de vivre dans une maison durable dans un quartier calme qui est constamment revalorisé, en profitant du confort d'avoir tout au même étage et avec une intimité totale. Ne manquez pas cette opportunité ! \r\n*Clause informative - Publicité immobilière\r\n* Le prix du bien n'inclut pas les frais d'agence, qui représentent 2 % du prix final du bien, plus la TVA correspondante (minimum 2 500 € plus TVA), ni les frais de notaire et d'acte foncier, qui sont soumis aux frais légalement établis et peuvent varier selon le prix de l'acte. Les taxes ne sont pas non plus applicables dans la Communauté valencienne, dont le montant dépend à la fois de la valeur du bien et des circonstances personnelles de l'acheteur. \r\n* Chez Casaja, nous travaillons à ce que toutes les informations soient aussi claires, transparentes et à jour que possible. \r\n#ref:VR-G-404-V",
+     "ru": "Your brand new dream home in San Juan de Moró! Detached new build villa\r\nAre you looking for tranquillity, modernity and your own space? Discover this spectacular newly built home in one of the areas with the greatest boom and projection of San Juan de Moró, located in a very quiet residential environment and surrounded by new buildings. \r\n\r\nIN THE PHOTO CAROUSEL YOU CAN SEE VIRTUAL PHOTOS OF THE PROPERTY, TO HELP YOU IMAGINE WHAT THIS FURNISHED AND DECORATED HOUSE COULD LOOK LIKE.\r\n\r\nThis fantastic house is designed entirely on one floor to offer you maximum comfort, combining maximum energy efficiency thanks to its installation of solar panels with an intelligent distribution of its 80 square meters. The property stands out for its very bright day area, which has an open kitchen with a modern concept fully integrated into the living room, from which you can directly access the large private garden of the 264 square meter plot, an ideal space to enjoy the outdoors, organise barbecues or design your own oasis. The night area consists of two bedrooms, highlighting the master bedroom that will become your favourite space thanks to its cosy electric fireplace, a private en-suite bathroom and a huge dressing room with great storage capacity. In addition, the house has a second full bathroom with current finishes to serve the rest of the house. The entire property is brand new and stands out for its contemporary design with cement floors, providing a very elegant industrial and minimalist touch that combines perfectly with the energy savings of the house and the high quality of its materials. It is a unique opportunity to live in a sustainable home in a quiet area that is constantly being revalued, enjoying the comfort of having everything on one floor and with total privacy. Don't miss this opportunity!\r\n*Informative clause - Real estate advertising\r\n* The price of the property does not include the agency fees, which amount to 2% of the final price of the property, plus the corresponding VAT (minimum €2,500 plus VAT), nor the notary and land registry expenses, which are subject to the legally established fees and may vary depending on the price of the deed. Nor are the taxes applicable in the Valencian Community included, the amount of which depends on both the value of the property and the personal circumstances of the buyer.\r\n* At Casagencia we work to ensure that all information is as clear, transparent and up-to-date as possible. \r\n#ref:VR-G-404-V",
+     "ca": "¡CASAGENCIA INMOBILIARIA VENDE...,,\r\nTu hogar de ensueño a estrenar en San Juan de Moró! Chalet independiente de obra nueva\r\n¿Buscas tranquilidad, modernidad y espacio propio? Descubre esta espectacular vivienda de nueva construcción en una de las zonas con mayor auge y proyección de San Juan de Moró, ubicada en un entorno residencial muy tranquilo y rodeado de nuevas edificaciones. \r\n\r\nEN EL CARRUSEL DE FOTOS PODRA VER FOTOS DEL INMUEBLE VIRTUALES,PARA AYUDARLE A IMAGINAR COMO PODRIA SER ESTA CASA AMUEBLADA Y DECORADA\r\n\r\nEsta fantástica casa está diseñada completamente en una sola planta para ofrecerte el máximo confort, combinando la máxima eficiencia energética gracias a su instalación de placas solares con una distribución inteligente de sus 80 metros cuadrados. El inmueble destaca por su zona de día muy luminosa, que cuenta con una cocina abierta de concepto moderno totalmente integrada al salón comedor, desde el cual se accede directamente al gran jardín privado de la parcela de 264 metros cuadrados, un espacio ideal para disfrutar del aire libre, organizar barbacoas o diseñar tu propio oasis. La zona de noche se compone de dos habitaciones, destacando el dormitorio principal que se convertirá en tu espacio favorito gracias a su acogedora chimenea eléctrica, un baño en suite privado y un vestidor enorme con gran capacidad de almacenaje. Además, la vivienda dispone de un segundo baño completo con acabados actuales para dar servicio al resto de la casa. Todo el inmueble es completamente nuevo a estrenar y destaca por su diseño contemporáneo con suelos de cemento, aportando un toque industrial y minimalista muy elegante que combina a la perfección con el ahorro energético de la vivienda y la alta calidad de sus materiales. Es una oportunidad única de vivir en un hogar sostenible en una zona tranquila que no para de revalorizarse, disfrutando de la comodidad de tenerlo todo en una planta y con total privacidad. ¡No dejes escapar esta oportunidad!\r\n*Cláusula informativa - Publicidad inmobiliaria\r\n* El precio del inmueble no incluye los honorarios de la agencia, que ascienden al 2 % del precio final del inmueble, más el IVA correspondiente (mínimo 2.500€ más IVA ) , ni los gastos de notaría y registro de la propiedad, los cuales están sujetos a los aranceles legalmente establecidos y pueden variar en función del precio de escrituración. Tampoco se incluyen los impuestos aplicables en la Comunitat Valenciana, cuyo importe depende tanto del valor del inmueble como de las circunstancias personales del comprador.\r\n* En Casagencia trabajamos para que toda la información sea lo más clara, transparente y actualizada posible. \r\n#ref:VR-G-404-V",
+     "nl": "Your brand new dream home in San Juan de Moró! Detached new build villa\r\nAre you looking for tranquillity, modernity and your own space? Discover this spectacular newly built home in one of the areas with the greatest boom and projection of San Juan de Moró, located in a very quiet residential environment and surrounded by new buildings. \r\n\r\nIN THE PHOTO CAROUSEL YOU CAN SEE VIRTUAL PHOTOS OF THE PROPERTY, TO HELP YOU IMAGINE WHAT THIS FURNISHED AND DECORATED HOUSE COULD LOOK LIKE.\r\n\r\nThis fantastic house is designed entirely on one floor to offer you maximum comfort, combining maximum energy efficiency thanks to its installation of solar panels with an intelligent distribution of its 80 square meters. The property stands out for its very bright day area, which has an open kitchen with a modern concept fully integrated into the living room, from which you can directly access the large private garden of the 264 square meter plot, an ideal space to enjoy the outdoors, organise barbecues or design your own oasis. The night area consists of two bedrooms, highlighting the master bedroom that will become your favourite space thanks to its cosy electric fireplace, a private en-suite bathroom and a huge dressing room with great storage capacity. In addition, the house has a second full bathroom with current finishes to serve the rest of the house. The entire property is brand new and stands out for its contemporary design with cement floors, providing a very elegant industrial and minimalist touch that combines perfectly with the energy savings of the house and the high quality of its materials. It is a unique opportunity to live in a sustainable home in a quiet area that is constantly being revalued, enjoying the comfort of having everything on one floor and with total privacy. Don't miss this opportunity!\r\n*Informative clause - Real estate advertising\r\n* The price of the property does not include the agency fees, which amount to 2% of the final price of the property, plus the corresponding VAT (minimum €2,500 plus VAT), nor the notary and land registry expenses, which are subject to the legally established fees and may vary depending on the price of the deed. Nor are the taxes applicable in the Valencian Community included, the amount of which depends on both the value of the property and the personal circumstances of the buyer.\r\n* At Casagencia we work to ensure that all information is as clear, transparent and up-to-date as possible. \r\n#ref:VR-G-404-V"
+    },
+    "features": {
+     "feature": [
+      "2 bathrooms",
+      "2 bedrooms",
+      "2 number of floors",
+      "highway",
+      "pharmacy",
+      "green areas",
+      "police",
+      "public transport",
+      "solar panels",
+      "excellent condition",
+      "outdoor building",
+      "264.00 land area",
+      "90.00 gross area",
+      "1 garage"
+     ]
+    },
+    "notes": "",
+    "images": {
+     "image": [
+      {
+       "id": "262353015",
+       "url": "https://feedmedia.egorealestate.com/Zfeed/S5/C4338/P31028922/Tphoto/IDba76d901-0000-0500-0000-00001a7f4e85.jpg"
+      },
+      {
+       "id": "262353007",
+       "url": "https://feedmedia.egorealestate.com/Zfeed/S5/C4338/P31028922/Tphoto/IDba76d901-0000-0500-0000-00001a7f45f2.jpg"
+      },
+      {
+       "id": "262353008",
+       "url": "https://feedmedia.egorealestate.com/Zfeed/S5/C4338/P31028922/Tphoto/IDba76d901-0000-0500-0000-00001a7f45fb.jpg"
+      },
+      {
+       "id": "262353010",
+       "url": "https://feedmedia.egorealestate.com/Zfeed/S5/C4338/P31028922/Tphoto/IDba76d901-0000-0500-0000-00001a7f4605.jpg"
+      },
+      {
+       "id": "262353009",
+       "url": "https://feedmedia.egorealestate.com/Zfeed/S5/C4338/P31028922/Tphoto/IDba76d901-0000-0500-0000-00001a7f45fe.jpg"
+      },
+      {
+       "id": "262352989",
+       "url": "https://feedmedia.egorealestate.com/Zfeed/S5/C4338/P31028922/Tphoto/IDba76d901-0000-0500-0000-00001a7f45a7.jpg"
+      },
+      {
+       "id": "262353017",
+       "url": "https://feedmedia.egorealestate.com/Zfeed/S5/C4338/P31028922/Tphoto/IDba76d901-0000-0500-0000-00001a7f4e88.jpg"
+      },
+      {
+       "id": "262353016",
+       "url": "https://feedmedia.egorealestate.com/Zfeed/S5/C4338/P31028922/Tphoto/IDba76d901-0000-0500-0000-00001a7f4e87.jpg"
+      },
+      {
+       "id": "262353001",
+       "url": "https://feedmedia.egorealestate.com/Zfeed/S5/C4338/P31028922/Tphoto/IDba76d901-0000-0500-0000-00001a7f45cd.jpg"
+      },
+      {
+       "id": "262353004",
+       "url": "https://feedmedia.egorealestate.com/Zfeed/S5/C4338/P31028922/Tphoto/IDba76d901-0000-0500-0000-00001a7f45e6.jpg"
+      },
+      {
+       "id": "262352991",
+       "url": "https://feedmedia.egorealestate.com/Zfeed/S5/C4338/P31028922/Tphoto/IDba76d901-0000-0500-0000-00001a7f45aa.jpg"
+      },
+      {
+       "id": "262353013",
+       "url": "https://feedmedia.egorealestate.com/Zfeed/S5/C4338/P31028922/Tphoto/IDba76d901-0000-0500-0000-00001a7f460f.jpg"
+      },
+      {
+       "id": "262353005",
+       "url": "https://feedmedia.egorealestate.com/Zfeed/S5/C4338/P31028922/Tphoto/IDba76d901-0000-0500-0000-00001a7f45ee.jpg"
+      },
+      {
+       "id": "262352990",
+       "url": "https://feedmedia.egorealestate.com/Zfeed/S5/C4338/P31028922/Tphoto/IDba76d901-0000-0500-0000-00001a7f45a9.jpg"
+      },
+      {
+       "id": "262353018",
+       "url": "https://feedmedia.egorealestate.com/Zfeed/S5/C4338/P31028922/Tphoto/IDba76d901-0000-0500-0000-00001a7f4e8b.jpg"
+      },
+      {
+       "id": "262352992",
+       "url": "https://feedmedia.egorealestate.com/Zfeed/S5/C4338/P31028922/Tphoto/IDba76d901-0000-0500-0000-00001a7f45ab.jpg"
+      },
+      {
+       "id": "262352993",
+       "url": "https://feedmedia.egorealestate.com/Zfeed/S5/C4338/P31028922/Tphoto/IDba76d901-0000-0500-0000-00001a7f45ad.jpg"
+      },
+      {
+       "id": "262352994",
+       "url": "https://feedmedia.egorealestate.com/Zfeed/S5/C4338/P31028922/Tphoto/IDba76d901-0000-0500-0000-00001a7f45af.jpg"
+      },
+      {
+       "id": "262352995",
+       "url": "https://feedmedia.egorealestate.com/Zfeed/S5/C4338/P31028922/Tphoto/IDba76d901-0000-0500-0000-00001a7f45b1.jpg"
+      },
+      {
+       "id": "262352996",
+       "url": "https://feedmedia.egorealestate.com/Zfeed/S5/C4338/P31028922/Tphoto/IDba76d901-0000-0500-0000-00001a7f45b3.jpg"
+      },
+      {
+       "id": "262352997",
+       "url": "https://feedmedia.egorealestate.com/Zfeed/S5/C4338/P31028922/Tphoto/IDba76d901-0000-0500-0000-00001a7f45b4.jpg"
+      },
+      {
+       "id": "262352998",
+       "url": "https://feedmedia.egorealestate.com/Zfeed/S5/C4338/P31028922/Tphoto/IDba76d901-0000-0500-0000-00001a7f45b6.jpg"
+      },
+      {
+       "id": "262352999",
+       "url": "https://feedmedia.egorealestate.com/Zfeed/S5/C4338/P31028922/Tphoto/IDba76d901-0000-0500-0000-00001a7f45c2.jpg"
+      },
+      {
+       "id": "262353000",
+       "url": "https://feedmedia.egorealestate.com/Zfeed/S5/C4338/P31028922/Tphoto/IDba76d901-0000-0500-0000-00001a7f45ca.jpg"
+      },
+      {
+       "id": "262353002",
+       "url": "https://feedmedia.egorealestate.com/Zfeed/S5/C4338/P31028922/Tphoto/IDba76d901-0000-0500-0000-00001a7f45d8.jpg"
+      },
+      {
+       "id": "262353003",
+       "url": "https://feedmedia.egorealestate.com/Zfeed/S5/C4338/P31028922/Tphoto/IDba76d901-0000-0500-0000-00001a7f45db.jpg"
+      },
+      {
+       "id": "262353006",
+       "url": "https://feedmedia.egorealestate.com/Zfeed/S5/C4338/P31028922/Tphoto/IDba76d901-0000-0500-0000-00001a7f45f0.jpg"
+      },
+      {
+       "id": "262353011",
+       "url": "https://feedmedia.egorealestate.com/Zfeed/S5/C4338/P31028922/Tphoto/IDba76d901-0000-0500-0000-00001a7f4609.jpg"
+      },
+      {
+       "id": "262353012",
+       "url": "https://feedmedia.egorealestate.com/Zfeed/S5/C4338/P31028922/Tphoto/IDba76d901-0000-0500-0000-00001a7f460b.jpg"
+      },
+      {
+       "id": "262353014",
+       "url": "https://feedmedia.egorealestate.com/Zfeed/S5/C4338/P31028922/Tphoto/IDba76d901-0000-0500-0000-00001a7f499f.jpg"
+      },
+      {
+       "id": "262353019",
+       "url": "https://feedmedia.egorealestate.com/Zfeed/S5/C4338/P31028922/Tphoto/IDba76d901-0000-0500-0000-00001a7f4e8d.jpg"
+      },
+      {
+       "id": "262630222",
+       "url": "https://feedmedia.egorealestate.com/Zfeed/S5/C4338/P31028922/Tphoto/IDba76d901-0000-0500-0000-00001a841fd9.jpg"
+      }
+     ]
+    },
+    "video_url": "https://www.youtube.com/v/cJ9bkddQcJ8?rel=0",
+    "virtual_tour_url": ""
+   },
+   {
+    "id": "0525370429",
+    "date": "2026-09-29 09:29:51",
+    "ref": "BN-1528-V",
+    "price": "259000",
+    "currency": "EUR",
+    "part_ownership": "0",
+    "leasehold": "0",
+    "new_build": "0",
+    "price_freq": "sale",
+    "type": "Flat",
+    "town": "Benicasim / Benicàssim",
+    "postcode": "",
+    "province": "Castellón",
+    "location_detail": "Pueblo",
+    "location": {
+     "latitude": "40.053718787",
+     "longitude": "0.059706105"
+    },
+    "beds": "3",
+    "baths": "2",
+    "pool": "0",
+    "surface_area": {
+     "built": "0",
+     "plot": "0"
+    },
+    "energy_rating": {
+     "consumption": "E",
+     "emissions": "E"
+    },
+    "url": {
+     "es": "",
+     "en": "",
+     "fr": "",
+     "de": "",
+     "ru": ""
+    },
+    "desc": {
+     "es": "CASAGENCIA INMOBILIARIA presenta una de esas viviendas que cada vez aparecen menos en Benicàssim.\r\nUn piso amplio, elegante y lleno de luz, pensado para vivirlo y disfrutarlo.\r\nAl entrar, la sensación de espacio es inmediata. El suelo de parquet aporta calidez y continuidad a toda la vivienda, mientras los balcones permiten que la luz natural acompañe salón y habitación principal.\r\nLa distribución es cómoda y equilibrada: tres habitaciones dobles con armarios, pensadas para descansar, trabajar o simplemente tener el espacio que hoy todos buscamos.\r\nLa vivienda cuenta con dos baños completos: el principal con ducha, y el segundo con bañera, práctico y funcional para el día a día.\r\n\r\nAdemás, la propiedad incluye plaza de parking y trastero, un valor añadido muy apreciado en Benicàssim.\r\nUn piso que reúne espacio, estilo y comodidad, difícil de encontrar hoy en el mercado.\r\n\r\nPara más información o concertar una visita, contacta con CASAGENCIA INMOBILIARIA.\r\n*\r\nCláusula informativa - Publicidad inmobiliaria\r\n\tEl precio del inmueble no incluye los honorarios de la agencia, que ascienden al 2 % del precio final del inmueble, más el IVA correspondiente (mínimo 2.500€ más iva ) , ni los gastos de notaría y registro de la propiedad, los cuales están sujetos a los aranceles legalmente establecidos y pueden variar en función del precio de escrituración. Tampoco se incluyen los impuestos aplicables en la Comunitat Valenciana, cuyo importe depende tanto del valor del inmueble como de las circunstancias personales del comprador.\r\n\tEn Casagencia trabajamos para que toda la información sea lo más clara, transparente y actualizada posible. \r\n#ref:BN-1528-V",
+     "en": "CASAGENCIA INMOBILIARIA presents one of those homes that appear less and less in Benicàssim.\r\nA spacious, elegant and light-filled flat, designed to be lived in and enjoyed.\r\nUpon entering, the feeling of space is immediate. The parquet floor brings warmth and continuity to the entire house, while the balconies allow natural light to accompany the living room and master bedroom.\r\nThe distribution is comfortable and balanced: three double bedrooms with wardrobes, designed to rest, work or simply have the space we are all looking for today.\r\nThe house has two full bathrooms: the main one with a shower, and the second with a bathtub, practical and functional for day to day.\r\n\r\nIn addition, the property includes a parking space and storage room, an added value that is highly appreciated in Benicàssim.\r\nA flat that combines space, style and comfort, difficult to find on the market today.\r\n\r\nFor more information or to arrange a visit, contact CASAGENCIA INMOBILIARIA.\r\n*\r\nInformative clause - Real estate advertising\r\n The price of the property does not include the agency's fees, which amount to 2% of the final price of the property, plus the corresponding VAT (minimum €2,500 plus VAT), nor the notary and land registry fees, which are subject to the legally established fees and may vary depending on the price of the deed. Nor are the taxes applicable in the Valencian Community included, the amount of which depends on both the value of the property and the personal circumstances of the buyer.\r\n At Casagencia we work to ensure that all information is as clear, transparent and up-to-date as possible. \r\n#ref:BN-1528-V",
+     "de": "CASAGENCIA INMOBILIARIA presents one of those homes that appear less and less in Benicàssim.\r\nA spacious, elegant and light-filled flat, designed to be lived in and enjoyed.\r\nUpon entering, the feeling of space is immediate. The parquet floor brings warmth and continuity to the entire house, while the balconies allow natural light to accompany the living room and master bedroom.\r\nThe distribution is comfortable and balanced: three double bedrooms with wardrobes, designed to rest, work or simply have the space we are all looking for today.\r\nThe house has two full bathrooms: the main one with a shower, and the second with a bathtub, practical and functional for day to day.\r\n\r\nIn addition, the property includes a parking space and storage room, an added value that is highly appreciated in Benicàssim.\r\nA flat that combines space, style and comfort, difficult to find on the market today.\r\n\r\nFor more information or to arrange a visit, contact CASAGENCIA INMOBILIARIA.\r\n*\r\nInformative clause - Real estate advertising\r\n The price of the property does not include the agency's fees, which amount to 2% of the final price of the property, plus the corresponding VAT (minimum €2,500 plus VAT), nor the notary and land registry fees, which are subject to the legally established fees and may vary depending on the price of the deed. Nor are the taxes applicable in the Valencian Community included, the amount of which depends on both the value of the property and the personal circumstances of the buyer.\r\n At Casagencia we work to ensure that all information is as clear, transparent and up-to-date as possible. \r\n#ref:BN-1528-V",
+     "fr": "CASAGENCIA INMOBILIARIA présente l'un de ces foyers qui apparaissent de moins en moins à Benicàssim.\r\nUn appartement spacieux, élégant et lumineux, conçu pour être habité et apprécié.\r\nEn entrant, la sensation d'espace est immédiate. Le parquet apporte chaleur et continuité à toute la maison, tandis que les balcons laissent entrer la lumière naturelle dans le salon et la chambre principale.\r\nLa distribution est confortable et équilibrée : trois chambres doubles avec armards, conçues pour se reposer, travailler ou simplement avoir l'espace que nous recherchons tous aujourd'hui.\r\nLa maison dispose de deux salles de bains complètes : la principale avec douche, et la seconde avec une baignoire, pratique et fonctionnelle au quotidien.\r\n\r\nDe plus, la propriété comprend un parking et une salle de stockage, une valeur ajoutée très appréciée à Benicàssim.\r\nUn appartement qui allie espace, style et confort, difficile à trouver sur le marché aujourd'hui.\r\n\r\nPour plus d'informations ou pour organiser une visite, contactez CASAGENCIA INMOBILIARIA.\r\n*\r\nClause informative - Publicité immobilière\r\n Le prix du bien n'inclut pas les honoraires de l'agence, qui représentent 2 % du prix final du bien, plus la TVA correspondante (minimum 2 500 € plus TVA), ni les frais de notaire et d'enregistrement, qui sont soumis aux frais légalement établis et peuvent varier selon le prix de l'acte. Les taxes applicables dans la Communauté valencienne ne sont pas non plus incluses, dont le montant dépend à la fois de la valeur du bien et des circonstances personnelles de l'acheteur.\r\n Chez Casagencia, nous travaillons à garantir que toutes les informations soient aussi claires, transparentes et à jour que possible. \r\n#ref:BN-1528-V",
+     "ru": "CASAGENCIA INMOBILIARIA presents one of those homes that appear less and less in Benicàssim.\r\nA spacious, elegant and light-filled flat, designed to be lived in and enjoyed.\r\nUpon entering, the feeling of space is immediate. The parquet floor brings warmth and continuity to the entire house, while the balconies allow natural light to accompany the living room and master bedroom.\r\nThe distribution is comfortable and balanced: three double bedrooms with wardrobes, designed to rest, work or simply have the space we are all looking for today.\r\nThe house has two full bathrooms: the main one with a shower, and the second with a bathtub, practical and functional for day to day.\r\n\r\nIn addition, the property includes a parking space and storage room, an added value that is highly appreciated in Benicàssim.\r\nA flat that combines space, style and comfort, difficult to find on the market today.\r\n\r\nFor more information or to arrange a visit, contact CASAGENCIA INMOBILIARIA.\r\n*\r\nInformative clause - Real estate advertising\r\n The price of the property does not include the agency's fees, which amount to 2% of the final price of the property, plus the corresponding VAT (minimum €2,500 plus VAT), nor the notary and land registry fees, which are subject to the legally established fees and may vary depending on the price of the deed. Nor are the taxes applicable in the Valencian Community included, the amount of which depends on both the value of the property and the personal circumstances of the buyer.\r\n At Casagencia we work to ensure that all information is as clear, transparent and up-to-date as possible. \r\n#ref:BN-1528-V",
+     "ca": "CASAGENCIA INMOBILIARIA presenta una de esas viviendas que cada vez aparecen menos en Benicàssim.\r\nUn piso amplio, elegante y lleno de luz, pensado para vivirlo y disfrutarlo.\r\nAl entrar, la sensación de espacio es inmediata. El suelo de parquet aporta calidez y continuidad a toda la vivienda, mientras los balcones permiten que la luz natural acompañe salón y habitación principal.\r\nLa distribución es cómoda y equilibrada: tres habitaciones dobles con armarios, pensadas para descansar, trabajar o simplemente tener el espacio que hoy todos buscamos.\r\nLa vivienda cuenta con dos baños completos: el principal con ducha, y el segundo con bañera, práctico y funcional para el día a día.\r\n\r\nAdemás, la propiedad incluye plaza de parking y trastero, un valor añadido muy apreciado en Benicàssim.\r\nUn piso que reúne espacio, estilo y comodidad, difícil de encontrar hoy en el mercado.\r\n\r\nPara más información o concertar una visita, contacta con CASAGENCIA INMOBILIARIA.\r\n*\r\nCláusula informativa - Publicidad inmobiliaria\r\n\tEl precio del inmueble no incluye los honorarios de la agencia, que ascienden al 2 % del precio final del inmueble, más el IVA correspondiente (mínimo 2.500€ más iva ) , ni los gastos de notaría y registro de la propiedad, los cuales están sujetos a los aranceles legalmente establecidos y pueden variar en función del precio de escrituración. Tampoco se incluyen los impuestos aplicables en la Comunitat Valenciana, cuyo importe depende tanto del valor del inmueble como de las circunstancias personales del comprador.\r\n\tEn Casagencia trabajamos para que toda la información sea lo más clara, transparente y actualizada posible. \r\n#ref:BN-1528-V",
+     "nl": "CASAGENCIA INMOBILIARIA presents one of those homes that appear less and less in Benicàssim.\r\nA spacious, elegant and light-filled flat, designed to be lived in and enjoyed.\r\nUpon entering, the feeling of space is immediate. The parquet floor brings warmth and continuity to the entire house, while the balconies allow natural light to accompany the living room and master bedroom.\r\nThe distribution is comfortable and balanced: three double bedrooms with wardrobes, designed to rest, work or simply have the space we are all looking for today.\r\nThe house has two full bathrooms: the main one with a shower, and the second with a bathtub, practical and functional for day to day.\r\n\r\nIn addition, the property includes a parking space and storage room, an added value that is highly appreciated in Benicàssim.\r\nA flat that combines space, style and comfort, difficult to find on the market today.\r\n\r\nFor more information or to arrange a visit, contact CASAGENCIA INMOBILIARIA.\r\n*\r\nInformative clause - Real estate advertising\r\n The price of the property does not include the agency's fees, which amount to 2% of the final price of the property, plus the corresponding VAT (minimum €2,500 plus VAT), nor the notary and land registry fees, which are subject to the legally established fees and may vary depending on the price of the deed. Nor are the taxes applicable in the Valencian Community included, the amount of which depends on both the value of the property and the personal circumstances of the buyer.\r\n At Casagencia we work to ensure that all information is as clear, transparent and up-to-date as possible. \r\n#ref:BN-1528-V"
+    },
+    "features": {
+     "feature": [
+      "2 bathrooms",
+      "3 bedrooms",
+      "1 number of floors",
+      "highway",
+      "city center",
+      "supermarket",
+      "school",
+      "pharmacy",
+      "green areas",
+      "police",
+      "public transport",
+      "1 lift",
+      "2 floor",
+      "good condition",
+      "2004-03-03 construction ended",
+      "outdoor building",
+      "103.00 gross area",
+      "1 garage"
+     ]
+    },
+    "notes": "",
+    "images": {
+     "image": [
+      {
+       "id": "237648460",
+       "url": "https://feedmedia.egorealestate.com/Zfeed/S5/C4338/P29567768/Tphoto/ID182bc301-0000-0500-0000-000018d3c3b8.jpg"
+      },
+      {
+       "id": "235238160",
+       "url": "https://feedmedia.egorealestate.com/Zfeed/S5/C4338/P29567768/Tphoto/ID182bc301-0000-0500-0000-000018a9a337.jpg"
+      },
+      {
+       "id": "235238159",
+       "url": "https://feedmedia.egorealestate.com/Zfeed/S5/C4338/P29567768/Tphoto/ID182bc301-0000-0500-0000-000018a9a336.jpg"
+      },
+      {
+       "id": "235238161",
+       "url": "https://feedmedia.egorealestate.com/Zfeed/S5/C4338/P29567768/Tphoto/ID182bc301-0000-0500-0000-000018a9a338.jpg"
+      },
+      {
+       "id": "235238162",
+       "url": "https://feedmedia.egorealestate.com/Zfeed/S5/C4338/P29567768/Tphoto/ID182bc301-0000-0500-0000-000018a9a339.jpg"
+      },
+      {
+       "id": "235238163",
+       "url": "https://feedmedia.egorealestate.com/Zfeed/S5/C4338/P29567768/Tphoto/ID182bc301-0000-0500-0000-000018a9a33a.jpg"
+      },
+      {
+       "id": "235238164",
+       "url": "https://feedmedia.egorealestate.com/Zfeed/S5/C4338/P29567768/Tphoto/ID182bc301-0000-0500-0000-000018a9a33b.jpg"
+      },
+      {
+       "id": "235238165",
+       "url": "https://feedmedia.egorealestate.com/Zfeed/S5/C4338/P29567768/Tphoto/ID182bc301-0000-0500-0000-000018a9a33c.jpg"
+      },
+      {
+       "id": "235238166",
+       "url": "https://feedmedia.egorealestate.com/Zfeed/S5/C4338/P29567768/Tphoto/ID182bc301-0000-0500-0000-000018a9a33d.jpg"
+      },
+      {
+       "id": "235238167",
+       "url": "https://feedmedia.egorealestate.com/Zfeed/S5/C4338/P29567768/Tphoto/ID182bc301-0000-0500-0000-000018a9a33e.jpg"
+      },
+      {
+       "id": "235238168",
+       "url": "https://feedmedia.egorealestate.com/Zfeed/S5/C4338/P29567768/Tphoto/ID182bc301-0000-0500-0000-000018a9a33f.jpg"
+      },
+      {
+       "id": "235238169",
+       "url": "https://feedmedia.egorealestate.com/Zfeed/S5/C4338/P29567768/Tphoto/ID182bc301-0000-0500-0000-000018a9a340.jpg"
+      },
+      {
+       "id": "235238170",
+       "url": "https://feedmedia.egorealestate.com/Zfeed/S5/C4338/P29567768/Tphoto/ID182bc301-0000-0500-0000-000018a9a342.jpg"
+      },
+      {
+       "id": "235238171",
+       "url": "https://feedmedia.egorealestate.com/Zfeed/S5/C4338/P29567768/Tphoto/ID182bc301-0000-0500-0000-000018a9a343.jpg"
+      },
+      {
+       "id": "235238172",
+       "url": "https://feedmedia.egorealestate.com/Zfeed/S5/C4338/P29567768/Tphoto/ID182bc301-0000-0500-0000-000018a9a344.jpg"
+      },
+      {
+       "id": "235238173",
+       "url": "https://feedmedia.egorealestate.com/Zfeed/S5/C4338/P29567768/Tphoto/ID182bc301-0000-0500-0000-000018a9a345.jpg"
+      },
+      {
+       "id": "235238174",
+       "url": "https://feedmedia.egorealestate.com/Zfeed/S5/C4338/P29567768/Tphoto/ID182bc301-0000-0500-0000-000018a9a346.jpg"
+      },
+      {
+       "id": "235238175",
+       "url": "https://feedmedia.egorealestate.com/Zfeed/S5/C4338/P29567768/Tphoto/ID182bc301-0000-0500-0000-000018a9a347.jpg"
+      },
+      {
+       "id": "235238176",
+       "url": "https://feedmedia.egorealestate.com/Zfeed/S5/C4338/P29567768/Tphoto/ID182bc301-0000-0500-0000-000018a9a348.jpg"
+      },
+      {
+       "id": "235238177",
+       "url": "https://feedmedia.egorealestate.com/Zfeed/S5/C4338/P29567768/Tphoto/ID182bc301-0000-0500-0000-000018a9a349.jpg"
+      },
+      {
+       "id": "235238183",
+       "url": "https://feedmedia.egorealestate.com/Zfeed/S5/C4338/P29567768/Tphoto/ID182bc301-0000-0500-0000-000018a9a350.jpg"
+      },
+      {
+       "id": "235238184",
+       "url": "https://feedmedia.egorealestate.com/Zfeed/S5/C4338/P29567768/Tphoto/ID182bc301-0000-0500-0000-000018a9a351.jpg"
+      },
+      {
+       "id": "235238178",
+       "url": "https://feedmedia.egorealestate.com/Zfeed/S5/C4338/P29567768/Tphoto/ID182bc301-0000-0500-0000-000018a9a34a.jpg"
+      },
+      {
+       "id": "235238179",
+       "url": "https://feedmedia.egorealestate.com/Zfeed/S5/C4338/P29567768/Tphoto/ID182bc301-0000-0500-0000-000018a9a34b.jpg"
+      },
+      {
+       "id": "235238180",
+       "url": "https://feedmedia.egorealestate.com/Zfeed/S5/C4338/P29567768/Tphoto/ID182bc301-0000-0500-0000-000018a9a34c.jpg"
+      },
+      {
+       "id": "235238182",
+       "url": "https://feedmedia.egorealestate.com/Zfeed/S5/C4338/P29567768/Tphoto/ID182bc301-0000-0500-0000-000018a9a34f.jpg"
+      },
+      {
+       "id": "235238181",
+       "url": "https://feedmedia.egorealestate.com/Zfeed/S5/C4338/P29567768/Tphoto/ID182bc301-0000-0500-0000-000018a9a34d.jpg"
+      },
+      {
+       "id": "235238185",
+       "url": "https://feedmedia.egorealestate.com/Zfeed/S5/C4338/P29567768/Tphoto/ID182bc301-0000-0500-0000-000018a9a352.jpg"
+      },
+      {
+       "id": "235238186",
+       "url": "https://feedmedia.egorealestate.com/Zfeed/S5/C4338/P29567768/Tphoto/ID182bc301-0000-0500-0000-000018a9a354.jpg"
+      },
+      {
+       "id": "235238187",
+       "url": "https://feedmedia.egorealestate.com/Zfeed/S5/C4338/P29567768/Tphoto/ID182bc301-0000-0500-0000-000018a9a35c.jpg"
+      },
+      {
+       "id": "235238188",
+       "url": "https://feedmedia.egorealestate.com/Zfeed/S5/C4338/P29567768/Tphoto/ID182bc301-0000-0500-0000-000018a9a36b.jpg"
+      },
+      {
+       "id": "235238189",
+       "url": "https://feedmedia.egorealestate.com/Zfeed/S5/C4338/P29567768/Tphoto/ID182bc301-0000-0500-0000-000018a9a36f.jpg"
+      },
+      {
+       "id": "235238190",
+       "url": "https://feedmedia.egorealestate.com/Zfeed/S5/C4338/P29567768/Tphoto/ID182bc301-0000-0500-0000-000018a9a373.jpg"
+      },
+      {
+       "id": "235238191",
+       "url": "https://feedmedia.egorealestate.com/Zfeed/S5/C4338/P29567768/Tphoto/ID182bc301-0000-0500-0000-000018a9a377.jpg"
+      },
+      {
+       "id": "235238192",
+       "url": "https://feedmedia.egorealestate.com/Zfeed/S5/C4338/P29567768/Tphoto/ID182bc301-0000-0500-0000-000018a9a37a.jpg"
+      },
+      {
+       "id": "252319964",
+       "url": "https://feedmedia.egorealestate.com/Zfeed/S5/C4338/P29567768/Tphoto/ID182bc301-0000-0500-0000-000019d36abe.jpg"
+      }
+     ]
+    },
+    "video_url": "https://www.youtube.com/v/VJ4Q2l5fRQI?rel=0",
+    "virtual_tour_url": ""
+   },
+   {
+    "id": "0526438029",
+    "date": "2026-08-17 15:13:06",
+    "ref": "CS-1552-A",
+    "price": "1850",
+    "currency": "EUR",
+    "part_ownership": "0",
+    "leasehold": "0",
+    "new_build": "0",
+    "price_freq": "month",
+    "type": "Flat",
+    "town": "Castellón de la Plana / Castelló de la Plana",
+    "postcode": "",
+    "province": "Castellón",
+    "location_detail": "Centro",
+    "location": {
+     "latitude": "39.986165815",
+     "longitude": "-0.035110732"
+    },
+    "beds": "3",
+    "baths": "2",
+    "pool": "0",
+    "surface_area": {
+     "built": "0",
+     "plot": "0"
+    },
+    "energy_rating": {
+     "consumption": "AVALIACAO",
+     "emissions": ""
+    },
+    "url": {
+     "es": "",
+     "en": "",
+     "fr": "",
+     "de": "",
+     "ru": ""
+    },
+    "desc": {
+     "es": "Exclusiva vivienda señorial de **casi 200 m²**, situada en pleno corazón de Castellón, con **impresionantes vistas** y una reforma integral realizada con excelentes calidades. Una vivienda amplia, elegante y confortable, ideal para quienes buscan espacio y una ubicación privilegiada en el centro de la ciudad.\r\n\r\nLa vivienda nos recibe con un **espectacular y amplio recibidor** que da paso a un magnífico **salón-comedor con balcón y vistas despejadas**. Dispone de una **gran cocina totalmente equipada**, además de una práctica galería independiente equipada con **dos lavadoras, secadora y dos termos eléctricos**.\r\n\r\nLa zona de descanso cuenta con **tres amplios dormitorios**. La habitación principal dispone de **vestidor, caja fuerte y baño completo en suite**. De los otros dos dormitorios, uno cuenta también con **vestidor**, y la vivienda dispone de un **segundo baño completo con ducha**.\r\n\r\nEl piso está completamente reformado y equipado con **suelo de parquet, aire acondicionado por conductos, persianas eléctricas** y numerosos detalles pensados para ofrecer el máximo confort.\r\n\r\nUna vivienda difícil de encontrar por sus **dimensiones, calidades, vistas y excelente ubicación**, perfecta para disfrutar de la comodidad de vivir en el centro de Castellón sin renunciar al espacio.\r\n\r\n**Se solicitará solvencia económica demostrable, contrato de trabajo y referencias.** \r\n#ref:CS-1552-A",
+     "en": "",
+     "de": "",
+     "fr": "",
+     "ru": "",
+     "ca": "Exclusiva vivienda señorial de **casi 200 m²**, situada en pleno corazón de Castellón, con **impresionantes vistas** y una reforma integral realizada con excelentes calidades. Una vivienda amplia, elegante y confortable, ideal para quienes buscan espacio y una ubicación privilegiada en el centro de la ciudad.\r\n\r\nLa vivienda nos recibe con un **espectacular y amplio recibidor** que da paso a un magnífico **salón-comedor con balcón y vistas despejadas**. Dispone de una **gran cocina totalmente equipada**, además de una práctica galería independiente equipada con **dos lavadoras, secadora y dos termos eléctricos**.\r\n\r\nLa zona de descanso cuenta con **tres amplios dormitorios**. La habitación principal dispone de **vestidor, caja fuerte y baño completo en suite**. De los otros dos dormitorios, uno cuenta también con **vestidor**, y la vivienda dispone de un **segundo baño completo con ducha**.\r\n\r\nEl piso está completamente reformado y equipado con **suelo de parquet, aire acondicionado por conductos, persianas eléctricas** y numerosos detalles pensados para ofrecer el máximo confort.\r\n\r\nUna vivienda difícil de encontrar por sus **dimensiones, calidades, vistas y excelente ubicación**, perfecta para disfrutar de la comodidad de vivir en el centro de Castellón sin renunciar al espacio.\r\n\r\n**Se solicitará solvencia económica demostrable, contrato de trabajo y referencias.** \r\n#ref:CS-1552-A"
+    },
+    "features": {
+     "feature": [
+      "2 bathrooms",
+      "3 bedrooms",
+      "1 number of floors",
+      "city center",
+      "supermarket",
+      "school",
+      "pharmacy",
+      "green areas",
+      "police",
+      "public transport",
+      "highway",
+      "lift",
+      "building",
+      "3 floor",
+      "good condition",
+      "199.00 gross area"
+     ]
+    },
+    "notes": "",
+    "images": {
+     "image": [
+      {
+       "id": "257503069",
+       "url": "https://feedmedia.egorealestate.com/Zfeed/S5/C4338/P30841211/Tphoto/ID7b99d601-0000-0500-0000-00001a2d67ac.jpg"
+      },
+      {
+       "id": "257503070",
+       "url": "https://feedmedia.egorealestate.com/Zfeed/S5/C4338/P30841211/Tphoto/ID7b99d601-0000-0500-0000-00001a2d67ad.jpg"
+      },
+      {
+       "id": "257503071",
+       "url": "https://feedmedia.egorealestate.com/Zfeed/S5/C4338/P30841211/Tphoto/ID7b99d601-0000-0500-0000-00001a2d67ae.jpg"
+      },
+      {
+       "id": "257503072",
+       "url": "https://feedmedia.egorealestate.com/Zfeed/S5/C4338/P30841211/Tphoto/ID7b99d601-0000-0500-0000-00001a2d67af.jpg"
+      },
+      {
+       "id": "257503073",
+       "url": "https://feedmedia.egorealestate.com/Zfeed/S5/C4338/P30841211/Tphoto/ID7b99d601-0000-0500-0000-00001a2d67b0.jpg"
+      },
+      {
+       "id": "257503074",
+       "url": "https://feedmedia.egorealestate.com/Zfeed/S5/C4338/P30841211/Tphoto/ID7b99d601-0000-0500-0000-00001a2d67b2.jpg"
+      },
+      {
+       "id": "257503075",
+       "url": "https://feedmedia.egorealestate.com/Zfeed/S5/C4338/P30841211/Tphoto/ID7b99d601-0000-0500-0000-00001a2d67b3.jpg"
+      },
+      {
+       "id": "257503076",
+       "url": "https://feedmedia.egorealestate.com/Zfeed/S5/C4338/P30841211/Tphoto/ID7b99d601-0000-0500-0000-00001a2d67b4.jpg"
+      },
+      {
+       "id": "257503077",
+       "url": "https://feedmedia.egorealestate.com/Zfeed/S5/C4338/P30841211/Tphoto/ID7b99d601-0000-0500-0000-00001a2d67b5.jpg"
+      },
+      {
+       "id": "257503078",
+       "url": "https://feedmedia.egorealestate.com/Zfeed/S5/C4338/P30841211/Tphoto/ID7b99d601-0000-0500-0000-00001a2d67b6.jpg"
+      },
+      {
+       "id": "257503079",
+       "url": "https://feedmedia.egorealestate.com/Zfeed/S5/C4338/P30841211/Tphoto/ID7b99d601-0000-0500-0000-00001a2d67b7.jpg"
+      },
+      {
+       "id": "257503080",
+       "url": "https://feedmedia.egorealestate.com/Zfeed/S5/C4338/P30841211/Tphoto/ID7b99d601-0000-0500-0000-00001a2d67b8.jpg"
+      },
+      {
+       "id": "257503081",
+       "url": "https://feedmedia.egorealestate.com/Zfeed/S5/C4338/P30841211/Tphoto/ID7b99d601-0000-0500-0000-00001a2d67b9.jpg"
+      },
+      {
+       "id": "257503082",
+       "url": "https://feedmedia.egorealestate.com/Zfeed/S5/C4338/P30841211/Tphoto/ID7b99d601-0000-0500-0000-00001a2d67ba.jpg"
+      },
+      {
+       "id": "257503083",
+       "url": "https://feedmedia.egorealestate.com/Zfeed/S5/C4338/P30841211/Tphoto/ID7b99d601-0000-0500-0000-00001a2d67bc.jpg"
+      },
+      {
+       "id": "257503084",
+       "url": "https://feedmedia.egorealestate.com/Zfeed/S5/C4338/P30841211/Tphoto/ID7b99d601-0000-0500-0000-00001a2d67bd.jpg"
+      },
+      {
+       "id": "257503085",
+       "url": "https://feedmedia.egorealestate.com/Zfeed/S5/C4338/P30841211/Tphoto/ID7b99d601-0000-0500-0000-00001a2d67be.jpg"
+      },
+      {
+       "id": "257503086",
+       "url": "https://feedmedia.egorealestate.com/Zfeed/S5/C4338/P30841211/Tphoto/ID7b99d601-0000-0500-0000-00001a2d67c4.jpg"
+      },
+      {
+       "id": "257503087",
+       "url": "https://feedmedia.egorealestate.com/Zfeed/S5/C4338/P30841211/Tphoto/ID7b99d601-0000-0500-0000-00001a2d67c7.jpg"
+      },
+      {
+       "id": "257503088",
+       "url": "https://feedmedia.egorealestate.com/Zfeed/S5/C4338/P30841211/Tphoto/ID7b99d601-0000-0500-0000-00001a2d67c8.jpg"
+      },
+      {
+       "id": "257503089",
+       "url": "https://feedmedia.egorealestate.com/Zfeed/S5/C4338/P30841211/Tphoto/ID7b99d601-0000-0500-0000-00001a2d67c9.jpg"
+      },
+      {
+       "id": "257503090",
+       "url": "https://feedmedia.egorealestate.com/Zfeed/S5/C4338/P30841211/Tphoto/ID7b99d601-0000-0500-0000-00001a2d67ca.jpg"
+      },
+      {
+       "id": "257503091",
+       "url": "https://feedmedia.egorealestate.com/Zfeed/S5/C4338/P30841211/Tphoto/ID7b99d601-0000-0500-0000-00001a2d67cb.jpg"
+      },
+      {
+       "id": "257503092",
+       "url": "https://feedmedia.egorealestate.com/Zfeed/S5/C4338/P30841211/Tphoto/ID7b99d601-0000-0500-0000-00001a2d67cd.jpg"
+      },
+      {
+       "id": "257503093",
+       "url": "https://feedmedia.egorealestate.com/Zfeed/S5/C4338/P30841211/Tphoto/ID7b99d601-0000-0500-0000-00001a2d67d0.jpg"
+      },
+      {
+       "id": "257503094",
+       "url": "https://feedmedia.egorealestate.com/Zfeed/S5/C4338/P30841211/Tphoto/ID7b99d601-0000-0500-0000-00001a2d67d1.jpg"
+      },
+      {
+       "id": "257503095",
+       "url": "https://feedmedia.egorealestate.com/Zfeed/S5/C4338/P30841211/Tphoto/ID7b99d601-0000-0500-0000-00001a2d67d2.jpg"
+      },
+      {
+       "id": "257503096",
+       "url": "https://feedmedia.egorealestate.com/Zfeed/S5/C4338/P30841211/Tphoto/ID7b99d601-0000-0500-0000-00001a2d67d3.jpg"
+      },
+      {
+       "id": "257503097",
+       "url": "https://feedmedia.egorealestate.com/Zfeed/S5/C4338/P30841211/Tphoto/ID7b99d601-0000-0500-0000-00001a2d67d5.jpg"
+      },
+      {
+       "id": "257503098",
+       "url": "https://feedmedia.egorealestate.com/Zfeed/S5/C4338/P30841211/Tphoto/ID7b99d601-0000-0500-0000-00001a2d67d6.jpg"
+      },
+      {
+       "id": "257503099",
+       "url": "https://feedmedia.egorealestate.com/Zfeed/S5/C4338/P30841211/Tphoto/ID7b99d601-0000-0500-0000-00001a2d67d8.jpg"
+      },
+      {
+       "id": "257503100",
+       "url": "https://feedmedia.egorealestate.com/Zfeed/S5/C4338/P30841211/Tphoto/ID7b99d601-0000-0500-0000-00001a2d67db.jpg"
+      },
+      {
+       "id": "257503101",
+       "url": "https://feedmedia.egorealestate.com/Zfeed/S5/C4338/P30841211/Tphoto/ID7b99d601-0000-0500-0000-00001a2d67dc.jpg"
+      },
+      {
+       "id": "257503102",
+       "url": "https://feedmedia.egorealestate.com/Zfeed/S5/C4338/P30841211/Tphoto/ID7b99d601-0000-0500-0000-00001a2d67dd.jpg"
+      }
+     ]
+    },
+    "video_url": "",
+    "virtual_tour_url": ""
+   }
+  ]
+ }
+}

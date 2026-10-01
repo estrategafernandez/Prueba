@@ -32,20 +32,12 @@
     },
     {
       "parameters": {
-        "documentId": {
-          "__rl": true,
-          "value": "1cB2UI-ScDI34QS57k-UD2ZE79P5XhpyPJu78A5zPs3Q",
-          "mode": "id"
-        },
-        "sheetName": {
-          "__rl": true,
-          "value": "gid=0",
-          "mode": "id"
-        },
+        "operation": "executeQuery",
+        "query": "select * from wa_cartera order by ref;",
         "options": {}
       },
-      "type": "n8n-nodes-base.googleSheets",
-      "typeVersion": 4.7,
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
       "position": [
         200,
         0
@@ -53,13 +45,14 @@
       "id": "440e7b12-cb1e-51f4-a8fb-f93a46dcbf1b",
       "name": "LeerInmuebles",
       "credentials": {
-        "googleSheetsOAuth2Api": {
-          "id": "TPExRnq8a9FlEXAh",
-          "name": "Google Sheets account"
+        "postgres": {
+          "id": "yvym0TdlOebNMzsm",
+          "name": "Postgres account"
         }
       },
       "alwaysOutputData": true,
-      "onError": "continueRegularOutput"
+      "onError": "continueRegularOutput",
+      "executeOnce": true
     },
     {
       "parameters": {
@@ -121,7 +114,7 @@
     },
     {
       "parameters": {
-        "content": "## Busqueda por calle\nReutiliza el emparejador de direcciones del telefono (fichero nodes/dir_emparejar.js, sin tocarlo). Si no hay coincidencia clara devuelve 'no encontrado' a proposito, para no soltarle al cliente un listado que no ha pedido.\n\n## La cartera\nSe LEE el mismo Google Sheet que usa el asistente telefonico, que rellena [TEL] XMLCacheo desde el feed de eGO. WhatsApp no escribe nunca en el.\n\nLa pestana *Direcciones* la rellena la agencia a mano: si un inmueble tiene su calle ahi, Sara puede darla.",
+        "content": "## Busqueda por calle\nReutiliza el emparejador de direcciones del telefono (fichero nodes/dir_emparejar.js, sin tocarlo). Si no hay coincidencia clara devuelve 'no encontrado' a proposito, para no soltarle al cliente un listado que no ha pedido.\n\n## La cartera\nSale de la tabla *wa_cartera*, que [WA] 4 rellena cada hora desde el MISMO feed de eGO que usa el telefono, pero COMPLETA: descripcion entera (la hoja del telefono la corta a 500 caracteres), superficie, caracteristicas en espanol y el enlace de la web.\n\nLa pestana *Direcciones* del Google Sheet la rellena la agencia a mano: si un inmueble tiene su calle ahi, Sara puede darla.",
         "height": 290,
         "width": 480
       },

@@ -3,9 +3,11 @@
 // contestar y se deja el mensaje listo para el buffer de Redis.
 //
 // Chatwoot manda dos formas distintas de payload segun como este configurado:
-//   A) webhook de cuenta -> llega el MENSAJE, con la conversacion anidada
-//   B) agent bot         -> llega la CONVERSACION, con su array de mensajes
-// Se aceptan las dos, para que no dependa de como lo monte el instalador.
+//   A) webhook de cuenta  -> llega el MENSAJE, con la conversacion anidada
+//   B) automatizacion o agent bot -> llega la CONVERSACION, con su ultimo
+//      mensaje en "messages". Es lo que usa Casagencia: la regla "IA WhatsApp:
+//      mensajes del cliente a n8n" (send_webhook_event), igual que Blue.
+// Se aceptan las dos, para que no dependa de como este montado.
 const raw = $input.first().json;
 const b = raw.body ?? raw;
 
@@ -35,7 +37,8 @@ const esDelEquipo = Object.values(EQUIPO).some(p => p.movil === tel.wa_id);
 
 // Motivos por los que el bot NO debe contestar
 const motivos = [];
-if (evento && evento !== 'message_created') motivos.push('evento_no_mensaje');
+// La automatizacion de Chatwoot lo manda como 'automation_event.message_created'
+if (evento && !/(^|\.)message_created$/.test(evento)) motivos.push('evento_no_mensaje');
 if (!esEntrante) motivos.push('mensaje_saliente');            // lo escribio la agencia
 if (!contenido) motivos.push('sin_texto');                    // audio o imagen: lo ve una persona
 if (!tel.valido) motivos.push('telefono_invalido');

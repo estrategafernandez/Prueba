@@ -1,0 +1,110 @@
+{
+ "additional_attributes": {},
+ "can_reply": true,
+ "channel": "Channel::Whatsapp",
+ "contact_inbox": {
+  "id": 1,
+  "contact_id": 1,
+  "inbox_id": 1,
+  "source_id": "34600000001",
+  "created_at": "2026-09-30T22:23:45.657Z",
+  "updated_at": "2026-09-30T22:23:45.657Z",
+  "hmac_verified": false,
+  "pubsub_token": "hms9qgp1sRRPJ6tHppK8pb3B"
+ },
+ "id": 1,
+ "inbox_id": 1,
+ "messages": [
+  {
+   "id": 5,
+   "content": "¡Me gustaría visitar la vivienda!",
+   "account_id": 1,
+   "inbox_id": 1,
+   "conversation_id": 1,
+   "message_type": 0,
+   "created_at": 1790849086,
+   "updated_at": "2026-10-01T10:04:46.964Z",
+   "private": false,
+   "status": "sent",
+   "source_id": "wamid.HBgLMzQ2MDg1NjM5MjMVAgASGBQzQjlDODYyNDRERjZDOTgwNkIzNgA=",
+   "content_type": "text",
+   "content_attributes": {
+    "in_reply_to": 3,
+    "in_reply_to_external_id": "wamid.HBgLMzQ2MDg1NjM5MjMVAgARGBJCNUI2ODI4ODMwRjdEQ0I0Q0UA"
+   },
+   "sender_type": "Contact",
+   "sender_id": 1,
+   "external_source_ids": {},
+   "additional_attributes": {},
+   "processed_message_content": "¡Me gustaría visitar la vivienda!",
+   "sentiment": {},
+   "conversation": {
+    "assignee_id": 1,
+    "unread_count": 1,
+    "last_activity_at": 1790849086,
+    "contact_inbox": {
+     "source_id": "34600000001"
+    }
+   },
+   "sender": {
+    "additional_attributes": {},
+    "custom_attributes": {},
+    "email": null,
+    "id": 1,
+    "identifier": null,
+    "name": "Cliente de Prueba",
+    "phone_number": "+34600000001",
+    "thumbnail": "",
+    "blocked": false,
+    "type": "contact"
+   }
+  }
+ ],
+ "labels": [
+  "1-bienvenida_ia"
+ ],
+ "meta": {
+  "sender": {
+   "additional_attributes": {},
+   "custom_attributes": {},
+   "email": null,
+   "id": 1,
+   "identifier": null,
+   "name": "Cliente de Prueba",
+   "phone_number": "+34600000001",
+   "thumbnail": "",
+   "blocked": false,
+   "type": "contact"
+  },
+  "assignee": {
+   "id": 1,
+   "name": "Agente",
+   "available_name": "Agente",
+   "avatar_url": "",
+   "type": "user",
+   "availability_status": null,
+   "thumbnail": ""
+  },
+  "assignee_type": "User",
+  "team": null,
+  "hmac_verified": false
+ },
+ "status": "open",
+ "custom_attributes": {},
+ "snoozed_until": null,
+ "unread_count": 1,
+ "first_reply_created_at": "2026-10-01T09:54:59.123Z",
+ "priority": null,
+ "waiting_since": 1790849086,
+ "agent_last_seen_at": 1790807028,
+ "contact_last_seen_at": 0,
+ "last_activity_at": 1790849086,
+ "timestamp": 1790849086,
+ "created_at": 1790807025,
+ "updated_at": 1790849086.9966521,
+ "account": {
+  "id": 1,
+  "name": "Casa Agencia Inmobiliaria"
+ },
+ "event": "automation_event.message_created"
+}

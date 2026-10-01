@@ -29,25 +29,7 @@ if (!encontradas.length) {
     'inmuebles parecidos con recomendarSimilares o buscarInmuebles, o avisa al equipo.', { encontrado: false });
 }
 
-const ficha = (r) => {
-  const dir = dirs[r.ref.toUpperCase()];
-  const lineas = [
-    `Referencia: ${r.ref}`,
-    `Operacion: ${r.operacion === 'alquiler' ? 'ALQUILER (no se agenda: se cualifica y se pasa al equipo)' : 'VENTA'}`,
-    `Tipo: ${r.tipo}`,
-    `Municipio: ${municipioCorto(r.municipio)}`,
-    r.zona ? `Zona: ${r.zona}` : '',
-    `Direccion: ${dir || 'no consta (no la deduzcas; si la pide, ofrece que se la confirme la asesora)'}`,
-    `Precio: ${euros(r.precio, r.operacion)}`,
-    r.superficie ? `Superficie: ${r.superficie} m²` : '',
-    r.habitaciones ? `Habitaciones: ${r.habitaciones}` : '',
-    r.banos ? `Baños: ${r.banos}` : '',
-    r.caracteristicas ? `Caracteristicas: ${r.caracteristicas}` : '',
-    r.descripcion ? `Descripcion del anuncio: ${r.descripcion}` : '',
-    `Asesora: ${resolverAsesora(r.ref, r.municipio).destinatario}`,
-  ].filter(Boolean);
-  return lineas.join('\n');
-};
+const ficha = (r) => fichaTexto(r, dirs);
 
 if (encontradas.length === 1) {
   const r = encontradas[0];

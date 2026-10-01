@@ -1,10 +1,12 @@
 // ===========================================================================
-// CARTERA · utilidades comunes de los nodos que leen el Google Sheet
+// CARTERA · utilidades comunes de los nodos que leen la cartera
 // ---------------------------------------------------------------------------
-// La hoja la rellena el [TEL] XMLCacheo desde el feed de eGO: WhatsApp solo la
-// LEE. Columnas: ref, precio, tipo_transaccion, tipo_inmueble, municipio, zona,
-// habitaciones, banos, superficie, caracteristicas, descripcion, imagen...
-// La pestana "Direcciones" (ref, direccion) la rellena la agencia a mano.
+// La cartera de WhatsApp es la tabla wa_cartera de Postgres, que rellena cada
+// hora [WA] 4 desde el MISMO feed de eGO que usa el telefono, pero completa:
+// descripcion entera (la hoja del telefono la corta a 500 caracteres),
+// superficie, caracteristicas en espanol y el enlace de la web de cada inmueble.
+// La pestana "Direcciones" del Google Sheet (ref, direccion) la rellena la
+// agencia a mano y se sigue leyendo de ahi.
 // ===========================================================================
 const MUNICIPIOS = [
   { valor: 'Almazora / Almassora',                       claves: ['almazora', 'almassora'] },
@@ -69,6 +71,7 @@ function limpiarFila(r) {
     caracteristicas: String(r.caracteristicas ?? '').trim(),
     descripcion: String(r.descripcion ?? '').replace(/\s+/g, ' ').trim(),
     imagen: String(r.imagen ?? '').trim(),
+    enlace: String(r.enlace ?? '').trim(),
   };
 }
 
@@ -106,7 +109,7 @@ function tarjeta(r, dirs) {
   const dir = dirs && dirs[r.ref.toUpperCase()];
   const destacado = r.caracteristicas.split(',').map(s => s.trim()).filter(Boolean).slice(0, 3).join(', ');
   return `[${r.ref}] ${partes.join(' · ')}` + (dir ? ` · ${dir}` : '')
-    + (destacado ? ` · ${destacado}` : '');
+    + (destacado ? ` · ${destacado}` : '') + (r.enlace ? ` · ${r.enlace}` : '');
 }
 
 // Busca una referencia con la misma tolerancia que el telefono: exacta, luego
@@ -130,4 +133,25 @@ function buscarReferencia(filas, texto) {
         [...x.p.num].filter((c, i) => c !== q.num[i]).length === 1).map(x => x.r.ref).slice(0, 3)
     : [];
   return { filas: m.map(x => x.r), parecidas };
+}
+
+// La ficha COMPLETA de un inmueble, en texto, tal y como la lee el agente.
+function fichaTexto(r, dirs) {
+  const dir = dirs && dirs[r.ref.toUpperCase()];
+  return [
+    `Referencia: ${r.ref}`,
+    `Operacion: ${r.operacion === 'alquiler' ? 'ALQUILER (no se agenda: se cualifica y se pasa al equipo)' : 'VENTA'}`,
+    `Tipo: ${r.tipo}`,
+    `Municipio: ${municipioCorto(r.municipio)}`,
+    r.zona ? `Zona: ${r.zona}` : '',
+    `Direccion: ${dir || 'no consta (no la deduzcas; si la pide, ofrece que se la confirme la asesora)'}`,
+    `Precio: ${euros(r.precio, r.operacion)}`,
+    r.superficie ? `Superficie: ${r.superficie} m\u00b2` : '',
+    r.habitaciones ? `Habitaciones: ${r.habitaciones}` : '',
+    r.banos ? `Ba\u00f1os: ${r.banos}` : '',
+    r.caracteristicas ? `Caracteristicas: ${r.caracteristicas}` : '',
+    r.descripcion ? `Descripcion del anuncio: ${r.descripcion}` : '',
+    r.enlace ? `Enlace de la web (se lo puedes mandar): ${r.enlace}` : '',
+    `Asesora: ${resolverAsesora(r.ref, r.municipio).destinatario}`,
+  ].filter(Boolean).join('\n');
 }

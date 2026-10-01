@@ -38,6 +38,8 @@ CRED_SHEETS   = {"googleSheetsOAuth2Api": {"id": "TPExRnq8a9FlEXAh", "name": "Go
 CRED_CAL      = {"googleCalendarOAuth2Api": {"id": "KKDdmqzzE6jXVm5b", "name": "Google Calendar Paco"}}
 CRED_CHATWOOT = {"httpHeaderAuth": {"id": "Wm0tmDE3FjfTx1Tu", "name": "Chatwoot Casagencia"}}
 CRED_META     = {"httpHeaderAuth": {"id": "P4xswu9i9E4RILJN", "name": "Meta WhatsApp Casagencia"}}
+# Clave que hay que mandar en la cabecera para usar [WA] 9 · Lead a mano
+CRED_LEAD_MANUAL = {"httpHeaderAuth": {"id": "cFrVkaTH4R4tKWn0", "name": "WA lead a mano (clave del webhook)"}}
 # PENDIENTE: en el n8n de Casagencia no hay credencial de OpenAI. Cuando se
 # cree, poner aqui su id y nombre y volver a desplegar.
 CRED_OPENAI = None
@@ -181,6 +183,12 @@ def leer_hoja(name, pestana, pos, **extra):
         alwaysOutputData=True, onError="continueRegularOutput", **extra)
 
 
+def leer_cartera(name, pos):
+    """La cartera completa de WhatsApp (tabla wa_cartera, la rellena [WA] 4)."""
+    return pg_query(name, SQL_LEER_CARTERA, None, pos, alwaysOutputData=True,
+                    onError="continueRegularOutput", executeOnce=True)
+
+
 def cal_getall(name, calendario, tmin, tmax, pos, query=None):
     opts = {"singleEvents": True}          # expande los eventos periodicos
     if query:
@@ -283,6 +291,25 @@ create table if not exists wa_leads (
 -- inmuebles distintos, pero no se le escribe dos veces por el mismo.
 create unique index if not exists wa_leads_unico on wa_leads (telefono_wa, referencia);
 
+-- La cartera COMPLETA, desde el feed de eGO ([WA] 4 la rellena cada hora)
+create table if not exists wa_cartera (
+  ref              text primary key,
+  web_id           text not null default '',
+  enlace           text not null default '',
+  precio           numeric not null default 0,
+  tipo_transaccion text not null default '',
+  tipo_inmueble    text not null default '',
+  municipio        text not null default '',
+  zona             text not null default '',
+  habitaciones     integer not null default 0,
+  banos            integer not null default 0,
+  superficie       integer not null default 0,
+  caracteristicas  text not null default '',
+  descripcion      text not null default '',
+  imagen           text not null default '',
+  actualizado_en   timestamptz not null default now()
+);
+
 -- Avisos ya enviados (recordatorio de 24 h), para no mandar ninguno dos veces
 create table if not exists wa_avisos (
   id         serial primary key,
@@ -309,6 +336,20 @@ on conflict (telefono_wa, referencia) do update
        actualizado_en = now()
  where wa_leads.actualizado_en < now() - interval '30 days'
 returning id, telefono_wa, referencia;"""
+
+# Alta a mano: a diferencia del correo, SIEMPRE se manda (lo pide una persona)
+# y las respuestas de cualificacion de antes se ponen a cero.
+SQL_ALTA_MANUAL = """insert into wa_leads
+  (telefono_wa, telefono_e164, referencia, nombre, email_cliente, portal,
+   operacion, es_alquiler, asesora, asunto, enlace, plantilla, estado)
+values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,'nuevo')
+on conflict (telefono_wa, referencia) do update
+   set nombre = excluded.nombre, portal = excluded.portal, enlace = excluded.enlace,
+       plantilla = excluded.plantilla, operacion = excluded.operacion,
+       es_alquiler = excluded.es_alquiler, asesora = excluded.asesora, estado = 'nuevo',
+       %s,
+       actualizado_en = now()
+returning id, telefono_wa, referencia;""" % ", ".join("%s = ''" % q for q in _Q)
 
 SQL_PLANTILLA_ENVIADA = """update wa_leads
    set estado = 'plantilla_enviada', conversacion_id = $2, actualizado_en = now()
@@ -341,6 +382,32 @@ SQL_CITA = """update wa_leads
    set estado = 'cita_agendada', actualizado_en = now()
  where telefono_wa = $1;"""
 
+# Una sola sentencia: mete o actualiza lo que viene en el feed y borra lo que ya
+# no esta (vendido o retirado). O todo o nada.
+_CARTERA_COLS = [("ref", "text"), ("web_id", "text"), ("enlace", "text"), ("precio", "numeric"),
+                 ("tipo_transaccion", "text"), ("tipo_inmueble", "text"), ("municipio", "text"),
+                 ("zona", "text"), ("habitaciones", "integer"), ("banos", "integer"),
+                 ("superficie", "integer"), ("caracteristicas", "text"), ("descripcion", "text"),
+                 ("imagen", "text")]
+SQL_GUARDAR_CARTERA = """with nuevos as (
+  select * from jsonb_to_recordset($1::jsonb) as x(%s)
+), borrados as (
+  delete from wa_cartera where ref not in (select ref from nuevos)
+  returning ref
+)
+insert into wa_cartera (%s, actualizado_en)
+select %s, now() from nuevos
+on conflict (ref) do update set
+  %s,
+  actualizado_en = now()
+returning ref;""" % (
+    ", ".join("%s %s" % c for c in _CARTERA_COLS),
+    ", ".join(c for c, _ in _CARTERA_COLS),
+    ", ".join(c for c, _ in _CARTERA_COLS),
+    ",\n  ".join("%s = excluded.%s" % (c, c) for c, _ in _CARTERA_COLS if c != "ref"))
+
+SQL_LEER_CARTERA = "select * from wa_cartera order by ref;"
+
 SQL_AVISADO = """insert into wa_avisos (evento_id, tipo) values ($1, 'recordatorio_24h')
 on conflict (evento_id, tipo) do nothing
 returning evento_id;"""
@@ -350,16 +417,17 @@ returning evento_id;"""
 # CARTERA: leen el mismo Google Sheet que el telefono (solo lectura)
 # ===========================================================================
 NOTA_CARTERA = (
-    "## La cartera\nSe LEE el mismo Google Sheet que usa el asistente telefonico, que rellena "
-    "[TEL] XMLCacheo desde el feed de eGO. WhatsApp no escribe nunca en el.\n\n"
-    "La pestana *Direcciones* la rellena la agencia a mano: si un inmueble tiene su calle "
-    "ahi, Sara puede darla.")
+    "## La cartera\nSale de la tabla *wa_cartera*, que [WA] 4 rellena cada hora desde el MISMO "
+    "feed de eGO que usa el telefono, pero COMPLETA: descripcion entera (la hoja del telefono la "
+    "corta a 500 caracteres), superficie, caracteristicas en espanol y el enlace de la web.\n\n"
+    "La pestana *Direcciones* del Google Sheet la rellena la agencia a mano: si un inmueble tiene "
+    "su calle ahi, Sara puede darla.")
 
 
 def wf_cartera(nombre, entradas, fichero, nodo_final, texto_nota, tipos_extra=None):
     return wf(nombre, [
         trigger_sub(entradas),
-        leer_hoja("LeerCartera", "gid=0", [200, 0]),
+        leer_cartera("LeerCartera", [200, 0]),
         leer_hoja("LeerDirecciones", "Direcciones", [420, 0], executeOnce=True),
         code_node(nodo_final, code_wa(fichero, cartera=True), [640, 0]),
         nota("Nota", texto_nota + "\n\n" + NOTA_CARTERA, [200, -300], 480, 270),
@@ -401,7 +469,7 @@ def wf_similares():
 def wf_direccion():
     return wf("[WA][SUB] buscarPorDireccion", [
         trigger_sub([("direccion", "string"), ("municipio", "string"), ("operacion", "string")]),
-        leer_hoja("LeerInmuebles", "gid=0", [200, 0]),
+        leer_cartera("LeerInmuebles", [200, 0]),
         leer_hoja("LeerDirecciones", "Direcciones", [420, 0], executeOnce=True),
         # El mismo algoritmo que el telefono (acierta el 91 % a la primera con las
         # calles reales de eGO), leyendo la peticion del sub-workflow en vez del webhook.
@@ -654,6 +722,9 @@ def wf_plantilla(ids):
         trigger_sub([("telefono", "string"), ("nombre", "string"), ("plantilla", "string"),
                      ("param1", "string"), ("param2", "string"), ("referencia", "string"),
                      ("operacion", "string"), ("portal", "string"), ("conversacion_id", "number")]),
+        pg_query("EnlaceDeLaWeb", "select enlace from wa_cartera where upper(ref) = upper($1) limit 1;",
+                 "={{ [ String($json.referencia || '') ] }}", [180, 160], alwaysOutputData=True,
+                 onError="continueRegularOutput"),
         code_node("Normalizar", code_wa("plantilla_normalizar.js"), [180, 0]),
         if_node("¿Telefono valido?", "={{ $json.telefono_valido }}", "true", [400, 0]),
         set_node("SinTelefono", {"resultado": ("string", "Telefono no valido, no se envia nada")}, [620, 220]),
@@ -711,7 +782,8 @@ def wf_plantilla(ids):
              "{{2}} el enlace del anuncio. Despues se siembra la memoria del agente con ese texto (asi "
              "Sara sabe lo que ya le ha dicho) y la conversacion pasa a *1-bienvenida_ia*.",
              [2620, -340], 540, 290),
-    ], conn(("Start", 0, "Normalizar", 0), ("Normalizar", 0, "¿Telefono valido?", 0),
+    ], conn(("Start", 0, "EnlaceDeLaWeb", 0), ("EnlaceDeLaWeb", 0, "Normalizar", 0),
+            ("Normalizar", 0, "¿Telefono valido?", 0),
             ("¿Telefono valido?", 0, "¿Ya tengo conversacion?", 0), ("¿Telefono valido?", 1, "SinTelefono", 0),
             ("¿Ya tengo conversacion?", 0, "UsarConversacionDada", 0),
             ("¿Ya tengo conversacion?", 1, "BuscarContacto", 0),
@@ -1015,24 +1087,27 @@ def wf_asistente(ids):
                  [2380, -400], {"conversacion_id": "number"}, onError="continueRegularOutput"),
         pg_query("LeerFichaDelLead", SQL_FICHA, "={{ [ $('JuntarMensajes').first().json.telefono_wa ] }}",
                  [1940, -160], alwaysOutputData=True, onError="continueRegularOutput"),
-        code_node("ContextoDelLead", code_wa("asistente_contexto.js"), [2160, -160]),
+        # La ficha completa del inmueble del lead va en el contexto de cada turno
+        leer_cartera("LeerCartera", [2160, -160]),
+        leer_hoja("LeerDirecciones", "Direcciones", [2380, -160], executeOnce=True),
+        code_node("ContextoDelLead", code_wa("asistente_contexto.js", cartera=True), [2600, -160]),
         node("Agente", "@n8n/n8n-nodes-langchain.agent", {
             "promptType": "define",
             "text": "=Datos del cliente:\n{{ $json.contexto }}\n"
                     "- Fecha y hora actual: {{ $now.setZone('Europe/Madrid').toFormat(\"cccc dd/MM/yyyy HH:mm\", "
                     "{ locale: 'es' }) }}\n\nMensaje del cliente:\n{{ $json.mensaje }}",
             "options": {"systemMessage": "=" + PROMPT, "maxIterations": 12},
-        }, [2400, -160], 1.8, onError="continueErrorOutput"),
+        }, [2840, -160], 1.8, onError="continueErrorOutput"),
         modelo,
         node("MemoriaPostgres", "@n8n/n8n-nodes-langchain.memoryPostgresChat", {
             "sessionIdType": "customKey", "sessionKey": "={{ %s.telefono_e164 }}" % CTX, "contextWindowLength": 40,
         }, [1700, 360], 1.3, credentials=CRED_PG),
-        code_node("DividirRespuesta", code_wa("asistente_dividir.js"), [2660, -260]),
-        http("EnviarMensajes", "POST", mensajes_url, [2900, -260], cred=CRED_CHATWOOT,
+        code_node("DividirRespuesta", code_wa("asistente_dividir.js"), [3100, -260]),
+        http("EnviarMensajes", "POST", mensajes_url, [3340, -260], cred=CRED_CHATWOOT,
              body="={{ JSON.stringify({ content: $json.mensaje, message_type: 'outgoing', private: false }) }}",
              retryOnFail=True, waitBetweenTries=3000,
              options={"batching": {"batch": {"batchSize": 1, "batchInterval": 2500}}}),
-        http("AvisoDeFallo", "POST", mensajes_url, [2660, -20], cred=CRED_CHATWOOT,
+        http("AvisoDeFallo", "POST", mensajes_url, [3100, -20], cred=CRED_CHATWOOT,
              body="={{ JSON.stringify({ content: 'Te atendemos enseguida, dame un momento.', "
                   "message_type: 'outgoing', private: false }) }}", onError="continueRegularOutput"),
         nota("Nota", "## Como llega el mensaje\nChatwoot avisa por webhook de cada mensaje. La IA NO "
@@ -1062,12 +1137,137 @@ def wf_asistente(ids):
         # primero la etiqueta (rapido) y luego el agente
         ("JuntarMensajes", 0, "EstadoEnProceso", 0), ("JuntarMensajes", 0, "LeerFichaDelLead", 0),
         ("EstadoEnProceso", 0, "¿Marcar en proceso?", 0), ("¿Marcar en proceso?", 0, "MarcarEnProceso", 0),
-        ("LeerFichaDelLead", 0, "ContextoDelLead", 0), ("ContextoDelLead", 0, "Agente", 0),
+        ("LeerFichaDelLead", 0, "LeerCartera", 0), ("LeerCartera", 0, "LeerDirecciones", 0),
+        ("LeerDirecciones", 0, "ContextoDelLead", 0), ("ContextoDelLead", 0, "Agente", 0),
         ("Agente", 0, "DividirRespuesta", 0), ("Agente", 1, "AvisoDeFallo", 0),
         ("DividirRespuesta", 0, "EnviarMensajes", 0))
     ai = ai_conn("Agente", [("ModeloOpenAI", "ai_languageModel"), ("MemoriaPostgres", "ai_memory")]
                  + [(t["name"], "ai_tool") for t in tools])
     return wf("[WA] 2 · Asistente de WhatsApp", nodos, fusionar(principal, ai))
+
+
+# ===========================================================================
+# [WA] 4 · Cartera desde eGO
+# ===========================================================================
+FEED_EGO = "http://feeds.transporter.janeladigital.com/423E0F5F-30FC-4E01-8FE1-99BD7E14B021/0500013012.xml"
+
+
+def wf_cartera_ego():
+    return wf("[WA] 4 · Cartera desde eGO", [
+        node("CadaHora", "n8n-nodes-base.scheduleTrigger",
+             {"rule": {"interval": [{"field": "hours", "hoursInterval": 1}]}}, [-40, -80], 1.2),
+        node("RefrescarAhora", "n8n-nodes-base.webhook", {
+            "httpMethod": "POST", "path": "wa-refrescar-cartera", "authentication": "headerAuth", "options": {}},
+            [-40, 120], 2.1, credentials=CRED_LEAD_MANUAL,
+            webhookId=str(uuid.uuid5(uuid.NAMESPACE_URL, "casagencia/wa/refrescar-cartera"))),
+        http("DescargarFeed", "GET", FEED_EGO, [200, 0], retryOnFail=True, waitBetweenTries=5000,
+             options={"timeout": 60000}),
+        node("LeerXML", "n8n-nodes-base.xml", {"options": {}}, [420, 0], 1),
+        code_node("Mapear", code_wa("cartera_mapear.js"), [640, 0]),
+        if_node("¿Feed correcto?", "={{ $json.ok }}", "true", [860, 0]),
+        pg_query("CrearTablasSiFaltan", DDL, None, [1080, -80], executeOnce=True),
+        pg_query("GuardarCartera", SQL_GUARDAR_CARTERA,
+                 "={{ [ JSON.stringify($('Mapear').first().json.filas) ] }}", [1300, -80], executeOnce=True),
+        noop("FeedRotoNoSeToca", [1080, 120]),
+        nota("Nota", "## La cartera de WhatsApp\nCada hora lee el MISMO feed de eGO que usa el telefono "
+             "(solo lectura) y lo guarda COMPLETO en la tabla *wa_cartera*:\n\n"
+             "- la descripcion entera (la hoja del telefono la corta a 500 caracteres y se pierden "
+             "cosas como el parking, el trastero o los honorarios);\n"
+             "- la superficie, las caracteristicas en espanol;\n"
+             "- el ENLACE de la web de cada inmueble (la web abre la ficha con el id del feed sin el "
+             "05 del principio).\n\n"
+             "Lo vendido o retirado se borra. Si el feed llega vacio o roto, no se toca nada.\n\n"
+             "Para refrescarla al momento: POST a */webhook/wa-refrescar-cartera* con la clave de la "
+             "credencial *WA lead a mano*.", [200, -420], 560, 360),
+    ], conn(("CadaHora", 0, "DescargarFeed", 0), ("RefrescarAhora", 0, "DescargarFeed", 0),
+            ("DescargarFeed", 0, "LeerXML", 0), ("LeerXML", 0, "Mapear", 0),
+            ("Mapear", 0, "¿Feed correcto?", 0), ("¿Feed correcto?", 0, "CrearTablasSiFaltan", 0),
+            ("CrearTablasSiFaltan", 0, "GuardarCartera", 0),
+            ("¿Feed correcto?", 1, "FeedRotoNoSeToca", 0)))
+
+
+# ===========================================================================
+# UTILIDADES: lead a mano y prueba sin IA
+# ===========================================================================
+def wf_lead_manual(ids):
+    j = "$('PrepararLead').first().json"
+    entradas = {k: "={{ %s.%s }}" % (j, v) for k, v in (
+        ("telefono", "telefono_e164"), ("nombre", "nombre"), ("plantilla", "plantilla"),
+        ("param1", "param1"), ("param2", "param2"), ("referencia", "referencia"),
+        ("operacion", "operacion"), ("portal", "portal"))}
+    entradas["conversacion_id"] = 0
+    return wf("[WA] 9 · Lead a mano", [
+        node("Webhook", "n8n-nodes-base.webhook", {
+            "httpMethod": "POST", "path": "wa-lead-manual", "authentication": "headerAuth",
+            "responseMode": "responseNode", "options": {}}, [-40, 0], 2.1,
+            credentials=CRED_LEAD_MANUAL, webhookId=str(uuid.uuid5(uuid.NAMESPACE_URL, "casagencia/wa/lead-manual"))),
+        code_node("PrepararLead", code_wa("lead_manual.js"), [180, 0]),
+        if_node("¿Datos correctos?", "={{ $json.valido }}", "true", [400, 0]),
+        node("RespuestaError", "n8n-nodes-base.respondToWebhook", {
+            "respondWith": "json", "responseBody": "={{ { ok: false, error: $json.error } }}",
+            "options": {"responseCode": 400}}, [620, 180], 1.5),
+        # Las tablas se crean si no existen: el mismo SQL que [WA] 0, que se
+        # puede repetir sin miedo.
+        pg_query("CrearTablasSiFaltan", DDL, None, [620, -40], executeOnce=True),
+        pg_query("ReiniciarMemoria", "delete from n8n_chat_histories where session_id = $1 and $2::boolean;",
+                 "={{ [ %s.telefono_e164, %s.reiniciar ] }}" % (j, j), [840, -40],
+                 alwaysOutputData=True, onError="continueRegularOutput"),
+        pg_query("AltaDelLead", SQL_ALTA_MANUAL,
+                 "={{ [ %s.telefono_wa, %s.telefono_e164, %s.referencia, %s.nombre, %s.email_cliente, "
+                 "%s.portal, %s.operacion, %s.es_alquiler, %s.asesora, %s.asunto, %s.enlace, %s.plantilla ] }}"
+                 % ((j,) * 12), [1060, -40]),
+        exec_sub("EnviarBienvenida", ids.get("[WA][SUB] EnviarPlantilla", ""), "[WA][SUB] EnviarPlantilla",
+                 entradas, [1280, -40], {"conversacion_id": "number"}),
+        pg_query("MarcarPlantillaEnviada", SQL_PLANTILLA_ENVIADA,
+                 "={{ [ %s.telefono_wa, $json.conversacion_id || 0, %s.referencia ] }}" % (j, j),
+                 [1500, -40], alwaysOutputData=True, onError="continueRegularOutput"),
+        node("RespuestaOK", "n8n-nodes-base.respondToWebhook", {
+            "respondWith": "json",
+            "responseBody": "={{ { ok: true, plantilla: %s.plantilla, telefono: %s.telefono_e164, "
+                            "referencia: %s.referencia, asesora: %s.asesora, "
+                            "conversacion_id: $('EnviarBienvenida').first().json.conversacion_id, "
+                            "texto: $('EnviarBienvenida').first().json.contenido } }}" % (j, j, j, j),
+            "options": {"responseCode": 200}}, [1720, -40], 1.5),
+        nota("Nota", "## Dar de alta un lead a mano\nPara leads que entran por telefono o en persona, "
+             "y para pruebas. Hace lo mismo que [WA] 1 cuando llega un correo: ficha del lead, "
+             "plantilla de bienvenida (compra o alquiler) y memoria del agente.\n\n"
+             "`POST /webhook/wa-lead-manual` con la cabecera de la credencial *WA lead a mano* y:\n"
+             "`{ \"telefono\", \"nombre\", \"referencia\", \"enlace\", \"reiniciar\" }`\n\n"
+             "*reiniciar: true* borra la memoria de la conversacion anterior con ese telefono.",
+             [180, -360], 520, 290),
+    ], conn(("Webhook", 0, "PrepararLead", 0), ("PrepararLead", 0, "¿Datos correctos?", 0),
+            ("¿Datos correctos?", 0, "CrearTablasSiFaltan", 0), ("¿Datos correctos?", 1, "RespuestaError", 0),
+            ("CrearTablasSiFaltan", 0, "ReiniciarMemoria", 0), ("ReiniciarMemoria", 0, "AltaDelLead", 0),
+            ("AltaDelLead", 0, "EnviarBienvenida", 0), ("EnviarBienvenida", 0, "MarcarPlantillaEnviada", 0),
+            ("MarcarPlantillaEnviada", 0, "RespuestaOK", 0)))
+
+
+def wf_prueba_contexto():
+    """La primera mitad del asistente, sin IA y sin contestar: recibe el mensaje
+    como [WA] 2 y monta el contexto EXACTO que leeria Sara. Para probar sin OpenAI."""
+    w = wf("[WA] 8 · Prueba sin IA (contexto)", [
+        node("Webhook", "n8n-nodes-base.webhook", {"httpMethod": "POST", "path": "wa-asistente", "options": {}},
+             [-40, 0], 2.1, webhookId=str(uuid.uuid5(uuid.NAMESPACE_URL, "casagencia/wa/prueba-contexto"))),
+        code_node("EntradaMensaje", code_wa("asistente_entrada.js"), [180, 0]),
+        if_node("¿Contestaria?", "={{ $json.contestar }}", "true", [400, 0]),
+        noop("NoContestaria", [620, 180]),
+        code_node("JuntarMensajes", "const e = $('EntradaMensaje').first().json;\n"
+                  "return [{ json: { ...e, mensaje: e.contenido, numero_de_mensajes: 1 } }];", [620, -40]),
+        pg_query("LeerFichaDelLead", SQL_FICHA, "={{ [ $json.telefono_wa ] }}", [840, -40],
+                 alwaysOutputData=True, onError="continueRegularOutput"),
+        leer_cartera("LeerCartera", [1060, -40]),
+        leer_hoja("LeerDirecciones", "Direcciones", [1280, -40], executeOnce=True),
+        code_node("ContextoDelLead", code_wa("asistente_contexto.js", cartera=True), [1500, -40]),
+        nota("Nota", "## Solo para probar, sin OpenAI\nEscucha en la MISMA ruta que [WA] 2 "
+             "(wa-asistente) y monta el contexto exacto que leeria Sara, pero no contesta a nadie.\n\n"
+             "**No pueden estar los dos activos a la vez**: para poner en marcha el asistente, "
+             "desactivar este y activar [WA] 2.", [180, -320], 480, 240),
+    ], conn(("Webhook", 0, "EntradaMensaje", 0), ("EntradaMensaje", 0, "¿Contestaria?", 0),
+            ("¿Contestaria?", 0, "JuntarMensajes", 0), ("¿Contestaria?", 1, "NoContestaria", 0),
+            ("JuntarMensajes", 0, "LeerFichaDelLead", 0), ("LeerFichaDelLead", 0, "LeerCartera", 0),
+            ("LeerCartera", 0, "LeerDirecciones", 0), ("LeerDirecciones", 0, "ContextoDelLead", 0)))
+    w["settings"] = dict(SETTINGS, saveDataSuccessExecution="all", saveManualExecutions=True)
+    return w
 
 
 # ===========================================================================
@@ -1089,6 +1289,9 @@ ORDEN = [
     "[WA] 1 · Leads de portales por correo",
     "[WA] 2 · Asistente de WhatsApp",
     "[WA] 3 · Recordatorio 24 h al comercial",
+    "[WA] 4 · Cartera desde eGO",
+    "[WA] 8 · Prueba sin IA (contexto)",
+    "[WA] 9 · Lead a mano",
 ]
 
 # Workflows de la primera version que se reaprovechan con su nombre nuevo, para
@@ -1122,6 +1325,9 @@ def construir(ids):
         "[WA] 1 · Leads de portales por correo": wf_leads(ids),
         "[WA] 2 · Asistente de WhatsApp": wf_asistente(ids),
         "[WA] 3 · Recordatorio 24 h al comercial": wf_recordatorio(ids),
+        "[WA] 4 · Cartera desde eGO": wf_cartera_ego(),
+        "[WA] 8 · Prueba sin IA (contexto)": wf_prueba_contexto(),
+        "[WA] 9 · Lead a mano": wf_lead_manual(ids),
     }
     assert list(wfs) == ORDEN
     return wfs
