@@ -93,6 +93,15 @@ const ANTELACION_MINIMA_HORAS = 0;
 // ella el recordatorio sabe cuales son suyas y no avisa de las del telefono.
 const MARCA_ORIGEN = 'Origen: WhatsApp (Sara IA)';
 
+// --- Pruebas -----------------------------------------------------------------
+// Con estos telefonos el asistente funciona IGUAL que con un cliente, pero:
+//   - los avisos van al que prueba (no a Carmen, Gisela ni Paco), con [PRUEBA];
+//   - las visitas NO se escriben en la agenda real (se consulta de verdad, pero
+//     la reserva se simula), asi no se ocupan huecos ni salta el recordatorio.
+// Se rellena AL DESPLEGAR desde wa/pruebas.local.json (no esta en git), para no
+// guardar telefonos personales en el repositorio.
+const PRUEBAS = /*PRUEBAS*/{ telefonos: [], avisar_movil: '', avisar_email: '' }/*FIN_PRUEBAS*/;
+
 // ---------------------------------------------------------------------------
 // Utilidades
 // ---------------------------------------------------------------------------
@@ -165,4 +174,9 @@ function fechaLegible(fecha, hora) {
   const d = DateTime.fromFormat(String(fecha), 'yyyy-MM-dd', { zone: ZONA });
   if (!d.isValid) return `${fecha} ${hora || ''}`.trim();
   return `${DIAS[d.weekday - 1]} ${d.day} de ${MESES[d.month - 1]}` + (hora ? ` a las ${hora}` : '');
+}
+
+function esPrueba(telefono) {
+  const t = normalizarTelefono(telefono).wa_id;
+  return !!t && (PRUEBAS.telefonos || []).includes(t);
 }

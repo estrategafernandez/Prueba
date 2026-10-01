@@ -287,11 +287,36 @@ entrada lo acepta, y hay un test con el payload real (anonimizado) en
 - `POST /webhook/wa-refrescar-cartera` (misma clave) refresca la cartera al
   momento.
 
-### Lo que falta para activarlo
+### Estado: EN MARCHA desde el 1-10-2026
 
-1. **La credencial de OpenAI** en el n8n de Casagencia (no hay ninguna).
-2. **La conexión al correo** donde entran las solicitudes de los portales.
-3. Desactivar `[WA] 8` y activar `[WA] 2`.
+Activos: `[WA] 2` (asistente), `[WA] 3` (recordatorio), `[WA] 4` (cartera),
+`[WA] 9` (lead a mano) y todos los `[WA][SUB]`. Modelo `gpt-5.1` con la
+credencial *OpenAI Casagencia*. **Todo en real**: las visitas se escriben en el
+calendario de la asesora y los avisos le llegan a ella (WhatsApp) y a ella y a
+Paco (correo).
+
+Falta solo **la conexión al correo** de los portales para activar `[WA] 1`.
+Mientras tanto, los leads se pueden lanzar con `[WA] 9`.
+
+### Modo prueba
+
+En `wa/pruebas.local.json` (no está en git) se pueden poner teléfonos de prueba:
+con ellos el asistente funciona igual, pero los avisos van a quien prueba y las
+visitas NO se escriben en la agenda real. Ahora mismo la lista está **vacía**.
+
+```json
+{"telefonos": ["34600000000"], "avisar_movil": "34600000000", "avisar_email": "x@y.com"}
+```
+
+### Lo que se corrigió probando con la línea real
+
+- Reservaba sin preguntar "¿te la reservo?" y la volvía a reservar si el cliente
+  insistía. Ahora pregunta antes y, si la misma visita ya está reservada, no la
+  repite (comprobado en la ficha del lead, no solo en el prompt).
+- Para "algo parecido más barato" copiaba los datos del piso como filtros y
+  contestaba que no había nada. Ahora usa `recomendarSimilares` con precio
+  máximo, y la búsqueda relaja los filtros secundarios en vez de devolver cero.
+- Negrita de markdown (`**así**`) que en WhatsApp se ve mal: se convierte sola.
 
 Esta versión de n8n **no deja activar un workflow si los sub-workflows que usa
 no están publicados**. Orden: primero `Etiquetar` y `AvisoEquipo`; después los

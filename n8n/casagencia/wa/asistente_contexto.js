@@ -65,7 +65,11 @@ const lineas = [
     : '- Todavia no ha contestado ninguna pregunta de cualificacion.',
   pendientes.length
     ? `- Te faltan: ${pendientes.map(([, k]) => k).join('; ')}`
-    : '- Ya tienes todas las preguntas: no vuelvas a preguntar.',
+    : '- Ya tienes todas las preguntas y estan guardadas: no vuelvas a preguntar ni a ejecutar guardarCualificacion.',
+  fila.estado === 'cita_agendada'
+    ? `- VISITA YA REGISTRADA${hay(fila.cita_fecha) ? ` el ${fechaLegible(fila.cita_fecha, fila.cita_hora)}` : ''}: `
+      + 'no la vuelvas a reservar. Si quiere cambiarla o anularla, avisarEquipo.'
+    : '',
   esAlq ? '- OJO: es ALQUILER. No se agenda: preguntas, guardarCualificacion y pasa al equipo.' : '',
 ];
 if (hay(fila.notas)) lineas.push(`- Notas internas: ${fila.notas}`);

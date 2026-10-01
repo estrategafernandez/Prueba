@@ -21,6 +21,10 @@ const base = encontradas[0];
 const excluir = new Set([base.ref.toUpperCase(),
   ...String(q.excluir ?? '').toUpperCase().split(/[,;\s]+/).filter(Boolean)]);
 const limite = Math.min(Math.max(Math.round(aNumero(q.limite)) || 3, 1), 5);
+// "Algo parecido pero mas barato": precio_max. Con limite de precio, el precio ya
+// no puntua por parecido (lo que quiere es otra horquilla).
+const pmax = aNumero(q.precio_max);
+const pmin = aNumero(q.precio_min);
 
 const puntos = (r) => {
   let p = 0;
@@ -28,20 +32,22 @@ const puntos = (r) => {
   if (base.zona && sinAcentos(r.zona) === sinAcentos(base.zona)) p += 3;
   if (casaTipo(base.tipo, r.tipo)) p += 2;
   if (base.habitaciones && Math.abs(r.habitaciones - base.habitaciones) <= 1) p += 2;
-  if (base.precio && r.precio && Math.abs(r.precio - base.precio) / base.precio <= 0.25) p += 3;
+  if (!pmax && !pmin && base.precio && r.precio && Math.abs(r.precio - base.precio) / base.precio <= 0.25) p += 3;
   return p;
 };
 
 const candidatos = filas
   .filter(r => r.operacion === base.operacion && !excluir.has(r.ref.toUpperCase()))
+  .filter(r => (!pmax || (r.precio && r.precio <= pmax)) && (!pmin || r.precio >= pmin))
   .map(r => ({ r, p: puntos(r) }))
   .filter(x => x.p >= 3)
-  .sort((a, b) => (b.p - a.p) || (Math.abs(a.r.precio - base.precio) - Math.abs(b.r.precio - base.precio)))
+  .sort((a, b) => (b.p - a.p) || (pmax ? b.r.precio - a.r.precio
+    : Math.abs(a.r.precio - base.precio) - Math.abs(b.r.precio - base.precio)))
   .slice(0, limite);
 
 if (!candidatos.length) {
-  return salida('No hay en cartera nada suficientemente parecido. Diselo con naturalidad y ofrecele buscar ' +
-    'con otros criterios o que el equipo le avise si entra algo.', { total: 0 });
+  return salida('No hay en cartera nada suficientemente parecido' + (pmax ? ` por debajo de ${euros(pmax, base.operacion)}` : '') +
+    '. Diselo con naturalidad y ofrecele buscar con otros criterios o que el equipo le avise si entra algo.', { total: 0 });
 }
 
 return salida(`Parecidos a ${base.ref} (${base.tipo}, ${municipioCorto(base.municipio)}, ${euros(base.precio, base.operacion)}), ` +

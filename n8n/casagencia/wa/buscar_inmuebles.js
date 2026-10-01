@@ -41,17 +41,34 @@ if (q.municipio && !municipio) {
     municipiosCartera.map(municipioCorto).join(', ') + '. Preguntale si le vale alguna.', { total: 0 });
 }
 
-const base = filas.filter(r =>
+const filtrar = (f) => filas.filter(r =>
   (!operacion || r.operacion === operacion) &&
   (!municipio || r.municipio === municipio) &&
-  (!zona || sinAcentos(r.zona).includes(zona) || sinAcentos(r.descripcion).includes(zona)) &&
+  (!f.zona || sinAcentos(r.zona).includes(f.zona) || sinAcentos(r.descripcion).includes(f.zona)) &&
   casaTipo(q.tipo, r.tipo) &&
-  (!hab || r.habitaciones >= hab) &&
-  (!banos || r.banos >= banos) &&
+  (!f.hab || r.habitaciones >= f.hab) &&
+  (!f.banos || r.banos >= f.banos) &&
   (!pmin || r.precio >= pmin) &&
   (!pmax || r.precio <= pmax) &&
-  (!smin || r.superficie >= smin) &&
+  (!f.smin || r.superficie >= f.smin) &&
   !excluir.has(r.ref.toUpperCase()));
+
+// Si con todo lo pedido no sale nada, se van quitando los filtros secundarios
+// (superficie y banos, luego la zona, luego una habitacion menos) y se avisa de
+// cuales. Operacion, municipio, tipo y precio no se tocan nunca: son lo que el
+// cliente de verdad quiere. Asi nunca se le dice "no hay nada" cuando si hay.
+const PASOS = [
+  { quitado: [], f: { zona, hab, banos, smin } },
+  { quitado: ['superficie', 'banos'], f: { zona, hab } },
+  { quitado: ['superficie', 'banos', 'zona'], f: { hab } },
+  { quitado: ['superficie', 'banos', 'zona', 'una habitacion menos'], f: { hab: hab > 1 ? hab - 1 : 0 } },
+];
+let base = [], relajado = [];
+for (const paso of PASOS) {
+  base = filtrar(paso.f);
+  relajado = paso.quitado;
+  if (base.length) break;
+}
 
 const aciertos = (r) => extras.filter(e => textoBuscable(r).includes(e)).length;
 let lista = extras.length ? base.filter(r => aciertos(r) === extras.length) : base;
@@ -73,7 +90,9 @@ if (!lista.length) {
 }
 
 const muestra = lista.slice(0, limite);
-const cabecera = (aproximado
+const cabecera = (relajado.length
+  ? `No hay nada con TODO lo que pide; quitando ${relajado.join(', ')}, esto es lo mas parecido. Diselo asi.\n`
+  : '') + (aproximado
   ? `Ninguno cumple todo lo que pide (${extras.join(', ')}); estos son los que mas se acercan. Diselo asi.\n`
   : '') + `${lista.length} inmueble${lista.length === 1 ? '' : 's'} en cartera. `;
 const consejo = lista.length > 3

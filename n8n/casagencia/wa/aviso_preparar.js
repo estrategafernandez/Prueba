@@ -16,6 +16,8 @@ const quien = EQUIPO[String(j.destinatario ?? '').trim()] ? String(j.destinatari
 const para = EQUIPO[quien];
 
 const tel = normalizarTelefono(j.cliente_telefono);
+// Conversacion de prueba: el aviso es el mismo, pero llega al que prueba.
+const prueba = esPrueba(j.cliente_telefono);
 const conv = Number(j.conversacion_id || 0);
 const enlaceChat = conv ? `${CHATWOOT_URL}/app/accounts/${CHATWOOT_CUENTA}/conversations/${conv}` : '';
 
@@ -36,7 +38,7 @@ const partes = [
   QUE_HACER[ACCION] || QUE_HACER.AVISO,
   enlaceChat ? `Chat: ${enlaceChat}` : '',
 ].filter(Boolean);
-const aviso = paramPlantilla(partes.join(' · '), 900);
+const aviso = paramPlantilla((prueba ? '[PRUEBA] ' : '') + partes.join(' · '), 900);
 
 const pasarAHumano = j.pasar_a_humano === true || String(j.pasar_a_humano).toLowerCase() === 'true';
 const etiquetas = [String(j.etiqueta ?? '').trim(), pasarAHumano ? ETIQUETAS.intervenir : '']
@@ -45,11 +47,12 @@ const etiquetas = [String(j.etiqueta ?? '').trim(), pasarAHumano ? ETIQUETAS.int
 return [{
   json: {
     para_nombre: quien,
-    para_movil: para.movil,
+    para_movil: prueba ? PRUEBAS.avisar_movil : para.movil,
+    es_prueba: prueba,
     aviso,
     meta_body: {
       messaging_product: 'whatsapp',
-      to: para.movil,
+      to: prueba ? PRUEBAS.avisar_movil : para.movil,
       type: 'template',
       template: {
         name: PLANTILLAS.aviso.nombre,
@@ -60,8 +63,8 @@ return [{
         ] }],
       },
     },
-    email_para: [para.email, EMAIL_DIRECCION].filter(Boolean).join(', '),
-    email_asunto: `[WhatsApp] ${ACCION}: ${String(j.referencia ?? '').toUpperCase() || 'sin inmueble'} - `
+    email_para: prueba ? PRUEBAS.avisar_email : [para.email, EMAIL_DIRECCION].filter(Boolean).join(', '),
+    email_asunto: `${prueba ? '[PRUEBA] ' : ''}[WhatsApp] ${ACCION}: ${String(j.referencia ?? '').toUpperCase() || 'sin inmueble'} - `
       + `${String(j.cliente_nombre ?? '').trim() || 'cliente'} - ${tel.e164 || 'sin telefono'}`,
     email_cuerpo: [
       `${ACCION} (asistente de WhatsApp)`,

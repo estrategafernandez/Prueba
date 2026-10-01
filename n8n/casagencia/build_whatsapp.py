@@ -40,15 +40,28 @@ CRED_CHATWOOT = {"httpHeaderAuth": {"id": "Wm0tmDE3FjfTx1Tu", "name": "Chatwoot 
 CRED_META     = {"httpHeaderAuth": {"id": "P4xswu9i9E4RILJN", "name": "Meta WhatsApp Casagencia"}}
 # Clave que hay que mandar en la cabecera para usar [WA] 9 · Lead a mano
 CRED_LEAD_MANUAL = {"httpHeaderAuth": {"id": "cFrVkaTH4R4tKWn0", "name": "WA lead a mano (clave del webhook)"}}
-# PENDIENTE: en el n8n de Casagencia no hay credencial de OpenAI. Cuando se
-# cree, poner aqui su id y nombre y volver a desplegar.
-CRED_OPENAI = None
+CRED_OPENAI   = {"openAiApi": {"id": "43TI6Y7wzI9hadIh", "name": "OpenAI Casagencia"}}
 
 MODELO = "gpt-5.1"
 SHEET_ID = "1cB2UI-ScDI34QS57k-UD2ZE79P5XhpyPJu78A5zPs3Q"
 CALENDARIOS = {"Carmen": "carmen@casagencia.com", "Gisela": "gisela@casagencia.com"}
 
 CONFIG = (WA / "config.js").read_text(encoding="utf-8")
+
+# Numeros de prueba: se inyectan desde wa/pruebas.local.json (no esta en git).
+# {"telefonos": ["34600000000"], "avisar_movil": "34600000000", "avisar_email": "x@y.com"}
+_PRUEBAS_FILE = WA / "pruebas.local.json"
+_hueco = re.search(r"/\*PRUEBAS\*/(.*?)/\*FIN_PRUEBAS\*/", CONFIG, re.S)
+assert _hueco, "config.js: no encuentro el hueco de PRUEBAS"
+CONFIG_REPO = CONFIG                  # lo que se guarda en workflows_wa/ (sin telefonos)
+CONFIG_DESPLIEGUE = CONFIG            # lo que se sube a n8n
+if _PRUEBAS_FILE.exists():
+    _p = json.loads(_PRUEBAS_FILE.read_text(encoding="utf-8"))
+    assert _p.get("avisar_movil") and _p.get("avisar_email"), "pruebas.local.json: faltan avisar_movil/avisar_email"
+    CONFIG_DESPLIEGUE = CONFIG.replace(_hueco.group(0), json.dumps(_p, ensure_ascii=False))
+    PRUEBAS_ACTIVAS = len(_p.get("telefonos", []))
+else:
+    PRUEBAS_ACTIVAS = 0
 CARTERA = (WA / "cartera.js").read_text(encoding="utf-8")
 LIB = (BASE / "lib" / "casagencia_comun.js").read_text(encoding="utf-8")
 PROMPT = (WA / "prompt_asistente.md").read_text(encoding="utf-8")
@@ -250,6 +263,7 @@ def wf(nombre, nodos, conexiones):
 # ===========================================================================
 # SQL
 # ===========================================================================
+_CITA_COLS = ["cita_fecha", "cita_hora"]                                # la visita agendada
 _Q = ["q_tiempo_buscando", "q_necesita_vender",                       # compra
       "q_personas", "q_ingresos", "q_mascotas", "q_entrada",           # alquiler
       "q_duracion", "q_actividad"]
@@ -319,7 +333,7 @@ create table if not exists wa_avisos (
 );
 create unique index if not exists wa_avisos_unico on wa_avisos (evento_id, tipo);
 """ % "\n".join("alter table wa_leads add column if not exists %s text not null default '';" % q
-                for q in _Q)
+                for q in _Q + _CITA_COLS)
 
 # Devuelve fila SOLO si el lead es nuevo o si el ultimo contacto es de hace mas
 # de 30 dias. Si no devuelve nada, ya se le escribio: no se le vuelve a escribir.
@@ -349,7 +363,7 @@ on conflict (telefono_wa, referencia) do update
        es_alquiler = excluded.es_alquiler, asesora = excluded.asesora, estado = 'nuevo',
        %s,
        actualizado_en = now()
-returning id, telefono_wa, referencia;""" % ", ".join("%s = ''" % q for q in _Q)
+returning id, telefono_wa, referencia;""" % ", ".join("%s = ''" % q for q in _Q + _CITA_COLS)
 
 SQL_PLANTILLA_ENVIADA = """update wa_leads
    set estado = 'plantilla_enviada', conversacion_id = $2, actualizado_en = now()
@@ -379,8 +393,13 @@ returning id;""" % (
                  % (q, q, q, q) for q in _Q))
 
 SQL_CITA = """update wa_leads
-   set estado = 'cita_agendada', actualizado_en = now()
+   set estado = 'cita_agendada', cita_fecha = $2, cita_hora = $3, actualizado_en = now()
  where telefono_wa = $1;"""
+
+# La misma visita (mismo cliente, dia y hora) ya reservada: no se repite.
+SQL_YA_RESERVADA = """select cita_fecha, cita_hora from wa_leads
+ where telefono_wa = $1 and estado = 'cita_agendada' and cita_fecha = $2 and cita_hora = $3
+ limit 1;"""
 
 # Una sola sentencia: mete o actualiza lo que viene en el feed y borra lo que ya
 # no esta (vendido o retirado). O todo o nada.
@@ -459,7 +478,8 @@ def wf_buscar():
 
 def wf_similares():
     return wf_cartera("[WA][SUB] recomendarSimilares",
-                      [("referencia", "string"), ("excluir", "string"), ("limite", "number")],
+                      [("referencia", "string"), ("excluir", "string"), ("limite", "number"),
+                       ("precio_max", "number"), ("precio_min", "number")],
                       "recomendar_similares.js", "Puntuar",
                       "## Recomendar parecidos\nMisma operacion y, puntuando: mismo municipio, "
                       "misma zona, mismo tipo, habitaciones parecidas y precio en la horquilla del "
@@ -527,6 +547,7 @@ def wf_disponibilidad():
 
 def wf_confirmar(ids):
     v = "$('ValidarAntesDeInsertar').first().json"
+    g = "$('GuardiaDeAlquiler').first().json"
     s = "$('Start').first().json"
     ini = "DateTime.fromFormat($json.fecha + ' ' + $json.hora,'yyyy-MM-dd HH:mm',{zone:'Europe/Madrid'})"
     aviso = {k: "={{ $json.%s }}" % k for k in
@@ -537,13 +558,27 @@ def wf_confirmar(ids):
         code_node("GuardiaDeAlquiler", code_wa("guardia_alquiler.js"), [200, 0]),
         if_node("¿Se puede agendar?", "={{ $json.seguir }}", "true", [420, 0]),
         set_node("Bloqueado", {"respuesta": ("string", "={{ $json.respuesta }}")}, [640, 200]),
-        code_node("PrepararDatos", code_tel("cc_preparar.js"), [640, -40]),
+        pg_query("¿YaReservada?", SQL_YA_RESERVADA,
+                 "={{ [ String(%s.telefono || '').replace(/\\D/g,''), %s.body.fecha, %s.body.hora ] }}" % (g, g, g),
+                 [640, -40], alwaysOutputData=True, onError="continueRegularOutput"),
+        if_node("¿Ya la tiene?", "={{ String($json.cita_fecha || '') }}", "notEmpty", [860, -40], tipo="string"),
+        set_node("RespuestaYaReservada", {"respuesta": ("string",
+                 "cita_confirmada: true. Esta visita YA estaba registrada (mismo dia y hora): no se ha vuelto a "
+                 "reservar ni a avisar. Diselo al cliente: ya la tiene, pendiente de que la asesora se la confirme.")},
+                 [1080, -200]),
+        code_node("RecuperarPeticion", "return [{ json: $('GuardiaDeAlquiler').first().json }];", [1080, -40]),
+        code_node("PrepararDatos", code_tel("cc_preparar.js"), [1300, -40]),
         cal_getall("LeerAgendaDelDia", "={{ $json.calendario }}", DESDE_DIA,
                    "={{ DateTime.fromFormat(%s,'yyyy-MM-dd',{zone:'Europe/Madrid'}).endOf('day').toISO() }}" % DIA,
                    [860, -40]),
         code_node("ValidarAntesDeInsertar", code_tel("cc_validar.js"), [1080, -40]),
         if_node("¿Puede crear?", "={{ $json.puede_crear }}", "true", [1300, -40]),
         code_node("RespuestaRechazo", code_wa("herramienta_respuesta.js"), [1520, 140]),
+        # Numero de prueba: la agenda se ha consultado de verdad, pero la reserva
+        # no se escribe (ni ocupa hueco, ni salta el recordatorio de 24 h).
+        if_node("¿Es prueba?", "={{ $('GuardiaDeAlquiler').first().json.es_prueba }}", "true", [1520, -120]),
+        set_node("SimularReserva", {"id": ("string", "PRUEBA-sin-agenda"), "prueba": ("boolean", "true")},
+                 [1740, -260]),
         node("InsertarEnAgenda", "n8n-nodes-base.googleCalendar", {
             "calendar": {"__rl": True, "value": "={{ $json.calendario }}", "mode": "id"},
             "start": "={{ %s.toISO() }}" % ini,
@@ -557,7 +592,7 @@ def wf_confirmar(ids):
                                 "+ '\\nResumen: ' + String(%s.resumen || '').replace(/\\n/g, ' ') }}"
                                 % (MARCA, s, s)),
             },
-        }, [1520, -120], 1.3, credentials=CRED_CAL, onError="continueErrorOutput"),
+        }, [1740, -60], 1.3, credentials=CRED_CAL, onError="continueErrorOutput"),
         set_node("RespuestaErrorCalendario", {"respuesta": ("string",
                  "cita_confirmada: false. No he podido guardar la cita por un problema tecnico. NO le "
                  "digas al cliente que esta reservada: explicale que ha habido una incidencia y usa "
@@ -567,7 +602,7 @@ def wf_confirmar(ids):
                  aviso, [1960, -120], {"conversacion_id": "number", "pasar_a_humano": "boolean"},
                  onError="continueRegularOutput", alwaysOutputData=True),
         pg_query("MarcarCitaEnLaFicha", SQL_CITA,
-                 "={{ [ %s.telefono_e164.replace(/\\D/g,'') ] }}" % v, [2180, -120],
+                 "={{ [ %s.telefono_e164.replace(/\\D/g,''), %s.fecha, %s.hora ] }}" % (v, v, v), [2180, -120],
                  onError="continueRegularOutput", alwaysOutputData=True, executeOnce=True),
         code_node("RespuestaOK", code_wa("cita_respuesta.js"), [2400, -120]),
         nota("Nota", NOTA_AGENDA, [640, -420], 520, 300),
@@ -577,12 +612,17 @@ def wf_confirmar(ids):
              "[WA] 3." % MARCA, [1740, -440], 460, 260),
     ], conn(("Start", 0, "GuardiaDeAlquiler", 0),
             ("GuardiaDeAlquiler", 0, "¿Se puede agendar?", 0),
-            ("¿Se puede agendar?", 0, "PrepararDatos", 0),
+            ("¿Se puede agendar?", 0, "¿YaReservada?", 0),
             ("¿Se puede agendar?", 1, "Bloqueado", 0),
+            ("¿YaReservada?", 0, "¿Ya la tiene?", 0),
+            ("¿Ya la tiene?", 0, "RespuestaYaReservada", 0), ("¿Ya la tiene?", 1, "RecuperarPeticion", 0),
+            ("RecuperarPeticion", 0, "PrepararDatos", 0),
             ("PrepararDatos", 0, "LeerAgendaDelDia", 0),
             ("LeerAgendaDelDia", 0, "ValidarAntesDeInsertar", 0),
             ("ValidarAntesDeInsertar", 0, "¿Puede crear?", 0),
-            ("¿Puede crear?", 0, "InsertarEnAgenda", 0),
+            ("¿Puede crear?", 0, "¿Es prueba?", 0),
+            ("¿Es prueba?", 0, "SimularReserva", 0), ("¿Es prueba?", 1, "InsertarEnAgenda", 0),
+            ("SimularReserva", 0, "PrepararAvisoCita", 0),
             ("¿Puede crear?", 1, "RespuestaRechazo", 0),
             ("InsertarEnAgenda", 0, "PrepararAvisoCita", 0),
             ("InsertarEnAgenda", 1, "RespuestaErrorCalendario", 0),
@@ -659,7 +699,7 @@ def wf_aviso(ids):
 def wf_etiquetar():
     url = "=" + CW_API + "/conversations/{{ $('Start').first().json.conversacion_id }}/labels"
     return wf("[WA][SUB] Etiquetar", [
-        trigger_sub([("conversacion_id", "number"), ("etiquetas", "string")]),
+        trigger_sub([("conversacion_id", "number"), ("etiquetas", "string"), ("forzar", "boolean")]),
         if_node("¿Hay algo que poner?", None, None, [200, 0], conds=[
             ("={{ Number($json.conversacion_id || 0) }}", "gt", 0, "number"),
             ("={{ String($json.etiquetas || '') }}", "notEmpty", None, "string")]),
@@ -987,8 +1027,10 @@ def herramientas(ids):
             "alternativas.",
             {"referencia": de_la_ia("referencia", REF_DESC),
              "excluir": de_la_ia("excluir", "Referencias que ya le has ensenado, separadas por comas. Vacio si ninguna."),
+             "precio_max": de_la_ia("precio_max", "Si lo quiere mas barato: precio maximo en euros, entero (por "
+                                    "ejemplo el precio del suyo). 0 si no ha hablado de precio.", "number"),
              "limite": de_la_ia("limite", "Cuantos devolver. Normalmente 3.", "number")},
-            [x + 3 * dx, y], {"limite": "number"}),
+            [x + 3 * dx, y], {"limite": "number", "precio_max": "number"}),
         herramienta("BuscarDisponibilidadCalendario", ids,
             "SOLO COMPRA. Comprueba si se puede hacer una visita de una hora ese dia y a esa hora en la agenda "
             "del comercial, y devuelve las horas LIBRES en 'alternativas'. Valida horario de oficina y "
@@ -1209,8 +1251,12 @@ def wf_lead_manual(ids):
         # Las tablas se crean si no existen: el mismo SQL que [WA] 0, que se
         # puede repetir sin miedo.
         pg_query("CrearTablasSiFaltan", DDL, None, [620, -40], executeOnce=True),
-        pg_query("ReiniciarMemoria", "delete from n8n_chat_histories where session_id = $1 and $2::boolean;",
-                 "={{ [ %s.telefono_e164, %s.reiniciar ] }}" % (j, j), [840, -40],
+        # Reiniciar: fuera la memoria de la conversacion anterior y las fichas sin
+        # inmueble que hayan quedado de escribir sin pasar por un portal.
+        pg_query("ReiniciarMemoria",
+                 "with memoria as (delete from n8n_chat_histories where session_id = $1 and $2::boolean returning 1) "
+                 "delete from wa_leads where telefono_wa = $3 and referencia = '' and $2::boolean;",
+                 "={{ [ %s.telefono_e164, %s.reiniciar, %s.telefono_wa ] }}" % (j, j, j), [840, -40],
                  alwaysOutputData=True, onError="continueRegularOutput"),
         pg_query("AltaDelLead", SQL_ALTA_MANUAL,
                  "={{ [ %s.telefono_wa, %s.telefono_e164, %s.referencia, %s.nombre, %s.email_cliente, "
@@ -1221,13 +1267,19 @@ def wf_lead_manual(ids):
         pg_query("MarcarPlantillaEnviada", SQL_PLANTILLA_ENVIADA,
                  "={{ [ %s.telefono_wa, $json.conversacion_id || 0, %s.referencia ] }}" % (j, j),
                  [1500, -40], alwaysOutputData=True, onError="continueRegularOutput"),
+        # Al reiniciar, la conversacion vuelve a 1-bienvenida_ia (y sin 4-intervenir)
+        exec_sub("EtiquetaDeInicio", ids.get("[WA][SUB] Etiquetar", ""), "[WA][SUB] Etiquetar",
+                 {"conversacion_id": "={{ $('EnviarBienvenida').first().json.conversacion_id }}",
+                  "etiquetas": ETQ_BIENVENIDA, "forzar": "={{ %s.reiniciar }}" % j},
+                 [1720, -40], {"conversacion_id": "number", "forzar": "boolean"},
+                 onError="continueRegularOutput", alwaysOutputData=True),
         node("RespuestaOK", "n8n-nodes-base.respondToWebhook", {
             "respondWith": "json",
             "responseBody": "={{ { ok: true, plantilla: %s.plantilla, telefono: %s.telefono_e164, "
                             "referencia: %s.referencia, asesora: %s.asesora, "
                             "conversacion_id: $('EnviarBienvenida').first().json.conversacion_id, "
                             "texto: $('EnviarBienvenida').first().json.contenido } }}" % (j, j, j, j),
-            "options": {"responseCode": 200}}, [1720, -40], 1.5),
+            "options": {"responseCode": 200}}, [1940, -40], 1.5),
         nota("Nota", "## Dar de alta un lead a mano\nPara leads que entran por telefono o en persona, "
              "y para pruebas. Hace lo mismo que [WA] 1 cuando llega un correo: ficha del lead, "
              "plantilla de bienvenida (compra o alquiler) y memoria del agente.\n\n"
@@ -1239,7 +1291,7 @@ def wf_lead_manual(ids):
             ("¿Datos correctos?", 0, "CrearTablasSiFaltan", 0), ("¿Datos correctos?", 1, "RespuestaError", 0),
             ("CrearTablasSiFaltan", 0, "ReiniciarMemoria", 0), ("ReiniciarMemoria", 0, "AltaDelLead", 0),
             ("AltaDelLead", 0, "EnviarBienvenida", 0), ("EnviarBienvenida", 0, "MarcarPlantillaEnviada", 0),
-            ("MarcarPlantillaEnviada", 0, "RespuestaOK", 0)))
+            ("MarcarPlantillaEnviada", 0, "EtiquetaDeInicio", 0), ("EtiquetaDeInicio", 0, "RespuestaOK", 0)))
 
 
 def wf_prueba_contexto():
@@ -1367,6 +1419,8 @@ def main():
                 print("  reservo id  %-46s %s" % (nombre, ids[nombre]))
         IDS_FILE.write_text(json.dumps(ids, ensure_ascii=False, indent=2), encoding="utf-8")
 
+    global CONFIG
+    CONFIG = CONFIG_REPO                  # los ficheros del repositorio, sin telefonos
     wfs = construir(ids)
     SALIDA.mkdir(exist_ok=True)
     for f in SALIDA.glob("*.json"):
@@ -1380,10 +1434,15 @@ def main():
         print("\n(sin --deploy: no se ha subido nada)")
         return
     print()
+    CONFIG = CONFIG_DESPLIEGUE            # a n8n, con los numeros de prueba
+    wfs = construir(ids)
     for nombre, w in wfs.items():
         api("PUT", "/api/v1/workflows/%s" % ids[nombre], w)
         print("  ACTUALIZADO %-46s %s" % (nombre, ids[nombre]))
-    print("\nTodos quedan DESACTIVADOS a proposito.")
+    print("\nLos nuevos quedan desactivados; los que ya estaban activos se publican con la version nueva.")
+    print("Numeros de prueba: %d %s" % (PRUEBAS_ACTIVAS,
+          "(OJO: con esos telefonos no se escribe en la agenda real)" if PRUEBAS_ACTIVAS
+          else "(todo en real: agenda y avisos de verdad para todos)"))
 
 
 if __name__ == "__main__":

@@ -13,10 +13,15 @@ const pedidas = String($('Start').first().json.etiquetas ?? '')
 const rango = (e) => ESTADOS.indexOf(e);          // -1 si no es de estado
 const estadoActual = actuales.filter(e => rango(e) >= 0).sort((a, b) => rango(b) - rango(a))[0] || '';
 
-let finales = [...actuales];
+// Reinicio a mano ([WA] 9 con reiniciar): se quitan todas las de la IA,
+// incluida 4-intervenir, y se ponen las pedidas. Las de las personas se quedan.
+const forzar = String($('Start').first().json.forzar ?? '').toLowerCase() === 'true';
+let finales = forzar
+  ? actuales.filter(e => !ESTADOS.includes(e) && e !== ETIQUETAS.intervenir)
+  : [...actuales];
 for (const e of pedidas) {
   if (rango(e) >= 0) {
-    if (rango(e) < rango(estadoActual)) continue;           // no se retrocede
+    if (!forzar && rango(e) < rango(estadoActual)) continue;  // no se retrocede
     finales = finales.filter(x => rango(x) < 0);            // fuera el estado anterior
   }
   if (!finales.includes(e)) finales.push(e);

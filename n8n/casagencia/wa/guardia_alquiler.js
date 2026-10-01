@@ -33,6 +33,8 @@ return [{
     referencia,
     es_alquiler: alquiler,
     seguir: !respuesta,
+    // Prueba: se consulta la agenda de verdad, pero la reserva NO se escribe
+    es_prueba: esPrueba(j.telefono),
     respuesta,
     body: {
       nombre: String(j.nombre ?? '').trim(),

@@ -2,7 +2,12 @@
 // Un muro de texto en WhatsApp no lo lee nadie. La respuesta del agente se
 // parte en mensajes cortos, como escribiria una persona, respetando los
 // parrafos y sin cortar frases por la mitad.
-const texto = String($input.first().json.output ?? $input.first().json.text ?? '').trim();
+// WhatsApp no es markdown: **negrita** se ve con asteriscos, y los titulos con #.
+const texto = String($input.first().json.output ?? $input.first().json.text ?? '')
+  .replace(/\*\*(.+?)\*\*/g, '*$1*')
+  .replace(/__(.+?)__/g, '_$1_')
+  .replace(/^#{1,6}\s+/gm, '')
+  .trim();
 
 const LIMITE = 320;   // caracteres por mensaje
 const MAXIMO = 5;     // nunca mas de 5 mensajes seguidos

@@ -333,6 +333,16 @@ ck(`parecidos a ${venta.ref}: no se incluye a si mismo`, simFilas.length > 0 && 
    (sim.referencias || []).join(','));
 ck('parecidos: misma operacion', simFilas.every(x => x.tipo_transaccion === venta.tipo_transaccion));
 ck('parecidos: como mucho 3', simFilas.length <= 3);
+// El caso real del 1-10-2026: "algo parecido pero mas barato" que el BN-1528-V (259.000)
+const barato = wa('recomendar_similares.js', inp([{}]), nod({ ...hoja, Start: { referencia: 'BN-1528-V', precio_max: 258999 } }), true)[0].json;
+const baratoFilas = (barato.referencias || []).map(ref => REAL.find(z => z.ref === ref));
+ck('parecidos y mas baratos que el BN-1528-V: los hay', baratoFilas.length > 0 && baratoFilas.every(x => x.precio < 259000),
+   baratoFilas.map(x => `${x.ref} ${x.precio}`).join(', '));
+// Y si el modelo copia los datos del piso como filtros, ya no contesta "no hay nada"
+r = buscar({ operacion: 'venta', municipio: 'Benicasim', zona: 'Pueblo', tipo: 'piso', habitaciones_min: 3,
+             banos_min: 2, precio_max: 259000, superficie_min: 90, excluir: 'BN-1528-V' });
+ck('buscar con filtros de mas: relaja los secundarios y lo dice', r.total > 0 && /quitando/.test(r.respuesta),
+   (r.referencias || []).join(','));
 
 // ===========================================================================
 console.log('\n== 12. [WA] 4: cartera completa desde el feed de eGO ==');
@@ -358,6 +368,29 @@ ck('bienvenida sin enlace en el correo: lleva el de la web', r.param2 === 'https
 r = wa('plantilla_normalizar.js', inp([{ json: { enlace: 'https://www.casagencia.com/inmueble/x/1' } }]),
   nod({ Start: { telefono: '600112233', referencia: 'BN-1528-V', param2: 'https://www.idealista.com/inmueble/9/' } }))[0].json;
 ck('si el correo traia enlace del portal, manda ese', r.param2 === 'https://www.idealista.com/inmueble/9/', r.param2);
+
+// ===========================================================================
+console.log('\n== 13. Modo prueba (numeros de quien prueba) ==');
+// El constructor rellena el hueco de PRUEBAS al desplegar; aqui con uno ficticio
+const CFG_PRUEBA = CFG.replace(/\/\*PRUEBAS\*\/[\s\S]*?\/\*FIN_PRUEBAS\*\//,
+  JSON.stringify({ telefonos: ['34600000009'], avisar_movil: '34600000009', avisar_email: 'prueba@ejemplo.com' }));
+const waP = (f, $input, $) => correr(CFG_PRUEBA + '\n' + fs.readFileSync(B + 'wa/' + f, 'utf8'), $input, $);
+r = waP('aviso_preparar.js', inp([{ json: { accion: 'VISITA AGENDADA', destinatario: 'Carmen', referencia: 'BN-1528-V',
+  cliente_nombre: 'Prueba', cliente_telefono: '+34 600 000 009', resumen: 'test', conversacion_id: 1 } }]))[0].json;
+ck('prueba: el WhatsApp del aviso va al que prueba, no a Carmen', r.meta_body.to === '34600000009', r.meta_body.to);
+ck('prueba: el correo va al que prueba, no a Carmen ni a Paco', r.email_para === 'prueba@ejemplo.com', r.email_para);
+ck('prueba: marcado [PRUEBA]', r.aviso.startsWith('[PRUEBA]') && r.email_asunto.startsWith('[PRUEBA]'));
+ck('prueba: el texto sigue saludando a Carmen (es el aviso real)', r.meta_body.template.components[0].parameters[0].text === 'Carmen');
+r = waP('aviso_preparar.js', inp([{ json: { accion: 'VISITA AGENDADA', destinatario: 'Carmen', referencia: 'BN-1528-V',
+  cliente_telefono: '+34 611 111 111', resumen: 'test' } }]))[0].json;
+ck('un cliente normal sigue avisando a Carmen', r.meta_body.to === '34654907386' && !r.aviso.startsWith('[PRUEBA]'));
+ck('prueba: la guardia lo marca', waP('guardia_alquiler.js', inp([{ json: { referencia: 'BN-1528-V',
+  tipo_transaccion: 'compra', telefono: '+34600000009', fecha: MARTES, hora: '17:00', modo: 'reserva' } }]))[0].json.es_prueba === true);
+ck('sin numeros de prueba configurados nadie es prueba', wa('guardia_alquiler.js', inp([{ json: { referencia: 'BN-1528-V',
+  tipo_transaccion: 'compra', telefono: '+34600000009', fecha: MARTES, hora: '17:00', modo: 'reserva' } }]))[0].json.es_prueba === false);
+r = wa('cita_respuesta.js', inp([{}]), nod({ ValidarAntesDeInsertar: val, SimularReserva: { id: 'PRUEBA-sin-agenda', prueba: true },
+  AvisarAlComercial: { mensaje_registrado: true } }))[0].json;
+ck('prueba: la cita simulada se da por confirmada', r.cita_confirmada === true && r.prueba === true && r.evento_id === 'PRUEBA-sin-agenda');
 
 // ===========================================================================
 console.log(fallos ? `\n${fallos} FALLOS` : '\nTodo correcto');
