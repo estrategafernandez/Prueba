@@ -676,6 +676,10 @@ ck('nota como en el panel de las otras agencias', r.nota ===
    + 'Busco un piso de alquiler para dos personas.\n\nTono del cliente: positivo\nAsesora: Carmen', JSON.stringify(r.nota));
 ck('asignada a Carmen y con aviso por WhatsApp', r.agente_id === 5 && r.avisar === true && r.asesora === 'Carmen');
 ck('con la grabacion', r.grabacion.endsWith('rec.wav'));
+ck('para no repetir avisos: se mira desde que empezo la llamada', r.inicio_iso
+   === DateTime.fromMillis(llamada.start_timestamp).toUTC().toISO() && r.telefono_wa === '34600000002', r.inicio_iso);
+ck('cada aviso dice que es (para apuntarlo y no repetir)', wa('aviso_preparar.js', inp([{ json: { accion: 'aviso',
+  origen: 'telefono', cliente_telefono: '600000002' } }]))[0].json.accion === 'AVISO');
 r = leer({ ...llamada, duration_ms: 5000, disconnection_reason: 'user_hangup', call_analysis: { call_summary: '' } });
 ck('cuelga a los 5 s: al panel si, aviso no', r.avisar === false && /Colgó el cliente/.test(r.nota) && /Sin resumen/.test(r.nota));
 r = wa('llamada_nombre.js', inp([{}]), nod({ LeerLlamada: leer(llamada),

@@ -77,6 +77,7 @@ return [{
     para_movil: destinos[0].movil,
     destinos: destinos.map(d => d.nombre),
     es_prueba: prueba,
+    accion: ACCION,
     origen: telefonico ? 'telefono' : 'whatsapp',
     aviso,
     envios: destinos.map(d => ({ para: d.nombre, meta_body: plantilla(d.nombre, d.movil) })),

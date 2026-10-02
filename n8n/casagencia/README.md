@@ -231,6 +231,9 @@ a Paco** (`DIRECCION` en `wa/config.js`). Ya no se manda ningún correo.
   pre-reserva (`ConfirmarCitaCalendario`) y del recado (`registrarMensaje`) se
   han cambiado por este aviso. La grabación se sigue subiendo a Drive y está en
   la nota del panel. El recado solo se le da a Sara por enviado si Meta lo acepta.
+- **Sin repetir**: cada aviso queda apuntado (tabla `avisos_enviados`). Si
+  durante una llamada ya salió el recado o la pre-reserva, al colgar no se manda
+  además el aviso de LLAMADA (la llamada entra igual en el panel).
 - En pruebas, un solo WhatsApp al que prueba ("Carmen y Paco").
 
 ### El circuito

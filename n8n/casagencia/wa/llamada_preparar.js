@@ -57,6 +57,8 @@ return [{ json: {
   telefono_e164: tel.e164,
   telefono_wa: tel.wa_id,
   telefono_valido: tel.valido,
+  // Desde cuando mirar si ya salio un aviso en esta llamada (recado, pre-reserva)
+  inicio_iso: (inicio || DateTime.now().setZone(ZONA).minus({ minutes: 30 })).toUTC().toISO(),
   asesora,
   agente_id: esPrueba(tel.e164) ? 0 : agenteDe(asesora),
   segundos: seg,

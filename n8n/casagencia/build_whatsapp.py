@@ -382,6 +382,19 @@ create table if not exists tel_llamadas_panel (
   creado_en        timestamptz not null default now()
 );
 
+-- Cada aviso al equipo que sale por WhatsApp (de los dos asistentes). Sirve
+-- para no repetir: si en una llamada ya salio el recado o la pre-reserva, al
+-- colgar no se manda ademas el aviso de LLAMADA.
+create table if not exists avisos_enviados (
+  id          serial primary key,
+  telefono    text not null default '',
+  accion      text not null default '',
+  origen      text not null default '',
+  destinos    text not null default '',
+  enviado_en  timestamptz not null default now()
+);
+create index if not exists avisos_enviados_tel on avisos_enviados (telefono, enviado_en);
+
 -- Avisos ya enviados (recordatorio de 24 h), para no mandar ninguno dos veces
 create table if not exists wa_avisos (
   id         serial primary key,
@@ -787,6 +800,10 @@ def wf_aviso(ids):
                   "return [{ json: { envios: $input.all().map((i, k) => ({ para: destinos[k]?.json.para, "
                   "ok: Array.isArray(i.json.messages) && !!i.json.messages[0]?.id, "
                   "error: String(i.json.error?.message || i.json.error || '').slice(0, 200) })) } }];", [1300, 0]),
+        pg_query("ApuntarAviso", SQL_APUNTAR_AVISO,
+                 "={{ [ String(%s.cliente_telefono_e164 || '').replace(/\\D/g, ''), %s.accion, %s.origen, "
+                 "$json.envios.filter(e => e.ok).map(e => e.para).join(', ') ] }}" % (p, p, p),
+                 [1410, 160], onError="continueRegularOutput", alwaysOutputData=True),
         if_node("¿Hay conversacion?", "={{ Number(%s.conversacion_id || 0) }}" % p, "gt", [1520, 0], der=0,
                 tipo="number"),
         exec_sub("Etiquetar", ids.get("[WA][SUB] Etiquetar", ""), "[WA][SUB] Etiquetar",
@@ -809,7 +826,8 @@ def wf_aviso(ids):
     ], conn(("Start", 0, "Preparar", 0), ("Preparar", 0, "¿Nota en eGO?", 0),
             ("¿Nota en eGO?", 0, "NotaEnEgo", 0), ("¿Nota en eGO?", 1, "UnoPorDestino", 0),
             ("NotaEnEgo", 0, "UnoPorDestino", 0), ("UnoPorDestino", 0, "EnviarWhatsApp", 0),
-            ("EnviarWhatsApp", 0, "Juntar", 0), ("Juntar", 0, "¿Hay conversacion?", 0),
+            ("EnviarWhatsApp", 0, "Juntar", 0), ("Juntar", 0, "ApuntarAviso", 0),
+            ("ApuntarAviso", 0, "¿Hay conversacion?", 0),
             ("¿Hay conversacion?", 0, "Etiquetar", 0), ("¿Hay conversacion?", 1, "Resultado", 0),
             ("Etiquetar", 0, "LeerAsignacion", 0), ("LeerAsignacion", 0, n_if, 0),
             (n_if, 0, n_post, 0), (n_if, 1, "Resultado", 0), (n_post, 0, "Resultado", 0)))
@@ -1651,7 +1669,16 @@ def wf_conversacion_contacto():
 
 
 DDL_LLAMADAS = DDL[DDL.index("create table if not exists tel_llamadas_panel"):]
-DDL_LLAMADAS = DDL_LLAMADAS[:DDL_LLAMADAS.index(");") + 2]
+DDL_LLAMADAS = DDL_LLAMADAS[:DDL_LLAMADAS.index("-- Avisos ya enviados (recordatorio")].strip()
+assert "avisos_enviados_tel" in DDL_LLAMADAS and "wa_avisos" not in DDL_LLAMADAS
+
+# Aviso que ya ha salido del telefono para este cliente durante esta llamada
+# (recado o pre-reserva): entonces no se manda tambien el de LLAMADA.
+SQL_AVISO_EN_LA_LLAMADA = """select count(*)::int as previos from avisos_enviados
+ where telefono = $1 and origen = 'telefono' and accion <> 'LLAMADA'
+   and enviado_en >= $2::timestamptz - interval '1 minute';"""
+SQL_APUNTAR_AVISO = """insert into avisos_enviados (telefono, accion, origen, destinos)
+values ($1, $2, $3, $4);"""
 
 SQL_LLAMADA_NUEVA = """insert into tel_llamadas_panel (call_id, telefono_e164) values ($1, $2)
 on conflict (call_id) do nothing
@@ -1723,7 +1750,12 @@ def wf_llamada_panel(ids):
                  {"telefono": "={{ %s.telefono_e164 }}" % d, "texto": "={{ %s.nota }}" % d, "tipo": "llamada"},
                  [3080, 0],
                  onError="continueRegularOutput", alwaysOutputData=True, sin_esperar=True),
-        if_node("¿Avisar a la comercial?", "={{ %s.avisar }}" % d, "true", [3300, 0]),
+        pg_query("¿Ya avisada en la llamada?", SQL_AVISO_EN_LA_LLAMADA,
+                 "={{ [ %s.telefono_wa, %s.inicio_iso ] }}" % (l, l), [3300, 0],
+                 executeOnce=True, onError="continueRegularOutput", alwaysOutputData=True),
+        if_node("¿Avisar a la comercial?", None, None, [3520, 0], conds=[
+            ("={{ %s.avisar }}" % d, "true", None, "boolean"),
+            ("={{ Number($json.previos || 0) }}", "equals", 0, "number")]),
         exec_sub("AvisoWhatsApp", ids.get("[WA][SUB] AvisoEquipo", ""), "[WA][SUB] AvisoEquipo",
                  {"accion": "LLAMADA", "destinatario": "={{ %s.asesora }}" % d,
                   "referencia": "={{ %s.referencia }}" % d, "municipio": "",
@@ -1731,7 +1763,7 @@ def wf_llamada_panel(ids):
                   "cita": "", "resumen": "={{ %s.resumen }}" % d, "detalle": "={{ %s.resumen }}" % d,
                   "conversacion_id": "={{ %s.conversacion_id }}" % cv, "pasar_a_humano": False, "etiqueta": "",
                   "origen": "telefono"},
-                 [3520, -100], {"conversacion_id": "number", "pasar_a_humano": "boolean"},
+                 [3740, -100], {"conversacion_id": "number", "pasar_a_humano": "boolean"},
                  onError="continueRegularOutput", alwaysOutputData=True),
         nota("Nota", "## Cada llamada del asistente telefonico, en el panel\nLa llama `[TEL] "
              "FinalizarLlamadaRetell` al terminar cada llamada (sin esperar: no le cambia nada).\n\n"
@@ -1739,7 +1771,8 @@ def wf_llamada_panel(ids):
              "dijo), y su conversacion del inbox de WhatsApp.\n2. Etiqueta **0-llamada_telefonica**.\n3. "
              "Nota privada con el resumen, el tono y la **grabacion**.\n4. Se asigna a la asesora de la "
              "llamada (si no la tiene ya una comercial).\n5. Aviso por WhatsApp a la asesora y a Paco (si ha "
-             "durado al menos %d s); sustituye a los correos de cada llamada.\n6. La misma nota, en el historial de eGO (contacto o lead del cliente; solo "
+             "durado al menos %d s); sustituye a los correos de cada llamada. Si en la llamada ya salio un recado o una "
+             "pre-reserva, no se repite.\n6. La misma nota, en el historial de eGO (contacto o lead del cliente; solo "
              "con MODO_LEADS = 'real').\n\nCada llamada entra una sola vez (tabla tel_llamadas_panel)."
              % int(const("LLAMADA_AVISO_MIN_SEGUNDOS", "15")), [640, -520], 620, 360),
     ], conn(("Start", 0, "LeerLlamada", 0), ("LeerLlamada", 0, "CrearTablaSiFalta", 0),
@@ -1754,7 +1787,8 @@ def wf_llamada_panel(ids):
             ("NotaConGrabacion", 0, n_if, 0), ("NotaConGrabacion", 1, "NotaSinGrabacion", 0),
             ("NotaSinGrabacion", 0, n_if, 0),
             (n_if, 0, n_post, 0), (n_if, 1, "ApuntarConversacion", 0), (n_post, 0, "ApuntarConversacion", 0),
-            ("ApuntarConversacion", 0, "NotaEnEgo", 0), ("NotaEnEgo", 0, "¿Avisar a la comercial?", 0),
+            ("ApuntarConversacion", 0, "NotaEnEgo", 0), ("NotaEnEgo", 0, "¿Ya avisada en la llamada?", 0),
+            ("¿Ya avisada en la llamada?", 0, "¿Avisar a la comercial?", 0),
             ("¿Avisar a la comercial?", 0, "AvisoWhatsApp", 0)))
 
 
