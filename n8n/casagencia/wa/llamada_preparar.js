@@ -65,6 +65,8 @@ return [{ json: {
   grabacion: String(c.recording_url || ''),
   transcripcion,
   hay_transcripcion: transcripcion.trim().length > 40,
-  // El aviso por WhatsApp a la comercial, solo si ha habido conversacion
-  avisar: !!asesora && seg >= LLAMADA_AVISO_MIN_SEGUNDOS,
+  // Aviso por WhatsApp (sustituye al correo de cada llamada) a la comercial de la
+  // llamada y a Paco, si ha habido conversacion. Sin asesora: por la referencia
+  // que diga el cliente o, si no, Laurence.
+  avisar: seg >= LLAMADA_AVISO_MIN_SEGUNDOS,
 } }];

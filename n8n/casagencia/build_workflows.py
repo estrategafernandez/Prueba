@@ -12,7 +12,6 @@ BASE = pathlib.Path(__file__).parent
 N8N = "https://n8n-casagencia.serversvisionarius.com"
 CRED_CAL = {"googleCalendarOAuth2Api": {"id": "KKDdmqzzE6jXVm5b", "name": "Google Calendar Paco"}}
 CRED_SHEETS = {"googleSheetsOAuth2Api": {"id": "TPExRnq8a9FlEXAh", "name": "Google Sheets account"}}
-CRED_GMAIL = {"gmailOAuth2": {"id": "mKh6b4I1hwDsBwOd", "name": "Gmail account"}}
 SHEET_ID = "1cB2UI-ScDI34QS57k-UD2ZE79P5XhpyPJu78A5zPs3Q"
 # El API publico de n8n solo admite estas claves en settings.
 SETTINGS = {"executionOrder": "v1", "timezone": "Europe/Madrid"}
@@ -21,7 +20,7 @@ SETTINGS_OK = {"saveExecutionProgress", "saveManualExecutions", "saveDataErrorEx
                "timezone", "executionOrder"}
 
 LIB = (BASE / "lib" / "casagencia_comun.js").read_text(encoding="utf-8")
-# --sin-email: despliega ConfirmarCita saltandose el aviso (solo para pruebas)
+# --sin-email: despliega ConfirmarCita y registrarMensaje sin el aviso (solo para pruebas)
 SIN_EMAIL = "--sin-email" in sys.argv
 
 # En n8n todo cuelga del mismo proyecto personal y los proyectos y las carpetas
@@ -78,6 +77,29 @@ def cal_getall(name, calendar_expr, tmin, tmax, pos, query=None):
         onError="continueRegularOutput")
 
 
+AVISO_CAMPOS = ["accion", "destinatario", "referencia", "municipio", "cliente_nombre", "cliente_telefono",
+                "cita", "resumen", "detalle", "conversacion_id", "pasar_a_humano", "etiqueta", "origen"]
+
+
+def aviso_whatsapp(name, entradas, pos):
+    """Los avisos al equipo salen SOLO por WhatsApp (a la comercial y a Paco), por el
+    mismo sitio que los de WhatsApp: [WA][SUB] AvisoEquipo (lo monta build_whatsapp.py).
+    Antes eran correos de Gmail."""
+    ids_wa = BASE / "wa" / "ids.json"
+    sub = json.loads(ids_wa.read_text(encoding="utf-8"))["[WA][SUB] AvisoEquipo"]
+    tipos = {"conversacion_id": "number", "pasar_a_humano": "boolean"}
+    return node(name, "n8n-nodes-base.executeWorkflow", {
+        "workflowId": {"__rl": True, "value": sub, "mode": "list", "cachedResultName": "[WA][SUB] AvisoEquipo"},
+        "workflowInputs": {"mappingMode": "defineBelow", "value": {k: entradas[k] for k in AVISO_CAMPOS},
+                           "matchingColumns": [], "schema": [
+                               {"id": k, "displayName": k, "required": False, "defaultMatch": False,
+                                "display": True, "canBeUsedToMatch": True, "type": tipos.get(k, "string")}
+                               for k in AVISO_CAMPOS],
+                           "attemptToConvertTypes": False, "convertFieldsToString": False},
+        "options": {"waitForSubWorkflow": True},
+    }, pos, 1.2, onError="continueRegularOutput", alwaysOutputData=True)
+
+
 def conn(*pairs):
     """conn(('A',0,'B',0), ...) -> dict de conexiones n8n"""
     out = {}
@@ -128,7 +150,7 @@ def wf_confirmar(orig):
     wh = next(n for n in orig["nodes"] if n["type"] == "n8n-nodes-base.webhook")
     dia = "$json.fecha_consulta"
     ini = "DateTime.fromFormat($json.fecha + ' ' + $json.hora,'yyyy-MM-dd HH:mm',{zone:'Europe/Madrid'})"
-    v = "$('ValidarAntesDeInsertar').item.json"
+    v = "$('ValidarAntesDeInsertar').first().json"
     return {
         "name": "ConfirmarCitaCalendario",
         "settings": SETTINGS,
@@ -153,24 +175,22 @@ def wf_confirmar(orig):
                 "additionalFields": {"summary": "={{ $json.titulo }}",
                                      "description": "={{ $json.descripcion }}"},
             }, [1080, -120], 1.3, credentials=CRED_CAL, onError="continueErrorOutput"),
-            node("AvisarAsesora", "n8n-nodes-base.gmail", {
-                "sendTo": "={{ %s.asesora === 'Carmen' ? 'carmen@casagencia.com, paco@casagencia.com' "
-                          ": 'gisela@casagencia.com, paco@casagencia.com' }}" % v,
-                "subject": "={{ 'CITA PRE-RESERVADA: FALTA CONFIRMAR: Referencia: ' + %s.referencia "
-                           "+ ' - Telefono: ' + %s.telefono_e164 + ' - Nombre: ' + %s.nombre }}" % (v, v, v),
-                "message": "={{ 'Visita pre-reservada el ' + %s.dia_texto + ' a las ' + %s.hora "
-                           "+ '.\\n\\nInmueble: ' + %s.referencia + '\\nOperacion: ' + %s.tipo_transaccion "
-                           "+ '\\nCliente: ' + %s.nombre + '\\nTelefono: ' + %s.telefono_e164 "
-                           "+ '\\n\\nCreada por Sara (IA). Falta confirmarla con el cliente.' }}"
-                           % (v, v, v, v, v, v),
-                "options": {"appendAttribution": False},
-            }, [1320, -200], 2.2, credentials=CRED_GMAIL, onError="continueRegularOutput"),
+            aviso_whatsapp("AvisarAsesora", {
+                "accion": "PRE-RESERVA", "destinatario": "={{ %s.asesora }}" % v,
+                "referencia": "={{ %s.referencia }}" % v, "municipio": "",
+                "cliente_nombre": "={{ %s.nombre }}" % v, "cliente_telefono": "={{ %s.telefono_e164 }}" % v,
+                "cita": "={{ %s.dia_texto + ' a las ' + %s.hora }}" % (v, v),
+                "resumen": "={{ 'Pre-reservada por telefono (' + (%s.tipo_transaccion || 'compra') + '). Falta "
+                           "confirmarla con el cliente.' }}" % v,
+                "detalle": "={{ 'Pre-reservada por telefono por Sara (IA). Falta confirmarla con el cliente.' }}",
+                "conversacion_id": 0, "pasar_a_humano": False, "etiqueta": "", "origen": "telefono"},
+                [1320, -200]),
             node("RespuestaOK", "n8n-nodes-base.set", {"assignments": {"assignments": [
                 {"id": "ok", "name": "respuesta", "type": "object",
                  "value": "={{ { cita_confirmada: true, motivo: 'ok', asesora: %s.asesora, "
                           "fecha: %s.fecha, hora: %s.hora, referencia: %s.referencia, "
                           "telefono: %s.telefono_e164, "
-                          "evento_id: $('InsertarEnAgenda').item.json.id, "
+                          "evento_id: $('InsertarEnAgenda').first().json.id, "
                           "mensaje_para_sara: 'La cita ha quedado guardada como PRE-RESERVA. Diselo al cliente: "
                           "queda pendiente de que ' + %s.asesora + ' se lo confirme.' } }}"
                           % (v, v, v, v, v, v)}]}, "options": {}}, [1560, -200], 3.4),
@@ -187,7 +207,7 @@ def wf_confirmar(orig):
             node("Nota", "n8n-nodes-base.stickyNote", {"content":
                  "## Segundo cortafuegos\nAunque BuscarDisponibilidad haya dicho que si, aqui se vuelve a validar "
                  "horario, festivo, telefono y ocupacion antes de escribir en la agenda.\n"
-                 "El aviso por email SOLO sale si la cita se ha creado de verdad.",
+                 "El aviso (WhatsApp a la asesora y a Paco) SOLO sale si la cita se ha creado de verdad.",
                  "height": 190, "width": 430}, [620, -260], 1),
         ],
         "connections": conn(
@@ -281,22 +301,23 @@ def wf_cita_telefono():
 # 5) FinalizarLlamadaRetell -> limpiar restos de Club Pilates + arreglos
 # =========================================================================
 BORRAR_CLUBPILATES = {"Filter", "Message a model1", "Send a message2", "Search files and folders"}
+# Los correos de cada llamada (a Paco y, por el Switch1, a la asesora) se quitan:
+# el aviso sale por WhatsApp a la asesora y a Paco desde "[TEL] Llamada al panel".
+# La grabacion se sigue subiendo a Drive igual.
+BORRAR_CORREOS_LLAMADA = {"Send a message", "Switch1", "Send a message1", "Send a message3", "Send a message4"}
 
 
 def wf_finalizar(orig):
-    nodes = [n for n in orig["nodes"] if n["name"] not in BORRAR_CLUBPILATES]
+    borrar = BORRAR_CLUBPILATES | BORRAR_CORREOS_LLAMADA
+    nodes = [n for n in orig["nodes"] if n["name"] not in borrar]
     for n in nodes:
         if n["name"] == "Upload file":
             n["parameters"]["name"] = ("=Llamada - {{ $now.setZone('Europe/Madrid').format('dd-MM-yyyy HH-mm') }}"
                                        " - {{ $('Webhook').item.json.body.call.from_number }}")
-        if n["name"] == "Switch1":
-            for rule in n["parameters"]["rules"]["values"]:
-                for c in rule["conditions"]["conditions"]:
-                    c["leftValue"] = ("={{ $('Webhook').item.json.body.call.call_analysis"
-                                      "?.custom_analysis_data?.asesora || '' }}")
-    conns = {s: v for s, v in orig["connections"].items() if s not in BORRAR_CLUBPILATES}
+    conns = {s: v for s, v in orig["connections"].items() if s not in borrar}
     for v in conns.values():
-        v["main"] = [[c for c in (out or []) if c["node"] not in BORRAR_CLUBPILATES] for out in v.get("main", [])]
+        v["main"] = [[c for c in (out or []) if c["node"] not in borrar] for out in v.get("main", [])]
+    conns = {s: v for s, v in conns.items() if any(v["main"])}
     s = {k: v for k, v in (orig.get("settings") or {}).items() if k in SETTINGS_OK}
     s["timezone"] = "Europe/Madrid"
     w = {"name": orig["name"], "settings": s, "nodes": nodes, "connections": conns}
@@ -384,24 +405,21 @@ def wf_xmlcacheo(orig):
     s = {k: v for k, v in (orig.get("settings") or {}).items() if k in SETTINGS_OK}
     s["timezone"] = "Europe/Madrid"
     w = {"name": orig["name"], "settings": s, "nodes": nodes, "connections": conns}
-    # Cada llamada tambien al panel de conversaciones (Chatwoot): un nodo que le
-    # pasa la llamada a "[TEL] Llamada al panel" sin esperar. Se monta en
-    # build_whatsapp.py; aqui solo se conserva para no perderlo al redesplegar.
-    ids_wa = BASE / "wa" / "ids.json"
-    sub = json.loads(ids_wa.read_text(encoding="utf-8")).get("[TEL] Llamada al panel") if ids_wa.exists() else None
-    if sub:
-        from build_whatsapp import enganchar
-        enganchar(w, sub)
     return w
 
 
 # =========================================================================
 # 8) registrarMensaje -> un solo correo, con la cualificacion de alquiler
 # =========================================================================
+AVISO_RM = "$('ComponerAviso').first().json.aviso"
+
+
 def wf_registrar_mensaje(orig):
     """Antes: Switch de 3 salidas + 3 nodos de Gmail. Si el destinatario no
     casaba con ninguna rama, nadie respondia y Sara se quedaba esperando.
-    Ahora el destinatario se normaliza en el Code y sale un unico correo."""
+    Ahora el destinatario se normaliza en el Code y sale un unico aviso, por
+    WhatsApp ([WA][SUB] AvisoEquipo). Solo se le dice a Sara que se ha enviado si
+    Meta lo ha aceptado."""
     wh = next(n for n in orig["nodes"] if n["type"] == "n8n-nodes-base.webhook")
     return {
         "name": "registrarMensaje",
@@ -409,15 +427,15 @@ def wf_registrar_mensaje(orig):
         "nodes": [
             webhook("Webhook", "registrarmensaje", [-40, 0], wh.get("webhookId"), wh.get("id")),
             code_node("ComponerAviso", "rm_componer.js", [200, 0]),
-            node("EnviarAviso", "n8n-nodes-base.gmail", {
-                "sendTo": "={{ $json.para }}",
-                "subject": "={{ $json.asunto }}",
-                "message": "={{ $json.cuerpo }}",
-                "options": {"appendAttribution": False},
-            }, [440, 0], 2.2, credentials=CRED_GMAIL, onError="continueErrorOutput"),
+            aviso_whatsapp("EnviarAviso", {k: "={{ %s.%s }}" % (AVISO_RM, k) for k in AVISO_CAMPOS}, [440, 0]),
+            node("¿Aviso enviado?", "n8n-nodes-base.if", {"conditions": {
+                "options": {"caseSensitive": True, "leftValue": "", "typeValidation": "loose", "version": 3},
+                "conditions": [{"id": "aviso-ok", "leftValue": "={{ $json.mensaje_registrado }}", "rightValue": "",
+                                "operator": {"type": "boolean", "operation": "true", "singleValue": True}}],
+                "combinator": "and"}, "looseTypeValidation": True, "options": {}}, [560, 0], 2.2),
             node("RespuestaOK", "n8n-nodes-base.set", {"assignments": {"assignments": [
                 {"id": "ok", "name": "respuesta", "type": "object",
-                 "value": "={{ $('ComponerAviso').item.json.respuesta }}"}]}, "options": {}},
+                 "value": "={{ $('ComponerAviso').first().json.respuesta }}"}]}, "options": {}},
                  [680, -80], 3.4),
             respond("RespondOK", [900, -80]),
             node("RespuestaError", "n8n-nodes-base.set", {"assignments": {"assignments": [
@@ -429,8 +447,8 @@ def wf_registrar_mensaje(orig):
                  [680, 120], 3.4),
             respond("RespondError", [900, 120]),
             node("Nota", "n8n-nodes-base.stickyNote", {"content":
-                 "## Avisos a las asesoras\nUn solo correo, con el destinatario normalizado "
-                 "(si no cuadra, va a Laurence).\n\nLos leads de ALQUILER llegan marcados en el "
+                 "## Avisos a las asesoras\nPor WhatsApp (a la asesora y a Paco), con el destinatario "
+                 "normalizado (si no cuadra, va a Laurence).\n\nLos leads de ALQUILER llegan marcados en el "
                  "asunto y con la cualificacion del cliente: personas, ingresos, mascotas, fecha "
                  "de entrada y duracion.",
                  "height": 210, "width": 430}, [200, -240], 1),
@@ -438,8 +456,9 @@ def wf_registrar_mensaje(orig):
         "connections": conn(
             ("Webhook", 0, "ComponerAviso", 0),
             ("ComponerAviso", 0, "RespuestaOK" if SIN_EMAIL else "EnviarAviso", 0),
-            *([] if SIN_EMAIL else [("EnviarAviso", 0, "RespuestaOK", 0),
-                                    ("EnviarAviso", 1, "RespuestaError", 0)]),
+            *([] if SIN_EMAIL else [("EnviarAviso", 0, "¿Aviso enviado?", 0),
+                                    ("¿Aviso enviado?", 0, "RespuestaOK", 0),
+                                    ("¿Aviso enviado?", 1, "RespuestaError", 0)]),
             ("RespuestaOK", 0, "RespondOK", 0),
             ("RespuestaError", 0, "RespondError", 0)),
     }
@@ -568,7 +587,10 @@ def main():
         return
 
     print()
+    solo = next((a.split("=", 1)[1].split(",") for a in sys.argv if a.startswith("--solo=")), None)
     for name, (wid, wf) in built.items():
+        if solo and name not in solo:
+            continue
         if wid:
             api("PUT", f"/api/v1/workflows/{wid}", wf)
             print(f"  ACTUALIZADO  {name}  ({wid})")

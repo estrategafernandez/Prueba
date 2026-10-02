@@ -1,7 +1,7 @@
 // registrarMensaje · ComponerAviso
-// Arma el correo que reciben Carmen, Gisela o Laurence. Antes habia un Switch
-// con tres nodos de Gmail: si el destinatario no casaba con ninguno, no
-// respondia nadie y Sara se quedaba colgada. Ahora se normaliza aqui.
+// Arma el aviso que reciben Carmen, Gisela o Laurence (y Paco) por WhatsApp,
+// por [WA][SUB] AvisoEquipo. Antes salia por correo. El destinatario se
+// normaliza aqui: si no casa con ninguno, va a Laurence.
 const b = ($input.first().json.body) ?? {};
 
 const BUZON = {
@@ -51,10 +51,25 @@ const asunto = esLeadAlquiler
   ? `LEAD ALQUILER (sin agendar) - ${nombre} - ${tel.nacional || b.telefono || ''} - ${b.motivo || ''}`
   : `${nombre} - ${tel.nacional || b.telefono || ''} - ${b.motivo || ''}`;
 
+// Para el WhatsApp, lo esencial en una linea (AvisoEquipo lo recorta)
+const corto = [
+  esLeadAlquiler ? 'LEAD ALQUILER (sin agendar)' : '',
+  String(b.motivo || '').trim(),
+  b.urgencia ? `Urgencia: ${String(b.urgencia).trim()}` : '',
+  cualificacion.map(([, v]) => String(v).trim()).join(' · '),
+  String(b.resumen_conversacion || '').trim(),
+].filter(Boolean).join(' · ');
+
 return [{
   json: {
     destinatario, para, asunto,
     cuerpo: lineas.join('\n'),
+    aviso: {
+      accion: 'AVISO', destinatario, referencia: String(b.referencia || '').trim(), municipio: '',
+      cliente_nombre: nombre === 'Sin nombre' ? '' : nombre, cliente_telefono: tel.e164 || String(b.telefono || ''),
+      cita: '', resumen: corto, detalle: lineas.join('\n'), conversacion_id: 0, pasar_a_humano: false,
+      etiqueta: '', origen: 'telefono',
+    },
     es_lead_alquiler: esLeadAlquiler,
     respuesta: {
       mensaje_registrado: true,

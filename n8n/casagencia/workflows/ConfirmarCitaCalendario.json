@@ -145,28 +145,166 @@
     },
     {
       "parameters": {
-        "sendTo": "={{ $('ValidarAntesDeInsertar').item.json.asesora === 'Carmen' ? 'carmen@casagencia.com, paco@casagencia.com' : 'gisela@casagencia.com, paco@casagencia.com' }}",
-        "subject": "={{ 'CITA PRE-RESERVADA: FALTA CONFIRMAR: Referencia: ' + $('ValidarAntesDeInsertar').item.json.referencia + ' - Telefono: ' + $('ValidarAntesDeInsertar').item.json.telefono_e164 + ' - Nombre: ' + $('ValidarAntesDeInsertar').item.json.nombre }}",
-        "message": "={{ 'Visita pre-reservada el ' + $('ValidarAntesDeInsertar').item.json.dia_texto + ' a las ' + $('ValidarAntesDeInsertar').item.json.hora + '.\\n\\nInmueble: ' + $('ValidarAntesDeInsertar').item.json.referencia + '\\nOperacion: ' + $('ValidarAntesDeInsertar').item.json.tipo_transaccion + '\\nCliente: ' + $('ValidarAntesDeInsertar').item.json.nombre + '\\nTelefono: ' + $('ValidarAntesDeInsertar').item.json.telefono_e164 + '\\n\\nCreada por Sara (IA). Falta confirmarla con el cliente.' }}",
+        "workflowId": {
+          "__rl": true,
+          "value": "LwkRcec6VuTUxgrm",
+          "mode": "list",
+          "cachedResultName": "[WA][SUB] AvisoEquipo"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "accion": "PRE-RESERVA",
+            "destinatario": "={{ $('ValidarAntesDeInsertar').first().json.asesora }}",
+            "referencia": "={{ $('ValidarAntesDeInsertar').first().json.referencia }}",
+            "municipio": "",
+            "cliente_nombre": "={{ $('ValidarAntesDeInsertar').first().json.nombre }}",
+            "cliente_telefono": "={{ $('ValidarAntesDeInsertar').first().json.telefono_e164 }}",
+            "cita": "={{ $('ValidarAntesDeInsertar').first().json.dia_texto + ' a las ' + $('ValidarAntesDeInsertar').first().json.hora }}",
+            "resumen": "={{ 'Pre-reservada por telefono (' + ($('ValidarAntesDeInsertar').first().json.tipo_transaccion || 'compra') + '). Falta confirmarla con el cliente.' }}",
+            "detalle": "={{ 'Pre-reservada por telefono por Sara (IA). Falta confirmarla con el cliente.' }}",
+            "conversacion_id": 0,
+            "pasar_a_humano": false,
+            "etiqueta": "",
+            "origen": "telefono"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "accion",
+              "displayName": "accion",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "destinatario",
+              "displayName": "destinatario",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "referencia",
+              "displayName": "referencia",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "municipio",
+              "displayName": "municipio",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "cliente_nombre",
+              "displayName": "cliente_nombre",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "cliente_telefono",
+              "displayName": "cliente_telefono",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "cita",
+              "displayName": "cita",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "resumen",
+              "displayName": "resumen",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "detalle",
+              "displayName": "detalle",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "conversacion_id",
+              "displayName": "conversacion_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "number"
+            },
+            {
+              "id": "pasar_a_humano",
+              "displayName": "pasar_a_humano",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "boolean"
+            },
+            {
+              "id": "etiqueta",
+              "displayName": "etiqueta",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "origen",
+              "displayName": "origen",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
         "options": {
-          "appendAttribution": false
+          "waitForSubWorkflow": true
         }
       },
-      "type": "n8n-nodes-base.gmail",
-      "typeVersion": 2.2,
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
       "position": [
         1320,
         -200
       ],
       "id": "5aeed811-3426-55ae-8db3-a8e644ca6c58",
       "name": "AvisarAsesora",
-      "credentials": {
-        "gmailOAuth2": {
-          "id": "mKh6b4I1hwDsBwOd",
-          "name": "Gmail account"
-        }
-      },
-      "onError": "continueRegularOutput"
+      "onError": "continueRegularOutput",
+      "alwaysOutputData": true
     },
     {
       "parameters": {
@@ -176,7 +314,7 @@
               "id": "ok",
               "name": "respuesta",
               "type": "object",
-              "value": "={{ { cita_confirmada: true, motivo: 'ok', asesora: $('ValidarAntesDeInsertar').item.json.asesora, fecha: $('ValidarAntesDeInsertar').item.json.fecha, hora: $('ValidarAntesDeInsertar').item.json.hora, referencia: $('ValidarAntesDeInsertar').item.json.referencia, telefono: $('ValidarAntesDeInsertar').item.json.telefono_e164, evento_id: $('InsertarEnAgenda').item.json.id, mensaje_para_sara: 'La cita ha quedado guardada como PRE-RESERVA. Diselo al cliente: queda pendiente de que ' + $('ValidarAntesDeInsertar').item.json.asesora + ' se lo confirme.' } }}"
+              "value": "={{ { cita_confirmada: true, motivo: 'ok', asesora: $('ValidarAntesDeInsertar').first().json.asesora, fecha: $('ValidarAntesDeInsertar').first().json.fecha, hora: $('ValidarAntesDeInsertar').first().json.hora, referencia: $('ValidarAntesDeInsertar').first().json.referencia, telefono: $('ValidarAntesDeInsertar').first().json.telefono_e164, evento_id: $('InsertarEnAgenda').first().json.id, mensaje_para_sara: 'La cita ha quedado guardada como PRE-RESERVA. Diselo al cliente: queda pendiente de que ' + $('ValidarAntesDeInsertar').first().json.asesora + ' se lo confirme.' } }}"
             }
           ]
         },
@@ -291,7 +429,7 @@
     },
     {
       "parameters": {
-        "content": "## Segundo cortafuegos\nAunque BuscarDisponibilidad haya dicho que si, aqui se vuelve a validar horario, festivo, telefono y ocupacion antes de escribir en la agenda.\nEl aviso por email SOLO sale si la cita se ha creado de verdad.",
+        "content": "## Segundo cortafuegos\nAunque BuscarDisponibilidad haya dicho que si, aqui se vuelve a validar horario, festivo, telefono y ocupacion antes de escribir en la agenda.\nEl aviso (WhatsApp a la asesora y a Paco) SOLO sale si la cita se ha creado de verdad.",
         "height": 190,
         "width": 430
       },

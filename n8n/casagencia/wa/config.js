@@ -63,7 +63,8 @@ const EQUIPO = {
   Gisela:   { movil: '34690027772', email: 'gisela@casagencia.com' },
   Laurence: { movil: '34618724192', email: 'laurence@casagencia.com' },
 };
-const EMAIL_DIRECCION = 'paco@casagencia.com';   // copia por correo de todos los avisos
+// La direccion: recibe TODOS los avisos por WhatsApp, ademas de la comercial.
+const DIRECCION = { nombre: 'Paco', movil: '34662052387' };
 
 // --- Leads entrantes ------------------------------------------------------------
 // De la WEB salen del buzon formularioscasagencia@gmail.com (credencial "Correo
@@ -119,6 +120,12 @@ const EGO_COMERCIALES = { 88560: 'Carmen', 62597: 'Gisela', 10768: 'Laurence' };
 // Llaves: en eGO solo constan las de algunos inmuebles. Con false, que no consten no
 // impide ofrecer visita: se le dice a la asesora en el aviso para que lo coordine.
 const LLAVES_OBLIGATORIAS = false;
+
+// --- Avisos al equipo (solo WhatsApp) ----------------------------------------------
+// Largo maximo del resumen dentro del aviso y del aviso entero. Meta corta la
+// plantilla si pasa de ~1000 caracteres: asi cabe siempre y se lee de un vistazo.
+const AVISO_RESUMEN_MAX = 220;
+const AVISO_MAX = 600;
 
 // --- Tiempos -----------------------------------------------------------------
 const BUFFER_SEGUNDOS = 60;         // se juntan los mensajes que el cliente manda seguidos
@@ -204,6 +211,15 @@ function paramPlantilla(texto, max = 700) {
     .replace(/ {2,}/g, ' ')
     .trim()
     .slice(0, max) || '-';
+}
+
+// Recorta un texto a `max` caracteres sin partir palabras (y con … si sobra).
+function recortar(texto, max) {
+  const t = String(texto ?? '').replace(/\s+/g, ' ').trim();
+  if (t.length <= max) return t;
+  const corte = t.slice(0, max - 1);
+  const espacio = corte.lastIndexOf(' ');
+  return (espacio > max * 0.6 ? corte.slice(0, espacio) : corte).replace(/[\s,.;:·-]+$/, '') + '…';
 }
 
 // "2026-10-02" + "17:00" -> "jueves 2 de octubre a las 17:00"

@@ -54,7 +54,11 @@ ck('asunto marca LEAD ALQUILER', r.asunto.startsWith('LEAD ALQUILER (sin agendar
 ck('el cuerpo trae la cualificacion', ['3','nomina indefinida','un perro pequeno','1 de noviembre','todo el ano']
    .every(v => r.cuerpo.includes(v)));
 ck('avisa de que la IA no agendo', r.cuerpo.includes('no agenda la visita'));
-console.log('\n--- correo que le llega a Gisela ---');
+ck('el recado sale por WhatsApp (AvisoEquipo) como aviso del telefono, a Gisela', r.aviso.origen === 'telefono'
+   && r.aviso.destinatario === 'Gisela' && r.aviso.cliente_telefono === '+34600111222' && r.aviso.accion === 'AVISO');
+ck('el WhatsApp lleva lo esencial en una linea', r.aviso.resumen.startsWith('LEAD ALQUILER (sin agendar) · Interesada en CS-1479-A')
+   && ['un perro pequeno', '1 de noviembre'].every(v => r.aviso.resumen.includes(v)) && !/\n/.test(r.aviso.resumen), r.aviso.resumen);
+console.log('\n--- detalle del recado (va al aviso y al historial) ---');
 console.log(r.cuerpo.split('\n').map(l=>'    '+l).join('\n'));
 
 const normal = { body: { nombre:'Luis', telefono:'600999888', destinatario:'Carmen',

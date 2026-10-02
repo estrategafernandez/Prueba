@@ -256,18 +256,22 @@ r = wa('aviso_preparar.js', inp([{ json: { accion: 'VISITA AGENDADA', destinatar
   referencia: 'BN-1547-V', cliente_nombre: 'Jaime', cliente_telefono: '600000001',
   cita: 'viernes 2 de octubre a las 17:00', resumen: 'Lleva seis meses buscando.\nNo necesita vender.',
   conversacion_id: 1, pasar_a_humano: false, etiqueta: '3-agendada_ia' } }]))[0].json;
-const t = r.meta_body.template;
+const [aCarmen, aPaco] = r.envios;
+const t = aCarmen.meta_body.template;
 ck('plantilla_aviso en ingles', t.name === 'plantilla_aviso' && t.language.code === 'en', t.name + '/' + t.language.code);
-ck('va al movil de Carmen', r.meta_body.to === '34654907386', r.meta_body.to);
+ck('SOLO WhatsApp, a Carmen y a Paco (sin correo)', r.envios.length === 2 && aCarmen.meta_body.to === '34654907386'
+   && aPaco.meta_body.to === '34662052387' && aPaco.meta_body.template.components[0].parameters[0].text === 'Paco'
+   && !('email_para' in r) && !('enviar_correo' in r), JSON.stringify(r.destinos));
 ck('{{1}} = el nombre de la comercial', t.components[0].parameters[0].text === 'Carmen');
 const p2 = t.components[0].parameters[1].text;
 ck('{{2}} en UNA linea (Meta rechaza saltos de linea)', !/[\n\t]/.test(p2) && !/ {5,}/.test(p2), p2.slice(0, 80));
-ck('{{2}} dice que tiene que hacer', /Confirmale la visita/.test(p2));
+ck('{{2}} empieza diciendo que viene del asistente de WhatsApp', p2.startsWith('💬 ASISTENTE WHATSAPP · VISITA AGENDADA'), p2.slice(0, 50));
+ck('{{2}} dice que tiene que hacer', /Confírmale la visita/.test(p2));
 ck('{{2}} lleva la cita, el cliente y el resumen',
    ['2 de octubre', 'Jaime', '+34600000001', 'seis meses'].every(x => p2.includes(x)), p2);
 ck('{{2}} lleva el enlace al chat',
    p2.includes('panel-casa-agencia.serversvisionarius.com/app/accounts/1/conversations/1'));
-ck('copia por correo a Carmen y a Paco', r.email_para === 'carmen@casagencia.com, paco@casagencia.com', r.email_para);
+ck('Carmen y Paco reciben el mismo texto', aPaco.meta_body.template.components[0].parameters[1].text === p2);
 ck('pone 3-agendada_ia', r.etiquetas === '3-agendada_ia', r.etiquetas);
 r = wa('aviso_preparar.js', inp([{ json: { accion: 'INTERVENIR', referencia: 'CS-1479-A',
   resumen: 'x', conversacion_id: 7, pasar_a_humano: true } }]))[0].json;
@@ -283,16 +287,36 @@ ck('nota para eGO con la pre-reserva y lo hablado', r.nota_ego_si === true && r.
      .every(x => r.nota_ego.includes(x)), r.nota_ego);
 ck('el recordatorio y las llamadas no ponen nota en eGO desde aqui', ['RECORDATORIO', 'LLAMADA'].every(a =>
    wa('aviso_preparar.js', inp([{ json: { accion: a, cliente_telefono: '600000001' } }]))[0].json.nota_ego_si === false));
-ck('aviso largo recortado a 900', wa('aviso_preparar.js', inp([{ json: { resumen: 'a'.repeat(3000) } }]))[0]
-   .json.aviso.length <= 900);
+{
+  const largo = 'El cliente lleva buscando unos cuatro meses en Benicassim y alrededores, necesita vender su piso de la '
+    + 'avenida Rey Don Jaime en Castellon, tiene hipoteca preconcedida, le interesa que tenga terraza y garaje y '
+    + 'pregunta tambien por los gastos de comunidad y el IBI, que no vienen en la ficha.';
+  const a = wa('aviso_preparar.js', inp([{ json: { referencia: 'BN-1528-V', resumen: largo, conversacion_id: 12 } }]))[0].json.aviso;
+  ck('resumen corto en el aviso (220 max, sin partir palabras) y aviso entero <= 600', a.length <= 600
+     && a.includes('…') && !a.includes('IBI') && /necesita vender/.test(a) && /conversations\/12$/.test(a), a);
+  ck('nunca pasa de 600 aunque todo venga largo', wa('aviso_preparar.js', inp([{ json: {
+    resumen: 'a'.repeat(3000), cliente_nombre: 'b'.repeat(500), cita: 'c'.repeat(500) } }]))[0].json.aviso.length <= 600);
+}
+r = wa('aviso_preparar.js', inp([{ json: { accion: 'LLAMADA', destinatario: 'Gisela', cliente_telefono: '600000002',
+  resumen: 'Pregunta por el CS-1479-A', conversacion_id: 5 } }]))[0].json;
+ck('llamada: viene del asistente telefonico, a Gisela y a Paco', r.envios[0].meta_body.template.components[0].parameters[1]
+   .text.startsWith('📞 ASISTENTE TELEFÓNICO · LLAMADA') && r.destinos.join() === 'Gisela,Paco' && r.origen === 'telefono');
+r = wa('aviso_preparar.js', inp([{ json: { accion: 'PRE-RESERVA', origen: 'telefono', destinatario: 'Carmen',
+  referencia: 'BN-1528-V', cliente_telefono: '600000002', cita: 'martes 6 de octubre a las 17:00',
+  resumen: 'Pre-reservada por telefono (compra). Falta confirmarla con el cliente.' } }]))[0].json;
+ck('pre-reserva hecha por telefono: se distingue del WhatsApp y no repite nota en eGO', r.aviso.startsWith('📞 ASISTENTE TELEFÓNICO · PRE-RESERVA')
+   && r.nota_ego_si === false && !/Chat:/.test(r.aviso), r.aviso);
+ck('recado por telefono: "devuelvele la llamada"', /Devuélvele la llamada/.test(wa('aviso_preparar.js', inp([{ json: {
+  accion: 'AVISO', origen: 'telefono', cliente_telefono: '600000002', resumen: 'Quiere que le llamen' } }]))[0].json.aviso));
 
-const res = (w, c) => wa('aviso_resultado.js', inp([{}]), nod({ Preparar: { para_nombre: 'Carmen', pasar_a_humano: false },
-  EnviarWhatsApp: w, EnviarCorreo: c }))[0].json;
-ck('whatsapp y correo OK', res({ messages: [{ id: 'wamid.1' }] }, { id: 'g1' }).mensaje_registrado === true);
-r = res({ error: { message: '(#131049) healthy ecosystem' } }, { id: 'g1' });
-ck('Meta frena la plantilla pero el correo sale', r.mensaje_registrado === true && r.whatsapp_ok === false, r.error_whatsapp);
-r = res({ error: { message: 'x' } }, {});
-ck('no sale por ningun sitio: no se dice que esta avisado', r.mensaje_registrado === false && /NO ha salido/.test(r.respuesta));
+const res = (envios) => wa('aviso_resultado.js', inp([{}]), nod({ Preparar: { para_nombre: 'Carmen', pasar_a_humano: false },
+  Juntar: { envios } }))[0].json;
+r = res([{ para: 'Carmen', ok: true }, { para: 'Paco', ok: true }]);
+ck('WhatsApp a Carmen y a Paco: avisado', r.mensaje_registrado === true && r.enviado_a.join() === 'Carmen,Paco' && /por WhatsApp/.test(r.respuesta));
+r = res([{ para: 'Carmen', ok: true }, { para: 'Paco', ok: false, error: 'x' }]);
+ck('si solo falla el de Paco, la comercial esta avisada', r.mensaje_registrado === true && /Paco: x/.test(r.error_whatsapp));
+r = res([{ para: 'Carmen', ok: false, error: '(#131049) healthy ecosystem' }, { para: 'Paco', ok: true }]);
+ck('si no le llega a la comercial: no se dice que esta avisado', r.mensaje_registrado === false && /NO ha salido/.test(r.respuesta));
 
 // ===========================================================================
 console.log('\n== 8. Etiquetas de Chatwoot (las de Blue) ==');
@@ -343,10 +367,10 @@ r = wa('aviso_cita.js', inp([{}]), nod({ ValidarAntesDeInsertar: val,
   Start: { resumen: 'Le gusta la terraza', conversacion_id: 1 },
   LeerCualificacion: { cualificacion: 'Lleva buscando: seis meses · Financiacion: hipoteca' } }))[0].json;
 ck('el aviso de la cita va a Carmen con 3-agendada_ia', r.destinatario === 'Carmen' && r.etiqueta === '3-agendada_ia');
-ck('es un aviso de PRE-RESERVA con lo que sabemos del cliente', r.accion === 'PRE-RESERVA'
-   && r.resumen === 'Lleva buscando: seis meses · Financiacion: hipoteca · Le gusta la terraza', r.resumen);
+ck('es un aviso de PRE-RESERVA: al WhatsApp el resumen corto, al detalle (eGO) la cualificacion', r.accion === 'PRE-RESERVA'
+   && r.resumen === 'Le gusta la terraza' && /Lleva buscando: seis meses/.test(r.detalle), r.resumen);
 const avPre = wa('aviso_preparar.js', inp([{ json: { ...r, cliente_telefono: '+34611111111' } }]))[0].json;
-ck('el WhatsApp a Carmen le dice que llame para confirmarla', /PRE-RESERVA: llama al cliente para confirmarla/.test(avPre.aviso), avPre.aviso);
+ck('el WhatsApp a Carmen le dice que llame para confirmarla', /PRE-RESERVA .*Llámale para confirmarla o muévela/.test(avPre.aviso), avPre.aviso);
 ck('la cita escrita como la lee una persona', /^martes \d+ de \w+ a las 17:00$/.test(r.cita), r.cita);
 
 // ===========================================================================
@@ -458,13 +482,14 @@ const CFG_PRUEBA = CFG.replace(/\/\*PRUEBAS\*\/[\s\S]*?\/\*FIN_PRUEBAS\*\//,
 const waP = (f, $input, $) => correr(CFG_PRUEBA + '\n' + fs.readFileSync(B + 'wa/' + f, 'utf8'), $input, $);
 r = waP('aviso_preparar.js', inp([{ json: { accion: 'VISITA AGENDADA', destinatario: 'Carmen', referencia: 'BN-1528-V',
   cliente_nombre: 'Prueba', cliente_telefono: '+34 600 000 009', resumen: 'test', conversacion_id: 1 } }]))[0].json;
-ck('prueba: el WhatsApp del aviso va al que prueba, no a Carmen', r.meta_body.to === '34600000009', r.meta_body.to);
-ck('prueba: el correo va al que prueba, no a Carmen ni a Paco', r.email_para === 'prueba@ejemplo.com', r.email_para);
-ck('prueba: marcado [PRUEBA]', r.aviso.startsWith('[PRUEBA]') && r.email_asunto.startsWith('[PRUEBA]'));
-ck('prueba: el texto sigue saludando a Carmen (es el aviso real)', r.meta_body.template.components[0].parameters[0].text === 'Carmen');
+ck('prueba: UN solo WhatsApp, al que prueba (ni a Carmen ni a Paco)', r.envios.length === 1
+   && r.envios[0].meta_body.to === '34600000009', JSON.stringify(r.envios.map(e => e.meta_body.to)));
+ck('prueba: marcado [PRUEBA]', r.aviso.startsWith('[PRUEBA]'));
+ck('prueba: el texto dice a quien le habria llegado', r.envios[0].meta_body.template.components[0].parameters[0].text === 'Carmen y Paco');
 r = waP('aviso_preparar.js', inp([{ json: { accion: 'VISITA AGENDADA', destinatario: 'Carmen', referencia: 'BN-1528-V',
   cliente_telefono: '+34 611 111 111', resumen: 'test' } }]))[0].json;
-ck('un cliente normal sigue avisando a Carmen', r.meta_body.to === '34654907386' && !r.aviso.startsWith('[PRUEBA]'));
+ck('un cliente normal sigue avisando a Carmen y a Paco', r.envios.map(e => e.meta_body.to).join() === '34654907386,34662052387'
+   && !r.aviso.startsWith('[PRUEBA]'));
 ck('prueba: la guardia lo marca', waP('guardia_alquiler.js', inp([{ json: { referencia: 'BN-1528-V',
   tipo_transaccion: 'compra', telefono: '+34600000009', fecha: MARTES, hora: '17:00', modo: 'reserva' } }]))[0].json.es_prueba === true);
 ck('sin numeros de prueba configurados nadie es prueba', wa('guardia_alquiler.js', inp([{ json: { referencia: 'BN-1528-V',
@@ -627,9 +652,7 @@ ck('CS -> para Gisela (agente 4)', av({ referencia: 'CS-1479-A' }).agente_id ===
 ck('VR -> para Gisela', av({ referencia: 'VR-1001-V' }).agente_id === 4);
 ck('sin referencia: a quien va el aviso', av({ destinatario: 'Laurence' }).agente_id === 6);
 ck('la referencia manda sobre el destinatario', av({ referencia: 'OR-1313-V', destinatario: 'Laurence' }).agente_id === 5);
-ck('los avisos normales tambien por correo', av({ referencia: 'BN-1528-V' }).enviar_correo === true);
-ck('el de una llamada, solo WhatsApp (el telefono ya manda su correo)',
-   av({ accion: 'LLAMADA', destinatario: 'Carmen' }).enviar_correo === false);
+ck('ningun aviso sale por correo', !('enviar_correo' in av({ referencia: 'BN-1528-V' })) && !('email_para' in av({})));
 r = wa('plantilla_normalizar.js', inp([{ json: {} }]), nod({ Start: { telefono: '600112233', referencia: 'CS-1479-A' } }))[0].json;
 ck('bienvenida: la conversacion para la asesora de la referencia', r.asesora === 'Gisela' && r.agente_id === 4);
 r = wa('cita_respuesta.js', inp([{}]), nod({ ValidarAntesDeInsertar: val, InsertarEnAgenda: { id: 'ev1' },

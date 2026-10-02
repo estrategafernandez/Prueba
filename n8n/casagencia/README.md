@@ -208,13 +208,30 @@ cuenta 1, inbox 1 *WhatsApp*.
 |---|---|---|---|
 | `bienvenida_compra` | `es` | nombre del cliente | enlace del anuncio |
 | `bienvenida_alquiler` | **`en`** | nombre del cliente | enlace del anuncio |
-| `plantilla_aviso` | **`en`** | nombre del comercial | qué tiene que hacer + resumen + enlace al chat |
+| `plantilla_aviso` | **`en`** | quien lo recibe | origen (📞/💬) + qué + resumen corto + qué hacer + enlace al chat |
 
 > Dos de las tres están dadas de alta en **inglés** aunque el texto sea en
 > español. Meta rechaza el envío si el código de idioma no es exactamente el
 > registrado, así que en `wa/config.js` van con `en`. Las tres son de categoría
 > *Marketing*: Meta puede frenar su entrega. Para los avisos internos sería
-> mejor *Utilidad*; mientras tanto, cada aviso sale también por correo.
+> mejor *Utilidad*.
+
+### Avisos al equipo: SOLO por WhatsApp (desde el 2-10-2026)
+
+Todos los avisos, del asistente de WhatsApp **y del telefónico**, salen por
+`[WA][SUB] AvisoEquipo`, con la `plantilla_aviso`, **a la comercial que toca y
+a Paco** (`DIRECCION` en `wa/config.js`). Ya no se manda ningún correo.
+
+- Empiezan diciendo de dónde vienen: **📞 ASISTENTE TELEFÓNICO** o **💬 ASISTENTE
+  WHATSAPP**, y qué es (PRE-RESERVA, LLAMADA, AVISO, INTERVENIR, RECORDATORIO).
+- Resumen **corto**: 220 caracteres como mucho, sin partir palabras (`…`), y el
+  aviso entero 600 (`AVISO_RESUMEN_MAX`, `AVISO_MAX`). El detalle completo va a
+  la nota del historial de eGO.
+- Teléfono: los correos de cada llamada (`FinalizarLlamadaRetell`), de la
+  pre-reserva (`ConfirmarCitaCalendario`) y del recado (`registrarMensaje`) se
+  han cambiado por este aviso. La grabación se sigue subiendo a Drive y está en
+  la nota del panel. El recado solo se le da a Sara por enviado si Meta lo acepta.
+- En pruebas, un solo WhatsApp al que prueba ("Carmen y Paco").
 
 ### El circuito
 
@@ -315,13 +332,13 @@ que OpenAI saca de la transcripción si lo dijo):
   hora · duración*, el resumen, el tono del cliente, la asesora y la
   **grabación** para escucharla en el panel;
 - se asigna a la asesora de la llamada;
-- **aviso por WhatsApp** a esa asesora con el resumen y el enlace al chat (si la
-  llamada ha durado al menos 15 s; los correos del teléfono siguen igual).
+- **aviso por WhatsApp** a la asesora y a Paco con el resumen y el enlace al chat
+  (si la llamada ha durado al menos 15 s). Sustituye a los correos de cada llamada.
 
-Es el **único cambio en el teléfono**: `[TEL] FinalizarLlamadaRetell` tiene un
-nodo más, *Llamada al panel*, que le pasa la llamada sin esperar. No cambia
-nada de lo que ya hacía (Drive, correos). Está también en `build_workflows.py`
-para que no se pierda si se vuelve a desplegar el teléfono. Cada llamada entra
+Cambios en el teléfono: `[TEL] FinalizarLlamadaRetell` tiene un nodo más,
+*Llamada al panel*, que le pasa la llamada sin esperar, y ya no manda los
+correos de cada llamada (el aviso va por WhatsApp). Sigue subiendo la grabación
+a Drive. Está todo en `build_workflows.py` (`--solo=` para desplegar solo uno). Cada llamada entra
 una sola vez (tabla `tel_llamadas_panel`).
 
 ### De dónde salen los leads (revisado el 1-10-2026)
@@ -484,8 +501,8 @@ entrada lo acepta, y hay un test con el payload real (anonimizado) en
 Activos: `[WA] 2` (asistente), `[WA] 3` (recordatorio), `[WA] 4` (cartera),
 `[WA] 9` (lead a mano) y todos los `[WA][SUB]`. Modelo `gpt-5.1` con la
 credencial *OpenAI Casagencia*. **Todo en real**: las visitas se escriben en el
-calendario de la asesora y los avisos le llegan a ella (WhatsApp) y a ella y a
-Paco (correo).
+calendario de la asesora y los avisos le llegan a ella y a Paco, solo por
+WhatsApp.
 
 Los leads entrantes (web y eGO) están preparados pero sin mandar nada (ver
 arriba). Mientras tanto, los leads se pueden lanzar a mano con `[WA] 9`.

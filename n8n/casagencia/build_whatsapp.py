@@ -31,7 +31,6 @@ SETTINGS = {"executionOrder": "v1", "timezone": "Europe/Madrid"}
 # --- Credenciales de Casagencia ---------------------------------------------
 CRED_PG       = {"postgres": {"id": "yvym0TdlOebNMzsm", "name": "Postgres account"}}
 CRED_REDIS    = {"redis": {"id": "hddla0B9Wo7BsMpy", "name": "Redis account"}}
-CRED_GMAIL    = {"gmailOAuth2": {"id": "mKh6b4I1hwDsBwOd", "name": "Gmail account"}}
 CRED_SHEETS   = {"googleSheetsOAuth2Api": {"id": "TPExRnq8a9FlEXAh", "name": "Google Sheets account"}}
 # El mismo calendario que usa el telefono para leer y escribir en las agendas
 # de Carmen y Gisela: las citas de los dos canales se ven y se respetan.
@@ -763,13 +762,14 @@ def wf_cita_telefono():
 AVISO_IN = [("accion", "string"), ("destinatario", "string"), ("referencia", "string"),
             ("municipio", "string"), ("cliente_nombre", "string"), ("cliente_telefono", "string"),
             ("cita", "string"), ("resumen", "string"), ("detalle", "string"),
-            ("conversacion_id", "number"), ("pasar_a_humano", "boolean"), ("etiqueta", "string")]
+            ("conversacion_id", "number"), ("pasar_a_humano", "boolean"), ("etiqueta", "string"),
+            ("origen", "string")]
 
 
 def wf_aviso(ids):
     p = "$('Preparar').first().json"
     nodos_asig, n_if, n_post = asignar("AsignarConversacion", "%s.conversacion_id" % p, "%s.agente_id" % p,
-                                       "$json.meta?.assignee?.id", [1520, 0])
+                                       "$json.meta?.assignee?.id", [1960, -80])
     return wf("[WA][SUB] AvisoEquipo", [
         trigger_sub(AVISO_IN),
         code_node("Preparar", code_wa("aviso_preparar.js"), [200, 0]),
@@ -778,42 +778,39 @@ def wf_aviso(ids):
                  {"telefono": "={{ %s.cliente_telefono_e164 }}" % p, "texto": "={{ %s.nota_ego }}" % p,
                   "tipo": "whatsapp"},
                  [640, -160], onError="continueRegularOutput", alwaysOutputData=True, sin_esperar=True),
-        http("EnviarWhatsApp", "POST", "%s/%s/messages" % (META_API, PHONE_ID), [860, 0],
-             cred=CRED_META, body="={{ JSON.stringify(%s.meta_body) }}" % p,
+        code_node("UnoPorDestino", "return $('Preparar').first().json.envios.map(e => ({ json: e }));", [860, 0]),
+        http("EnviarWhatsApp", "POST", "%s/%s/messages" % (META_API, PHONE_ID), [1080, 0],
+             cred=CRED_META, body="={{ JSON.stringify($json.meta_body) }}",
              onError="continueRegularOutput", alwaysOutputData=True,
              retryOnFail=True, waitBetweenTries=3000, maxTries=2),
-        node("EnviarCorreo", "n8n-nodes-base.gmail", {
-            "sendTo": "={{ %s.email_para }}" % p,
-            "subject": "={{ %s.email_asunto }}" % p,
-            "emailType": "text",
-            "message": "={{ %s.email_cuerpo }}" % p,
-            "options": {"appendAttribution": False},
-        }, [860, -120], 2.2, credentials=CRED_GMAIL, onError="continueRegularOutput", alwaysOutputData=True),
-        if_node("¿Tambien por correo?", "={{ %s.enviar_correo }}" % p, "true", [640, 0]),
+        code_node("Juntar", "const destinos = $('UnoPorDestino').all();\n"
+                  "return [{ json: { envios: $input.all().map((i, k) => ({ para: destinos[k]?.json.para, "
+                  "ok: Array.isArray(i.json.messages) && !!i.json.messages[0]?.id, "
+                  "error: String(i.json.error?.message || i.json.error || '').slice(0, 200) })) } }];", [1300, 0]),
+        if_node("¿Hay conversacion?", "={{ Number(%s.conversacion_id || 0) }}" % p, "gt", [1520, 0], der=0,
+                tipo="number"),
         exec_sub("Etiquetar", ids.get("[WA][SUB] Etiquetar", ""), "[WA][SUB] Etiquetar",
                  {"conversacion_id": "={{ %s.conversacion_id }}" % p, "etiquetas": "={{ %s.etiquetas }}" % p},
-                 [1080, 0], {"conversacion_id": "number"},
+                 [1520, -200], {"conversacion_id": "number"},
                  onError="continueRegularOutput", alwaysOutputData=True),
         http("LeerAsignacion", "GET", "=" + CW_API + "/conversations/{{ Number(%s.conversacion_id || 0) }}" % p,
-             [1300, 0], cred=CRED_CHATWOOT, onError="continueRegularOutput", alwaysOutputData=True),
+             [1740, -200], cred=CRED_CHATWOOT, onError="continueRegularOutput", alwaysOutputData=True),
     ] + nodos_asig + [
-        code_node("Resultado", code_wa("aviso_resultado.js"), [1960, 0]),
-        nota("Nota", "## Todos los avisos al equipo salen de aqui\nVisita agendada, recordatorio de "
-             "24 h, lead de alquiler que tiene que coger una persona, o lo que Sara no pueda resolver.\n\n"
-             "- **WhatsApp**: plantilla_aviso directa a Meta (no por Chatwoot, para no abrir una "
-             "conversacion de cliente con el comercial). {{1}} = el comercial, {{2}} = que tiene que "
-             "hacer + el resumen de la conversacion + el enlace al chat.\n"
-             "- **Correo**: el mismo aviso con el detalle, al comercial y a Paco. Por si Meta frena "
-             "la plantilla (es de marketing). De las llamadas del telefono, solo WhatsApp (el telefono "
-             "ya manda su correo).\n\nSi hay que pasar a una persona, pone 4-intervenir y la IA deja de "
-             "contestar. La conversacion se asigna en el panel a la asesora de la referencia, salvo que "
-             "ya la tenga una comercial.", [200, -420], 600, 360),
+        code_node("Resultado", code_wa("aviso_resultado.js"), [2400, 0]),
+        nota("Nota", "## Todos los avisos al equipo salen de aqui (solo WhatsApp)\nDel asistente de "
+             "WhatsApp (pre-reserva, recordatorio de 24 h, alquiler cualificado, lo que Sara no pueda "
+             "resolver) y del asistente telefonico (llamada recibida, pre-reserva por telefono, recado).\n\n"
+             "plantilla_aviso directa a Meta (no por Chatwoot, para no abrir una conversacion de cliente con "
+             "el comercial), a **la comercial y a Paco**. {{1}} = quien lo recibe, {{2}} = de donde viene "
+             "(📞 telefono / 💬 WhatsApp), que, quien, un resumen corto, que tiene que hacer y el enlace al "
+             "chat.\n\nSi hay que pasar a una persona, pone 4-intervenir y la IA deja de contestar. La "
+             "conversacion se asigna en el panel a la asesora de la referencia, salvo que ya la tenga una "
+             "comercial.", [200, -460], 640, 380),
     ], conn(("Start", 0, "Preparar", 0), ("Preparar", 0, "¿Nota en eGO?", 0),
-            ("¿Nota en eGO?", 0, "NotaEnEgo", 0), ("¿Nota en eGO?", 1, "EnviarWhatsApp", 0),
-            ("NotaEnEgo", 0, "EnviarWhatsApp", 0),
-            ("EnviarWhatsApp", 0, "¿Tambien por correo?", 0),
-            ("¿Tambien por correo?", 0, "EnviarCorreo", 0), ("¿Tambien por correo?", 1, "Etiquetar", 0),
-            ("EnviarCorreo", 0, "Etiquetar", 0),
+            ("¿Nota en eGO?", 0, "NotaEnEgo", 0), ("¿Nota en eGO?", 1, "UnoPorDestino", 0),
+            ("NotaEnEgo", 0, "UnoPorDestino", 0), ("UnoPorDestino", 0, "EnviarWhatsApp", 0),
+            ("EnviarWhatsApp", 0, "Juntar", 0), ("Juntar", 0, "¿Hay conversacion?", 0),
+            ("¿Hay conversacion?", 0, "Etiquetar", 0), ("¿Hay conversacion?", 1, "Resultado", 0),
             ("Etiquetar", 0, "LeerAsignacion", 0), ("LeerAsignacion", 0, n_if, 0),
             (n_if, 0, n_post, 0), (n_if, 1, "Resultado", 0), (n_post, 0, "Resultado", 0)))
 
@@ -1295,8 +1292,9 @@ def herramientas(ids, x=1900, y=360):
             "aceptado ese dia y esa hora. Solo di que esta registrada si devuelve cita_confirmada: true, y "
             "siempre como PRE-RESERVA. En ALQUILER esta bloqueada.",
             {**agenda, "modo": "reserva", "conversacion_id": CONV,
-             "resumen": de_la_ia("resumen", "Una o dos lineas para el comercial: cuanto lleva buscando, si "
-                                 "necesita vender, que le ha interesado. Sin saltos de linea.")},
+             "resumen": de_la_ia("resumen", "UNA frase corta para el comercial (maximo 200 caracteres): "
+                                 "cuanto lleva buscando, si necesita vender, como lo financia y que le ha interesado. "
+                                 "Sin saltos de linea.")},
             [x + dx, y + 180], {"conversacion_id": "number"}),
         herramienta("buscarCitaPorTelefono", ids,
             "Busca las visitas que tiene este cliente en las agendas de Carmen y Gisela. Usala cuando "
@@ -1325,7 +1323,8 @@ def herramientas(ids, x=1900, y=360):
              "entrada": de_la_ia("entrada", "Solo alquiler. Para que fecha necesitan entrar."),
              "duracion": de_la_ia("duracion", "Solo alquiler. Todo el ano o temporada, si lo ha dicho."),
              "actividad": de_la_ia("actividad", "Solo locales, oficinas o traspasos: para que actividad."),
-             "resumen": de_la_ia("resumen", "Resumen de la conversacion en dos o tres frases, sin saltos de linea.")},
+             "resumen": de_la_ia("resumen", "Resumen de la conversacion en UNA o dos frases cortas (maximo 200 "
+                                 "caracteres), sin saltos de linea.")},
             [x + 3 * dx, y + 180], {"conversacion_id": "number", "es_vendedor": "boolean"}),
         herramienta("avisarEquipo", ids,
             "Manda un aviso por WhatsApp (y copia por correo) a la asesora o a Laurence, con el resumen de la "
@@ -1340,9 +1339,10 @@ def herramientas(ids, x=1900, y=360):
              "cliente_nombre": de_la_ia("cliente_nombre", "Nombre del cliente."),
              "cliente_telefono": TEL_CLIENTE,
              "cita": "",
-             "resumen": de_la_ia("resumen", "Dos o tres frases: que pide el cliente, de que inmueble, que le "
-                                 "has contestado y que queda pendiente. Sin saltos de linea. No inventes."),
-             "detalle": de_la_ia("detalle", "El mismo resumen, con mas detalle si hace falta."),
+             "resumen": de_la_ia("resumen", "UNA frase corta (maximo 200 caracteres): que pide el cliente, "
+                                 "de que inmueble y que queda pendiente. Sin saltos de linea. No inventes."),
+             "detalle": de_la_ia("detalle", "El resumen con mas detalle (va al historial del cliente en el CRM, "
+                                 "no al aviso)."),
              "conversacion_id": CONV,
              "pasar_a_humano": de_la_ia("pasar_a_humano", "true si a partir de ahora tiene que llevar la "
                                         "conversacion una persona y tu dejas de contestar.", "boolean"),
@@ -1729,7 +1729,8 @@ def wf_llamada_panel(ids):
                   "referencia": "={{ %s.referencia }}" % d, "municipio": "",
                   "cliente_nombre": "={{ %s.nombre }}" % d, "cliente_telefono": "={{ %s.telefono_e164 }}" % d,
                   "cita": "", "resumen": "={{ %s.resumen }}" % d, "detalle": "={{ %s.resumen }}" % d,
-                  "conversacion_id": "={{ %s.conversacion_id }}" % cv, "pasar_a_humano": False, "etiqueta": ""},
+                  "conversacion_id": "={{ %s.conversacion_id }}" % cv, "pasar_a_humano": False, "etiqueta": "",
+                  "origen": "telefono"},
                  [3520, -100], {"conversacion_id": "number", "pasar_a_humano": "boolean"},
                  onError="continueRegularOutput", alwaysOutputData=True),
         nota("Nota", "## Cada llamada del asistente telefonico, en el panel\nLa llama `[TEL] "
@@ -1737,8 +1738,8 @@ def wf_llamada_panel(ids):
              "1. El contacto por su telefono (y su nombre, que OpenAI saca de la transcripcion si lo "
              "dijo), y su conversacion del inbox de WhatsApp.\n2. Etiqueta **0-llamada_telefonica**.\n3. "
              "Nota privada con el resumen, el tono y la **grabacion**.\n4. Se asigna a la asesora de la "
-             "llamada (si no la tiene ya una comercial).\n5. Aviso por WhatsApp a la asesora (si ha "
-             "durado al menos %d s).\n6. La misma nota, en el historial de eGO (contacto o lead del cliente; solo "
+             "llamada (si no la tiene ya una comercial).\n5. Aviso por WhatsApp a la asesora y a Paco (si ha "
+             "durado al menos %d s); sustituye a los correos de cada llamada.\n6. La misma nota, en el historial de eGO (contacto o lead del cliente; solo "
              "con MODO_LEADS = 'real').\n\nCada llamada entra una sola vez (tabla tel_llamadas_panel)."
              % int(const("LLAMADA_AVISO_MIN_SEGUNDOS", "15")), [640, -520], 620, 360),
     ], conn(("Start", 0, "LeerLlamada", 0), ("LeerLlamada", 0, "CrearTablaSiFalta", 0),

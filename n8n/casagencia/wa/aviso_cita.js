@@ -16,7 +16,8 @@ return [{ json: {
   cliente_nombre: v.nombre,
   cliente_telefono: v.telefono_e164,
   cita: fechaLegible(v.fecha, v.hora),
-  resumen: [cualificacion, resumen, crm].filter(Boolean).join(' · '),
+  // Al WhatsApp, lo corto: el resumen de Sara (ya lleva la cualificacion) y eGO
+  resumen: [resumen || cualificacion, crm].filter(Boolean).join(' · '),
   detalle: [cualificacion ? 'Cualificacion: ' + cualificacion : '', resumen, crm].filter(Boolean).join('\n'),
   conversacion_id: Number(s.conversacion_id || 0),
   pasar_a_humano: false,

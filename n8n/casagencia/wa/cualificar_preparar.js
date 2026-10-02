@@ -45,7 +45,6 @@ const respuestas = alquiler
 const vendedor = !alquiler && (j.es_vendedor === true || String(j.es_vendedor).toLowerCase() === 'true'
   || !!campos.q_vivienda_venta || esAfirmativo(campos.q_necesita_vender));
 
-const resumenRespuestas = respuestas.filter(([, v]) => v).map(([k, v]) => `${k}: ${v}`).join(' · ');
 const resumen = limpio(j.resumen);
 
 return [{
@@ -70,7 +69,9 @@ return [{
       referencia,
       cliente_nombre: limpio(j.nombre),
       cliente_telefono: tel.e164,
-      resumen: [ 'Lead de ALQUILER cualificado', resumenRespuestas, resumen ].filter(Boolean).join(' · '),
+      // Al WhatsApp, lo corto: las respuestas en pocas palabras (el detalle va a eGO)
+      resumen: [ 'ALQUILER cualificado', respuestas.filter(([, v]) => v).map(([, v]) => recortar(v, 45)).join(' · '),
+                 resumen ].filter(Boolean).join(' · '),
       detalle: [
         'Lead de ALQUILER cualificado por WhatsApp. La IA no agenda en alquiler:',
         'decide tu si le das visita.', '',
