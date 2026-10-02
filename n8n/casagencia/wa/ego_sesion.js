@@ -29,9 +29,18 @@ if (!sesion.token && nueva.token) {
 
 const query = parse(start.query);
 if (sesion.applicationId && query.applicationId == null) query.applicationId = sesion.applicationId;
+// Las listas de agencias (applicationIds: []) se rellenan con la nuestra
+for (const k of Object.keys(query)) {
+  if (/^applicationIds$/i.test(k) && Array.isArray(query[k]) && !query[k].length && sesion.applicationId) {
+    query[k] = [sesion.applicationId];
+  }
+}
 const cuerpo = parse(start.cuerpo);
 if (sesion.applicationId && cuerpo && typeof cuerpo === 'object' && !Array.isArray(cuerpo)
     && Object.keys(cuerpo).length && cuerpo.applicationId == null) cuerpo.applicationId = sesion.applicationId;
+
+// securityUserId: 'SESION' = el usuario con el que se ha entrado (credencial eGO API)
+if (cuerpo && cuerpo.securityUserId === 'SESION') cuerpo.securityUserId = sesion.securityUserId || 0;
 
 return [{ json: {
   hay_sesion: !!sesion.token,

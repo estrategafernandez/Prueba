@@ -1,59 +1,67 @@
 // [WA] 5 · Leads de eGO · Decidir
-// Con el detalle del lead (GetLead) y el de su inmueble (GetRealestate):
-//   - de que portal viene, quien es y a que comercial lo ha asignado eGO;
-//   - si el inmueble sigue DISPONIBLE (y en la cartera publicada);
-//   - que primer WhatsApp le toca (leads.js) y a que asesora le toca por la
-//     referencia (BN/OR Carmen, CS/VR Gisela), para compararlo con eGO.
-const base = $('Separar').item.json;
-const lead = $('DetalleLead').item.json?.datos || {};
-const inm = (() => { try { return $('DetalleInmueble').item.json?.datos || {}; } catch (e) { return {}; } })();
-const cartera = (() => { try { return $('EnLaCartera').item.json || {}; } catch (e) { return {}; } })();
-const estados = (() => { try { return $('EstadosDeInmueble').first().json?.datos || []; } catch (e) { return []; } })();
-const empleados = (() => { try { return $('Empleados').first().json?.datos || []; } catch (e) { return []; } })();
+// Un item por lead nuevo. Con el estado de su inmueble en eGO (GetRealestate,
+// en el mismo orden) y la cartera publicada en la web (el enlace):
+//   - disponible (estado 2 en eGO) -> bienvenida_compra / _alquiler con el enlace;
+//   - reservado, vendido, alquilado, retirado... -> plantilla_abierta: ya no
+//     esta disponible y Sara le ensena otros;
+//   - la comercial que puso eGO y la que toca por la referencia (BN/OR Carmen,
+//     CS/VR Gisela), para comprobar que coinciden.
+const nuevos = $('SoloNuevos').all();
+let inmuebles = [];
+try { inmuebles = $('EstadoDelInmueble').all(); } catch (e) { inmuebles = []; }
+let cartera = [];
+try { cartera = $('LaCartera').first().json.filas || []; } catch (e) { cartera = []; }
+if (typeof cartera === 'string') { try { cartera = JSON.parse(cartera); } catch (e) { cartera = []; } }
+const porRef = Object.fromEntries([].concat(cartera).map(c => [String(c.ref || '').toUpperCase(), c]));
 
-const referencia = String(inm.reference || cartera.ref || '').toUpperCase();
-const estadoNombre = String((estados.find(e => String(e.id) === String(inm.realestateStatusId)) || {}).name || '');
-// Disponible: el estado de eGO lo dice y, ademas, sigue publicado en el feed de la web
-const estadoOk = !estadoNombre || /disponible|activ|publicad|available/i.test(estadoNombre);
-const disponible = referencia ? (estadoOk && !!cartera.ref) : null;
-
-const tel = normalizarTelefono(lead.phone || base.telefono);
-const origen = String(lead.leadOrigin?.name ?? lead.leadOrigin ?? lead.originId ?? '');
-const idAsignado = lead.assignToSecurityUserId ?? lead.securityUserId ?? null;
-const empleado = empleados.find(e => String(e.id ?? e.securityUserId ?? e.ID) === String(idAsignado)) || {};
-const asignadoEgo = [empleado.firstName, empleado.lastName].filter(Boolean).join(' ') || (idAsignado ? `usuario ${idAsignado}` : '');
-const porReferencia = resolverAsesora(referencia).destinatario;
-
-const d = decidirPrimerMensaje({
-  tipo: esAlquiler(referencia, '') ? 'alquiler' : 'compra',
-  referencia,
-  disponible,
-  enlace: cartera.enlace || '',
-  operacion: cartera.tipo_transaccion || '',
-  nombre: lead.name || base.nombre,
-  idioma: 'es',
+return nuevos.map((n, k) => {
+  const b = n.json;
+  const r = inmuebles[k]?.json || {};
+  const inm = r.ok && r.datos && typeof r.datos === 'object' ? r.datos : {};
+  const c = porRef[b.referencia] || {};
+  const estadoId = Number(inm.realestateStatusId || 0);
+  const estado = EGO_ESTADOS[estadoId] || (estadoId ? `estado ${estadoId}` : '');
+  // Lo dice eGO; si eGO no ha contestado, que siga publicado en la web
+  const disponible = !b.referencia ? null : (estadoId ? estadoId === EGO_DISPONIBLE : !!c.ref);
+  const tel = normalizarTelefono(b.telefono);
+  const alquiler = esAlquiler(b.referencia, b.operacion);
+  const d = decidirPrimerMensaje({
+    tipo: alquiler ? 'alquiler' : 'compra',
+    referencia: b.referencia,
+    disponible,
+    // Si no esta en la web, la bienvenida lleva la referencia en vez del enlace
+    enlace: c.enlace || (b.referencia ? `ref. ${b.referencia}` : ''),
+    operacion: b.operacion,
+    nombre: b.nombre,
+    idioma: idiomaDe(b.mensaje),
+    municipio: c.municipio || '',
+  });
+  const asignadoEgo = b.asignado_ids.map(id => EGO_COMERCIALES[id]).filter(Boolean)[0]
+    || String(b.asignado_nombres[0] || '').split(' ')[0];
+  const porReferencia = resolverAsesora(b.referencia, c.municipio).destinatario;
+  return { json: {
+    ...d,
+    lead_id: b.lead_id,
+    telefono_e164: tel.e164,
+    telefono_wa: tel.wa_id,
+    se_puede_contactar: tel.valido,
+    // Se manda de verdad solo con MODO_LEADS = 'real' (o a un telefono de prueba)
+    enviar: tel.valido && !!d.plantilla && leadsEnReal(tel.e164),
+    nombre: b.nombre,
+    email_cliente: b.email,
+    referencia: b.referencia,
+    enlace: c.enlace || '',
+    portal: b.portal,
+    solicitud: b.solicitud,
+    tipo: alquiler ? 'alquiler' : 'compra',
+    estado_inmueble: estado || (c.ref ? 'publicado en la web' : 'sin datos'),
+    disponible,
+    // eGO no crea contacto con los leads de los portales (potencialClientId vacio)
+    contacto_creado: false,
+    asignado_ego: asignadoEgo,
+    asesora_por_referencia: porReferencia,
+    asignacion_coincide: !asignadoEgo || asignadoEgo === porReferencia,
+    notas: `Lead de eGO (${b.solicitud || b.portal}): ${b.mensaje || b.obs}`.slice(0, 1500),
+    asunto: b.solicitud,
+  }, pairedItem: { item: k } };
 });
-
-return [{ json: {
-  ...d,
-  lead_id: base.lead_id,
-  telefono_e164: tel.e164,
-  telefono_wa: tel.wa_id,
-  se_puede_contactar: tel.valido,
-  nombre: String(lead.name || base.nombre || '').trim(),
-  email_cliente: String(lead.email || '').toLowerCase(),
-  referencia,
-  enlace: cartera.enlace || '',
-  portal: origen,
-  tipo: d.es_alquiler ? 'alquiler' : 'compra',
-  estado_inmueble: estadoNombre || (cartera.ref ? 'en la cartera publicada' : 'no esta en la cartera publicada'),
-  disponible,
-  // Contacto: eGO lo asocia al lead como potencialClientId
-  contacto_creado: !!lead.potencialClientId,
-  contacto_id: lead.potencialClientId || null,
-  asignado_ego: asignadoEgo,
-  asesora_por_referencia: porReferencia,
-  asignacion_coincide: !asignadoEgo || new RegExp(porReferencia, 'i').test(asignadoEgo),
-  notas: `Lead de eGO (${origen || 'internet'}): ${String(lead.obs || '').replace(/\s+/g, ' ').slice(0, 1200)}`,
-  asunto: String(lead.title || ''),
-} }];

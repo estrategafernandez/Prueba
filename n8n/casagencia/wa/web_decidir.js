@@ -35,5 +35,7 @@ return [{ json: {
   municipio: c.municipio || '',
   resumen: String(c.resumen || f.mensaje || '').replace(/\s+/g, ' ').slice(0, 400),
   enlace: inmueble.enlace || '',
+  // Se manda de verdad solo con MODO_LEADS = 'real' (o a un telefono de prueba)
+  enviar: !!f.se_puede_contactar && !!d.plantilla && leadsEnReal(f.telefono_e164),
   notas: `Formulario de la web (${f.origen_url || 'casagencia.com'}): ${f.mensaje}`.slice(0, 1500),
 } }];

@@ -89,6 +89,20 @@ return [{
     pasar_a_humano: pasarAHumano,
     // Las llamadas del telefono ya mandan su propio correo: de esas, solo WhatsApp
     enviar_correo: ACCION !== 'LLAMADA',
+    // Nota en el historial de eGO (contacto o lead del cliente) con lo hablado.
+    // El recordatorio no (repetiria la pre-reserva) y las llamadas la ponen ellas.
+    nota_ego_si: !['RECORDATORIO', 'LLAMADA'].includes(ACCION) && tel.valido,
+    nota_ego: [
+      [
+        `WhatsApp · Sara (IA de Casagencia) · ${ACCION}${prueba ? ' [PRUEBA]' : ''}`,
+        j.cita ? `Visita: ${j.cita}` : '',
+        j.referencia ? `Inmueble: ${String(j.referencia).toUpperCase()}` : '',
+        `Asesora: ${quien}`,
+      ].filter(Boolean).join('\n'),
+      String(j.detalle ?? j.resumen ?? '').trim() || 'sin resumen',
+      enlaceChat ? `Conversacion: ${enlaceChat}` : '',
+    ].filter(Boolean).join('\n\n'),
+    cliente_telefono_e164: tel.e164,
     // La conversacion se asigna en el panel a la asesora de la referencia (o a
     // quien va el aviso si no hay referencia). En pruebas no se toca.
     agente_id: prueba ? 0 : agenteDe(r.conocida ? r.destinatario : quien),

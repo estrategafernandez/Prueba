@@ -233,8 +233,9 @@ def cal_getall(name, calendario, tmin, tmax, pos, query=None):
     }, pos, 1.3, credentials=CRED_CAL, alwaysOutputData=True, onError="continueRegularOutput")
 
 
-def exec_sub(name, wid, sub, entradas, pos, tipos=None, cada_uno=False, **extra):
-    """Llama a un sub-workflow [WA][SUB] pasandole las entradas por nombre."""
+def exec_sub(name, wid, sub, entradas, pos, tipos=None, cada_uno=False, sin_esperar=False, **extra):
+    """Llama a un sub-workflow [WA][SUB] pasandole las entradas por nombre.
+    sin_esperar: lo lanza y sigue (para lo que no debe frenar ni romper el flujo)."""
     tipos = tipos or {}
     esquema = [{"id": k, "displayName": k, "required": False, "defaultMatch": False, "display": True,
                 "canBeUsedToMatch": True, "type": tipos.get(k, "string")} for k in entradas]
@@ -242,7 +243,7 @@ def exec_sub(name, wid, sub, entradas, pos, tipos=None, cada_uno=False, **extra)
          "workflowInputs": {"mappingMode": "defineBelow", "value": entradas, "matchingColumns": [],
                             "schema": esquema, "attemptToConvertTypes": False,
                             "convertFieldsToString": False},
-         "options": {"waitForSubWorkflow": True}}
+         "options": {"waitForSubWorkflow": not sin_esperar}}
     if cada_uno:
         p["mode"] = "each"
     return node(name, "n8n-nodes-base.executeWorkflow", p, pos, 1.2, **extra)
@@ -686,6 +687,9 @@ def wf_confirmar(ids):
                  "cita_confirmada: false. No he podido guardar la cita por un problema tecnico. NO le "
                  "digas al cliente que esta reservada: explicale que ha habido una incidencia y usa "
                  "avisarEquipo para que la asesora cierre la visita.")}, [1740, 60]),
+        exec_sub("FichaDelCRM", ids.get("[EGO][SUB] FichaCRM", ""), "[EGO][SUB] FichaCRM",
+                 {"referencia": "={{ %s.referencia }}" % v}, [1740, -200],
+                 onError="continueRegularOutput", alwaysOutputData=True),
         code_node("PrepararAvisoCita", code_wa("aviso_cita.js"), [1740, -120]),
         exec_sub("AvisarAlComercial", ids.get("[WA][SUB] AvisoEquipo", ""), "[WA][SUB] AvisoEquipo",
                  aviso, [1960, -120], {"conversacion_id": "number", "pasar_a_humano": "boolean"},
@@ -715,9 +719,9 @@ def wf_confirmar(ids):
             ("ValidarAntesDeInsertar", 0, "¿Puede crear?", 0),
             ("¿Puede crear?", 0, "¿Es prueba?", 0),
             ("¿Es prueba?", 0, "SimularReserva", 0), ("¿Es prueba?", 1, "InsertarEnAgenda", 0),
-            ("SimularReserva", 0, "PrepararAvisoCita", 0),
+            ("SimularReserva", 0, "FichaDelCRM", 0), ("FichaDelCRM", 0, "PrepararAvisoCita", 0),
             ("¿Puede crear?", 1, "RespuestaRechazo", 0),
-            ("InsertarEnAgenda", 0, "PrepararAvisoCita", 0),
+            ("InsertarEnAgenda", 0, "FichaDelCRM", 0),
             ("InsertarEnAgenda", 1, "RespuestaErrorCalendario", 0),
             ("PrepararAvisoCita", 0, "AvisarAlComercial", 0),
             ("AvisarAlComercial", 0, "MarcarCitaEnLaFicha", 0),
@@ -727,8 +731,8 @@ def wf_confirmar(ids):
         "LeerAgendaDelDia": [1740, 0], "ValidarAntesDeInsertar": [1960, 0], "¿Puede crear?": [2180, 0],
         "RespuestaRechazo": [2400, 200], "¿Es prueba?": [2400, 0], "SimularReserva": [2620, -200],
         "InsertarEnAgenda": [2620, 0], "RespuestaErrorCalendario": [2840, 200],
-        "PrepararAvisoCita": [2840, 0], "AvisarAlComercial": [3060, 0], "MarcarCitaEnLaFicha": [3280, 0],
-        "RespuestaOK": [3500, 0], "Nota": [640, -440], "Nota2": [2620, -560]})
+        "FichaDelCRM": [2840, 0], "PrepararAvisoCita": [3060, 0], "AvisarAlComercial": [3280, 0],
+        "MarcarCitaEnLaFicha": [3500, 0], "RespuestaOK": [3720, 0], "Nota": [640, -440], "Nota2": [2620, -560]})
 
 
 def wf_cita_telefono():
@@ -769,8 +773,13 @@ def wf_aviso(ids):
     return wf("[WA][SUB] AvisoEquipo", [
         trigger_sub(AVISO_IN),
         code_node("Preparar", code_wa("aviso_preparar.js"), [200, 0]),
-        http("EnviarWhatsApp", "POST", "%s/%s/messages" % (META_API, PHONE_ID), [420, 0],
-             cred=CRED_META, body="={{ JSON.stringify($json.meta_body) }}",
+        if_node("¿Nota en eGO?", "={{ $json.nota_ego_si }}", "true", [420, 0]),
+        exec_sub("NotaEnEgo", ids.get("[EGO][SUB] NotaEnEgo", ""), "[EGO][SUB] NotaEnEgo",
+                 {"telefono": "={{ %s.cliente_telefono_e164 }}" % p, "texto": "={{ %s.nota_ego }}" % p,
+                  "tipo": "whatsapp"},
+                 [640, -160], onError="continueRegularOutput", alwaysOutputData=True, sin_esperar=True),
+        http("EnviarWhatsApp", "POST", "%s/%s/messages" % (META_API, PHONE_ID), [860, 0],
+             cred=CRED_META, body="={{ JSON.stringify(%s.meta_body) }}" % p,
              onError="continueRegularOutput", alwaysOutputData=True,
              retryOnFail=True, waitBetweenTries=3000, maxTries=2),
         node("EnviarCorreo", "n8n-nodes-base.gmail", {
@@ -799,7 +808,9 @@ def wf_aviso(ids):
              "ya manda su correo).\n\nSi hay que pasar a una persona, pone 4-intervenir y la IA deja de "
              "contestar. La conversacion se asigna en el panel a la asesora de la referencia, salvo que "
              "ya la tenga una comercial.", [200, -420], 600, 360),
-    ], conn(("Start", 0, "Preparar", 0), ("Preparar", 0, "EnviarWhatsApp", 0),
+    ], conn(("Start", 0, "Preparar", 0), ("Preparar", 0, "¿Nota en eGO?", 0),
+            ("¿Nota en eGO?", 0, "NotaEnEgo", 0), ("¿Nota en eGO?", 1, "EnviarWhatsApp", 0),
+            ("NotaEnEgo", 0, "EnviarWhatsApp", 0),
             ("EnviarWhatsApp", 0, "¿Tambien por correo?", 0),
             ("¿Tambien por correo?", 0, "EnviarCorreo", 0), ("¿Tambien por correo?", 1, "Etiquetar", 0),
             ("EnviarCorreo", 0, "Etiquetar", 0),
@@ -1016,21 +1027,9 @@ PROMPT_CLASIFICAR_WEB = (
 
 
 def wf_leads(ids):
-    """Leads del FORMULARIO DE LA WEB (por correo). Los de portales vienen de eGO ([WA] 5)."""
-    d = "$('Decidir').first().json"
-    entradas = {k: "={{ %s.%s }}" % (d, v) for k, v in (
-        ("telefono", "telefono_e164"), ("nombre", "nombre"), ("plantilla", "plantilla"),
-        ("param1", "param1"), ("param2", "param2"), ("referencia", "referencia"),
-        ("operacion", "operacion"), ("portal", "portal"))}
-    entradas["conversacion_id"] = 0
-    registro = ("={{ [ 'web', %s.mensaje_id, %s.telefono_e164, %s.nombre, %s.referencia, %s.tipo, %s.accion, "
-                "%s.plantilla, %s.param2, %s.asesora, %s.se_puede_contactar ? 'preparado' : 'sin_telefono', "
-                "JSON.stringify({ origen: %s.origen_url, idioma: %s.idioma, municipio: %s.municipio, resumen: "
-                "%s.resumen, mensaje: %s.mensaje }) ] }}")
-    registro = registro % tuple([d] * registro.count("%s"))
-    alta = ("={{ [ %s.telefono_wa, %s.telefono_e164, %s.referencia, %s.nombre, %s.email_cliente, 'Web', "
-            "%s.operacion, %s.es_alquiler, %s.asesora, %s.asunto, %s.enlace, %s.plantilla, %s.notas ] }}")
-    alta = alta % tuple([d] * alta.count("%s"))
+    """Leads del FORMULARIO DE LA WEB (por correo). Los de portales vienen de eGO ([WA] 5).
+    El trigger de Gmail puede traer varios correos a la vez: cada uno va por separado
+    a [WA][SUB] LeadDeLaWeb, para que no se pierda ninguno."""
     return wf("[WA] 1 · Leads de la web (correo)", [
         node("CorreoDeLaWeb", "n8n-nodes-base.gmailTrigger", {
             "pollTimes": {"item": [{"mode": "everyMinute"}]},
@@ -1038,6 +1037,35 @@ def wf_leads(ids):
             "filters": {"q": "from:websites.egorealestate.com"},
             "options": {"downloadAttachments": False},
         }, [-40, 0], 1.2, credentials=CRED_FORMULARIO),
+        exec_sub("CadaCorreo", ids.get("[WA][SUB] LeadDeLaWeb", ""), "[WA][SUB] LeadDeLaWeb",
+                 {"correo": "={{ JSON.stringify($json) }}"}, [200, 0], cada_uno=True,
+                 onError="continueRegularOutput"),
+        nota("Nota", "## Solo los formularios de la WEB\nBuzon *formularioscasagencia@gmail.com* (credencial "
+             "*Correo Formulario*): solo los correos de **web@websites.egorealestate.com** (\"Contacto del "
+             "WebSite\"). Los de Idealista, Fotocasa... son las mismas solicitudes que entran en eGO: esas "
+             "salen de [WA] 5.\n\nCada correo se trata por separado en *[WA][SUB] LeadDeLaWeb*.",
+             [-40, -320], 520, 260),
+    ], conn(("CorreoDeLaWeb", 0, "CadaCorreo", 0)))
+
+
+def wf_lead_web(ids):
+    """Un formulario de la web: que es, que se le manda y, si toca, se le manda."""
+    d = "$('Decidir').first().json"
+    entradas = {k: "={{ %s.%s }}" % (d, v) for k, v in (
+        ("telefono", "telefono_e164"), ("nombre", "nombre"), ("plantilla", "plantilla"),
+        ("param1", "param1"), ("param2", "param2"), ("referencia", "referencia"),
+        ("operacion", "operacion"), ("portal", "portal"))}
+    entradas["conversacion_id"] = 0
+    registro = ("={{ [ 'web', %s.mensaje_id, %s.telefono_e164, %s.nombre, %s.referencia, %s.tipo, %s.accion, "
+                "%s.plantilla, %s.param2, %s.asesora, %s.se_puede_contactar ? "
+                "(%s.enviar ? 'enviando' : 'preparado') : 'sin_telefono', JSON.stringify({ origen: %s.origen_url, idioma: %s.idioma, municipio: %s.municipio, resumen: "
+                "%s.resumen, mensaje: %s.mensaje }) ] }}")
+    registro = registro % tuple([d] * registro.count("%s"))
+    alta = ("={{ [ %s.telefono_wa, %s.telefono_e164, %s.referencia, %s.nombre, %s.email_cliente, 'Web', "
+            "%s.operacion, %s.es_alquiler, %s.asesora, %s.asunto, %s.enlace, %s.plantilla, %s.notas ] }}")
+    alta = alta % tuple([d] * alta.count("%s"))
+    return wf("[WA][SUB] LeadDeLaWeb", [
+        trigger_sub([("correo", "string")]),
         code_node("LeerFormulario", code_wa("web_parsear.js"), [180, 0]),
         if_node("¿Es de la web?", "={{ $json.es_de_la_web }}", "true", [400, 0]),
         noop("NoEsDeLaWeb", [620, 200]),
@@ -1056,10 +1084,7 @@ def wf_leads(ids):
         pg_query("Registrar", SQL_REGISTRAR_ENTRANTE, registro, [1280, 0], alwaysOutputData=True),
         if_node("¿Es nuevo?", "={{ $json.id }}", "exists", [1500, 0], tipo="number"),
         noop("YaEstabaApuntado", [1720, 200]),
-        if_node("¿Se manda?", None, None, [1720, 0], conds=[
-            ("={{ %s }}" % json.dumps(const("MODO_LEADS")), "equals", "real", "string"),
-            ("={{ %s.se_puede_contactar }}" % d, "true", None, "boolean"),
-            ("={{ %s.plantilla }}" % d, "notEmpty", None, "string")]),
+        if_node("¿Se manda?", "={{ %s.enviar }}" % d, "true", [1720, 0]),
         noop("Preparado (no se manda)", [1940, 200]),
         pg_query("AltaDelLead", SQL_ALTA_LEAD_WEB, alta, [1940, -120], alwaysOutputData=True,
                  onError="continueRegularOutput"),
@@ -1071,6 +1096,18 @@ def wf_leads(ids):
                  [2600, -220], onError="continueRegularOutput", alwaysOutputData=True),
         pg_query("ApuntarEnviado", SQL_ENTRANTE_ESTADO, "={{ [ $('Registrar').first().json.id, 'enviado' ] }}",
                  [2820, -220], onError="continueRegularOutput", alwaysOutputData=True),
+        # Propietario que quiere vender o alquilar: ademas, aviso a la asesora
+        if_node("¿Es captacion?", "={{ %s.accion }}" % d, "equals", [3040, -220], der="captacion", tipo="string"),
+        exec_sub("AvisoCaptacion", ids.get("[WA][SUB] AvisoEquipo", ""), "[WA][SUB] AvisoEquipo",
+                 {"accion": "AVISO", "destinatario": "={{ %s.asesora }}" % d,
+                  "referencia": "={{ %s.referencia }}" % d, "municipio": "={{ %s.municipio }}" % d,
+                  "cliente_nombre": "={{ %s.nombre }}" % d, "cliente_telefono": "={{ %s.telefono_e164 }}" % d,
+                  "cita": "", "resumen": "={{ 'Propietario (formulario de la web): ' + %s.resumen }}" % d,
+                  "detalle": "={{ %s.notas }}" % d,
+                  "conversacion_id": "={{ $('EnviarPrimerWhatsApp').first().json.conversacion_id || 0 }}",
+                  "pasar_a_humano": False, "etiqueta": ""},
+                 [3260, -320], {"conversacion_id": "number", "pasar_a_humano": "boolean"},
+                 onError="continueRegularOutput", alwaysOutputData=True),
         nota("Nota", "## Solo los formularios de la WEB\nBuzon *formularioscasagencia@gmail.com* (credencial "
              "*Correo Formulario*): solo los correos de **web@websites.egorealestate.com** (\"Contacto del "
              "WebSite\"). Los de Idealista, Fotocasa... son las mismas solicitudes que entran en eGO: esas "
@@ -1083,16 +1120,17 @@ def wf_leads(ids):
              "nada, lo revisa una persona.\n\nTodo se apunta en *leads_entrantes*.", [840, -440], 560, 330),
         nota("Nota3", "## Modo: %s\nCon MODO_LEADS = 'preparado' (wa/config.js) se decide y se apunta, pero "
              "**no se manda nada**. Con 'real', se da de alta el lead y sale el WhatsApp (sin repetir: 30 "
-             "dias por telefono e inmueble)." % const("MODO_LEADS"), [1720, -480], 460, 220),
-    ], conn(("CorreoDeLaWeb", 0, "LeerFormulario", 0), ("LeerFormulario", 0, "¿Es de la web?", 0),
-            ("¿Es de la web?", 0, "Clasificar", 0), ("¿Es de la web?", 1, "NoEsDeLaWeb", 0),
+             "dias por telefono e inmueble). A los telefonos de prueba se les manda siempre." % const("MODO_LEADS"), [1720, -480], 460, 220),
+    ], conn(("LeerFormulario", 0, "¿Es de la web?", 0),
+            ("Start", 0, "LeerFormulario", 0), ("¿Es de la web?", 0, "Clasificar", 0), ("¿Es de la web?", 1, "NoEsDeLaWeb", 0),
             ("Clasificar", 0, "LeerInmueble", 0), ("LeerInmueble", 0, "Decidir", 0),
             ("Decidir", 0, "Registrar", 0), ("Registrar", 0, "¿Es nuevo?", 0),
             ("¿Es nuevo?", 0, "¿Se manda?", 0), ("¿Es nuevo?", 1, "YaEstabaApuntado", 0),
             ("¿Se manda?", 0, "AltaDelLead", 0), ("¿Se manda?", 1, "Preparado (no se manda)", 0),
             ("AltaDelLead", 0, "¿Lead nuevo?", 0), ("¿Lead nuevo?", 0, "EnviarPrimerWhatsApp", 0),
             ("EnviarPrimerWhatsApp", 0, "MarcarPlantillaEnviada", 0),
-            ("MarcarPlantillaEnviada", 0, "ApuntarEnviado", 0)))
+            ("MarcarPlantillaEnviada", 0, "ApuntarEnviado", 0), ("ApuntarEnviado", 0, "¿Es captacion?", 0),
+            ("¿Es captacion?", 0, "AvisoCaptacion", 0)))
 
 
 def wf_recordatorio(ids):
@@ -1165,9 +1203,12 @@ def de_la_ia(nombre, desc, tipo="string"):
     return "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('%s', `%s`, '%s') }}" % (nombre, desc, tipo)
 
 
+SUB_DE_HERRAMIENTA = {"avisarEquipo": "[WA][SUB] AvisoEquipo", "consultarCRM": "[EGO][SUB] FichaCRM"}
+
+
 def herramienta(nombre, ids, desc, valores, pos, tipos=None):
     """Nodo toolWorkflow: el modelo ve el NOMBRE del nodo como nombre de la herramienta."""
-    sub = "[WA][SUB] " + nombre if nombre != "avisarEquipo" else "[WA][SUB] AvisoEquipo"
+    sub = SUB_DE_HERRAMIENTA.get(nombre, "[WA][SUB] " + nombre)
     tipos = tipos or {}
     esquema = [{"id": k, "displayName": k, "required": False, "defaultMatch": False, "display": True,
                 "canBeUsedToMatch": True, "type": tipos.get(k, "string")} for k in valores]
@@ -1236,6 +1277,12 @@ def herramientas(ids, x=1900, y=360):
                                     "ejemplo el precio del suyo). 0 si no ha hablado de precio.", "number"),
              "limite": de_la_ia("limite", "Cuantos devolver. Normalmente 3.", "number")},
             [x + 3 * dx, y], {"limite": "number", "precio_max": "number"}),
+        herramienta("consultarCRM", ids,
+            "Lo que dice el CRM (eGO) de un inmueble: si sigue DISPONIBLE o esta reservado, vendido, "
+            "alquilado o retirado; si la agencia tiene las llaves; y las visitas que ha tenido (internas). "
+            "Usala SIEMPRE antes de ofrecer o cerrar una visita, y cuando el cliente pregunte si sigue "
+            "disponible.",
+            {"referencia": de_la_ia("referencia", REF_DESC)}, [x + 4 * dx, y]),
         herramienta("BuscarDisponibilidadCalendario", ids,
             "SOLO COMPRA. Comprueba si se puede hacer una visita de una hora ese dia y a esa hora en la agenda "
             "del comercial, y devuelve las horas LIBRES en 'alternativas'. Valida horario de oficina y "
@@ -1611,7 +1658,7 @@ on conflict (call_id) do nothing
 returning call_id;"""
 
 PROMPT_NOMBRE = (
-    "Te paso la transcripcion de una llamada a una inmobiliaria. 'Agent' es Sara, la asistente: NO es el "
+    "Te paso la transcripcion de una llamada a una inmobiliaria. 'Agent' es Sara, IA de Casagencia: NO es el "
     "cliente. Saca el nombre del CLIENTE que llama (nombre y apellido si los dice) y la referencia del "
     "inmueble si la menciona (formato como BN-1528-V). Responde solo con JSON: "
     '{"nombre": "", "referencia": ""}. Si no lo dice, deja la cadena vacia. No inventes.')
@@ -1672,14 +1719,18 @@ def wf_llamada_panel(ids):
         pg_query("ApuntarConversacion", "update tel_llamadas_panel set conversacion_id = $2 where call_id = $1;",
                  "={{ [ %s.call_id, %s.conversacion_id ] }}" % (d, cv), [2860, 0], executeOnce=True,
                  onError="continueRegularOutput", alwaysOutputData=True),
-        if_node("¿Avisar a la comercial?", "={{ %s.avisar }}" % d, "true", [3080, 0]),
+        exec_sub("NotaEnEgo", ids.get("[EGO][SUB] NotaEnEgo", ""), "[EGO][SUB] NotaEnEgo",
+                 {"telefono": "={{ %s.telefono_e164 }}" % d, "texto": "={{ %s.nota }}" % d, "tipo": "llamada"},
+                 [3080, 0],
+                 onError="continueRegularOutput", alwaysOutputData=True, sin_esperar=True),
+        if_node("¿Avisar a la comercial?", "={{ %s.avisar }}" % d, "true", [3300, 0]),
         exec_sub("AvisoWhatsApp", ids.get("[WA][SUB] AvisoEquipo", ""), "[WA][SUB] AvisoEquipo",
                  {"accion": "LLAMADA", "destinatario": "={{ %s.asesora }}" % d,
                   "referencia": "={{ %s.referencia }}" % d, "municipio": "",
                   "cliente_nombre": "={{ %s.nombre }}" % d, "cliente_telefono": "={{ %s.telefono_e164 }}" % d,
                   "cita": "", "resumen": "={{ %s.resumen }}" % d, "detalle": "={{ %s.resumen }}" % d,
                   "conversacion_id": "={{ %s.conversacion_id }}" % cv, "pasar_a_humano": False, "etiqueta": ""},
-                 [3300, -100], {"conversacion_id": "number", "pasar_a_humano": "boolean"},
+                 [3520, -100], {"conversacion_id": "number", "pasar_a_humano": "boolean"},
                  onError="continueRegularOutput", alwaysOutputData=True),
         nota("Nota", "## Cada llamada del asistente telefonico, en el panel\nLa llama `[TEL] "
              "FinalizarLlamadaRetell` al terminar cada llamada (sin esperar: no le cambia nada).\n\n"
@@ -1687,7 +1738,8 @@ def wf_llamada_panel(ids):
              "dijo), y su conversacion del inbox de WhatsApp.\n2. Etiqueta **0-llamada_telefonica**.\n3. "
              "Nota privada con el resumen, el tono y la **grabacion**.\n4. Se asigna a la asesora de la "
              "llamada (si no la tiene ya una comercial).\n5. Aviso por WhatsApp a la asesora (si ha "
-             "durado al menos %d s).\n\nCada llamada entra una sola vez (tabla tel_llamadas_panel)."
+             "durado al menos %d s).\n6. La misma nota, en el historial de eGO (contacto o lead del cliente; solo "
+             "con MODO_LEADS = 'real').\n\nCada llamada entra una sola vez (tabla tel_llamadas_panel)."
              % int(const("LLAMADA_AVISO_MIN_SEGUNDOS", "15")), [640, -520], 620, 360),
     ], conn(("Start", 0, "LeerLlamada", 0), ("LeerLlamada", 0, "CrearTablaSiFalta", 0),
             ("CrearTablaSiFalta", 0, "¿Es nueva?", 0), ("¿Es nueva?", 0, "¿Se pone en el panel?", 0),
@@ -1701,7 +1753,7 @@ def wf_llamada_panel(ids):
             ("NotaConGrabacion", 0, n_if, 0), ("NotaConGrabacion", 1, "NotaSinGrabacion", 0),
             ("NotaSinGrabacion", 0, n_if, 0),
             (n_if, 0, n_post, 0), (n_if, 1, "ApuntarConversacion", 0), (n_post, 0, "ApuntarConversacion", 0),
-            ("ApuntarConversacion", 0, "¿Avisar a la comercial?", 0),
+            ("ApuntarConversacion", 0, "NotaEnEgo", 0), ("NotaEnEgo", 0, "¿Avisar a la comercial?", 0),
             ("¿Avisar a la comercial?", 0, "AvisoWhatsApp", 0)))
 
 
@@ -1757,7 +1809,9 @@ def wf_ego_api():
         "sendHeaders": True, "headerParameters": {"parameters": [
             {"name": "Authorization", "value": "=Bearer {{ %s.token }}" % ses},
             {"name": "Accept", "value": "application/json"}]},
-        "options": {"response": {"response": {"fullResponse": True, "neverError": True}}, "timeout": 60000},
+        # eGO (ASP.NET) quiere las listas repetidas: ?realestateIds=1&realestateIds=2
+        "options": {"response": {"response": {"fullResponse": True, "neverError": True, "responseFormat": "text"}},
+                    "queryParameterArrays": "repeat", "timeout": 60000},
     }, **({"sendBody": True, "specifyBody": "json", "jsonBody": "={{ JSON.stringify(%s.cuerpo) }}" % ses}
           if cuerpo else {})), pos, 4.2, onError="continueRegularOutput")
     return wf("[EGO][SUB] Llamar a eGO", [
@@ -1787,14 +1841,20 @@ def wf_ego_api():
         if_node("¿Con cuerpo?", "={{ %s.con_cuerpo }}" % ses, "true", [1960, 0]),
         pedir("LlamadaConCuerpo", [2180, -100], True),
         pedir("LlamadaSinCuerpo", [2180, 100], False),
-        code_node("Resultado", "const r = $input.first().json || {};\n"
+        if_node("¿Sesion caducada?", "={{ Number($json.statusCode || 0) }}", "equals", [2400, 0], der=401,
+                tipo="number"),
+        redis("OlvidarSesion", {"operation": "delete", "key": "ego:sesion"}, [2620, -100]),
+        code_node("Resultado", "let r = {};\n"
+                  "try { r = $('LlamadaConCuerpo').first().json; } catch (e) {}\n"
+                  "try { if (!r || !r.statusCode) r = $('LlamadaSinCuerpo').first().json; } catch (e) {}\n"
+                  "r = r || {};\n"
                   "const s = $('Sesion').first().json;\n"
                   "const status = Number(r.statusCode || 0);\n"
-                  "return [{ json: { ok: status >= 200 && status < 300, status, datos: r.body ?? r, "
-                  "error: !s.hay_sesion ? 'login: ' + s.login_error : (status >= 300 ? String(r.statusMessage || "
-                  "'error ' + status) : '') } }];", [2400, 0]),
-        if_node("¿Sesion caducada?", "={{ $json.status }}", "equals", [2620, 0], der=401, tipo="number"),
-        redis("OlvidarSesion", {"operation": "delete", "key": "ego:sesion"}, [2840, -100]),
+                  "let datos = r.body ?? r.data ?? null;\n"
+                  "if (typeof datos === 'string') { try { datos = JSON.parse(datos); } catch (e) {} }\n"
+                  "return [{ json: { ok: status >= 200 && status < 300, status, datos, "
+                  "error: !s.hay_sesion ? 'login: ' + s.login_error : (status >= 300 || !status ? String(r.statusMessage || "
+                  "r.error || 'error ' + status) : '') } }];", [2840, 0]),
         nota("Nota", "## Llamar a la API de eGO\nEntrada: metodo (GET/POST/PUT), ruta (por ejemplo "
              "/lead/Lead/ListLeadByPage), query y cuerpo en JSON. La agencia (applicationId) se anade "
              "sola.\n\nLogin con la credencial **eGO API** (usuario y contrasena dentro, en el cuerpo del "
@@ -1807,8 +1867,9 @@ def wf_ego_api():
             ("Sesion", 0, "¿Guardar sesion?", 0), ("¿Guardar sesion?", 0, "GuardarSesion", 0),
             ("¿Guardar sesion?", 1, "¿Con cuerpo?", 0), ("GuardarSesion", 0, "¿Con cuerpo?", 0),
             ("¿Con cuerpo?", 0, "LlamadaConCuerpo", 0), ("¿Con cuerpo?", 1, "LlamadaSinCuerpo", 0),
-            ("LlamadaConCuerpo", 0, "Resultado", 0), ("LlamadaSinCuerpo", 0, "Resultado", 0),
-            ("Resultado", 0, "¿Sesion caducada?", 0), ("¿Sesion caducada?", 0, "OlvidarSesion", 0)))
+            ("LlamadaConCuerpo", 0, "¿Sesion caducada?", 0), ("LlamadaSinCuerpo", 0, "¿Sesion caducada?", 0),
+            ("¿Sesion caducada?", 0, "OlvidarSesion", 0), ("¿Sesion caducada?", 1, "Resultado", 0),
+            ("OlvidarSesion", 0, "Resultado", 0)))
 
 
 def ego(name, ids, metodo, ruta, pos, query="{}", cuerpo="{}", **extra):
@@ -1819,19 +1880,20 @@ def ego(name, ids, metodo, ruta, pos, query="{}", cuerpo="{}", **extra):
 
 
 def wf_leads_ego(ids):
-    """Todas las solicitudes de los portales, desde eGO. Preparado: no manda nada."""
+    """Todas las solicitudes de los portales, desde eGO. En modo 'preparado' solo
+    manda a los telefonos de prueba; al resto lo apunta sin mandar."""
     d = "$('Decidir').item.json"
     entradas = {k: "={{ %s.%s }}" % (d, v) for k, v in (
         ("telefono", "telefono_e164"), ("nombre", "nombre"), ("plantilla", "plantilla"),
         ("param1", "param1"), ("param2", "param2"), ("referencia", "referencia"),
         ("operacion", "operacion"), ("portal", "portal"))}
     entradas["conversacion_id"] = 0
-    registro = ("={{ [ 'ego', %s.lead_id, %s.telefono_e164, %s.nombre, %s.referencia, %s.tipo, %s.accion, "
-                "%s.plantilla, %s.param2, %s.asesora, %s.se_puede_contactar ? 'preparado' : 'sin_telefono', "
-                "JSON.stringify({ portal: %s.portal, estado_inmueble: %s.estado_inmueble, disponible: %s.disponible, "
-                "contacto_creado: %s.contacto_creado, contacto_id: %s.contacto_id, asignado_ego: %s.asignado_ego, "
-                "asesora_por_referencia: %s.asesora_por_referencia, asignacion_coincide: %s.asignacion_coincide }) ] }}")
-    registro = registro % tuple([d] * registro.count("%s"))
+    registro = ("={{ [ 'ego', $json.lead_id, $json.telefono_e164, $json.nombre, $json.referencia, $json.tipo, "
+                "$json.accion, $json.plantilla, $json.param2, $json.asesora, $json.se_puede_contactar ? "
+                "($json.enviar ? 'enviando' : 'preparado') : 'sin_telefono', JSON.stringify({ portal: $json.portal, "
+                "solicitud: $json.solicitud, estado_inmueble: $json.estado_inmueble, disponible: $json.disponible, "
+                "contacto_creado: $json.contacto_creado, asignado_ego: $json.asignado_ego, asesora_por_referencia: "
+                "$json.asesora_por_referencia, asignacion_coincide: $json.asignacion_coincide, notas: $json.notas }) ] }}")
     alta = ("={{ [ %s.telefono_wa, %s.telefono_e164, %s.referencia, %s.nombre, %s.email_cliente, %s.portal, "
             "%s.operacion, %s.es_alquiler, %s.asesora, %s.asunto, %s.enlace, %s.plantilla, %s.notas ] }}")
     alta = alta % tuple([d] * alta.count("%s"))
@@ -1839,108 +1901,125 @@ def wf_leads_ego(ids):
         node("Cada5Minutos", "n8n-nodes-base.scheduleTrigger",
              {"rule": {"interval": [{"field": "minutes", "minutesInterval": 5}]}}, [-40, 0], 1.2),
         ego("ListarLeads", ids, "POST", "/lead/Lead/ListLeadByPage", [180, 0],
-            cuerpo="={{ JSON.stringify({ minDateCreated: $now.minus({ hours: 3 }).toISO(), pageIndex: 0, "
-                   "numberOfRecords: 100 }) }}"),
-        ego("EstadosDeInmueble", ids, "GET", "/realestate/RealestateStatus/ListRealestateStatus", [180, 220],
-            executeOnce=True),
-        ego("Empleados", ids, "GET", "/authentication/Authentication/ListEmployees", [180, 400], executeOnce=True),
+            # eGO guarda createDate en UTC (comprobado: un lead creado a las 11:53 UTC sale 11:53)
+            cuerpo="={{ JSON.stringify({ minDateCreated: $now.toUTC().minus({ hours: 3 })"
+                   ".toFormat(\"yyyy-MM-dd'T'HH:mm:ss\"), pageIndex: 0, numberOfRecords: 100 }) }}"),
         code_node("Separar", code_wa("ego_leads_separar.js"), [400, 0]),
         if_node("¿Hay leads?", "={{ $json.lead_id }}", "exists", [620, 0], tipo="string"),
-        pg_query("¿Ya visto?", "select 1 as visto from leads_entrantes where fuente = 'ego' and id_origen = $1;",
-                 "={{ [ $json.lead_id ] }}", [840, 0], alwaysOutputData=True),
-        code_node("SoloNuevos", "return $input.all().map((i, k) => ({ json: { ...$('Separar').all()[k].json, "
-                  "visto: !!i.json.visto } })).filter(i => !i.json.visto);", [1060, 0]),
-        ego("DetalleLead", ids, "GET", "/lead/Lead/GetLead", [1280, 0],
-            query="={{ JSON.stringify({ leadId: $json.lead_id }) }}"),
-        ego("DetalleInmueble", ids, "GET", "/realestate/Realestate/GetRealestate", [1500, 0],
-            query="={{ JSON.stringify({ realestateId: $json.datos?.realestateId || 0 }) }}"),
-        pg_query("EnLaCartera", "select * from wa_cartera where upper(ref) = upper($1) or enlace like '%/' || $2 limit 1;",
-                 "={{ [ String($json.datos?.reference || ''), String($('DetalleLead').item.json.datos?.realestateId || 'x') ] }}",
-                 [1720, 0], alwaysOutputData=True, onError="continueRegularOutput"),
-        code_node("Decidir", code_leads("ego_decidir.js"), [1940, 0]),
-        pg_query("Registrar", SQL_REGISTRAR_ENTRANTE, registro, [2160, 0], alwaysOutputData=True),
-        if_node("¿Se manda?", None, None, [2380, 0], conds=[
-            ("={{ %s }}" % json.dumps(const("MODO_LEADS")), "equals", "real", "string"),
-            ("={{ !!$json.id }}", "true", None, "boolean"),
-            ("={{ %s.se_puede_contactar }}" % d, "true", None, "boolean"),
-            ("={{ %s.plantilla }}" % d, "notEmpty", None, "string")]),
-        noop("Preparado (no se manda)", [2600, 200]),
-        pg_query("AltaDelLead", SQL_ALTA_LEAD_WEB, alta, [2600, -120], alwaysOutputData=True,
+        noop("NadaNuevo", [840, 200]),
+        pg_query("YaVistos", "select coalesce(string_agg(id_origen, ','), '') as vistos from leads_entrantes "
+                 "where fuente = 'ego' and id_origen = any(string_to_array($1, ','));",
+                 "={{ [ $('Separar').all().map(i => i.json.lead_id).filter(Boolean).join(',') ] }}", [840, 0],
+                 executeOnce=True, alwaysOutputData=True),
+        code_node("SoloNuevos", "const vistos = new Set(String($input.first().json.vistos || '').split(',')"
+                  ".filter(Boolean));\nreturn $('Separar').all().filter(i => i.json.lead_id && !vistos.has("
+                  "i.json.lead_id)).slice(0, 25).map(i => ({ json: i.json }));", [1060, 0]),
+        ego("EstadoDelInmueble", ids, "GET", "/realestate/Realestate/GetRealestate", [1280, 0],
+            query="={{ JSON.stringify({ realestateId: $json.realestate_id || 0 }) }}", cada_uno=True),
+        pg_query("LaCartera", "select coalesce(json_agg(json_build_object('ref', ref, 'enlace', enlace, "
+                 "'tipo_transaccion', tipo_transaccion, 'municipio', municipio)), '[]'::json) as filas "
+                 "from wa_cartera where upper(ref) = any(string_to_array(upper($1), ','));",
+                 "={{ [ $('SoloNuevos').all().map(i => i.json.referencia).filter(Boolean).join(',') ] }}",
+                 [1500, 0], executeOnce=True, alwaysOutputData=True, onError="continueRegularOutput"),
+        code_node("Decidir", code_leads("ego_decidir.js"), [1720, 0]),
+        pg_query("Registrar", SQL_REGISTRAR_ENTRANTE, registro, [1940, 0], alwaysOutputData=True),
+        if_node("¿Se manda?", None, None, [2160, 0], conds=[
+            ("={{ %s.enviar }}" % d, "true", None, "boolean"),
+            ("={{ !!$json.id }}", "true", None, "boolean")]),
+        noop("Preparado (no se manda)", [2380, 200]),
+        pg_query("AltaDelLead", SQL_ALTA_LEAD_WEB, alta, [2380, -120], alwaysOutputData=True,
                  onError="continueRegularOutput"),
-        if_node("¿Lead nuevo?", "={{ $json.id }}", "exists", [2820, -120], tipo="number"),
+        if_node("¿Lead nuevo?", "={{ $json.id }}", "exists", [2600, -120], tipo="number"),
         exec_sub("EnviarPrimerWhatsApp", ids.get("[WA][SUB] EnviarPlantilla", ""), "[WA][SUB] EnviarPlantilla",
-                 entradas, [3040, -220], {"conversacion_id": "number"}, onError="continueRegularOutput"),
+                 entradas, [2820, -220], {"conversacion_id": "number"}, cada_uno=True,
+                 onError="continueRegularOutput"),
+        pg_query("MarcarPlantillaEnviada", SQL_PLANTILLA_ENVIADA,
+                 "={{ [ %s.telefono_wa, $json.conversacion_id || 0, %s.referencia ] }}" % (d, d),
+                 [3040, -220], onError="continueRegularOutput", alwaysOutputData=True),
+        pg_query("ApuntarEnviado", SQL_ENTRANTE_ESTADO, "={{ [ $('Registrar').item.json.id, 'enviado' ] }}",
+                 [3260, -220], onError="continueRegularOutput", alwaysOutputData=True),
         nota("Nota", "## Todas las solicitudes de los portales, desde eGO\nCada 5 minutos, los leads que han "
-             "entrado en eGO en las ultimas 3 horas (Idealista, Fotocasa, Properstar...). Cada lead una sola "
-             "vez (tabla *leads_entrantes*).\n\nPor cada uno: su detalle (telefono, origen, comercial "
-             "asignado en eGO, contacto creado) y su inmueble (estado). Comprobado: todo lo que llega al "
-             "correo de los portales entra en eGO 1-3 minutos despues.", [180, -420], 600, 300),
-        nota("Nota2", "## Que se le manda\n- Inmueble **disponible** (estado de eGO y publicado en la web): "
-             "**bienvenida_compra / _alquiler** con el enlace.\n- **Vendido, reservado, retirado o ya no "
-             "publicado**: **plantilla_abierta**: ya no esta disponible, Sara le ensena otros.\n\nModo "
-             "**%s**: se apunta todo en *leads_entrantes* (con el comercial que asigno eGO y el que toca por "
-             "la referencia) y no se manda nada." % const("MODO_LEADS"), [1500, -460], 560, 300),
-        nota("Nota3", "## SIN PROBAR\nFalta la contrasena en la credencial **eGO API**. Hasta entonces este "
-             "escenario no esta activo.", [2380, -420], 380, 160),
-    ], conn(("Cada5Minutos", 0, "ListarLeads", 0), ("ListarLeads", 0, "EstadosDeInmueble", 0),
-            ("EstadosDeInmueble", 0, "Empleados", 0), ("Empleados", 0, "Separar", 0),
-            ("Separar", 0, "¿Hay leads?", 0), ("¿Hay leads?", 0, "¿Ya visto?", 0),
-            ("¿Ya visto?", 0, "SoloNuevos", 0), ("SoloNuevos", 0, "DetalleLead", 0),
-            ("DetalleLead", 0, "DetalleInmueble", 0), ("DetalleInmueble", 0, "EnLaCartera", 0),
-            ("EnLaCartera", 0, "Decidir", 0), ("Decidir", 0, "Registrar", 0),
-            ("Registrar", 0, "¿Se manda?", 0), ("¿Se manda?", 0, "AltaDelLead", 0),
-            ("¿Se manda?", 1, "Preparado (no se manda)", 0), ("AltaDelLead", 0, "¿Lead nuevo?", 0),
-            ("¿Lead nuevo?", 0, "EnviarPrimerWhatsApp", 0)))
+             "entrado en eGO en las ultimas 3 horas y vienen de un portal (Idealista, Fotocasa, "
+             "Properstar...). Cada lead una sola vez (tabla *leads_entrantes*).\n\nEl lead ya trae el "
+             "telefono, el inmueble, venta o alquiler y la comercial que ha puesto eGO. Del inmueble se pide "
+             "el **estado** a eGO (GetRealestate). Comprobado: todo lo que llega al correo de los portales "
+             "entra en eGO 1-3 minutos despues, y eGO lo asigna igual que nuestro reparto por referencia.",
+             [180, -440], 620, 320),
+        nota("Nota2", "## Que se le manda\n- Inmueble **Disponible** en eGO: **bienvenida_compra / "
+             "_alquiler** con el enlace de la web (o la referencia si no esta en la web).\n- **Reservado, "
+             "vendido, alquilado, retirado...**: **plantilla_abierta**: ya no esta disponible, Sara le "
+             "ensena otros.\n\nModo **%s**: se apunta todo en *leads_entrantes* y solo se manda a los "
+             "telefonos de prueba. Con 'real' (wa/config.js) se manda a todos." % const("MODO_LEADS"),
+             [1500, -460], 600, 300),
+    ], conn(("Cada5Minutos", 0, "ListarLeads", 0), ("ListarLeads", 0, "Separar", 0),
+            ("Separar", 0, "¿Hay leads?", 0), ("¿Hay leads?", 0, "YaVistos", 0), ("¿Hay leads?", 1, "NadaNuevo", 0),
+            ("YaVistos", 0, "SoloNuevos", 0), ("SoloNuevos", 0, "EstadoDelInmueble", 0),
+            ("EstadoDelInmueble", 0, "LaCartera", 0), ("LaCartera", 0, "Decidir", 0),
+            ("Decidir", 0, "Registrar", 0), ("Registrar", 0, "¿Se manda?", 0),
+            ("¿Se manda?", 0, "AltaDelLead", 0), ("¿Se manda?", 1, "Preparado (no se manda)", 0),
+            ("AltaDelLead", 0, "¿Lead nuevo?", 0), ("¿Lead nuevo?", 0, "EnviarPrimerWhatsApp", 0),
+            ("EnviarPrimerWhatsApp", 0, "MarcarPlantillaEnviada", 0),
+            ("MarcarPlantillaEnviada", 0, "ApuntarEnviado", 0)))
 
 
 def wf_ego_ficha(ids):
-    """La ficha del CRM de un inmueble: estado, llaves y fichas de visita.
-    El id de eGO es el numero del enlace de la web (wa_cartera)."""
-    rid = "Number((String($('IdDeEgo').first().json.enlace || '').match(/(\\d+)$/) || [])[1] || 0)"
+    """La ficha del CRM de un inmueble: estado, llaves y fichas de visita."""
+    rid = "$('IdDeEgo').first().json.datos"
     return wf("[EGO][SUB] FichaCRM", [
         trigger_sub([("referencia", "string")]),
-        pg_query("IdDeEgo", "select ref, enlace from wa_cartera where upper(ref) = upper($1) limit 1;",
-                 "={{ [ String($json.referencia || '') ] }}", [200, 0], alwaysOutputData=True),
-        ego("Inmueble", ids, "GET", "/realestate/Realestate/GetRealestate", [420, 0],
+        ego("IdDeEgo", ids, "GET", "/realestate/Realestate/CheckRealestateReference", [200, 0],
+            query="={{ JSON.stringify({ realestateReference: String($json.referencia || '').toUpperCase().trim() }) }}"),
+        if_node("¿Esta en eGO?", "={{ Number($json.datos || 0) }}", "gt", [420, 0], der=0, tipo="number"),
+        ego("Inmueble", ids, "GET", "/realestate/Realestate/GetRealestate", [640, -100],
             query="={{ JSON.stringify({ realestateId: %s }) }}" % rid),
-        ego("Estados", ids, "GET", "/realestate/RealestateStatus/ListRealestateStatus", [640, 0]),
-        ego("Llaves", ids, "GET", "/realestate/RealestateKey/ListRealestateKeyMovementByRealestateId", [860, 0],
-            query="={{ JSON.stringify({ realestateId: %s }) }}" % rid),
-        ego("FichasDeVisita", ids, "POST", "/realestate/Realestate/ListRealestateVisitFile", [1080, 0],
+        ego("Llaves", ids, "GET", "/realestate/RealestateKey/ListRealestateKeyGroup", [860, -100],
+            query="={{ JSON.stringify({ realestateIds: [ %s ], applicationIds: [] }) }}" % rid),
+        ego("FichasDeVisita", ids, "POST", "/realestate/Realestate/ListRealestateVisitFile", [1080, -100],
             cuerpo="={{ JSON.stringify({ realestateId: %s }) }}" % rid),
         code_node("Resumen", code_wa("ego_ficha.js"), [1300, 0]),
-        nota("Nota", "## Ficha del CRM de un inmueble\nEstado (disponible, reservado, vendido...), si la "
-             "agencia tiene las **llaves** (si no, no se cierra visita: se avisa a la asesora) y las "
-             "**fichas de visita** (cuantas, interes, puntos positivos y negativos, internos).\n\nSIN "
-             "PROBAR hasta tener la contrasena en la credencial eGO API. No esta conectada a Sara todavia.",
-             [200, -360], 560, 260),
-    ], conn(("Start", 0, "IdDeEgo", 0), ("IdDeEgo", 0, "Inmueble", 0), ("Inmueble", 0, "Estados", 0),
-            ("Estados", 0, "Llaves", 0), ("Llaves", 0, "FichasDeVisita", 0), ("FichasDeVisita", 0, "Resumen", 0)))
+        nota("Nota", "## Ficha del CRM de un inmueble\nPor la referencia: el id de eGO "
+             "(CheckRealestateReference), el **estado** (Disponible, Reservado, Vendido, Alquilado, "
+             "Retirado...), las **llaves** (si hay un llavero del inmueble en la agencia) y las **fichas de "
+             "visita** (hechas, programadas, interes, puntos positivos y negativos: internos).\n\nLa usa "
+             "Sara (herramienta *consultarCRM*) antes de ofrecer visita, y la pre-reserva para decirle a la "
+             "asesora el estado y las llaves.", [200, -420], 600, 280),
+    ], conn(("Start", 0, "IdDeEgo", 0), ("IdDeEgo", 0, "¿Esta en eGO?", 0),
+            ("¿Esta en eGO?", 0, "Inmueble", 0), ("¿Esta en eGO?", 1, "Resumen", 0),
+            ("Inmueble", 0, "Llaves", 0), ("Llaves", 0, "FichasDeVisita", 0), ("FichasDeVisita", 0, "Resumen", 0)))
 
 
 def wf_ego_nota(ids):
-    """Deja en eGO, en la ficha del contacto, una nota con el resumen de la conversacion."""
+    """Deja en eGO una nota (historial) con el resumen de la conversacion o de la llamada."""
     return wf("[EGO][SUB] NotaEnEgo", [
-        trigger_sub([("telefono", "string"), ("texto", "string")]),
-        ego("BuscarContacto", ids, "POST", "/entity/Entity/ListEntityByPageFastSearch", [200, 0],
-            cuerpo="={{ JSON.stringify({ searchText: String($json.telefono || '').replace(/\\D/g, '').slice(-9), "
-                   "pageIndex: 0, numberOfRecords: 5 }) }}"),
-        code_node("Contacto", "const d = $input.first().json.datos || {};\n"
-                  "const lista = d.searchList || d.entities || [];\n"
-                  "const c = lista[0] || {};\n"
-                  "return [{ json: { contacto_id: c.id ?? c.entityId ?? null, encontrados: lista.length } }];",
-                  [420, 0]),
-        if_node("¿Existe en eGO?", "={{ $json.contacto_id }}", "exists", [640, 0], tipo="number"),
-        noop("NoEstaEnEgo", [860, 160]),
-        ego("InsertarNota", ids, "POST", "/note/Note/InsertNote", [860, -40],
-            cuerpo="={{ JSON.stringify({ objectId: $json.contacto_id, objectName: 'Entity', description: "
-                   "$('Start').first().json.texto }) }}"),
-        nota("Nota", "## Nota en eGO\nBusca el contacto por su telefono y le deja una nota (historial) con el "
-             "resumen de la conversacion de WhatsApp o de la llamada.\n\nSIN PROBAR hasta tener la "
-             "contrasena en la credencial eGO API.", [200, -320], 500, 220),
-    ], conn(("Start", 0, "BuscarContacto", 0), ("BuscarContacto", 0, "Contacto", 0),
-            ("Contacto", 0, "¿Existe en eGO?", 0), ("¿Existe en eGO?", 0, "InsertarNota", 0),
-            ("¿Existe en eGO?", 1, "NoEstaEnEgo", 0)))
+        trigger_sub([("telefono", "string"), ("texto", "string"), ("tipo", "string")]),
+        code_node("Preparar", code_wa("ego_nota_preparar.js"), [200, 0]),
+        if_node("¿Se escribe?", "={{ $json.escribir }}", "true", [420, 0]),
+        set_node("NoSeEscribe", {"resultado": ("string", "={{ 'No se escribe en eGO (modo ' + $json.modo + ')' }}")},
+                 [640, 200]),
+        ego("BuscarContacto", ids, "POST", "/entity/Entity/ListEntityByPageFastSearch", [640, -40],
+            cuerpo="={{ JSON.stringify({ searchText: $json.nueve, pageIndex: 0, numberOfRecords: 5 }) }}"),
+        ego("BuscarLead", ids, "POST", "/lead/Lead/ListLeadByPage", [860, -40],
+            cuerpo="={{ JSON.stringify({ phone: $('Preparar').first().json.nueve, pageIndex: 0, numberOfRecords: 10 }) }}"),
+        code_node("Destino", code_wa("ego_nota_destino.js"), [1080, -40]),
+        if_node("¿Esta en eGO?", "={{ Number($json.objeto_id || 0) }}", "gt", [1300, -40], der=0, tipo="number"),
+        set_node("NoEstaEnEgo", {"resultado": ("string", "No hay contacto ni lead con ese telefono en eGO")},
+                 [1520, 120]),
+        ego("InsertarNota", ids, "POST", "/note/Note/InsertNote", [1520, -120],
+            # id: 0 = nota nueva (sin el, eGO falla con "Column 'ID' cannot be null")
+            cuerpo="={{ JSON.stringify({ id: 0, objectId: $json.objeto_id, objectName: $json.objeto, "
+                   "description: $json.texto, historicTypeId: $json.tipo_historial, securityUserId: 'SESION' }) }}"),
+        set_node("Resultado", {"resultado": ("string", "={{ $json.ok ? 'Nota en ' + $('Destino').first().json.donde "
+                                                       ": 'eGO no ha guardado la nota: ' + $json.error }}")},
+                 [1740, -120]),
+        nota("Nota", "## Nota en el historial de eGO\nBusca al cliente por su telefono: en su **contacto** "
+             "si existe y, si no, en su **lead** mas reciente (los de los portales no traen contacto). "
+             "Deja una nota con el resumen de la conversacion de WhatsApp o de la llamada.\n\nSolo con "
+             "MODO_LEADS = 'real' (y siempre con los telefonos de prueba).", [200, -380], 560, 240),
+    ], conn(("Start", 0, "Preparar", 0), ("Preparar", 0, "¿Se escribe?", 0),
+            ("¿Se escribe?", 0, "BuscarContacto", 0), ("¿Se escribe?", 1, "NoSeEscribe", 0),
+            ("BuscarContacto", 0, "BuscarLead", 0), ("BuscarLead", 0, "Destino", 0),
+            ("Destino", 0, "¿Esta en eGO?", 0), ("¿Esta en eGO?", 0, "InsertarNota", 0),
+            ("¿Esta en eGO?", 1, "NoEstaEnEgo", 0), ("InsertarNota", 0, "Resultado", 0)))
 
 
 # ===========================================================================
@@ -2082,6 +2161,9 @@ def wf_prueba_contexto():
 # ===========================================================================
 ORDEN = [
     "[WA][SUB] Etiquetar",
+    "[EGO][SUB] Llamar a eGO",
+    "[EGO][SUB] FichaCRM",
+    "[EGO][SUB] NotaEnEgo",
     "[WA][SUB] AvisoEquipo",
     "[WA][SUB] buscarPorReferencia",
     "[WA][SUB] buscarPorDireccion",
@@ -2091,11 +2173,9 @@ ORDEN = [
     "[WA][SUB] confirmarCitaCalendario",
     "[WA][SUB] buscarCitaPorTelefono",
     "[WA][SUB] guardarCualificacion",
-    "[EGO][SUB] Llamar a eGO",
-    "[EGO][SUB] FichaCRM",
-    "[EGO][SUB] NotaEnEgo",
     "[WA][SUB] EnviarPlantilla",
     "[WA][SUB] ConversacionDelContacto",
+    "[WA][SUB] LeadDeLaWeb",
     "[TEL] Llamada al panel",
     "[WA] 0 · Esquema de base de datos",
     "[WA] 1 · Leads de la web (correo)",
@@ -2125,6 +2205,9 @@ RENOMBRADOS = {
 def construir(ids):
     wfs = {
         "[WA][SUB] Etiquetar": wf_etiquetar(),
+        "[EGO][SUB] Llamar a eGO": wf_ego_api(),
+        "[EGO][SUB] FichaCRM": wf_ego_ficha(ids),
+        "[EGO][SUB] NotaEnEgo": wf_ego_nota(ids),
         "[WA][SUB] AvisoEquipo": wf_aviso(ids),
         "[WA][SUB] buscarPorReferencia": wf_ficha(),
         "[WA][SUB] buscarPorDireccion": wf_direccion(),
@@ -2134,11 +2217,9 @@ def construir(ids):
         "[WA][SUB] confirmarCitaCalendario": wf_confirmar(ids),
         "[WA][SUB] buscarCitaPorTelefono": wf_cita_telefono(),
         "[WA][SUB] guardarCualificacion": wf_cualificar(ids),
-        "[EGO][SUB] Llamar a eGO": wf_ego_api(),
-        "[EGO][SUB] FichaCRM": wf_ego_ficha(ids),
-        "[EGO][SUB] NotaEnEgo": wf_ego_nota(ids),
         "[WA][SUB] EnviarPlantilla": wf_plantilla(ids),
         "[WA][SUB] ConversacionDelContacto": wf_conversacion_contacto(),
+        "[WA][SUB] LeadDeLaWeb": wf_lead_web(ids),
         "[TEL] Llamada al panel": wf_llamada_panel(ids),
         "[WA] 0 · Esquema de base de datos": wf_esquema(),
         "[WA] 1 · Leads de la web (correo)": wf_leads(ids),
@@ -2204,8 +2285,16 @@ def main():
     print()
     CONFIG = CONFIG_DESPLIEGUE            # a n8n, con los numeros de prueba
     wfs = construir(ids)
+    activos = {w["id"]: w["active"] for w in api("GET", "/api/v1/workflows?limit=250")["data"]}
     for nombre, w in wfs.items():
-        api("PUT", "/api/v1/workflows/%s" % ids[nombre], w)
+        try:
+            api("PUT", "/api/v1/workflows/%s" % ids[nombre], w)
+        except urllib.error.HTTPError as e:
+            raise SystemExit("ERROR en %s: %s" % (nombre, e.read().decode()[:600]))
+        # Un sub-workflow tiene que estar publicado antes que los que lo llaman
+        if "[SUB]" in nombre and not activos.get(ids[nombre]):
+            api("POST", "/api/v1/workflows/%s/activate" % ids[nombre])
+            print("  PUBLICADO   %-46s %s" % (nombre, ids[nombre]))
         print("  ACTUALIZADO %-46s %s" % (nombre, ids[nombre]))
     print("\nLos nuevos quedan desactivados; los que ya estaban activos se publican con la version nueva.")
     print("Numeros de prueba: %d %s" % (PRUEBAS_ACTIVAS,

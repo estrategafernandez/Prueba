@@ -39,7 +39,7 @@
             "metodo": "POST",
             "ruta": "/lead/Lead/ListLeadByPage",
             "query": "{}",
-            "cuerpo": "={{ JSON.stringify({ minDateCreated: $now.minus({ hours: 3 }).toISO(), pageIndex: 0, numberOfRecords: 100 }) }}"
+            "cuerpo": "={{ JSON.stringify({ minDateCreated: $now.toUTC().minus({ hours: 3 }).toFormat(\"yyyy-MM-dd'T'HH:mm:ss\"), pageIndex: 0, numberOfRecords: 100 }) }}"
           },
           "matchingColumns": [],
           "schema": [
@@ -100,155 +100,7 @@
     },
     {
       "parameters": {
-        "workflowId": {
-          "__rl": true,
-          "value": "p2vGYI5OZPMw4sPl",
-          "mode": "list",
-          "cachedResultName": "[EGO][SUB] Llamar a eGO"
-        },
-        "workflowInputs": {
-          "mappingMode": "defineBelow",
-          "value": {
-            "metodo": "GET",
-            "ruta": "/realestate/RealestateStatus/ListRealestateStatus",
-            "query": "{}",
-            "cuerpo": "{}"
-          },
-          "matchingColumns": [],
-          "schema": [
-            {
-              "id": "metodo",
-              "displayName": "metodo",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "canBeUsedToMatch": true,
-              "type": "string"
-            },
-            {
-              "id": "ruta",
-              "displayName": "ruta",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "canBeUsedToMatch": true,
-              "type": "string"
-            },
-            {
-              "id": "query",
-              "displayName": "query",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "canBeUsedToMatch": true,
-              "type": "string"
-            },
-            {
-              "id": "cuerpo",
-              "displayName": "cuerpo",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "canBeUsedToMatch": true,
-              "type": "string"
-            }
-          ],
-          "attemptToConvertTypes": false,
-          "convertFieldsToString": false
-        },
-        "options": {
-          "waitForSubWorkflow": true
-        }
-      },
-      "type": "n8n-nodes-base.executeWorkflow",
-      "typeVersion": 1.2,
-      "position": [
-        180,
-        220
-      ],
-      "id": "8bba9396-ba5e-58d4-b286-a77c566c5a99",
-      "name": "EstadosDeInmueble",
-      "onError": "continueRegularOutput",
-      "alwaysOutputData": true,
-      "executeOnce": true
-    },
-    {
-      "parameters": {
-        "workflowId": {
-          "__rl": true,
-          "value": "p2vGYI5OZPMw4sPl",
-          "mode": "list",
-          "cachedResultName": "[EGO][SUB] Llamar a eGO"
-        },
-        "workflowInputs": {
-          "mappingMode": "defineBelow",
-          "value": {
-            "metodo": "GET",
-            "ruta": "/authentication/Authentication/ListEmployees",
-            "query": "{}",
-            "cuerpo": "{}"
-          },
-          "matchingColumns": [],
-          "schema": [
-            {
-              "id": "metodo",
-              "displayName": "metodo",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "canBeUsedToMatch": true,
-              "type": "string"
-            },
-            {
-              "id": "ruta",
-              "displayName": "ruta",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "canBeUsedToMatch": true,
-              "type": "string"
-            },
-            {
-              "id": "query",
-              "displayName": "query",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "canBeUsedToMatch": true,
-              "type": "string"
-            },
-            {
-              "id": "cuerpo",
-              "displayName": "cuerpo",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "canBeUsedToMatch": true,
-              "type": "string"
-            }
-          ],
-          "attemptToConvertTypes": false,
-          "convertFieldsToString": false
-        },
-        "options": {
-          "waitForSubWorkflow": true
-        }
-      },
-      "type": "n8n-nodes-base.executeWorkflow",
-      "typeVersion": 1.2,
-      "position": [
-        180,
-        400
-      ],
-      "id": "aba341f7-79c9-520a-bb25-b9cd515af5b1",
-      "name": "Empleados",
-      "onError": "continueRegularOutput",
-      "alwaysOutputData": true,
-      "executeOnce": true
-    },
-    {
-      "parameters": {
-        "jsCode": "// ===========================================================================\n// CASAGENCIA · ASISTENTE DE WHATSAPP — CONFIGURACION COMUN\n// ---------------------------------------------------------------------------\n// Proyecto independiente del asistente telefonico: sus workflows llevan [WA] y\n// no llaman nunca a los [TEL]. Comparten los MISMOS datos (el Google Sheet de\n// la cartera y los calendarios de Carmen y Gisela), no el codigo en ejecucion.\n//\n// Se inyecta al principio de los nodos Code propios de WhatsApp.\n// Editar aqui y volver a desplegar:  python3 build_whatsapp.py --deploy\n// ===========================================================================\nconst ZONA = 'Europe/Madrid';\n\n// --- Chatwoot (panel de conversaciones) -------------------------------------\nconst CHATWOOT_URL    = 'https://panel-casa-agencia.serversvisionarius.com';\nconst CHATWOOT_CUENTA = 1;   // \"Casa Agencia Inmobiliaria\"\nconst CHATWOOT_INBOX  = 1;   // inbox \"WhatsApp\" (whatsapp_cloud, +34 864 89 37 94)\n\n// --- Meta · WhatsApp Cloud API ---------------------------------------------\n// Linea +34 864 89 37 94 (Casa Agencia Inmobiliaria), verificada y conectada.\n// El token NO va aqui: esta en la credencial \"Meta WhatsApp Casagencia\".\nconst META_API        = 'https://graph.facebook.com/v22.0';\nconst META_PHONE_ID   = '1254647111075735';\nconst META_WABA_ID    = '1791979752043585';\n\n// Plantillas aprobadas. OJO con el idioma: bienvenida_alquiler y plantilla_aviso\n// estan dadas de alta en INGLES ('en') aunque el texto sea en espanol. Meta\n// rechaza el envio si el codigo de idioma no es exactamente el registrado.\n// Todas usan parametros por posicion: {{1}} y {{2}}.\nconst PLANTILLAS = {\n  compra:   { nombre: 'bienvenida_compra',   idioma: 'es' },  // {{1}} nombre, {{2}} enlace del inmueble\n  alquiler: { nombre: 'bienvenida_alquiler', idioma: 'en' },  // {{1}} nombre, {{2}} enlace del inmueble\n  aviso:    { nombre: 'plantilla_aviso',     idioma: 'en' },  // {{1}} comercial, {{2}} el aviso (una linea)\n  abierta:  { nombre: 'plantilla_abierta',   idioma: 'en' },  // {{1}} nombre, {{2}} texto libre (una linea)\n};\n\n// Texto exacto de cada plantilla, tal y como esta aprobada en Meta. Solo se usa\n// para que en el panel se lea lo mismo que le ha llegado al cliente.\nconst TEXTO_PLANTILLA = {\n  bienvenida_compra:\n    'Hola *{{1}}*, soy Sara de Casagencia.\\nHemos recibido tu solicitud de información por este inmueble de compra: {{2}}\\n*Quieres visitar la vivienda?*',\n  bienvenida_alquiler:\n    'Hola *{{1}}*, soy Sara de Casagencia.\\nHemos recibido tu solicitud de información por este inmueble de alquiler: {{2}}\\n*Quieres visitar la vivienda?*',\n  plantilla_aviso:\n    'Hola *{{1}}*,\\n*{{2}}*\\nUn saludo. Tenga un buen día.',\n  plantilla_abierta:\n    'Hola *{{1}}*,\\n{{2}}\\nUn saludo. Buen día.',\n};\n\n// --- El equipo ---------------------------------------------------------------\n// Mismo reparto que el telefono: la referencia manda.\nconst ASESORA_POR_PREFIJO = { BN: 'Carmen', OR: 'Carmen', CS: 'Gisela', VR: 'Gisela' };\nconst ASESORA_POR_MUNICIPIO = {\n  'benicasim': 'Carmen', 'benicassim': 'Carmen', 'oropesa': 'Carmen', 'orpesa': 'Carmen',\n  'torreblanca': 'Carmen', 'onda': 'Carmen', 'borriol': 'Carmen', 'vilafames': 'Carmen',\n  'castellon': 'Gisela', 'castello': 'Gisela', 'vila-real': 'Gisela', 'villarreal': 'Gisela',\n  'burriana': 'Gisela', 'borriana': 'Gisela', 'almazora': 'Gisela', 'almassora': 'Gisela',\n  'alquerias': 'Gisela', 'alqueries': 'Gisela',\n};\n// Moviles a los que llega el aviso por WhatsApp (los mismos que usa el telefono\n// para saber por que linea entra la llamada).\nconst EQUIPO = {\n  Carmen:   { movil: '34654907386', email: 'carmen@casagencia.com' },\n  Gisela:   { movil: '34690027772', email: 'gisela@casagencia.com' },\n  Laurence: { movil: '34618724192', email: 'laurence@casagencia.com' },\n};\nconst EMAIL_DIRECCION = 'paco@casagencia.com';   // copia por correo de todos los avisos\n\n// --- Leads entrantes ------------------------------------------------------------\n// De la WEB salen del buzon formularioscasagencia@gmail.com (credencial \"Correo\n// Formulario\"): solo los de web@websites.egorealestate.com. Los de los PORTALES\n// ya entran en eGO y se cogen de su API ([WA] 5).\nconst BUZON_LEADS = 'formularioscasagencia@gmail.com';\n// 'preparado': decide que mandaria y lo apunta (tabla leads_entrantes), pero NO\n// manda nada. 'real': manda la plantilla. Se cambia aqui y se vuelve a desplegar.\nconst MODO_LEADS = 'preparado';\nconst PORTALES = [\n  { nombre: 'Idealista',  de: /idealista\\.com/i,   asunto: /idealista/i },\n  { nombre: 'Fotocasa',   de: /fotocasa\\.es/i,     asunto: /fotocasa/i },\n  { nombre: 'Habitaclia', de: /habitaclia\\.com/i,  asunto: /habitaclia/i },\n  { nombre: 'Web',        de: /casagencia\\.com/i,  asunto: /formulario|contacto/i },\n];\n\n// --- Etiquetas de Chatwoot ---------------------------------------------------\n// Las mismas que Blue, creadas ya en el panel. Las tres primeras son el estado\n// de la conversacion (solo una a la vez y nunca hacia atras); la cuarta se suma\n// a la que haya y hace que el bot deje de contestar.\nconst ETIQUETAS = {\n  bienvenida: '1-bienvenida_ia',   // la IA ha mandado la plantilla\n  en_proceso: '2-en_proceso',      // el cliente ha contestado y la IA esta con el\n  agendada:   '3-agendada_ia',     // visita agendada de verdad en el calendario\n  intervenir: '4-intervenir',      // tiene que entrar una persona: la IA se calla\n};\nconst ESTADOS = [ETIQUETAS.bienvenida, ETIQUETAS.en_proceso, ETIQUETAS.agendada];\n// Etiquetas que se SUMAN a las de estado (no cuentan como estado):\nconst ETIQUETA_VENDEDOR = 'vendedor';               // el comprador tiene que vender una vivienda\nconst ETIQUETA_LLAMADA  = '0-llamada_telefonica';   // la conversacion tiene llamadas del asistente telefonico\n\n// --- El interruptor del bot (atributo \"bot\" del contacto, como en Blue) -------\n// Off: la IA se calla (se cambia a mano en el panel). On o sin valor (\"Select\n// value\"): la IA contesta. Con SOLO_CONTACTOS_CON_BOT = true solo contestaria a\n// los contactos con el atributo puesto (el estandar de Blue); Casagencia quiere\n// que conteste a todos menos a los que esten en Off.\nconst SOLO_CONTACTOS_CON_BOT = false;\n\n// --- Asignacion de la conversacion en Chatwoot (como el reparto del telefono) -\n// Id de cada comercial como agente del panel. La conversacion se asigna a la\n// asesora de la referencia (BN/OR Carmen, CS/VR Gisela; si no hay, Laurence),\n// salvo que ya la tenga una de ellas: un cambio hecho a mano se respeta.\nconst AGENTES_CHATWOOT = { Carmen: 5, Gisela: 4, Laurence: 6 };\n\n// --- Tiempos -----------------------------------------------------------------\nconst BUFFER_SEGUNDOS = 60;         // se juntan los mensajes que el cliente manda seguidos\nconst RECORDATORIO_HORAS = 24;      // aviso al comercial antes de cada visita\n// Antelacion minima para agendar desde WhatsApp. 0 = la que permita el horario.\nconst ANTELACION_MINIMA_HORAS = 0;\n// Llamadas del asistente telefonico: todas van al panel, pero el aviso por\n// WhatsApp a la comercial solo si la llamada ha durado al menos esto.\nconst LLAMADA_AVISO_MIN_SEGUNDOS = 15;\n\n// Marca que llevan en la descripcion las visitas agendadas por WhatsApp. Con\n// ella el recordatorio sabe cuales son suyas y no avisa de las del telefono.\nconst MARCA_ORIGEN = 'Origen: WhatsApp (Sara IA)';\n\n// --- Pruebas -----------------------------------------------------------------\n// Con estos telefonos el asistente funciona IGUAL que con un cliente, pero:\n//   - los avisos van al que prueba (no a Carmen, Gisela ni Paco), con [PRUEBA];\n//   - las visitas NO se escriben en la agenda real (se consulta de verdad, pero\n//     la reserva se simula), asi no se ocupan huecos ni salta el recordatorio.\n// Se rellena AL DESPLEGAR desde wa/pruebas.local.json (no esta en git), para no\n// guardar telefonos personales en el repositorio.\nconst PRUEBAS = /*PRUEBAS*/{ telefonos: [], avisar_movil: '', avisar_email: '' }/*FIN_PRUEBAS*/;\n\n// ---------------------------------------------------------------------------\n// Utilidades\n// ---------------------------------------------------------------------------\nfunction normalizarTelefono(raw) {\n  let s = String(raw ?? '').trim();\n  const teniaMas = s.startsWith('+');\n  s = s.replace(/\\D/g, '');\n  if (!teniaMas && s.startsWith('00')) s = s.slice(2);\n  if (/^[6789]\\d{8}$/.test(s)) s = '34' + s;\n  return {\n    e164: s ? '+' + s : '',\n    wa_id: s,                                   // como lo quiere Meta: solo digitos\n    nacional: s.startsWith('34') ? s.slice(2) : s,\n    valido: s.length >= 8 && s.length <= 15,\n  };\n}\n\nconst sinAcentos = (s) => String(s ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();\n\nfunction prefijoDeReferencia(ref) {\n  const m = String(ref ?? '').toUpperCase().match(/[A-Z]{2}/);\n  return m ? m[0] : '';\n}\n\n// Asesora por referencia y, si no hay, por municipio. Si no hay ninguna, Laurence.\nfunction resolverAsesora(ref, municipio) {\n  const prefijo = prefijoDeReferencia(ref);\n  let asesora = ASESORA_POR_PREFIJO[prefijo] || null;\n  if (!asesora && municipio) {\n    const m = sinAcentos(municipio);\n    for (const [clave, quien] of Object.entries(ASESORA_POR_MUNICIPIO)) {\n      if (m.includes(clave)) { asesora = quien; break; }\n    }\n  }\n  const final = asesora || 'Laurence';\n  return { prefijo, asesora, conocida: !!asesora, destinatario: final, ...EQUIPO[final] };\n}\n\n// Alquiler o compra. Mismo criterio que el telefono: lo dice la operacion o la\n// referencia acaba en -A.\nfunction esAlquiler(referencia, operacion) {\n  const o = String(operacion ?? '').toLowerCase();\n  if (o.includes('alquiler') || o.includes('traspaso') || o.includes('rent')) return true;\n  if (o.includes('venta') || o.includes('compra')) return false;\n  return /-A$/i.test(String(referencia ?? '').trim());\n}\n\nfunction detectarPortal(remitente, asunto) {\n  for (const p of PORTALES) {\n    if (p.de.test(String(remitente ?? '')) || p.asunto.test(String(asunto ?? ''))) return p.nombre;\n  }\n  return 'Otro';\n}\n\n// Meta no admite saltos de linea, tabuladores ni mas de 4 espacios seguidos\n// dentro de un parametro de plantilla: si los hay, rechaza el envio entero.\nfunction paramPlantilla(texto, max = 700) {\n  return String(texto ?? '')\n    .replace(/[\\r\\n\\t]+/g, ' · ')\n    .replace(/ {2,}/g, ' ')\n    .trim()\n    .slice(0, max) || '-';\n}\n\n// \"2026-10-02\" + \"17:00\" -> \"jueves 2 de octubre a las 17:00\"\nfunction fechaLegible(fecha, hora) {\n  const DIAS = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo'];\n  const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto',\n                 'septiembre', 'octubre', 'noviembre', 'diciembre'];\n  const d = DateTime.fromFormat(String(fecha), 'yyyy-MM-dd', { zone: ZONA });\n  if (!d.isValid) return `${fecha} ${hora || ''}`.trim();\n  return `${DIAS[d.weekday - 1]} ${d.day} de ${MESES[d.month - 1]}` + (hora ? ` a las ${hora}` : '');\n}\n\n// \"Si, tengo que vender el mio\" -> true. \"No\", \"no necesito\" -> false.\nfunction esAfirmativo(texto) {\n  const t = sinAcentos(texto).trim();\n  if (!t || /^(no\\b|nop|para nada|ninguna|nada)/.test(t) || /\\bno (necesito|tengo|hace falta)\\b/.test(t)) return false;\n  return /^(si\\b|sí\\b|claro|por supuesto|correcto|exacto)/.test(t) ||\n    /\\b(tengo|necesito|debo|tendria|tendre|hay) que vender\\b|\\bnecesito vender\\b|\\bvender (primero|antes|mi|el|la)\\b/.test(t);\n}\n\n// Id del agente de Chatwoot de un comercial ('Carmen' -> 5). 0 si no tiene.\nfunction agenteDe(nombre) {\n  return Number(AGENTES_CHATWOOT[String(nombre ?? '').trim()] || 0);\n}\n\nfunction esPrueba(telefono) {\n  const t = normalizarTelefono(telefono).wa_id;\n  return !!t && (PRUEBAS.telefonos || []).includes(t);\n}\n\n\n// [WA] 5 · Leads de eGO · Separar\n// ListLeadByPage devuelve { leads: [...], totalRows }. Un item por lead, con\n// lo minimo para apuntarlo; el detalle se pide despues lead a lead.\nconst r = $input.first().json || {};\nconst datos = r.datos ?? r;\nconst leads = Array.isArray(datos?.leads) ? datos.leads : (Array.isArray(datos) ? datos : []);\nconst fuera = [];\nfor (const l of leads) {\n  const id = l.id ?? l.leadId ?? l.ID;\n  if (id == null) continue;\n  fuera.push({ json: {\n    lead_id: String(id),\n    nombre: String(l.name ?? l.title ?? '').trim(),\n    telefono: String(l.phone ?? '').trim(),\n    creado: l.createDate ?? l.dateCreated ?? '',\n  } });\n}\nreturn fuera.length ? fuera : [{ json: { vacio: true, error: r.ok === false ? (r.error || 'eGO no ha respondido') : '' } }];\n"
+        "jsCode": "// ===========================================================================\n// CASAGENCIA · ASISTENTE DE WHATSAPP — CONFIGURACION COMUN\n// ---------------------------------------------------------------------------\n// Proyecto independiente del asistente telefonico: sus workflows llevan [WA] y\n// no llaman nunca a los [TEL]. Comparten los MISMOS datos (el Google Sheet de\n// la cartera y los calendarios de Carmen y Gisela), no el codigo en ejecucion.\n//\n// Se inyecta al principio de los nodos Code propios de WhatsApp.\n// Editar aqui y volver a desplegar:  python3 build_whatsapp.py --deploy\n// ===========================================================================\nconst ZONA = 'Europe/Madrid';\n\n// --- Chatwoot (panel de conversaciones) -------------------------------------\nconst CHATWOOT_URL    = 'https://panel-casa-agencia.serversvisionarius.com';\nconst CHATWOOT_CUENTA = 1;   // \"Casa Agencia Inmobiliaria\"\nconst CHATWOOT_INBOX  = 1;   // inbox \"WhatsApp\" (whatsapp_cloud, +34 864 89 37 94)\n\n// --- Meta · WhatsApp Cloud API ---------------------------------------------\n// Linea +34 864 89 37 94 (Casa Agencia Inmobiliaria), verificada y conectada.\n// El token NO va aqui: esta en la credencial \"Meta WhatsApp Casagencia\".\nconst META_API        = 'https://graph.facebook.com/v22.0';\nconst META_PHONE_ID   = '1254647111075735';\nconst META_WABA_ID    = '1791979752043585';\n\n// Plantillas aprobadas. OJO con el idioma: bienvenida_alquiler y plantilla_aviso\n// estan dadas de alta en INGLES ('en') aunque el texto sea en espanol. Meta\n// rechaza el envio si el codigo de idioma no es exactamente el registrado.\n// Todas usan parametros por posicion: {{1}} y {{2}}.\nconst PLANTILLAS = {\n  compra:   { nombre: 'bienvenida_compra',   idioma: 'es' },  // {{1}} nombre, {{2}} enlace del inmueble\n  alquiler: { nombre: 'bienvenida_alquiler', idioma: 'en' },  // {{1}} nombre, {{2}} enlace del inmueble\n  aviso:    { nombre: 'plantilla_aviso',     idioma: 'en' },  // {{1}} comercial, {{2}} el aviso (una linea)\n  abierta:  { nombre: 'plantilla_abierta',   idioma: 'en' },  // {{1}} nombre, {{2}} texto libre (una linea)\n};\n\n// Texto exacto de cada plantilla, tal y como esta aprobada en Meta. Solo se usa\n// para que en el panel se lea lo mismo que le ha llegado al cliente.\nconst TEXTO_PLANTILLA = {\n  bienvenida_compra:\n    'Hola *{{1}}*, soy Sara de Casagencia.\\nHemos recibido tu solicitud de información por este inmueble de compra: {{2}}\\n*Quieres visitar la vivienda?*',\n  bienvenida_alquiler:\n    'Hola *{{1}}*, soy Sara de Casagencia.\\nHemos recibido tu solicitud de información por este inmueble de alquiler: {{2}}\\n*Quieres visitar la vivienda?*',\n  plantilla_aviso:\n    'Hola *{{1}}*,\\n*{{2}}*\\nUn saludo. Tenga un buen día.',\n  plantilla_abierta:\n    'Hola *{{1}}*,\\n{{2}}\\nUn saludo. Buen día.',\n};\n\n// --- El equipo ---------------------------------------------------------------\n// Mismo reparto que el telefono: la referencia manda.\nconst ASESORA_POR_PREFIJO = { BN: 'Carmen', OR: 'Carmen', CS: 'Gisela', VR: 'Gisela' };\nconst ASESORA_POR_MUNICIPIO = {\n  'benicasim': 'Carmen', 'benicassim': 'Carmen', 'oropesa': 'Carmen', 'orpesa': 'Carmen',\n  'torreblanca': 'Carmen', 'onda': 'Carmen', 'borriol': 'Carmen', 'vilafames': 'Carmen',\n  'castellon': 'Gisela', 'castello': 'Gisela', 'vila-real': 'Gisela', 'villarreal': 'Gisela',\n  'burriana': 'Gisela', 'borriana': 'Gisela', 'almazora': 'Gisela', 'almassora': 'Gisela',\n  'alquerias': 'Gisela', 'alqueries': 'Gisela',\n};\n// Moviles a los que llega el aviso por WhatsApp (los mismos que usa el telefono\n// para saber por que linea entra la llamada).\nconst EQUIPO = {\n  Carmen:   { movil: '34654907386', email: 'carmen@casagencia.com' },\n  Gisela:   { movil: '34690027772', email: 'gisela@casagencia.com' },\n  Laurence: { movil: '34618724192', email: 'laurence@casagencia.com' },\n};\nconst EMAIL_DIRECCION = 'paco@casagencia.com';   // copia por correo de todos los avisos\n\n// --- Leads entrantes ------------------------------------------------------------\n// De la WEB salen del buzon formularioscasagencia@gmail.com (credencial \"Correo\n// Formulario\"): solo los de web@websites.egorealestate.com. Los de los PORTALES\n// ya entran en eGO y se cogen de su API ([WA] 5).\nconst BUZON_LEADS = 'formularioscasagencia@gmail.com';\n// 'preparado': decide que mandaria y lo apunta (tabla leads_entrantes), pero NO\n// manda nada. 'real': manda la plantilla. Se cambia aqui y se vuelve a desplegar.\nconst MODO_LEADS = 'preparado';\nconst PORTALES = [\n  { nombre: 'Idealista',  de: /idealista\\.com/i,   asunto: /idealista/i },\n  { nombre: 'Fotocasa',   de: /fotocasa\\.es/i,     asunto: /fotocasa/i },\n  { nombre: 'Habitaclia', de: /habitaclia\\.com/i,  asunto: /habitaclia/i },\n  { nombre: 'Web',        de: /casagencia\\.com/i,  asunto: /formulario|contacto/i },\n];\n\n// --- Etiquetas de Chatwoot ---------------------------------------------------\n// Las mismas que Blue, creadas ya en el panel. Las tres primeras son el estado\n// de la conversacion (solo una a la vez y nunca hacia atras); la cuarta se suma\n// a la que haya y hace que el bot deje de contestar.\nconst ETIQUETAS = {\n  bienvenida: '1-bienvenida_ia',   // la IA ha mandado la plantilla\n  en_proceso: '2-en_proceso',      // el cliente ha contestado y la IA esta con el\n  agendada:   '3-agendada_ia',     // visita agendada de verdad en el calendario\n  intervenir: '4-intervenir',      // tiene que entrar una persona: la IA se calla\n};\nconst ESTADOS = [ETIQUETAS.bienvenida, ETIQUETAS.en_proceso, ETIQUETAS.agendada];\n// Etiquetas que se SUMAN a las de estado (no cuentan como estado):\nconst ETIQUETA_VENDEDOR = 'vendedor';               // el comprador tiene que vender una vivienda\nconst ETIQUETA_LLAMADA  = '0-llamada_telefonica';   // la conversacion tiene llamadas del asistente telefonico\n\n// --- El interruptor del bot (atributo \"bot\" del contacto, como en Blue) -------\n// Off: la IA se calla (se cambia a mano en el panel). On o sin valor (\"Select\n// value\"): la IA contesta. Con SOLO_CONTACTOS_CON_BOT = true solo contestaria a\n// los contactos con el atributo puesto (el estandar de Blue); Casagencia quiere\n// que conteste a todos menos a los que esten en Off.\nconst SOLO_CONTACTOS_CON_BOT = false;\n\n// --- Asignacion de la conversacion en Chatwoot (como el reparto del telefono) -\n// Id de cada comercial como agente del panel. La conversacion se asigna a la\n// asesora de la referencia (BN/OR Carmen, CS/VR Gisela; si no hay, Laurence),\n// salvo que ya la tenga una de ellas: un cambio hecho a mano se respeta.\nconst AGENTES_CHATWOOT = { Carmen: 5, Gisela: 4, Laurence: 6 };\n\n// --- eGO (CRM) -----------------------------------------------------------------\n// Comprobado con la API el 2-10-2026. Agencia 4338.\nconst EGO_ESTADOS = { 2: 'Disponible', 3: 'Vendido', 4: 'Reservado', 5: 'Alquilado', 7: 'Captación',\n                      8: 'Retirado', 9: 'En evaluación' };\nconst EGO_DISPONIBLE = 2;\nconst EGO_PORTALES = { 701: 'Idealista', 31: 'Fotocasa', 680: 'Properstar' };\n// Usuarios de eGO de cada comercial (securityUserID)\nconst EGO_COMERCIALES = { 88560: 'Carmen', 62597: 'Gisela', 10768: 'Laurence' };\n// Llaves: en eGO solo constan las de algunos inmuebles. Con false, que no consten no\n// impide ofrecer visita: se le dice a la asesora en el aviso para que lo coordine.\nconst LLAVES_OBLIGATORIAS = false;\n\n// --- Tiempos -----------------------------------------------------------------\nconst BUFFER_SEGUNDOS = 60;         // se juntan los mensajes que el cliente manda seguidos\nconst RECORDATORIO_HORAS = 24;      // aviso al comercial antes de cada visita\n// Antelacion minima para agendar desde WhatsApp. 0 = la que permita el horario.\nconst ANTELACION_MINIMA_HORAS = 0;\n// Llamadas del asistente telefonico: todas van al panel, pero el aviso por\n// WhatsApp a la comercial solo si la llamada ha durado al menos esto.\nconst LLAMADA_AVISO_MIN_SEGUNDOS = 15;\n\n// Marca que llevan en la descripcion las visitas agendadas por WhatsApp. Con\n// ella el recordatorio sabe cuales son suyas y no avisa de las del telefono.\nconst MARCA_ORIGEN = 'Origen: WhatsApp (Sara IA)';\n\n// --- Pruebas -----------------------------------------------------------------\n// Con estos telefonos el asistente funciona IGUAL que con un cliente, pero:\n//   - los avisos van al que prueba (no a Carmen, Gisela ni Paco), con [PRUEBA];\n//   - las visitas NO se escriben en la agenda real (se consulta de verdad, pero\n//     la reserva se simula), asi no se ocupan huecos ni salta el recordatorio.\n// Se rellena AL DESPLEGAR desde wa/pruebas.local.json (no esta en git), para no\n// guardar telefonos personales en el repositorio.\nconst PRUEBAS = /*PRUEBAS*/{ telefonos: [], avisar_movil: '', avisar_email: '' }/*FIN_PRUEBAS*/;\n\n// ---------------------------------------------------------------------------\n// Utilidades\n// ---------------------------------------------------------------------------\nfunction normalizarTelefono(raw) {\n  let s = String(raw ?? '').trim();\n  const teniaMas = s.startsWith('+');\n  s = s.replace(/\\D/g, '');\n  if (!teniaMas && s.startsWith('00')) s = s.slice(2);\n  if (/^[6789]\\d{8}$/.test(s)) s = '34' + s;\n  return {\n    e164: s ? '+' + s : '',\n    wa_id: s,                                   // como lo quiere Meta: solo digitos\n    nacional: s.startsWith('34') ? s.slice(2) : s,\n    valido: s.length >= 8 && s.length <= 15,\n  };\n}\n\nconst sinAcentos = (s) => String(s ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();\n\nfunction prefijoDeReferencia(ref) {\n  const m = String(ref ?? '').toUpperCase().match(/[A-Z]{2}/);\n  return m ? m[0] : '';\n}\n\n// Asesora por referencia y, si no hay, por municipio. Si no hay ninguna, Laurence.\nfunction resolverAsesora(ref, municipio) {\n  const prefijo = prefijoDeReferencia(ref);\n  let asesora = ASESORA_POR_PREFIJO[prefijo] || null;\n  if (!asesora && municipio) {\n    const m = sinAcentos(municipio);\n    for (const [clave, quien] of Object.entries(ASESORA_POR_MUNICIPIO)) {\n      if (m.includes(clave)) { asesora = quien; break; }\n    }\n  }\n  const final = asesora || 'Laurence';\n  return { prefijo, asesora, conocida: !!asesora, destinatario: final, ...EQUIPO[final] };\n}\n\n// Alquiler o compra. Mismo criterio que el telefono: lo dice la operacion o la\n// referencia acaba en -A.\nfunction esAlquiler(referencia, operacion) {\n  const o = String(operacion ?? '').toLowerCase();\n  if (o.includes('alquiler') || o.includes('traspaso') || o.includes('rent')) return true;\n  if (o.includes('venta') || o.includes('compra')) return false;\n  return /-A$/i.test(String(referencia ?? '').trim());\n}\n\nfunction detectarPortal(remitente, asunto) {\n  for (const p of PORTALES) {\n    if (p.de.test(String(remitente ?? '')) || p.asunto.test(String(asunto ?? ''))) return p.nombre;\n  }\n  return 'Otro';\n}\n\n// Meta no admite saltos de linea, tabuladores ni mas de 4 espacios seguidos\n// dentro de un parametro de plantilla: si los hay, rechaza el envio entero.\nfunction paramPlantilla(texto, max = 700) {\n  return String(texto ?? '')\n    .replace(/[\\r\\n\\t]+/g, ' · ')\n    .replace(/ {2,}/g, ' ')\n    .trim()\n    .slice(0, max) || '-';\n}\n\n// \"2026-10-02\" + \"17:00\" -> \"jueves 2 de octubre a las 17:00\"\nfunction fechaLegible(fecha, hora) {\n  const DIAS = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo'];\n  const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto',\n                 'septiembre', 'octubre', 'noviembre', 'diciembre'];\n  const d = DateTime.fromFormat(String(fecha), 'yyyy-MM-dd', { zone: ZONA });\n  if (!d.isValid) return `${fecha} ${hora || ''}`.trim();\n  return `${DIAS[d.weekday - 1]} ${d.day} de ${MESES[d.month - 1]}` + (hora ? ` a las ${hora}` : '');\n}\n\n// \"Si, tengo que vender el mio\" -> true. \"No\", \"no necesito\" -> false.\nfunction esAfirmativo(texto) {\n  const t = sinAcentos(texto).trim();\n  if (!t || /^(no\\b|nop|para nada|ninguna|nada)/.test(t) || /\\bno (necesito|tengo|hace falta)\\b/.test(t)) return false;\n  return /^(si\\b|sí\\b|claro|por supuesto|correcto|exacto)/.test(t) ||\n    /\\b(tengo|necesito|debo|tendria|tendre|hay) que vender\\b|\\bnecesito vender\\b|\\bvender (primero|antes|mi|el|la)\\b/.test(t);\n}\n\n// Id del agente de Chatwoot de un comercial ('Carmen' -> 5). 0 si no tiene.\nfunction agenteDe(nombre) {\n  return Number(AGENTES_CHATWOOT[String(nombre ?? '').trim()] || 0);\n}\n\nfunction esPrueba(telefono) {\n  const t = normalizarTelefono(telefono).wa_id;\n  return !!t && (PRUEBAS.telefonos || []).includes(t);\n}\n\n// Lo nuevo de leads y eGO (primer WhatsApp a los leads, notas en eGO) solo\n// actua de verdad con MODO_LEADS = 'real'; con los telefonos de prueba, siempre.\nfunction leadsEnReal(telefono) {\n  return MODO_LEADS === 'real' || esPrueba(telefono);\n}\n\n\n// [WA] 5 · Leads de eGO · Separar\n// ListLeadByPage devuelve { leads: [...], totalRows } y cada lead ya trae todo\n// lo que hace falta (comprobado con la API): telefono (0034...), inmueble\n// (realestateReference / realestateId), portal (portalId), venta o alquiler\n// (masterLeadType) y la comercial que le ha puesto eGO (assignToSecurityUser*).\n// Solo los de los PORTALES: los que meten las comerciales a mano no llevan portal.\nconst r = $input.first().json || {};\nconst leads = Array.isArray(r.datos?.leads) ? r.datos.leads : [];\nconst es = (o) => String(o?.['ES-ES'] ?? o?.['EN-GB'] ?? '').trim();\nconst fuera = [];\nfor (const l of leads) {\n  if (l?.id == null || !Number(l.portalId || 0)) continue;\n  const solicitud = es(l.leadSubOrigin?.nameMls);           // \"Idealista ES Solicitud de Visita\"\n  const obs = String(l.obs ?? '').replace(/<br\\s*\\/?>/gi, '\\n').replace(/<[^>]+>/g, ' ');\n  fuera.push({ json: {\n    lead_id: String(l.id),\n    nombre: String(l.name ?? l.title ?? '').trim(),\n    telefono: String(l.phone ?? '').trim(),\n    email: String(l.email ?? '').trim().toLowerCase(),\n    referencia: String(l.realestateReference ?? '').toUpperCase().trim(),\n    realestate_id: Number(l.realestateId || 0),\n    portal_id: Number(l.portalId),\n    portal: EGO_PORTALES[l.portalId] || solicitud.split(/\\s+/)[0] || `Portal ${l.portalId}`,\n    solicitud,\n    operacion: es(l.masterLeadType?.name).toLowerCase(),   // venta / alquiler\n    asignado_ids: [].concat(l.assignToSecurityUserIds?.length ? l.assignToSecurityUserIds\n      : (l.assignToSecurityUserId ? [l.assignToSecurityUserId] : [])),\n    asignado_nombres: [].concat(l.assignToSecurityUserNames || []),\n    // Lo que escribio el cliente en el portal (despues de la cabecera del portal)\n    mensaje: (obs.includes('\\n') ? obs.split('\\n').slice(1).join(' ') : '').replace(/\\s+/g, ' ').trim().slice(0, 1000),\n    obs: obs.replace(/\\s+/g, ' ').trim().slice(0, 1200),\n    creado: l.createDate || '',\n  } });\n}\nconst error = r.ok === false ? (r.error || 'eGO no ha respondido') : '';\nreturn fuera.length ? fuera : [{ json: { vacio: true, error } }];\n"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -295,11 +147,22 @@
       "name": "¿Hay leads?"
     },
     {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        840,
+        200
+      ],
+      "id": "f831d0fc-8eb3-55af-a1c4-2d8ee253379d",
+      "name": "NadaNuevo"
+    },
+    {
       "parameters": {
         "operation": "executeQuery",
-        "query": "select 1 as visto from leads_entrantes where fuente = 'ego' and id_origen = $1;",
+        "query": "select coalesce(string_agg(id_origen, ','), '') as vistos from leads_entrantes where fuente = 'ego' and id_origen = any(string_to_array($1, ','));",
         "options": {
-          "queryReplacement": "={{ [ $json.lead_id ] }}"
+          "queryReplacement": "={{ [ $('Separar').all().map(i => i.json.lead_id).filter(Boolean).join(',') ] }}"
         }
       },
       "type": "n8n-nodes-base.postgres",
@@ -308,19 +171,20 @@
         840,
         0
       ],
-      "id": "b68dfbf1-e256-5025-9872-4b27f8d69a77",
-      "name": "¿Ya visto?",
+      "id": "1037c85d-d846-5e3d-84a4-cd11033bc8d3",
+      "name": "YaVistos",
       "credentials": {
         "postgres": {
           "id": "yvym0TdlOebNMzsm",
           "name": "Postgres account"
         }
       },
+      "executeOnce": true,
       "alwaysOutputData": true
     },
     {
       "parameters": {
-        "jsCode": "return $input.all().map((i, k) => ({ json: { ...$('Separar').all()[k].json, visto: !!i.json.visto } })).filter(i => !i.json.visto);"
+        "jsCode": "const vistos = new Set(String($input.first().json.vistos || '').split(',').filter(Boolean));\nreturn $('Separar').all().filter(i => i.json.lead_id && !vistos.has(i.json.lead_id)).slice(0, 25).map(i => ({ json: i.json }));"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -343,8 +207,8 @@
           "mappingMode": "defineBelow",
           "value": {
             "metodo": "GET",
-            "ruta": "/lead/Lead/GetLead",
-            "query": "={{ JSON.stringify({ leadId: $json.lead_id }) }}",
+            "ruta": "/realestate/Realestate/GetRealestate",
+            "query": "={{ JSON.stringify({ realestateId: $json.realestate_id || 0 }) }}",
             "cuerpo": "{}"
           },
           "matchingColumns": [],
@@ -391,7 +255,8 @@
         },
         "options": {
           "waitForSubWorkflow": true
-        }
+        },
+        "mode": "each"
       },
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.2,
@@ -399,117 +264,45 @@
         1280,
         0
       ],
-      "id": "e287eda8-f0d8-5b01-903c-0d9c43b4f9f0",
-      "name": "DetalleLead",
-      "onError": "continueRegularOutput",
-      "alwaysOutputData": true
-    },
-    {
-      "parameters": {
-        "workflowId": {
-          "__rl": true,
-          "value": "p2vGYI5OZPMw4sPl",
-          "mode": "list",
-          "cachedResultName": "[EGO][SUB] Llamar a eGO"
-        },
-        "workflowInputs": {
-          "mappingMode": "defineBelow",
-          "value": {
-            "metodo": "GET",
-            "ruta": "/realestate/Realestate/GetRealestate",
-            "query": "={{ JSON.stringify({ realestateId: $json.datos?.realestateId || 0 }) }}",
-            "cuerpo": "{}"
-          },
-          "matchingColumns": [],
-          "schema": [
-            {
-              "id": "metodo",
-              "displayName": "metodo",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "canBeUsedToMatch": true,
-              "type": "string"
-            },
-            {
-              "id": "ruta",
-              "displayName": "ruta",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "canBeUsedToMatch": true,
-              "type": "string"
-            },
-            {
-              "id": "query",
-              "displayName": "query",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "canBeUsedToMatch": true,
-              "type": "string"
-            },
-            {
-              "id": "cuerpo",
-              "displayName": "cuerpo",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "canBeUsedToMatch": true,
-              "type": "string"
-            }
-          ],
-          "attemptToConvertTypes": false,
-          "convertFieldsToString": false
-        },
-        "options": {
-          "waitForSubWorkflow": true
-        }
-      },
-      "type": "n8n-nodes-base.executeWorkflow",
-      "typeVersion": 1.2,
-      "position": [
-        1500,
-        0
-      ],
-      "id": "5746a796-9245-5b78-9ce8-fa67641672a1",
-      "name": "DetalleInmueble",
+      "id": "9d31a297-5053-52a8-be1f-7254f048e8b4",
+      "name": "EstadoDelInmueble",
       "onError": "continueRegularOutput",
       "alwaysOutputData": true
     },
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "select * from wa_cartera where upper(ref) = upper($1) or enlace like '%/' || $2 limit 1;",
+        "query": "select coalesce(json_agg(json_build_object('ref', ref, 'enlace', enlace, 'tipo_transaccion', tipo_transaccion, 'municipio', municipio)), '[]'::json) as filas from wa_cartera where upper(ref) = any(string_to_array(upper($1), ','));",
         "options": {
-          "queryReplacement": "={{ [ String($json.datos?.reference || ''), String($('DetalleLead').item.json.datos?.realestateId || 'x') ] }}"
+          "queryReplacement": "={{ [ $('SoloNuevos').all().map(i => i.json.referencia).filter(Boolean).join(',') ] }}"
         }
       },
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
       "position": [
-        1720,
+        1500,
         0
       ],
-      "id": "624c7b7b-ffc2-5b16-9b07-fc0135037b54",
-      "name": "EnLaCartera",
+      "id": "933344a8-5788-5462-a523-69d878dda5e9",
+      "name": "LaCartera",
       "credentials": {
         "postgres": {
           "id": "yvym0TdlOebNMzsm",
           "name": "Postgres account"
         }
       },
+      "executeOnce": true,
       "alwaysOutputData": true,
       "onError": "continueRegularOutput"
     },
     {
       "parameters": {
-        "jsCode": "// ===========================================================================\n// CASAGENCIA · ASISTENTE DE WHATSAPP — CONFIGURACION COMUN\n// ---------------------------------------------------------------------------\n// Proyecto independiente del asistente telefonico: sus workflows llevan [WA] y\n// no llaman nunca a los [TEL]. Comparten los MISMOS datos (el Google Sheet de\n// la cartera y los calendarios de Carmen y Gisela), no el codigo en ejecucion.\n//\n// Se inyecta al principio de los nodos Code propios de WhatsApp.\n// Editar aqui y volver a desplegar:  python3 build_whatsapp.py --deploy\n// ===========================================================================\nconst ZONA = 'Europe/Madrid';\n\n// --- Chatwoot (panel de conversaciones) -------------------------------------\nconst CHATWOOT_URL    = 'https://panel-casa-agencia.serversvisionarius.com';\nconst CHATWOOT_CUENTA = 1;   // \"Casa Agencia Inmobiliaria\"\nconst CHATWOOT_INBOX  = 1;   // inbox \"WhatsApp\" (whatsapp_cloud, +34 864 89 37 94)\n\n// --- Meta · WhatsApp Cloud API ---------------------------------------------\n// Linea +34 864 89 37 94 (Casa Agencia Inmobiliaria), verificada y conectada.\n// El token NO va aqui: esta en la credencial \"Meta WhatsApp Casagencia\".\nconst META_API        = 'https://graph.facebook.com/v22.0';\nconst META_PHONE_ID   = '1254647111075735';\nconst META_WABA_ID    = '1791979752043585';\n\n// Plantillas aprobadas. OJO con el idioma: bienvenida_alquiler y plantilla_aviso\n// estan dadas de alta en INGLES ('en') aunque el texto sea en espanol. Meta\n// rechaza el envio si el codigo de idioma no es exactamente el registrado.\n// Todas usan parametros por posicion: {{1}} y {{2}}.\nconst PLANTILLAS = {\n  compra:   { nombre: 'bienvenida_compra',   idioma: 'es' },  // {{1}} nombre, {{2}} enlace del inmueble\n  alquiler: { nombre: 'bienvenida_alquiler', idioma: 'en' },  // {{1}} nombre, {{2}} enlace del inmueble\n  aviso:    { nombre: 'plantilla_aviso',     idioma: 'en' },  // {{1}} comercial, {{2}} el aviso (una linea)\n  abierta:  { nombre: 'plantilla_abierta',   idioma: 'en' },  // {{1}} nombre, {{2}} texto libre (una linea)\n};\n\n// Texto exacto de cada plantilla, tal y como esta aprobada en Meta. Solo se usa\n// para que en el panel se lea lo mismo que le ha llegado al cliente.\nconst TEXTO_PLANTILLA = {\n  bienvenida_compra:\n    'Hola *{{1}}*, soy Sara de Casagencia.\\nHemos recibido tu solicitud de información por este inmueble de compra: {{2}}\\n*Quieres visitar la vivienda?*',\n  bienvenida_alquiler:\n    'Hola *{{1}}*, soy Sara de Casagencia.\\nHemos recibido tu solicitud de información por este inmueble de alquiler: {{2}}\\n*Quieres visitar la vivienda?*',\n  plantilla_aviso:\n    'Hola *{{1}}*,\\n*{{2}}*\\nUn saludo. Tenga un buen día.',\n  plantilla_abierta:\n    'Hola *{{1}}*,\\n{{2}}\\nUn saludo. Buen día.',\n};\n\n// --- El equipo ---------------------------------------------------------------\n// Mismo reparto que el telefono: la referencia manda.\nconst ASESORA_POR_PREFIJO = { BN: 'Carmen', OR: 'Carmen', CS: 'Gisela', VR: 'Gisela' };\nconst ASESORA_POR_MUNICIPIO = {\n  'benicasim': 'Carmen', 'benicassim': 'Carmen', 'oropesa': 'Carmen', 'orpesa': 'Carmen',\n  'torreblanca': 'Carmen', 'onda': 'Carmen', 'borriol': 'Carmen', 'vilafames': 'Carmen',\n  'castellon': 'Gisela', 'castello': 'Gisela', 'vila-real': 'Gisela', 'villarreal': 'Gisela',\n  'burriana': 'Gisela', 'borriana': 'Gisela', 'almazora': 'Gisela', 'almassora': 'Gisela',\n  'alquerias': 'Gisela', 'alqueries': 'Gisela',\n};\n// Moviles a los que llega el aviso por WhatsApp (los mismos que usa el telefono\n// para saber por que linea entra la llamada).\nconst EQUIPO = {\n  Carmen:   { movil: '34654907386', email: 'carmen@casagencia.com' },\n  Gisela:   { movil: '34690027772', email: 'gisela@casagencia.com' },\n  Laurence: { movil: '34618724192', email: 'laurence@casagencia.com' },\n};\nconst EMAIL_DIRECCION = 'paco@casagencia.com';   // copia por correo de todos los avisos\n\n// --- Leads entrantes ------------------------------------------------------------\n// De la WEB salen del buzon formularioscasagencia@gmail.com (credencial \"Correo\n// Formulario\"): solo los de web@websites.egorealestate.com. Los de los PORTALES\n// ya entran en eGO y se cogen de su API ([WA] 5).\nconst BUZON_LEADS = 'formularioscasagencia@gmail.com';\n// 'preparado': decide que mandaria y lo apunta (tabla leads_entrantes), pero NO\n// manda nada. 'real': manda la plantilla. Se cambia aqui y se vuelve a desplegar.\nconst MODO_LEADS = 'preparado';\nconst PORTALES = [\n  { nombre: 'Idealista',  de: /idealista\\.com/i,   asunto: /idealista/i },\n  { nombre: 'Fotocasa',   de: /fotocasa\\.es/i,     asunto: /fotocasa/i },\n  { nombre: 'Habitaclia', de: /habitaclia\\.com/i,  asunto: /habitaclia/i },\n  { nombre: 'Web',        de: /casagencia\\.com/i,  asunto: /formulario|contacto/i },\n];\n\n// --- Etiquetas de Chatwoot ---------------------------------------------------\n// Las mismas que Blue, creadas ya en el panel. Las tres primeras son el estado\n// de la conversacion (solo una a la vez y nunca hacia atras); la cuarta se suma\n// a la que haya y hace que el bot deje de contestar.\nconst ETIQUETAS = {\n  bienvenida: '1-bienvenida_ia',   // la IA ha mandado la plantilla\n  en_proceso: '2-en_proceso',      // el cliente ha contestado y la IA esta con el\n  agendada:   '3-agendada_ia',     // visita agendada de verdad en el calendario\n  intervenir: '4-intervenir',      // tiene que entrar una persona: la IA se calla\n};\nconst ESTADOS = [ETIQUETAS.bienvenida, ETIQUETAS.en_proceso, ETIQUETAS.agendada];\n// Etiquetas que se SUMAN a las de estado (no cuentan como estado):\nconst ETIQUETA_VENDEDOR = 'vendedor';               // el comprador tiene que vender una vivienda\nconst ETIQUETA_LLAMADA  = '0-llamada_telefonica';   // la conversacion tiene llamadas del asistente telefonico\n\n// --- El interruptor del bot (atributo \"bot\" del contacto, como en Blue) -------\n// Off: la IA se calla (se cambia a mano en el panel). On o sin valor (\"Select\n// value\"): la IA contesta. Con SOLO_CONTACTOS_CON_BOT = true solo contestaria a\n// los contactos con el atributo puesto (el estandar de Blue); Casagencia quiere\n// que conteste a todos menos a los que esten en Off.\nconst SOLO_CONTACTOS_CON_BOT = false;\n\n// --- Asignacion de la conversacion en Chatwoot (como el reparto del telefono) -\n// Id de cada comercial como agente del panel. La conversacion se asigna a la\n// asesora de la referencia (BN/OR Carmen, CS/VR Gisela; si no hay, Laurence),\n// salvo que ya la tenga una de ellas: un cambio hecho a mano se respeta.\nconst AGENTES_CHATWOOT = { Carmen: 5, Gisela: 4, Laurence: 6 };\n\n// --- Tiempos -----------------------------------------------------------------\nconst BUFFER_SEGUNDOS = 60;         // se juntan los mensajes que el cliente manda seguidos\nconst RECORDATORIO_HORAS = 24;      // aviso al comercial antes de cada visita\n// Antelacion minima para agendar desde WhatsApp. 0 = la que permita el horario.\nconst ANTELACION_MINIMA_HORAS = 0;\n// Llamadas del asistente telefonico: todas van al panel, pero el aviso por\n// WhatsApp a la comercial solo si la llamada ha durado al menos esto.\nconst LLAMADA_AVISO_MIN_SEGUNDOS = 15;\n\n// Marca que llevan en la descripcion las visitas agendadas por WhatsApp. Con\n// ella el recordatorio sabe cuales son suyas y no avisa de las del telefono.\nconst MARCA_ORIGEN = 'Origen: WhatsApp (Sara IA)';\n\n// --- Pruebas -----------------------------------------------------------------\n// Con estos telefonos el asistente funciona IGUAL que con un cliente, pero:\n//   - los avisos van al que prueba (no a Carmen, Gisela ni Paco), con [PRUEBA];\n//   - las visitas NO se escriben en la agenda real (se consulta de verdad, pero\n//     la reserva se simula), asi no se ocupan huecos ni salta el recordatorio.\n// Se rellena AL DESPLEGAR desde wa/pruebas.local.json (no esta en git), para no\n// guardar telefonos personales en el repositorio.\nconst PRUEBAS = /*PRUEBAS*/{ telefonos: [], avisar_movil: '', avisar_email: '' }/*FIN_PRUEBAS*/;\n\n// ---------------------------------------------------------------------------\n// Utilidades\n// ---------------------------------------------------------------------------\nfunction normalizarTelefono(raw) {\n  let s = String(raw ?? '').trim();\n  const teniaMas = s.startsWith('+');\n  s = s.replace(/\\D/g, '');\n  if (!teniaMas && s.startsWith('00')) s = s.slice(2);\n  if (/^[6789]\\d{8}$/.test(s)) s = '34' + s;\n  return {\n    e164: s ? '+' + s : '',\n    wa_id: s,                                   // como lo quiere Meta: solo digitos\n    nacional: s.startsWith('34') ? s.slice(2) : s,\n    valido: s.length >= 8 && s.length <= 15,\n  };\n}\n\nconst sinAcentos = (s) => String(s ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();\n\nfunction prefijoDeReferencia(ref) {\n  const m = String(ref ?? '').toUpperCase().match(/[A-Z]{2}/);\n  return m ? m[0] : '';\n}\n\n// Asesora por referencia y, si no hay, por municipio. Si no hay ninguna, Laurence.\nfunction resolverAsesora(ref, municipio) {\n  const prefijo = prefijoDeReferencia(ref);\n  let asesora = ASESORA_POR_PREFIJO[prefijo] || null;\n  if (!asesora && municipio) {\n    const m = sinAcentos(municipio);\n    for (const [clave, quien] of Object.entries(ASESORA_POR_MUNICIPIO)) {\n      if (m.includes(clave)) { asesora = quien; break; }\n    }\n  }\n  const final = asesora || 'Laurence';\n  return { prefijo, asesora, conocida: !!asesora, destinatario: final, ...EQUIPO[final] };\n}\n\n// Alquiler o compra. Mismo criterio que el telefono: lo dice la operacion o la\n// referencia acaba en -A.\nfunction esAlquiler(referencia, operacion) {\n  const o = String(operacion ?? '').toLowerCase();\n  if (o.includes('alquiler') || o.includes('traspaso') || o.includes('rent')) return true;\n  if (o.includes('venta') || o.includes('compra')) return false;\n  return /-A$/i.test(String(referencia ?? '').trim());\n}\n\nfunction detectarPortal(remitente, asunto) {\n  for (const p of PORTALES) {\n    if (p.de.test(String(remitente ?? '')) || p.asunto.test(String(asunto ?? ''))) return p.nombre;\n  }\n  return 'Otro';\n}\n\n// Meta no admite saltos de linea, tabuladores ni mas de 4 espacios seguidos\n// dentro de un parametro de plantilla: si los hay, rechaza el envio entero.\nfunction paramPlantilla(texto, max = 700) {\n  return String(texto ?? '')\n    .replace(/[\\r\\n\\t]+/g, ' · ')\n    .replace(/ {2,}/g, ' ')\n    .trim()\n    .slice(0, max) || '-';\n}\n\n// \"2026-10-02\" + \"17:00\" -> \"jueves 2 de octubre a las 17:00\"\nfunction fechaLegible(fecha, hora) {\n  const DIAS = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo'];\n  const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto',\n                 'septiembre', 'octubre', 'noviembre', 'diciembre'];\n  const d = DateTime.fromFormat(String(fecha), 'yyyy-MM-dd', { zone: ZONA });\n  if (!d.isValid) return `${fecha} ${hora || ''}`.trim();\n  return `${DIAS[d.weekday - 1]} ${d.day} de ${MESES[d.month - 1]}` + (hora ? ` a las ${hora}` : '');\n}\n\n// \"Si, tengo que vender el mio\" -> true. \"No\", \"no necesito\" -> false.\nfunction esAfirmativo(texto) {\n  const t = sinAcentos(texto).trim();\n  if (!t || /^(no\\b|nop|para nada|ninguna|nada)/.test(t) || /\\bno (necesito|tengo|hace falta)\\b/.test(t)) return false;\n  return /^(si\\b|sí\\b|claro|por supuesto|correcto|exacto)/.test(t) ||\n    /\\b(tengo|necesito|debo|tendria|tendre|hay) que vender\\b|\\bnecesito vender\\b|\\bvender (primero|antes|mi|el|la)\\b/.test(t);\n}\n\n// Id del agente de Chatwoot de un comercial ('Carmen' -> 5). 0 si no tiene.\nfunction agenteDe(nombre) {\n  return Number(AGENTES_CHATWOOT[String(nombre ?? '').trim()] || 0);\n}\n\nfunction esPrueba(telefono) {\n  const t = normalizarTelefono(telefono).wa_id;\n  return !!t && (PRUEBAS.telefonos || []).includes(t);\n}\n\n\n// ===========================================================================\n// LEADS ENTRANTES (web y eGO): que primer mensaje le toca a cada uno\n// ---------------------------------------------------------------------------\n// Se inyecta despues de config.js en los nodos que deciden la plantilla.\n//\n//   compra / alquiler con un inmueble DISPONIBLE -> bienvenida_compra / _alquiler\n//                                                  ({{2}} = enlace del anuncio)\n//   el inmueble ya NO esta disponible (vendido, reservado, retirado o fuera de\n//   la cartera)                                  -> plantilla_abierta: ya no esta,\n//                                                  y que Sara le ensena otros\n//   compra / alquiler SIN inmueble (formulario general de la web)\n//                                                -> plantilla_abierta con lo que busca\n//   propietario que quiere vender o alquilar su vivienda\n//                                                -> plantilla_abierta + aviso a la asesora\n//   cualquier otra cosa                          -> nada: lo revisa una persona\n// ===========================================================================\n\nconst TEXTOS_ABIERTA = {\n  no_disponible: {\n    es: (r) => `Soy Sara, la asistente virtual de Casagencia. El inmueble por el que nos preguntaste${r.referencia ? ` (ref. ${r.referencia})` : ''} ya no está disponible, pero tenemos otros parecidos que te pueden encajar. ¿Quieres que te los enseñe por aquí?`,\n    en: (r) => `I'm Sara, Casagencia's virtual assistant. The property you asked about${r.referencia ? ` (ref. ${r.referencia})` : ''} is no longer available, but we have similar ones that may suit you. Shall I show them to you here?`,\n    fr: (r) => `Je suis Sara, l'assistante virtuelle de Casagencia. Le bien qui vous intéressait${r.referencia ? ` (réf. ${r.referencia})` : ''} n'est plus disponible, mais nous en avons d'autres similaires. Voulez-vous que je vous les montre ici ?`,\n  },\n  busqueda: {\n    es: (r) => `Soy Sara, la asistente virtual de Casagencia. Hemos recibido el mensaje que nos dejaste en nuestra web${r.resumen_cliente ? ` sobre ${r.resumen_cliente}` : ''}. ¿Te ayudo por aquí? Cuéntame qué buscas y te enseño lo que tenemos.`,\n    en: (r) => `I'm Sara, Casagencia's virtual assistant. We received the message you left on our website${r.resumen_cliente ? ` about ${r.resumen_cliente}` : ''}. Can I help you here? Tell me what you are looking for and I'll show you what we have.`,\n    fr: (r) => `Je suis Sara, l'assistante virtuelle de Casagencia. Nous avons bien reçu votre message sur notre site${r.resumen_cliente ? ` concernant ${r.resumen_cliente}` : ''}. Je peux vous aider ici : dites-moi ce que vous cherchez et je vous montre ce que nous avons.`,\n  },\n  propietario: {\n    es: (r) => `Soy Sara, la asistente virtual de Casagencia. Hemos recibido tu mensaje sobre tu vivienda${r.municipio ? ` en ${r.municipio}` : ''}. ${r.asesora} se pondrá en contacto contigo para hablarlo; si quieres, cuéntame por aquí cómo es.`,\n    en: (r) => `I'm Sara, Casagencia's virtual assistant. We received your message about your property${r.municipio ? ` in ${r.municipio}` : ''}. ${r.asesora} will contact you to discuss it; meanwhile, feel free to tell me about it here.`,\n    fr: (r) => `Je suis Sara, l'assistante virtuelle de Casagencia. Nous avons bien reçu votre message au sujet de votre bien${r.municipio ? ` à ${r.municipio}` : ''}. ${r.asesora} vous contactera pour en parler ; en attendant, vous pouvez m'en dire plus ici.`,\n  },\n};\n\nconst TIPOS_BUSCA = ['compra', 'alquiler', 'alquiler_temporada', 'sin_mensaje'];\nconst TIPOS_PROPIETARIO = ['vender_su_vivienda', 'alquilar_su_vivienda'];\n\n// r: { tipo, referencia, disponible (true/false/null = no se sabe), enlace,\n//      nombre, idioma, resumen_cliente, municipio, operacion }\nfunction decidirPrimerMensaje(r) {\n  const idioma = ['es', 'en', 'fr'].includes(r.idioma) ? r.idioma : 'es';\n  const tipo = String(r.tipo || 'otro');\n  const asesora = resolverAsesora(r.referencia, r.municipio).destinatario;\n  const alquiler = tipo === 'alquiler' || tipo === 'alquiler_temporada' || esAlquiler(r.referencia, r.operacion);\n  const nombre = String(r.nombre || '').trim().split(/\\s+/)[0] || '';\n  const base = { asesora, es_alquiler: alquiler, operacion: alquiler ? 'alquiler' : 'venta',\n                 param1: paramPlantilla(nombre || '\\u{1F44B}', 60) };\n  const abierta = (clave, accion) => ({ ...base, accion, plantilla: PLANTILLAS.abierta.nombre,\n    param2: paramPlantilla(TEXTOS_ABIERTA[clave][idioma]({ ...r, asesora }), 900) });\n\n  if (TIPOS_PROPIETARIO.includes(tipo)) return abierta('propietario', 'captacion');\n  if (r.referencia && r.disponible === false) return abierta('no_disponible', 'no_disponible');\n  if (r.referencia && r.enlace && (TIPOS_BUSCA.includes(tipo) || tipo === 'otro' || !tipo)) {\n    const p = alquiler ? PLANTILLAS.alquiler : PLANTILLAS.compra;\n    return { ...base, accion: 'bienvenida', plantilla: p.nombre, param2: paramPlantilla(r.enlace, 300) };\n  }\n  if (TIPOS_BUSCA.includes(tipo)) return abierta('busqueda', 'busqueda');\n  return { ...base, accion: 'revisar', plantilla: '', param2: '' };\n}\n\n\n// [WA] 5 · Leads de eGO · Decidir\n// Con el detalle del lead (GetLead) y el de su inmueble (GetRealestate):\n//   - de que portal viene, quien es y a que comercial lo ha asignado eGO;\n//   - si el inmueble sigue DISPONIBLE (y en la cartera publicada);\n//   - que primer WhatsApp le toca (leads.js) y a que asesora le toca por la\n//     referencia (BN/OR Carmen, CS/VR Gisela), para compararlo con eGO.\nconst base = $('Separar').item.json;\nconst lead = $('DetalleLead').item.json?.datos || {};\nconst inm = (() => { try { return $('DetalleInmueble').item.json?.datos || {}; } catch (e) { return {}; } })();\nconst cartera = (() => { try { return $('EnLaCartera').item.json || {}; } catch (e) { return {}; } })();\nconst estados = (() => { try { return $('EstadosDeInmueble').first().json?.datos || []; } catch (e) { return []; } })();\nconst empleados = (() => { try { return $('Empleados').first().json?.datos || []; } catch (e) { return []; } })();\n\nconst referencia = String(inm.reference || cartera.ref || '').toUpperCase();\nconst estadoNombre = String((estados.find(e => String(e.id) === String(inm.realestateStatusId)) || {}).name || '');\n// Disponible: el estado de eGO lo dice y, ademas, sigue publicado en el feed de la web\nconst estadoOk = !estadoNombre || /disponible|activ|publicad|available/i.test(estadoNombre);\nconst disponible = referencia ? (estadoOk && !!cartera.ref) : null;\n\nconst tel = normalizarTelefono(lead.phone || base.telefono);\nconst origen = String(lead.leadOrigin?.name ?? lead.leadOrigin ?? lead.originId ?? '');\nconst idAsignado = lead.assignToSecurityUserId ?? lead.securityUserId ?? null;\nconst empleado = empleados.find(e => String(e.id ?? e.securityUserId ?? e.ID) === String(idAsignado)) || {};\nconst asignadoEgo = [empleado.firstName, empleado.lastName].filter(Boolean).join(' ') || (idAsignado ? `usuario ${idAsignado}` : '');\nconst porReferencia = resolverAsesora(referencia).destinatario;\n\nconst d = decidirPrimerMensaje({\n  tipo: esAlquiler(referencia, '') ? 'alquiler' : 'compra',\n  referencia,\n  disponible,\n  enlace: cartera.enlace || '',\n  operacion: cartera.tipo_transaccion || '',\n  nombre: lead.name || base.nombre,\n  idioma: 'es',\n});\n\nreturn [{ json: {\n  ...d,\n  lead_id: base.lead_id,\n  telefono_e164: tel.e164,\n  telefono_wa: tel.wa_id,\n  se_puede_contactar: tel.valido,\n  nombre: String(lead.name || base.nombre || '').trim(),\n  email_cliente: String(lead.email || '').toLowerCase(),\n  referencia,\n  enlace: cartera.enlace || '',\n  portal: origen,\n  tipo: d.es_alquiler ? 'alquiler' : 'compra',\n  estado_inmueble: estadoNombre || (cartera.ref ? 'en la cartera publicada' : 'no esta en la cartera publicada'),\n  disponible,\n  // Contacto: eGO lo asocia al lead como potencialClientId\n  contacto_creado: !!lead.potencialClientId,\n  contacto_id: lead.potencialClientId || null,\n  asignado_ego: asignadoEgo,\n  asesora_por_referencia: porReferencia,\n  asignacion_coincide: !asignadoEgo || new RegExp(porReferencia, 'i').test(asignadoEgo),\n  notas: `Lead de eGO (${origen || 'internet'}): ${String(lead.obs || '').replace(/\\s+/g, ' ').slice(0, 1200)}`,\n  asunto: String(lead.title || ''),\n} }];\n"
+        "jsCode": "// ===========================================================================\n// CASAGENCIA · ASISTENTE DE WHATSAPP — CONFIGURACION COMUN\n// ---------------------------------------------------------------------------\n// Proyecto independiente del asistente telefonico: sus workflows llevan [WA] y\n// no llaman nunca a los [TEL]. Comparten los MISMOS datos (el Google Sheet de\n// la cartera y los calendarios de Carmen y Gisela), no el codigo en ejecucion.\n//\n// Se inyecta al principio de los nodos Code propios de WhatsApp.\n// Editar aqui y volver a desplegar:  python3 build_whatsapp.py --deploy\n// ===========================================================================\nconst ZONA = 'Europe/Madrid';\n\n// --- Chatwoot (panel de conversaciones) -------------------------------------\nconst CHATWOOT_URL    = 'https://panel-casa-agencia.serversvisionarius.com';\nconst CHATWOOT_CUENTA = 1;   // \"Casa Agencia Inmobiliaria\"\nconst CHATWOOT_INBOX  = 1;   // inbox \"WhatsApp\" (whatsapp_cloud, +34 864 89 37 94)\n\n// --- Meta · WhatsApp Cloud API ---------------------------------------------\n// Linea +34 864 89 37 94 (Casa Agencia Inmobiliaria), verificada y conectada.\n// El token NO va aqui: esta en la credencial \"Meta WhatsApp Casagencia\".\nconst META_API        = 'https://graph.facebook.com/v22.0';\nconst META_PHONE_ID   = '1254647111075735';\nconst META_WABA_ID    = '1791979752043585';\n\n// Plantillas aprobadas. OJO con el idioma: bienvenida_alquiler y plantilla_aviso\n// estan dadas de alta en INGLES ('en') aunque el texto sea en espanol. Meta\n// rechaza el envio si el codigo de idioma no es exactamente el registrado.\n// Todas usan parametros por posicion: {{1}} y {{2}}.\nconst PLANTILLAS = {\n  compra:   { nombre: 'bienvenida_compra',   idioma: 'es' },  // {{1}} nombre, {{2}} enlace del inmueble\n  alquiler: { nombre: 'bienvenida_alquiler', idioma: 'en' },  // {{1}} nombre, {{2}} enlace del inmueble\n  aviso:    { nombre: 'plantilla_aviso',     idioma: 'en' },  // {{1}} comercial, {{2}} el aviso (una linea)\n  abierta:  { nombre: 'plantilla_abierta',   idioma: 'en' },  // {{1}} nombre, {{2}} texto libre (una linea)\n};\n\n// Texto exacto de cada plantilla, tal y como esta aprobada en Meta. Solo se usa\n// para que en el panel se lea lo mismo que le ha llegado al cliente.\nconst TEXTO_PLANTILLA = {\n  bienvenida_compra:\n    'Hola *{{1}}*, soy Sara de Casagencia.\\nHemos recibido tu solicitud de información por este inmueble de compra: {{2}}\\n*Quieres visitar la vivienda?*',\n  bienvenida_alquiler:\n    'Hola *{{1}}*, soy Sara de Casagencia.\\nHemos recibido tu solicitud de información por este inmueble de alquiler: {{2}}\\n*Quieres visitar la vivienda?*',\n  plantilla_aviso:\n    'Hola *{{1}}*,\\n*{{2}}*\\nUn saludo. Tenga un buen día.',\n  plantilla_abierta:\n    'Hola *{{1}}*,\\n{{2}}\\nUn saludo. Buen día.',\n};\n\n// --- El equipo ---------------------------------------------------------------\n// Mismo reparto que el telefono: la referencia manda.\nconst ASESORA_POR_PREFIJO = { BN: 'Carmen', OR: 'Carmen', CS: 'Gisela', VR: 'Gisela' };\nconst ASESORA_POR_MUNICIPIO = {\n  'benicasim': 'Carmen', 'benicassim': 'Carmen', 'oropesa': 'Carmen', 'orpesa': 'Carmen',\n  'torreblanca': 'Carmen', 'onda': 'Carmen', 'borriol': 'Carmen', 'vilafames': 'Carmen',\n  'castellon': 'Gisela', 'castello': 'Gisela', 'vila-real': 'Gisela', 'villarreal': 'Gisela',\n  'burriana': 'Gisela', 'borriana': 'Gisela', 'almazora': 'Gisela', 'almassora': 'Gisela',\n  'alquerias': 'Gisela', 'alqueries': 'Gisela',\n};\n// Moviles a los que llega el aviso por WhatsApp (los mismos que usa el telefono\n// para saber por que linea entra la llamada).\nconst EQUIPO = {\n  Carmen:   { movil: '34654907386', email: 'carmen@casagencia.com' },\n  Gisela:   { movil: '34690027772', email: 'gisela@casagencia.com' },\n  Laurence: { movil: '34618724192', email: 'laurence@casagencia.com' },\n};\nconst EMAIL_DIRECCION = 'paco@casagencia.com';   // copia por correo de todos los avisos\n\n// --- Leads entrantes ------------------------------------------------------------\n// De la WEB salen del buzon formularioscasagencia@gmail.com (credencial \"Correo\n// Formulario\"): solo los de web@websites.egorealestate.com. Los de los PORTALES\n// ya entran en eGO y se cogen de su API ([WA] 5).\nconst BUZON_LEADS = 'formularioscasagencia@gmail.com';\n// 'preparado': decide que mandaria y lo apunta (tabla leads_entrantes), pero NO\n// manda nada. 'real': manda la plantilla. Se cambia aqui y se vuelve a desplegar.\nconst MODO_LEADS = 'preparado';\nconst PORTALES = [\n  { nombre: 'Idealista',  de: /idealista\\.com/i,   asunto: /idealista/i },\n  { nombre: 'Fotocasa',   de: /fotocasa\\.es/i,     asunto: /fotocasa/i },\n  { nombre: 'Habitaclia', de: /habitaclia\\.com/i,  asunto: /habitaclia/i },\n  { nombre: 'Web',        de: /casagencia\\.com/i,  asunto: /formulario|contacto/i },\n];\n\n// --- Etiquetas de Chatwoot ---------------------------------------------------\n// Las mismas que Blue, creadas ya en el panel. Las tres primeras son el estado\n// de la conversacion (solo una a la vez y nunca hacia atras); la cuarta se suma\n// a la que haya y hace que el bot deje de contestar.\nconst ETIQUETAS = {\n  bienvenida: '1-bienvenida_ia',   // la IA ha mandado la plantilla\n  en_proceso: '2-en_proceso',      // el cliente ha contestado y la IA esta con el\n  agendada:   '3-agendada_ia',     // visita agendada de verdad en el calendario\n  intervenir: '4-intervenir',      // tiene que entrar una persona: la IA se calla\n};\nconst ESTADOS = [ETIQUETAS.bienvenida, ETIQUETAS.en_proceso, ETIQUETAS.agendada];\n// Etiquetas que se SUMAN a las de estado (no cuentan como estado):\nconst ETIQUETA_VENDEDOR = 'vendedor';               // el comprador tiene que vender una vivienda\nconst ETIQUETA_LLAMADA  = '0-llamada_telefonica';   // la conversacion tiene llamadas del asistente telefonico\n\n// --- El interruptor del bot (atributo \"bot\" del contacto, como en Blue) -------\n// Off: la IA se calla (se cambia a mano en el panel). On o sin valor (\"Select\n// value\"): la IA contesta. Con SOLO_CONTACTOS_CON_BOT = true solo contestaria a\n// los contactos con el atributo puesto (el estandar de Blue); Casagencia quiere\n// que conteste a todos menos a los que esten en Off.\nconst SOLO_CONTACTOS_CON_BOT = false;\n\n// --- Asignacion de la conversacion en Chatwoot (como el reparto del telefono) -\n// Id de cada comercial como agente del panel. La conversacion se asigna a la\n// asesora de la referencia (BN/OR Carmen, CS/VR Gisela; si no hay, Laurence),\n// salvo que ya la tenga una de ellas: un cambio hecho a mano se respeta.\nconst AGENTES_CHATWOOT = { Carmen: 5, Gisela: 4, Laurence: 6 };\n\n// --- eGO (CRM) -----------------------------------------------------------------\n// Comprobado con la API el 2-10-2026. Agencia 4338.\nconst EGO_ESTADOS = { 2: 'Disponible', 3: 'Vendido', 4: 'Reservado', 5: 'Alquilado', 7: 'Captación',\n                      8: 'Retirado', 9: 'En evaluación' };\nconst EGO_DISPONIBLE = 2;\nconst EGO_PORTALES = { 701: 'Idealista', 31: 'Fotocasa', 680: 'Properstar' };\n// Usuarios de eGO de cada comercial (securityUserID)\nconst EGO_COMERCIALES = { 88560: 'Carmen', 62597: 'Gisela', 10768: 'Laurence' };\n// Llaves: en eGO solo constan las de algunos inmuebles. Con false, que no consten no\n// impide ofrecer visita: se le dice a la asesora en el aviso para que lo coordine.\nconst LLAVES_OBLIGATORIAS = false;\n\n// --- Tiempos -----------------------------------------------------------------\nconst BUFFER_SEGUNDOS = 60;         // se juntan los mensajes que el cliente manda seguidos\nconst RECORDATORIO_HORAS = 24;      // aviso al comercial antes de cada visita\n// Antelacion minima para agendar desde WhatsApp. 0 = la que permita el horario.\nconst ANTELACION_MINIMA_HORAS = 0;\n// Llamadas del asistente telefonico: todas van al panel, pero el aviso por\n// WhatsApp a la comercial solo si la llamada ha durado al menos esto.\nconst LLAMADA_AVISO_MIN_SEGUNDOS = 15;\n\n// Marca que llevan en la descripcion las visitas agendadas por WhatsApp. Con\n// ella el recordatorio sabe cuales son suyas y no avisa de las del telefono.\nconst MARCA_ORIGEN = 'Origen: WhatsApp (Sara IA)';\n\n// --- Pruebas -----------------------------------------------------------------\n// Con estos telefonos el asistente funciona IGUAL que con un cliente, pero:\n//   - los avisos van al que prueba (no a Carmen, Gisela ni Paco), con [PRUEBA];\n//   - las visitas NO se escriben en la agenda real (se consulta de verdad, pero\n//     la reserva se simula), asi no se ocupan huecos ni salta el recordatorio.\n// Se rellena AL DESPLEGAR desde wa/pruebas.local.json (no esta en git), para no\n// guardar telefonos personales en el repositorio.\nconst PRUEBAS = /*PRUEBAS*/{ telefonos: [], avisar_movil: '', avisar_email: '' }/*FIN_PRUEBAS*/;\n\n// ---------------------------------------------------------------------------\n// Utilidades\n// ---------------------------------------------------------------------------\nfunction normalizarTelefono(raw) {\n  let s = String(raw ?? '').trim();\n  const teniaMas = s.startsWith('+');\n  s = s.replace(/\\D/g, '');\n  if (!teniaMas && s.startsWith('00')) s = s.slice(2);\n  if (/^[6789]\\d{8}$/.test(s)) s = '34' + s;\n  return {\n    e164: s ? '+' + s : '',\n    wa_id: s,                                   // como lo quiere Meta: solo digitos\n    nacional: s.startsWith('34') ? s.slice(2) : s,\n    valido: s.length >= 8 && s.length <= 15,\n  };\n}\n\nconst sinAcentos = (s) => String(s ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();\n\nfunction prefijoDeReferencia(ref) {\n  const m = String(ref ?? '').toUpperCase().match(/[A-Z]{2}/);\n  return m ? m[0] : '';\n}\n\n// Asesora por referencia y, si no hay, por municipio. Si no hay ninguna, Laurence.\nfunction resolverAsesora(ref, municipio) {\n  const prefijo = prefijoDeReferencia(ref);\n  let asesora = ASESORA_POR_PREFIJO[prefijo] || null;\n  if (!asesora && municipio) {\n    const m = sinAcentos(municipio);\n    for (const [clave, quien] of Object.entries(ASESORA_POR_MUNICIPIO)) {\n      if (m.includes(clave)) { asesora = quien; break; }\n    }\n  }\n  const final = asesora || 'Laurence';\n  return { prefijo, asesora, conocida: !!asesora, destinatario: final, ...EQUIPO[final] };\n}\n\n// Alquiler o compra. Mismo criterio que el telefono: lo dice la operacion o la\n// referencia acaba en -A.\nfunction esAlquiler(referencia, operacion) {\n  const o = String(operacion ?? '').toLowerCase();\n  if (o.includes('alquiler') || o.includes('traspaso') || o.includes('rent')) return true;\n  if (o.includes('venta') || o.includes('compra')) return false;\n  return /-A$/i.test(String(referencia ?? '').trim());\n}\n\nfunction detectarPortal(remitente, asunto) {\n  for (const p of PORTALES) {\n    if (p.de.test(String(remitente ?? '')) || p.asunto.test(String(asunto ?? ''))) return p.nombre;\n  }\n  return 'Otro';\n}\n\n// Meta no admite saltos de linea, tabuladores ni mas de 4 espacios seguidos\n// dentro de un parametro de plantilla: si los hay, rechaza el envio entero.\nfunction paramPlantilla(texto, max = 700) {\n  return String(texto ?? '')\n    .replace(/[\\r\\n\\t]+/g, ' · ')\n    .replace(/ {2,}/g, ' ')\n    .trim()\n    .slice(0, max) || '-';\n}\n\n// \"2026-10-02\" + \"17:00\" -> \"jueves 2 de octubre a las 17:00\"\nfunction fechaLegible(fecha, hora) {\n  const DIAS = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo'];\n  const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto',\n                 'septiembre', 'octubre', 'noviembre', 'diciembre'];\n  const d = DateTime.fromFormat(String(fecha), 'yyyy-MM-dd', { zone: ZONA });\n  if (!d.isValid) return `${fecha} ${hora || ''}`.trim();\n  return `${DIAS[d.weekday - 1]} ${d.day} de ${MESES[d.month - 1]}` + (hora ? ` a las ${hora}` : '');\n}\n\n// \"Si, tengo que vender el mio\" -> true. \"No\", \"no necesito\" -> false.\nfunction esAfirmativo(texto) {\n  const t = sinAcentos(texto).trim();\n  if (!t || /^(no\\b|nop|para nada|ninguna|nada)/.test(t) || /\\bno (necesito|tengo|hace falta)\\b/.test(t)) return false;\n  return /^(si\\b|sí\\b|claro|por supuesto|correcto|exacto)/.test(t) ||\n    /\\b(tengo|necesito|debo|tendria|tendre|hay) que vender\\b|\\bnecesito vender\\b|\\bvender (primero|antes|mi|el|la)\\b/.test(t);\n}\n\n// Id del agente de Chatwoot de un comercial ('Carmen' -> 5). 0 si no tiene.\nfunction agenteDe(nombre) {\n  return Number(AGENTES_CHATWOOT[String(nombre ?? '').trim()] || 0);\n}\n\nfunction esPrueba(telefono) {\n  const t = normalizarTelefono(telefono).wa_id;\n  return !!t && (PRUEBAS.telefonos || []).includes(t);\n}\n\n// Lo nuevo de leads y eGO (primer WhatsApp a los leads, notas en eGO) solo\n// actua de verdad con MODO_LEADS = 'real'; con los telefonos de prueba, siempre.\nfunction leadsEnReal(telefono) {\n  return MODO_LEADS === 'real' || esPrueba(telefono);\n}\n\n\n// ===========================================================================\n// LEADS ENTRANTES (web y eGO): que primer mensaje le toca a cada uno\n// ---------------------------------------------------------------------------\n// Se inyecta despues de config.js en los nodos que deciden la plantilla.\n//\n//   compra / alquiler con un inmueble DISPONIBLE -> bienvenida_compra / _alquiler\n//                                                  ({{2}} = enlace del anuncio)\n//   el inmueble ya NO esta disponible (vendido, reservado, retirado o fuera de\n//   la cartera)                                  -> plantilla_abierta: ya no esta,\n//                                                  y que Sara le ensena otros\n//   compra / alquiler SIN inmueble (formulario general de la web)\n//                                                -> plantilla_abierta con lo que busca\n//   propietario que quiere vender o alquilar su vivienda\n//                                                -> plantilla_abierta + aviso a la asesora\n//   cualquier otra cosa                          -> nada: lo revisa una persona\n// ===========================================================================\n\nconst TEXTOS_ABIERTA = {\n  no_disponible: {\n    es: (r) => `Soy Sara, IA de Casagencia. El inmueble por el que nos preguntaste${r.referencia ? ` (ref. ${r.referencia})` : ''} ya no está disponible, pero tenemos otros parecidos que te pueden encajar. ¿Quieres que te los enseñe por aquí?`,\n    en: (r) => `I'm Sara, Casagencia's AI. The property you asked about${r.referencia ? ` (ref. ${r.referencia})` : ''} is no longer available, but we have similar ones that may suit you. Shall I show them to you here?`,\n    fr: (r) => `Je suis Sara, l'IA de Casagencia. Le bien qui vous intéressait${r.referencia ? ` (réf. ${r.referencia})` : ''} n'est plus disponible, mais nous en avons d'autres similaires. Voulez-vous que je vous les montre ici ?`,\n  },\n  busqueda: {\n    es: (r) => `Soy Sara, IA de Casagencia. Hemos recibido el mensaje que nos dejaste en nuestra web${r.resumen_cliente ? ` sobre ${r.resumen_cliente}` : ''}. ¿Te ayudo por aquí? Cuéntame qué buscas y te enseño lo que tenemos.`,\n    en: (r) => `I'm Sara, Casagencia's AI. We received the message you left on our website${r.resumen_cliente ? ` about ${r.resumen_cliente}` : ''}. Can I help you here? Tell me what you are looking for and I'll show you what we have.`,\n    fr: (r) => `Je suis Sara, l'IA de Casagencia. Nous avons bien reçu votre message sur notre site${r.resumen_cliente ? ` concernant ${r.resumen_cliente}` : ''}. Je peux vous aider ici : dites-moi ce que vous cherchez et je vous montre ce que nous avons.`,\n  },\n  propietario: {\n    es: (r) => `Soy Sara, IA de Casagencia. Hemos recibido tu mensaje sobre tu vivienda${r.municipio ? ` en ${r.municipio}` : ''}. ${r.asesora} se pondrá en contacto contigo para hablarlo; si quieres, cuéntame por aquí cómo es.`,\n    en: (r) => `I'm Sara, Casagencia's AI. We received your message about your property${r.municipio ? ` in ${r.municipio}` : ''}. ${r.asesora} will contact you to discuss it; meanwhile, feel free to tell me about it here.`,\n    fr: (r) => `Je suis Sara, l'IA de Casagencia. Nous avons bien reçu votre message au sujet de votre bien${r.municipio ? ` à ${r.municipio}` : ''}. ${r.asesora} vous contactera pour en parler ; en attendant, vous pouvez m'en dire plus ici.`,\n  },\n};\n\n// Idioma del mensaje del cliente (para la plantilla abierta). Por defecto, espanol.\nfunction idiomaDe(texto) {\n  const t = sinAcentos(texto);\n  if (/\\b(bonjour|je |j'|cordialement|merci|madame|monsieur|appartement|interesse)/.test(t)) return 'fr';\n  if (/\\b(hello|hi|dear|i am|i'm|i would|interested|thank|regards|please)\\b/.test(t)) return 'en';\n  return 'es';\n}\n\nconst TIPOS_BUSCA = ['compra', 'alquiler', 'alquiler_temporada', 'sin_mensaje'];\nconst TIPOS_PROPIETARIO = ['vender_su_vivienda', 'alquilar_su_vivienda'];\n\n// r: { tipo, referencia, disponible (true/false/null = no se sabe), enlace,\n//      nombre, idioma, resumen_cliente, municipio, operacion }\nfunction decidirPrimerMensaje(r) {\n  const idioma = ['es', 'en', 'fr'].includes(r.idioma) ? r.idioma : 'es';\n  const tipo = String(r.tipo || 'otro');\n  const asesora = resolverAsesora(r.referencia, r.municipio).destinatario;\n  const alquiler = tipo === 'alquiler' || tipo === 'alquiler_temporada' || esAlquiler(r.referencia, r.operacion);\n  const nombre = String(r.nombre || '').trim().split(/\\s+/)[0] || '';\n  const base = { asesora, es_alquiler: alquiler, operacion: alquiler ? 'alquiler' : 'venta',\n                 param1: paramPlantilla(nombre || '\\u{1F44B}', 60) };\n  const abierta = (clave, accion) => ({ ...base, accion, plantilla: PLANTILLAS.abierta.nombre,\n    param2: paramPlantilla(TEXTOS_ABIERTA[clave][idioma]({ ...r, asesora }), 900) });\n\n  if (TIPOS_PROPIETARIO.includes(tipo)) return abierta('propietario', 'captacion');\n  if (r.referencia && r.disponible === false) return abierta('no_disponible', 'no_disponible');\n  if (r.referencia && r.enlace && (TIPOS_BUSCA.includes(tipo) || tipo === 'otro' || !tipo)) {\n    const p = alquiler ? PLANTILLAS.alquiler : PLANTILLAS.compra;\n    return { ...base, accion: 'bienvenida', plantilla: p.nombre, param2: paramPlantilla(r.enlace, 300) };\n  }\n  if (TIPOS_BUSCA.includes(tipo)) return abierta('busqueda', 'busqueda');\n  return { ...base, accion: 'revisar', plantilla: '', param2: '' };\n}\n\n\n// [WA] 5 · Leads de eGO · Decidir\n// Un item por lead nuevo. Con el estado de su inmueble en eGO (GetRealestate,\n// en el mismo orden) y la cartera publicada en la web (el enlace):\n//   - disponible (estado 2 en eGO) -> bienvenida_compra / _alquiler con el enlace;\n//   - reservado, vendido, alquilado, retirado... -> plantilla_abierta: ya no\n//     esta disponible y Sara le ensena otros;\n//   - la comercial que puso eGO y la que toca por la referencia (BN/OR Carmen,\n//     CS/VR Gisela), para comprobar que coinciden.\nconst nuevos = $('SoloNuevos').all();\nlet inmuebles = [];\ntry { inmuebles = $('EstadoDelInmueble').all(); } catch (e) { inmuebles = []; }\nlet cartera = [];\ntry { cartera = $('LaCartera').first().json.filas || []; } catch (e) { cartera = []; }\nif (typeof cartera === 'string') { try { cartera = JSON.parse(cartera); } catch (e) { cartera = []; } }\nconst porRef = Object.fromEntries([].concat(cartera).map(c => [String(c.ref || '').toUpperCase(), c]));\n\nreturn nuevos.map((n, k) => {\n  const b = n.json;\n  const r = inmuebles[k]?.json || {};\n  const inm = r.ok && r.datos && typeof r.datos === 'object' ? r.datos : {};\n  const c = porRef[b.referencia] || {};\n  const estadoId = Number(inm.realestateStatusId || 0);\n  const estado = EGO_ESTADOS[estadoId] || (estadoId ? `estado ${estadoId}` : '');\n  // Lo dice eGO; si eGO no ha contestado, que siga publicado en la web\n  const disponible = !b.referencia ? null : (estadoId ? estadoId === EGO_DISPONIBLE : !!c.ref);\n  const tel = normalizarTelefono(b.telefono);\n  const alquiler = esAlquiler(b.referencia, b.operacion);\n  const d = decidirPrimerMensaje({\n    tipo: alquiler ? 'alquiler' : 'compra',\n    referencia: b.referencia,\n    disponible,\n    // Si no esta en la web, la bienvenida lleva la referencia en vez del enlace\n    enlace: c.enlace || (b.referencia ? `ref. ${b.referencia}` : ''),\n    operacion: b.operacion,\n    nombre: b.nombre,\n    idioma: idiomaDe(b.mensaje),\n    municipio: c.municipio || '',\n  });\n  const asignadoEgo = b.asignado_ids.map(id => EGO_COMERCIALES[id]).filter(Boolean)[0]\n    || String(b.asignado_nombres[0] || '').split(' ')[0];\n  const porReferencia = resolverAsesora(b.referencia, c.municipio).destinatario;\n  return { json: {\n    ...d,\n    lead_id: b.lead_id,\n    telefono_e164: tel.e164,\n    telefono_wa: tel.wa_id,\n    se_puede_contactar: tel.valido,\n    // Se manda de verdad solo con MODO_LEADS = 'real' (o a un telefono de prueba)\n    enviar: tel.valido && !!d.plantilla && leadsEnReal(tel.e164),\n    nombre: b.nombre,\n    email_cliente: b.email,\n    referencia: b.referencia,\n    enlace: c.enlace || '',\n    portal: b.portal,\n    solicitud: b.solicitud,\n    tipo: alquiler ? 'alquiler' : 'compra',\n    estado_inmueble: estado || (c.ref ? 'publicado en la web' : 'sin datos'),\n    disponible,\n    // eGO no crea contacto con los leads de los portales (potencialClientId vacio)\n    contacto_creado: false,\n    asignado_ego: asignadoEgo,\n    asesora_por_referencia: porReferencia,\n    asignacion_coincide: !asignadoEgo || asignadoEgo === porReferencia,\n    notas: `Lead de eGO (${b.solicitud || b.portal}): ${b.mensaje || b.obs}`.slice(0, 1500),\n    asunto: b.solicitud,\n  }, pairedItem: { item: k } };\n});\n"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1940,
+        1720,
         0
       ],
       "id": "35db55ca-bf98-5314-be4d-0192cf930048",
@@ -520,13 +313,13 @@
         "operation": "executeQuery",
         "query": "insert into leads_entrantes\n  (fuente, id_origen, telefono_e164, nombre, referencia, tipo, accion, plantilla, param2, asesora, estado, detalle)\nvalues ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12::jsonb)\non conflict (fuente, id_origen) do nothing\nreturning id;",
         "options": {
-          "queryReplacement": "={{ [ 'ego', $('Decidir').item.json.lead_id, $('Decidir').item.json.telefono_e164, $('Decidir').item.json.nombre, $('Decidir').item.json.referencia, $('Decidir').item.json.tipo, $('Decidir').item.json.accion, $('Decidir').item.json.plantilla, $('Decidir').item.json.param2, $('Decidir').item.json.asesora, $('Decidir').item.json.se_puede_contactar ? 'preparado' : 'sin_telefono', JSON.stringify({ portal: $('Decidir').item.json.portal, estado_inmueble: $('Decidir').item.json.estado_inmueble, disponible: $('Decidir').item.json.disponible, contacto_creado: $('Decidir').item.json.contacto_creado, contacto_id: $('Decidir').item.json.contacto_id, asignado_ego: $('Decidir').item.json.asignado_ego, asesora_por_referencia: $('Decidir').item.json.asesora_por_referencia, asignacion_coincide: $('Decidir').item.json.asignacion_coincide }) ] }}"
+          "queryReplacement": "={{ [ 'ego', $json.lead_id, $json.telefono_e164, $json.nombre, $json.referencia, $json.tipo, $json.accion, $json.plantilla, $json.param2, $json.asesora, $json.se_puede_contactar ? ($json.enviar ? 'enviando' : 'preparado') : 'sin_telefono', JSON.stringify({ portal: $json.portal, solicitud: $json.solicitud, estado_inmueble: $json.estado_inmueble, disponible: $json.disponible, contacto_creado: $json.contacto_creado, asignado_ego: $json.asignado_ego, asesora_por_referencia: $json.asesora_por_referencia, asignacion_coincide: $json.asignacion_coincide, notas: $json.notas }) ] }}"
         }
       },
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
       "position": [
-        2160,
+        1940,
         0
       ],
       "id": "3e4ea619-9f22-5d6c-bf43-5637fa664f71",
@@ -551,11 +344,12 @@
           "conditions": [
             {
               "id": "d8c8d485-9692-5fed-9f77-279fdaccf6bd",
-              "leftValue": "={{ \"preparado\" }}",
-              "rightValue": "real",
+              "leftValue": "={{ $('Decidir').item.json.enviar }}",
+              "rightValue": "",
               "operator": {
-                "type": "string",
-                "operation": "equals"
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
               }
             },
             {
@@ -565,26 +359,6 @@
               "operator": {
                 "type": "boolean",
                 "operation": "true",
-                "singleValue": true
-              }
-            },
-            {
-              "id": "19026d2a-dde6-5e81-83c8-8a1b719b1766",
-              "leftValue": "={{ $('Decidir').item.json.se_puede_contactar }}",
-              "rightValue": "",
-              "operator": {
-                "type": "boolean",
-                "operation": "true",
-                "singleValue": true
-              }
-            },
-            {
-              "id": "8d1d3544-fa25-588c-bec4-f8346ff4859d",
-              "leftValue": "={{ $('Decidir').item.json.plantilla }}",
-              "rightValue": "",
-              "operator": {
-                "type": "string",
-                "operation": "notEmpty",
                 "singleValue": true
               }
             }
@@ -597,7 +371,7 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        2380,
+        2160,
         0
       ],
       "id": "1e981c22-06b2-5a4e-9c0c-41168c4d9a96",
@@ -608,7 +382,7 @@
       "type": "n8n-nodes-base.noOp",
       "typeVersion": 1,
       "position": [
-        2600,
+        2380,
         200
       ],
       "id": "d26984b4-6885-58b4-bd05-418540615e8b",
@@ -625,7 +399,7 @@
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
       "position": [
-        2600,
+        2380,
         -120
       ],
       "id": "41a09a64-137f-5712-b405-f2234aae6a54",
@@ -668,7 +442,7 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        2820,
+        2600,
         -120
       ],
       "id": "4429b994-8d0c-5a45-bc5b-5c6b869f36a8",
@@ -784,12 +558,13 @@
         },
         "options": {
           "waitForSubWorkflow": true
-        }
+        },
+        "mode": "each"
       },
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.2,
       "position": [
-        3040,
+        2820,
         -220
       ],
       "id": "530c96cb-6d11-59a1-addd-f1314a6b3efd",
@@ -798,24 +573,74 @@
     },
     {
       "parameters": {
-        "content": "## Todas las solicitudes de los portales, desde eGO\nCada 5 minutos, los leads que han entrado en eGO en las ultimas 3 horas (Idealista, Fotocasa, Properstar...). Cada lead una sola vez (tabla *leads_entrantes*).\n\nPor cada uno: su detalle (telefono, origen, comercial asignado en eGO, contacto creado) y su inmueble (estado). Comprobado: todo lo que llega al correo de los portales entra en eGO 1-3 minutos despues.",
-        "height": 300,
-        "width": 600
+        "operation": "executeQuery",
+        "query": "update wa_leads\n   set estado = 'plantilla_enviada', conversacion_id = $2, actualizado_en = now()\n where telefono_wa = $1 and referencia = $3;",
+        "options": {
+          "queryReplacement": "={{ [ $('Decidir').item.json.telefono_wa, $json.conversacion_id || 0, $('Decidir').item.json.referencia ] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        3040,
+        -220
+      ],
+      "id": "456d7aa6-7c1b-52f1-a692-453d69db509d",
+      "name": "MarcarPlantillaEnviada",
+      "credentials": {
+        "postgres": {
+          "id": "yvym0TdlOebNMzsm",
+          "name": "Postgres account"
+        }
+      },
+      "onError": "continueRegularOutput",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "update leads_entrantes set estado = $2 where id = $1;",
+        "options": {
+          "queryReplacement": "={{ [ $('Registrar').item.json.id, 'enviado' ] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        3260,
+        -220
+      ],
+      "id": "000d9631-fe53-5675-afda-c74e385de494",
+      "name": "ApuntarEnviado",
+      "credentials": {
+        "postgres": {
+          "id": "yvym0TdlOebNMzsm",
+          "name": "Postgres account"
+        }
+      },
+      "onError": "continueRegularOutput",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "content": "## Todas las solicitudes de los portales, desde eGO\nCada 5 minutos, los leads que han entrado en eGO en las ultimas 3 horas y vienen de un portal (Idealista, Fotocasa, Properstar...). Cada lead una sola vez (tabla *leads_entrantes*).\n\nEl lead ya trae el telefono, el inmueble, venta o alquiler y la comercial que ha puesto eGO. Del inmueble se pide el **estado** a eGO (GetRealestate). Comprobado: todo lo que llega al correo de los portales entra en eGO 1-3 minutos despues, y eGO lo asigna igual que nuestro reparto por referencia.",
+        "height": 320,
+        "width": 620
       },
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
         180,
-        -420
+        -440
       ],
       "id": "e5da7b4e-5aeb-50d1-8d57-71866644de89",
       "name": "Nota"
     },
     {
       "parameters": {
-        "content": "## Que se le manda\n- Inmueble **disponible** (estado de eGO y publicado en la web): **bienvenida_compra / _alquiler** con el enlace.\n- **Vendido, reservado, retirado o ya no publicado**: **plantilla_abierta**: ya no esta disponible, Sara le ensena otros.\n\nModo **preparado**: se apunta todo en *leads_entrantes* (con el comercial que asigno eGO y el que toca por la referencia) y no se manda nada.",
+        "content": "## Que se le manda\n- Inmueble **Disponible** en eGO: **bienvenida_compra / _alquiler** con el enlace de la web (o la referencia si no esta en la web).\n- **Reservado, vendido, alquilado, retirado...**: **plantilla_abierta**: ya no esta disponible, Sara le ensena otros.\n\nModo **preparado**: se apunta todo en *leads_entrantes* y solo se manda a los telefonos de prueba. Con 'real' (wa/config.js) se manda a todos.",
         "height": 300,
-        "width": 560
+        "width": 600
       },
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
@@ -825,21 +650,6 @@
       ],
       "id": "1b9bb1c5-523d-5b07-8d56-f0b006889d17",
       "name": "Nota2"
-    },
-    {
-      "parameters": {
-        "content": "## SIN PROBAR\nFalta la contrasena en la credencial **eGO API**. Hasta entonces este escenario no esta activo.",
-        "height": 160,
-        "width": 380
-      },
-      "type": "n8n-nodes-base.stickyNote",
-      "typeVersion": 1,
-      "position": [
-        2380,
-        -420
-      ],
-      "id": "627ef422-fb26-50fe-a08e-f66809913e2b",
-      "name": "Nota3"
     }
   ],
   "connections": {
@@ -855,28 +665,6 @@
       ]
     },
     "ListarLeads": {
-      "main": [
-        [
-          {
-            "node": "EstadosDeInmueble",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "EstadosDeInmueble": {
-      "main": [
-        [
-          {
-            "node": "Empleados",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Empleados": {
       "main": [
         [
           {
@@ -902,14 +690,21 @@
       "main": [
         [
           {
-            "node": "¿Ya visto?",
+            "node": "YaVistos",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "NadaNuevo",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "¿Ya visto?": {
+    "YaVistos": {
       "main": [
         [
           {
@@ -924,36 +719,25 @@
       "main": [
         [
           {
-            "node": "DetalleLead",
+            "node": "EstadoDelInmueble",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "DetalleLead": {
+    "EstadoDelInmueble": {
       "main": [
         [
           {
-            "node": "DetalleInmueble",
+            "node": "LaCartera",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "DetalleInmueble": {
-      "main": [
-        [
-          {
-            "node": "EnLaCartera",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "EnLaCartera": {
+    "LaCartera": {
       "main": [
         [
           {
@@ -1020,6 +804,28 @@
         [
           {
             "node": "EnviarPrimerWhatsApp",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "EnviarPrimerWhatsApp": {
+      "main": [
+        [
+          {
+            "node": "MarcarPlantillaEnviada",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "MarcarPlantillaEnviada": {
+      "main": [
+        [
+          {
+            "node": "ApuntarEnviado",
             "type": "main",
             "index": 0
           }

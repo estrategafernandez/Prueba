@@ -108,6 +108,18 @@ const SOLO_CONTACTOS_CON_BOT = false;
 // salvo que ya la tenga una de ellas: un cambio hecho a mano se respeta.
 const AGENTES_CHATWOOT = { Carmen: 5, Gisela: 4, Laurence: 6 };
 
+// --- eGO (CRM) -----------------------------------------------------------------
+// Comprobado con la API el 2-10-2026. Agencia 4338.
+const EGO_ESTADOS = { 2: 'Disponible', 3: 'Vendido', 4: 'Reservado', 5: 'Alquilado', 7: 'Captación',
+                      8: 'Retirado', 9: 'En evaluación' };
+const EGO_DISPONIBLE = 2;
+const EGO_PORTALES = { 701: 'Idealista', 31: 'Fotocasa', 680: 'Properstar' };
+// Usuarios de eGO de cada comercial (securityUserID)
+const EGO_COMERCIALES = { 88560: 'Carmen', 62597: 'Gisela', 10768: 'Laurence' };
+// Llaves: en eGO solo constan las de algunos inmuebles. Con false, que no consten no
+// impide ofrecer visita: se le dice a la asesora en el aviso para que lo coordine.
+const LLAVES_OBLIGATORIAS = false;
+
 // --- Tiempos -----------------------------------------------------------------
 const BUFFER_SEGUNDOS = 60;         // se juntan los mensajes que el cliente manda seguidos
 const RECORDATORIO_HORAS = 24;      // aviso al comercial antes de cada visita
@@ -220,4 +232,10 @@ function agenteDe(nombre) {
 function esPrueba(telefono) {
   const t = normalizarTelefono(telefono).wa_id;
   return !!t && (PRUEBAS.telefonos || []).includes(t);
+}
+
+// Lo nuevo de leads y eGO (primer WhatsApp a los leads, notas en eGO) solo
+// actua de verdad con MODO_LEADS = 'real'; con los telefonos de prueba, siempre.
+function leadsEnReal(telefono) {
+  return MODO_LEADS === 'real' || esPrueba(telefono);
 }

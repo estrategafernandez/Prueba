@@ -7,7 +7,9 @@
 //   Nombre: ...  Email: ...  Teléfono: ...  Observaciones: ...  RGPD: ...  IP: ...
 //
 // Solo se cogen estos: los de los portales ya entran en eGO y salen de alli.
-const j = $input.first().json || {};
+// Llega el correo entero (de [WA] 1, uno por uno) como texto JSON en "correo"
+let j = $input.first().json || {};
+if (typeof j.correo === 'string') { try { j = JSON.parse(j.correo); } catch (e) { j = {}; } }
 const de = String(j.from?.text ?? j.from ?? '').toLowerCase();
 const asunto = String(j.subject ?? '');
 const texto = String(j.text || String(j.html ?? '').replace(/<[^>]+>/g, ' '))

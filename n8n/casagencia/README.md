@@ -365,27 +365,59 @@ web usa la plantilla abierta. Probado con los 27 formularios reales: 15
 buscadores, 6 propietarios y 9 que no eran clientes.
 
 Con `MODO_LEADS = 'preparado'` (`wa/config.js`) todo se apunta en la tabla
-`leads_entrantes` y **no se manda nada**. Con `'real'` se da de alta el lead y
-sale el WhatsApp.
+`leads_entrantes` y **no se manda nada** (salvo a los teléfonos de prueba). Con
+`'real'` se da de alta el lead y sale el WhatsApp.
 
-### eGO (API) — preparado, falta la contraseña
+El trigger de Gmail puede traer varios correos de golpe: cada uno se trata por
+separado en `[WA][SUB] LeadDeLaWeb`, para que no se pierda ninguno.
 
-- `[EGO][SUB] Llamar a eGO`: login con la credencial **eGO API** (usuario
-  casagencia@casagencia.com; la contraseña se pone en n8n, en la credencial) y
-  sesión guardada 50 min en Redis. Probado hasta el login.
-- `[WA] 5 · Leads de eGO (portales)`: cada 5 minutos, los leads nuevos de eGO
-  con su detalle y el estado de su inmueble; decide la plantilla igual que la
-  web (si el piso está vendido, reservado o retirado, plantilla abierta y
-  parecidos). Apunta también el comercial que asignó eGO, el que toca por la
-  referencia y si eGO creó el contacto. Inactivo y en modo preparado.
-- `[EGO][SUB] FichaCRM`: estado del inmueble, si la agencia tiene las **llaves**
-  (si no, no se cierra visita) y las **fichas de visita** (puntos positivos y
-  negativos, internos). Sin conectar a Sara hasta probarlo.
-- `[EGO][SUB] NotaEnEgo`: deja en la ficha del contacto en eGO una nota con el
-  resumen de la conversación.
+### eGO (API) — conectado y probado el 2-10-2026
 
-Reparto: manda la **referencia** (BN/OR Carmen, CS/VR Gisela), igual que el
-teléfono. Lo que asigne eGO queda apuntado al lado para comprobar que coincide.
+Las visitas **se siguen agendando solo en Google Calendar**: no se crea nada en
+la agenda ni en las fichas de visita de eGO. De eGO se **lee** (estado, llaves,
+fichas de visita, leads) y solo se **escribe** la nota del historial.
+
+- `[EGO][SUB] Llamar a eGO`: login con la credencial **eGO API** (la contraseña
+  está solo en n8n) y sesión guardada 50 min en Redis (`ego:sesion`). Las
+  respuestas se leen como texto; las listas van repetidas
+  (`?realestateIds=1&realestateIds=2`) y `applicationIds: []` se rellena con la
+  agencia (4338).
+- `[WA] 5 · Leads de eGO (portales)` — **ACTIVO en modo preparado**: cada 5
+  minutos, los leads de portales (`portalId`) de las últimas 3 horas (eGO guarda
+  las fechas en UTC). Cada lead ya trae teléfono, inmueble, venta/alquiler y
+  comercial; del inmueble se pide el estado (`GetRealestate`). Disponible (2) →
+  bienvenida con el enlace de la web (o la referencia si no está en la web);
+  reservado, vendido, alquilado o retirado → `plantilla_abierta` (ya no está,
+  ¿te enseño otros?) en el idioma del mensaje.
+- `[EGO][SUB] FichaCRM`: por la referencia (`CheckRealestateReference`), el
+  **estado**, las **llaves** (llavero del inmueble en la agencia;
+  `ListRealestateKeyGroup`) y las **fichas de visita** (hechas, programadas,
+  interés, puntos positivos y negativos: internos). La usa Sara con la
+  herramienta `consultarCRM` antes de ofrecer visita, y la pre-reserva para
+  poner en el aviso a la asesora el estado y las llaves.
+- `[EGO][SUB] NotaEnEgo`: nota en el historial del cliente (tipo *WhatsApp* o
+  *Llamada*), en su **contacto** si existe y, si no, en su **lead** más
+  reciente. La ponen los avisos de WhatsApp (pre-reserva, intervenir, aviso) y
+  cada llamada del asistente telefónico.
+
+Lo comprobado con los datos reales:
+
+- Los leads de los portales **no crean contacto** en eGO (`potencialClientId`
+  vacío); el contacto lo crea la comercial cuando trabaja al cliente. Por eso la
+  nota va al contacto si lo hay y, si no, al lead.
+- La **asignación de eGO coincide** con el reparto por referencia en los 35
+  leads revisados (BN/OR Carmen, CS/VR Gisela). Se usa la regla de la
+  referencia y lo de eGO queda apuntado al lado (`asignacion_coincide`).
+- **Llaves**: solo unos pocos inmuebles tienen llavero en eGO, así que no tener
+  llaves registradas no impide ofrecer visita (`LLAVES_OBLIGATORIAS = false`):
+  se le dice a la asesora en el aviso.
+- Los reservados y vendidos no están en el feed de la web: si alguien pide uno,
+  ya sale como no disponible.
+
+**Un solo interruptor para salir**: `MODO_LEADS` en `wa/config.js`. Con
+`'preparado'` los leads (web y eGO) se apuntan en `leads_entrantes` sin mandar
+nada y no se escriben notas en eGO; con `'real'` se manda el primer WhatsApp y
+se escriben las notas. Con los teléfonos de prueba funciona siempre en real.
 
 ### La cartera de WhatsApp (`[WA] 4`)
 

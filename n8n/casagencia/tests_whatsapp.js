@@ -275,6 +275,14 @@ ck('pasar a humano pone 4-intervenir', r.etiquetas === '4-intervenir', r.etiquet
 ck('sin destinatario: la de la referencia (Gisela)', r.para_nombre === 'Gisela', r.para_nombre);
 r = wa('aviso_preparar.js', inp([{ json: { accion: 'AVISO', resumen: 'Queja por la firma' } }]))[0].json;
 ck('sin referencia ni zona: Laurence', r.para_nombre === 'Laurence', r.para_nombre);
+r = wa('aviso_preparar.js', inp([{ json: { accion: 'PRE-RESERVA', destinatario: 'Carmen', referencia: 'BN-1547-V',
+  cliente_telefono: '600000001', cita: 'viernes 2 de octubre a las 17:00', resumen: 'r', detalle: 'Lleva seis meses',
+  conversacion_id: 3 } }]))[0].json;
+ck('nota para eGO con la pre-reserva y lo hablado', r.nota_ego_si === true && r.cliente_telefono_e164 === '+34600000001'
+   && ['PRE-RESERVA', 'viernes 2 de octubre', 'BN-1547-V', 'Asesora: Carmen', 'Lleva seis meses', 'conversations/3']
+     .every(x => r.nota_ego.includes(x)), r.nota_ego);
+ck('el recordatorio y las llamadas no ponen nota en eGO desde aqui', ['RECORDATORIO', 'LLAMADA'].every(a =>
+   wa('aviso_preparar.js', inp([{ json: { accion: a, cliente_telefono: '600000001' } }]))[0].json.nota_ego_si === false));
 ck('aviso largo recortado a 900', wa('aviso_preparar.js', inp([{ json: { resumen: 'a'.repeat(3000) } }]))[0]
    .json.aviso.length <= 900);
 
@@ -664,6 +672,11 @@ r = wa('web_parsear.js', inp([{ json: correoWeb('Petición de Contacto\nOrigen d
   + 'Voramar, presupuesto 330.000\nRGPD: Declaro que he leído...\nIP: 1.2.3.4\nUser Agent: Mozilla') }]))[0].json;
 ck('web: es de la web y saca los campos', r.es_de_la_web && r.nombre === 'Ana Pruebas' && r.email_cliente === 'ana@ejemplo.com'
    && r.telefono_e164 === '+34600112233' && r.idioma === 'es', JSON.stringify(r).slice(0, 200));
+const r1 = r;
+r = wa('web_parsear.js', inp([{ json: { correo: JSON.stringify(correoWeb('Petición de Contacto\nNombre: Ana Pruebas\n'
+  + 'Teléfono: 600 11 22 33\nObservaciones: Hola')) } }]))[0].json;
+ck('web: llega de [WA] 1 como texto (un correo cada vez) y se lee igual', r.es_de_la_web && r.telefono_e164 === '+34600112233');
+r = r1;
 ck('web: el mensaje sin el RGPD ni la IP', r.mensaje === 'Busco un piso de unos 75 metros en Voramar, presupuesto 330.000', r.mensaje);
 r = wa('web_parsear.js', inp([{ json: correoWeb('Contact Form Contact Source : https://www.casagencia.com/en-gb/contacts '
   + 'Name: John Test Email: john@example.com Phone: +44 7700 900123 Remarks: Looking for a villa in Benicassim RGPD: ok',
@@ -697,6 +710,17 @@ ck('propietario: captacion para la asesora de su zona', r.accion === 'captacion'
    && /Carmen se pondrá en contacto/.test(r.param2));
 r = decide('otro');
 ck('spam o proveedores: no se manda nada', r.accion === 'revisar' && r.plantilla === '');
+{
+  const textos = [];
+  for (const idioma of ['es', 'en', 'fr']) for (const [tipo, extra] of [['compra', { referencia: 'BN-1528-V', disponible: false }],
+    ['compra', {}], ['vender_su_vivienda', {}]]) textos.push(decide(tipo, { ...extra, idioma }).param2);
+  ck('Sara se presenta como "Sara, IA de Casagencia", nunca como asistente virtual',
+     textos.every(t => /^(Soy Sara, IA de Casagencia|I'm Sara, Casagencia's AI|Je suis Sara, l'IA de Casagencia)\./.test(t)
+       && !/virtu|asistente|assistant/i.test(t)), textos.find(t => /virtu|asistente|assistant/i.test(t)) || '');
+  const prompt = fs.readFileSync(B + 'wa/prompt_asistente.md', 'utf8');
+  ck('el prompt: Sara, IA de Casagencia (y prohibe "asistente virtual")', /Eres Sara, IA de Casagencia/.test(prompt)
+     && (prompt.match(/asistente virtual/gi) || []).length === 1 && /Nunca digas que eres\s+una asistente virtual/.test(prompt));
+}
 ck('los parametros nunca llevan saltos de linea', !/\n/.test(decide('compra', { resumen_cliente: 'algo\ncon salto' }).param2));
 r = lead('web_decidir.js', inp([{}]), nod({ LeerFormulario: { mensaje: '', se_puede_contactar: true, nombre: 'Ana', idioma: 'es' },
   Clasificar: { choices: [{ message: { content: '{"tipo":"otro"}' } }] }, LeerInmueble: {} }))[0].json;
@@ -706,39 +730,81 @@ r = lead('web_decidir.js', inp([{}]), nod({ LeerFormulario: { mensaje: 'Me inter
   LeerInmueble: {} }))[0].json;
 ck('cita una referencia que ya no esta en la cartera: no disponible', r.accion === 'no_disponible', r.accion);
 
-console.log('\n== 19. eGO: leads de portales y ficha del CRM ==');
-const egoDec = (lead_, inm, cartera, estados = [{ id: 1, name: 'Disponible' }, { id: 3, name: 'Vendido' }]) =>
-  lead('ego_decidir.js', inp([{}]), (n) => {
-    const m = { Separar: { lead_id: '77', nombre: '', telefono: '' }, DetalleLead: { datos: lead_ }, DetalleInmueble: { datos: inm },
-      EnLaCartera: cartera, EstadosDeInmueble: { datos: estados },
-      Empleados: { datos: [{ id: 5, firstName: 'Carmen', lastName: 'X' }, { id: 4, firstName: 'Gisela', lastName: 'Y' }] } };
-    if (!(n in m)) throw new Error('no simulado ' + n);
-    return { first: () => ({ json: m[n] }), item: { json: m[n] }, all: () => [{ json: m[n] }] };
-  })[0].json;
-const leadEgo = { name: 'Ana Pruebas', phone: '0034600112233', email: 'ana@ejemplo.com', leadOrigin: { name: 'Idealista' },
-  realestateId: 25370429, potencialClientId: 9001, assignToSecurityUserId: 5, obs: 'Me gustaria visitarlo' };
-r = egoDec(leadEgo, { id: 25370429, reference: 'BN-1528-V', realestateStatusId: 1 },
-  { ref: 'BN-1528-V', enlace: 'https://www.casagencia.com/inmueble/x/25370429', tipo_transaccion: 'venta' });
-ck('eGO: disponible -> bienvenida_compra', r.plantilla === 'bienvenida_compra' && r.telefono_e164 === '+34600112233' && r.disponible === true);
-ck('eGO: contacto creado y asignacion de eGO = la de la referencia', r.contacto_creado === true && r.asignado_ego === 'Carmen X'
-   && r.asesora_por_referencia === 'Carmen' && r.asignacion_coincide === true, JSON.stringify([r.asignado_ego, r.asignacion_coincide]));
-r = egoDec(leadEgo, { id: 25370429, reference: 'BN-1528-V', realestateStatusId: 3 },
-  { ref: 'BN-1528-V', enlace: 'https://www.casagencia.com/inmueble/x/25370429' });
-ck('eGO: vendido -> plantilla_abierta (ya no esta disponible)', r.accion === 'no_disponible' && r.estado_inmueble === 'Vendido');
-r = egoDec({ ...leadEgo, assignToSecurityUserId: 4 }, { id: 1, reference: 'BN-1000-V', realestateStatusId: 1 }, {});
-ck('eGO: ya no publicado en la web -> no disponible; y avisa de asignacion distinta',
-   r.accion === 'no_disponible' && r.asignacion_coincide === false && r.asignado_ego === 'Gisela Y');
-const fichaCrm = (inm, llaves, visitas) => wa('ego_ficha.js', inp([{}]), (n) => {
-  const m = { Start: { referencia: 'BN-1528-V' }, Inmueble: { datos: inm }, Estados: { datos: [{ id: 1, name: 'Disponible' }, { id: 2, name: 'Reservado' }] },
-    Llaves: { datos: llaves }, FichasDeVisita: { datos: visitas } };
-  return { first: () => ({ json: m[n] }) };
-})[0].json;
-r = fichaCrm({ id: 1, realestateStatusId: 1, hasKey: true }, [], [{ interested: true, positivePoints: 'Luz', negativePoints: 'Ruido' }]);
-ck('ficha: disponible, con llaves y con los puntos de las visitas', r.disponible && r.tiene_llaves && r.visitas === 1
-   && r.puntos_negativos[0] === 'Ruido' && /INTERNO/.test(r.respuesta));
-r = fichaCrm({ id: 1, realestateStatusId: 2, hasKey: false }, [], []);
-ck('ficha: reservado y sin llaves -> no se ofrece ni se cierra visita', !r.disponible && !r.tiene_llaves
-   && /NO esta disponible/.test(r.respuesta) && /NO tiene las llaves/.test(r.respuesta));
+console.log('\n== 19. eGO: leads de portales, ficha del CRM y notas ==');
+// Nodo que mira varios nodos anteriores, cada uno con su lista de items
+const nodos = m => n => {
+  if (!(n in m)) throw new Error('el test no simula el nodo ' + n);
+  const items = [].concat(m[n]).map(j => ({ json: j }));
+  return { first: () => items[0], item: items[0], all: () => items };
+};
+// Un lead tal y como lo devuelve ListLeadByPage (datos inventados)
+const itemEgo = (o = {}) => ({ id: 60300001, name: 'Ana Pruebas', phone: '0034600112233', email: 'Ana@Ejemplo.com',
+  realestateReference: 'BN-1528-V', realestateId: 29567768, portalId: 701, originId: 1, potencialClientId: null,
+  assignToSecurityUserId: 88560, assignToSecurityUserIds: [88560], assignToSecurityUserNames: ['Carmen Prueba'],
+  masterLeadType: { id: 2, name: { 'ES-ES': 'Venta', 'EN-GB': 'For sale' } },
+  leadSubOrigin: { nameMls: { 'ES-ES': 'Idealista ES Solicitud de Visita' }, portalId: 701 },
+  obs: 'Nuevo mensaje de Ana sobre tu inmueble, con ref: BN-1528-V<br />Hola, me gustaria visitarlo.',
+  createDate: '2026-10-02T10:00:00', ...o });
+r = wa('ego_leads_separar.js', inp([{ json: { ok: true, datos: { totalRows: 3, leads: [
+  itemEgo(), itemEgo({ id: 60300002, portalId: null }),
+  itemEgo({ id: 60300003, portalId: 680, realestateReference: 'CS-1449-A', masterLeadType: { name: { 'ES-ES': 'Alquiler' } },
+    leadSubOrigin: { nameMls: { 'ES-ES': 'Properstar (Free) Solicitud de Información' } }, obs: 'Hi<br />Hello, I am interested' }),
+] } } }]), () => ({}));
+ck('separar: solo los de portales, con todo lo del lead', r.length === 2 && r[0].json.lead_id === '60300001'
+   && r[0].json.portal === 'Idealista' && r[0].json.operacion === 'venta' && r[0].json.mensaje === 'Hola, me gustaria visitarlo.'
+   && r[1].json.portal === 'Properstar' && r[1].json.operacion === 'alquiler', JSON.stringify(r.map(x => x.json.portal)));
+ck('separar: si eGO falla, un item vacio con el error', wa('ego_leads_separar.js', inp([{ json: { ok: false, error: 'login: 401' } }]),
+   () => ({}))[0].json.error === 'login: 401');
+const separados = r.map(x => x.json);
+const egoDec = (estados, cartera) => lead('ego_decidir.js', inp([{}]), nodos({
+  SoloNuevos: separados, EstadoDelInmueble: estados, LaCartera: { filas: cartera } })).map(x => x.json);
+const enLaWeb = [{ ref: 'BN-1528-V', enlace: 'https://www.casagencia.com/inmueble/x/25370429', municipio: 'Benicassim' }];
+r = egoDec([{ ok: true, datos: { realestateStatusId: 2 } }, { ok: true, datos: { realestateStatusId: 5 } }], enLaWeb);
+ck('eGO: disponible -> bienvenida_compra con el enlace de la web', r[0].plantilla === 'bienvenida_compra'
+   && r[0].param2.startsWith('https://') && r[0].telefono_e164 === '+34600112233' && r[0].disponible === true);
+ck('eGO: alquilado -> plantilla_abierta (ya no esta), en el idioma del cliente', r[1].accion === 'no_disponible'
+   && r[1].plantilla === 'plantilla_abierta' && /no longer available/.test(r[1].param2) && r[1].estado_inmueble === 'Alquilado');
+ck('eGO: asignacion de eGO = la de la referencia; sin contacto creado', r[0].asignado_ego === 'Carmen'
+   && r[0].asesora_por_referencia === 'Carmen' && r[0].asignacion_coincide === true && r[0].contacto_creado === false);
+ck('eGO: en modo preparado no se manda (salvo telefonos de prueba)', r[0].enviar === false);
+r = egoDec([{ ok: true, datos: { realestateStatusId: 2 } }, { ok: false, datos: null }], []);
+ck('eGO: disponible pero no esta en la web -> bienvenida con la referencia', r[0].accion === 'bienvenida' && r[0].param2 === 'ref. BN-1528-V');
+ck('eGO: si eGO no contesta y no esta en la web -> no disponible', r[1].disponible === false && r[1].accion === 'no_disponible');
+
+const ahora = DateTime.now().setZone('Europe/Madrid');
+const fichaCrm = (id, inm, llaves, visitas) => wa('ego_ficha.js', inp([{}]), nodos({
+  Start: { referencia: 'bn-1528-v' }, IdDeEgo: { datos: id }, Inmueble: { datos: inm }, Llaves: { datos: llaves },
+  FichasDeVisita: { datos: visitas } }))[0].json;
+const visita = (dias, o = {}) => ({ realestateId: 29567768, date: ahora.plus({ days: dias }).toFormat("yyyy-MM-dd'T'HH:mm:ss"),
+  interested: null, positivePoints: [], negativePoints: [], notAttended: false, ...o });
+r = fichaCrm(29567768, { id: 29567768, realestateStatusId: 2, assignToSecurityUserId: 88560 },
+  [{ realestateId: 29567768, name: 'LLAVES PORTAL', realestateKeyMovementTypeId: null }],
+  [visita(-3, { interested: true, positivePoints: [{ name: 'Luz' }], negativePoints: ['Ruido'] }), visita(5)]);
+ck('ficha: disponible, llaves en la agencia, visitas hechas y programadas', r.disponible === true && r.tiene_llaves
+   && r.visitas_hechas === 1 && r.visitas_programadas === 1 && r.puntos_positivos[0] === 'Luz' && r.puntos_negativos[0] === 'Ruido'
+   && r.comercial === 'Carmen' && /INTERNO/.test(r.respuesta) && r.referencia === 'BN-1528-V', r.respuesta);
+r = fichaCrm(29567768, { id: 29567768, realestateStatusId: 4 }, [], []);
+ck('ficha: reservado -> no se ofrece visita y se recomiendan otros', r.disponible === false && r.estado === 'Reservado'
+   && /NO esta disponible/.test(r.respuesta) && /recomendarSimilares/.test(r.respuesta) && !/Puedes ofrecer/.test(r.respuesta));
+r = fichaCrm(29567768, { id: 29567768, realestateStatusId: 2 }, [], []);
+ck('ficha: sin llaves en eGO -> la visita se ofrece igual (la coordina la asesora)', r.disponible && !r.tiene_llaves
+   && /no constan/.test(r.llaves) && /Puedes ofrecer la visita igual/.test(r.respuesta) && /llaves no constan/.test(r.para_la_asesora));
+r = fichaCrm(29567768, { id: 29567768, realestateStatusId: 2 }, [{ realestateId: 29567768, name: 'L', realestateKeyMovementTypeId: 1 }], []);
+ck('ficha: llaves que han salido de la agencia', !r.tiene_llaves && /han salido/.test(r.llaves));
+r = fichaCrm(0, null, null, null);
+ck('ficha: referencia que no esta en eGO -> no se sabe (manda la cartera)', r.encontrado === false && r.disponible === null);
+
+const destino = (contactos, leads) => wa('ego_nota_destino.js', inp([{}]), nodos({
+  Preparar: { nueve: '600112233', texto: 'Resumen' }, BuscarContacto: { datos: { searchList: contactos } },
+  BuscarLead: { datos: { leads } } }))[0].json;
+r = destino([{ id: 45, firstName: 'Ana', phones: [{ number: '+34 600 112 233' }] }], [{ id: 9, phone: '0034600112233' }]);
+ck('nota: si tiene contacto en eGO, en el contacto', r.objeto === 2 && r.objeto_id === 45);
+r = destino([], [{ id: 8, phone: '0034600112233', createDate: '2026-09-01T10:00:00' },
+  { id: 9, phone: '0034600112233', createDate: '2026-10-01T10:00:00' }, { id: 7, phone: '0034699999999', createDate: '2026-10-02T10:00:00' }]);
+ck('nota: si no, en su lead mas reciente (de su telefono)', r.objeto === 3 && r.objeto_id === 9);
+ck('nota: si no esta en eGO, no se escribe', destino([], []).objeto_id === null);
+const prepNota = (tel) => wa('ego_nota_preparar.js', inp([{ json: { telefono: tel, texto: 'x' } }]), () => ({}))[0].json;
+ck('nota: en modo preparado no se escribe en eGO', prepNota('+34600112233').escribir === false && prepNota('+34600112233').nueve === '600112233');
 
 // ===========================================================================
 console.log(fallos ? `\n${fallos} FALLOS` : '\nTodo correcto');
