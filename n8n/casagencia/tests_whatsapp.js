@@ -678,6 +678,13 @@ ck('asignada a Carmen y con aviso por WhatsApp', r.agente_id === 5 && r.avisar =
 ck('con la grabacion', r.grabacion.endsWith('rec.wav'));
 ck('para no repetir avisos: se mira desde que empezo la llamada', r.inicio_iso
    === DateTime.fromMillis(llamada.start_timestamp).toUTC().toISO() && r.telefono_wa === '34600000002', r.inicio_iso);
+{
+  const bin = { mimeType: 'binary/octet-stream', fileName: 'recording.wav', fileExtension: 'wav' };
+  const it = wa('llamada_audio.js', { first: () => ({ json: {}, binary: { data: bin } }) },
+    nod({ LeerLlamada: leer(llamada) }))[0];
+  ck('la grabacion sube como AUDIO (Chatwoot la reproduce en el chat, no la descarga)', it.binary.data.mimeType === 'audio/wav'
+     && it.binary.data.fileName === 'llamada-01-10-16h51.wav', JSON.stringify(it.binary.data));
+}
 ck('cada aviso dice que es (para apuntarlo y no repetir)', wa('aviso_preparar.js', inp([{ json: { accion: 'aviso',
   origen: 'telefono', cliente_telefono: '600000002' } }]))[0].json.accion === 'AVISO');
 r = leer({ ...llamada, duration_ms: 5000, disconnection_reason: 'user_hangup', call_analysis: { call_summary: '' } });

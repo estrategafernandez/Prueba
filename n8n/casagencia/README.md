@@ -333,7 +333,8 @@ que OpenAI saca de la transcripción si lo dijo):
 - etiqueta `0-llamada_telefonica`;
 - nota privada: *LLAMADA DE LA IA — Colgó la IA / Nos llamó · teléfono · día y
   hora · duración*, el resumen, el tono del cliente, la asesora y la
-  **grabación** para escucharla en el panel;
+  **grabación**, subida como audio para escucharla dentro de la conversación
+  (Retell la sirve como fichero genérico y Chatwoot la ponía para descargar);
 - se asigna a la asesora de la llamada;
 - **aviso por WhatsApp** a la asesora y a Paco con el resumen y el enlace al chat
   (si la llamada ha durado al menos 15 s). Sustituye a los correos de cada llamada.

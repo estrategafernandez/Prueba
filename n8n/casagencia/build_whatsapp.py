@@ -1725,6 +1725,7 @@ def wf_llamada_panel(ids):
             "url": "={{ %s.grabacion }}" % l,
             "options": {"response": {"response": {"responseFormat": "file"}}, "timeout": 60000},
         }, [1980, 0], 4.2, onError="continueErrorOutput"),
+        code_node("ComoAudio", code_wa("llamada_audio.js"), [2090, -120]),
         node("NotaConGrabacion", "n8n-nodes-base.httpRequest", {
             "method": "POST",
             "url": "=" + CW_API + "/conversations/{{ %s.conversacion_id }}/messages" % cv,
@@ -1769,7 +1770,7 @@ def wf_llamada_panel(ids):
              "FinalizarLlamadaRetell` al terminar cada llamada (sin esperar: no le cambia nada).\n\n"
              "1. El contacto por su telefono (y su nombre, que OpenAI saca de la transcripcion si lo "
              "dijo), y su conversacion del inbox de WhatsApp.\n2. Etiqueta **0-llamada_telefonica**.\n3. "
-             "Nota privada con el resumen, el tono y la **grabacion**.\n4. Se asigna a la asesora de la "
+             "Nota privada con el resumen, el tono y la **grabacion** (como audio: se escucha en el panel).\n4. Se asigna a la asesora de la "
              "llamada (si no la tiene ya una comercial).\n5. Aviso por WhatsApp a la asesora y a Paco (si ha "
              "durado al menos %d s); sustituye a los correos de cada llamada. Si en la llamada ya salio un recado o una "
              "pre-reserva, no se repite.\n6. La misma nota, en el historial de eGO (contacto o lead del cliente; solo "
@@ -1783,7 +1784,7 @@ def wf_llamada_panel(ids):
             ("DatosDelCliente", 0, "ConversacionDelContacto", 0),
             ("ConversacionDelContacto", 0, "EtiquetaLlamada", 0),
             ("EtiquetaLlamada", 0, "DescargarGrabacion", 0),
-            ("DescargarGrabacion", 0, "NotaConGrabacion", 0), ("DescargarGrabacion", 1, "NotaSinGrabacion", 0),
+            ("DescargarGrabacion", 0, "ComoAudio", 0), ("ComoAudio", 0, "NotaConGrabacion", 0), ("DescargarGrabacion", 1, "NotaSinGrabacion", 0),
             ("NotaConGrabacion", 0, n_if, 0), ("NotaConGrabacion", 1, "NotaSinGrabacion", 0),
             ("NotaSinGrabacion", 0, n_if, 0),
             (n_if, 0, n_post, 0), (n_if, 1, "ApuntarConversacion", 0), (n_post, 0, "ApuntarConversacion", 0),

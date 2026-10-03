@@ -57,6 +57,8 @@ return [{ json: {
   telefono_e164: tel.e164,
   telefono_wa: tel.wa_id,
   telefono_valido: tel.valido,
+  // Nombre del audio en el panel: llamada-03-10-11h22.wav
+  inicio_nombre: inicio ? inicio.toFormat("dd-MM-HH'h'mm") : '',
   // Desde cuando mirar si ya salio un aviso en esta llamada (recado, pre-reserva)
   inicio_iso: (inicio || DateTime.now().setZone(ZONA).minus({ minutes: 30 })).toUTC().toISO(),
   asesora,
