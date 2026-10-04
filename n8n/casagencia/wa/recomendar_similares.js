@@ -53,8 +53,12 @@ const puntos = (r) => {
   return p;
 };
 
+// Sin la ficha del que ya no esta no se sabe que era: se ofrecen viviendas (lo
+// que busca casi todo el mundo), no terrenos, locales ni oficinas.
+const VIVIENDA = /apartamento|piso|chalet|villa|duplex|town house|village house|casa|estudio|ground floor|atico|bungalow|adosad/;
 const candidatos = filas
   .filter(r => r.operacion === base.operacion && !excluir.has(r.ref.toUpperCase()))
+  .filter(r => !porReferencia || VIVIENDA.test(sinAcentos(r.tipo)))
   .filter(r => (!pmax || (r.precio && r.precio <= pmax)) && (!pmin || r.precio >= pmin))
   .map(r => ({ r, p: puntos(r) }))
   .filter(x => x.p >= 3)
