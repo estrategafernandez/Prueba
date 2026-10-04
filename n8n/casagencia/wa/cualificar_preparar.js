@@ -58,9 +58,12 @@ return [{
     es_vendedor: vendedor,
     etiqueta_vendedor: ETIQUETA_VENDEDOR,
     asesora: r.destinatario,
-    estado: alquiler ? 'alquiler_pasado_al_equipo' : 'cualificado',
+    // En alquiler pasa al equipo solo cuando estan las cuatro respuestas (lo mira
+    // ¿Alquiler completo? con lo que queda guardado, que junta las de varias veces)
+    estado: alquiler ? 'alquiler_cualificando' : 'cualificado',
     ...campos,
     campos_con_dato: Object.entries(campos).filter(([, v]) => v).map(([k]) => k),
+    resumen_sara: resumen,
     conversacion_id: Number(j.conversacion_id || 0),
     // Lo que necesita el aviso al equipo (solo se usa en alquiler)
     aviso: {

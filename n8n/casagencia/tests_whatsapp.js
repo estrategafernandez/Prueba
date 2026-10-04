@@ -249,6 +249,22 @@ ck('alquiler: a Gisela', r.aviso.destinatario === 'Gisela', r.aviso.destinatario
 ck('alquiler: el aviso lleva las cuatro respuestas',
    ['3', 'nomina indefinida', 'un perro', '1 de noviembre'].every(v => r.aviso.resumen.includes(v)), r.aviso.resumen);
 ck('alquiler: no ofrece hora', /No le ofrezcas fecha ni hora/.test(r.respuesta));
+{
+  // Alquiler en dos veces: primero tres respuestas (falta la fecha), luego la fecha
+  const prep = wa('cualificar_preparar.js', inp([{ json: { telefono: '+34600000001', referencia: 'CS-1479-A',
+    personas: '2', ingresos: 'nomina', mascotas: 'no', resumen: 'Pareja interesada.', conversacion_id: 7 } }]))[0].json;
+  const falta = (guardado) => wa('cualificar_falta.js', inp([{}]), nod({ Preparar: prep, GuardarFicha: guardado }))[0].json;
+  let f = falta({ id: 4, q_personas: '2', q_ingresos: 'nomina', q_mascotas: 'no', q_entrada: '', q_actividad: '' });
+  ck('alquiler sin la fecha de entrada: NO pasa al equipo y dice que falta', f.completo === false
+     && f.faltan.join() === 'para que fecha necesitan entrar', f.faltan.join());
+  const resp = wa('cualificar_respuesta.js', inp([{}]), nod({ Preparar: prep, FaltaAlquiler: f }))[0].json.respuesta;
+  ck('a Sara: que lo pregunte y aun no se despida', /falta para que fecha necesitan entrar/.test(resp) && /Aun no le digas/.test(resp));
+  f = falta({ id: 4, q_personas: '2', q_ingresos: 'nomina', q_mascotas: 'no', q_entrada: '1 de noviembre', q_actividad: '' });
+  ck('con la fecha (guardada despues): completo, y el aviso lleva las cuatro', f.completo === true
+     && ['2', 'nomina', 'no', '1 de noviembre', 'Pareja interesada.'].every(x => f.resumen_aviso.includes(x)), f.resumen_aviso);
+  f = falta({ id: 5, q_personas: '', q_ingresos: '', q_mascotas: '', q_entrada: 'enero', q_actividad: 'cafeteria' });
+  ck('local o traspaso: basta actividad y fecha', f.completo === true);
+}
 
 // ===========================================================================
 console.log('\n== 7. El aviso al comercial (plantilla_aviso) ==');

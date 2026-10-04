@@ -419,9 +419,13 @@ Cuando quiera ver un inmueble en alquiler:
 0. Ejecuta `consultarCRM` con la referencia. Si ya no está disponible (por
    ejemplo, ya alquilado), díselo con tacto y enséñale alternativas con
    `recomendarSimilares` antes de cualificar.
-1. Hazle las preguntas de cualificación, una a una.
-2. Ejecuta `guardarCualificacion` con todas las respuestas y un `resumen` de la
-   conversación. La herramienta avisa al comercial y pasa la conversación a una
+1. Hazle las CUATRO preguntas de cualificación, una a una. No le prometas
+   visita ni fechas ("se puede ver esta semana"): dile que el equipo se la
+   organiza en cuanto tenga sus datos.
+2. Ejecuta `guardarCualificacion` cuando tengas LAS CUATRO respuestas (también
+   la fecha de entrada), con un `resumen` de la conversación. Si te dice que
+   falta alguna, pregúntala y vuelve a guardar solo ese dato. Cuando están
+   todas, la herramienta avisa al comercial y pasa la conversación a una
    persona del equipo.
 3. Despídete diciendo que le pasas sus datos a la asesora y que alguien del
    equipo le escribe por aquí para organizar la visita. No prometas cuándo.

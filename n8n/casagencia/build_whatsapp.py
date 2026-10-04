@@ -472,7 +472,7 @@ on conflict (telefono_wa, referencia) do update set
   conversacion_id = coalesce(nullif(excluded.conversacion_id, 0), wa_leads.conversacion_id),
   %s,
   actualizado_en = now()
-returning id;""" % (
+returning id, q_personas, q_ingresos, q_mascotas, q_entrada, q_actividad;""" % (
     ", ".join(_Q),
     ",".join("$%d" % (10 + i) for i in range(len(_Q))),
     ",\n  ".join("%s = case when excluded.%s <> '' then excluded.%s else wa_leads.%s end"
@@ -880,24 +880,34 @@ def wf_cualificar(ids):
                  [860, -160], {"conversacion_id": "number"}, onError="continueRegularOutput",
                  alwaysOutputData=True),
         if_node("¿Es alquiler?", "={{ $('Preparar').first().json.es_alquiler }}", "true", [1080, 0]),
+        code_node("FaltaAlquiler", code_wa("cualificar_falta.js"), [1300, -100]),
+        if_node("¿Alquiler completo?", "={{ $json.completo }}", "true", [1520, -100]),
+        pg_query("MarcarPasado", "update wa_leads set estado = 'alquiler_pasado_al_equipo' where id = $1;",
+                 "={{ [ $json.ficha_id || 0 ] }}", [1740, -200], onError="continueRegularOutput",
+                 alwaysOutputData=True),
         exec_sub("PasarAlEquipo", ids.get("[WA][SUB] AvisoEquipo", ""), "[WA][SUB] AvisoEquipo",
-                 {k: "={{ %s.%s }}" % (a, k) for k, _ in AVISO_IN if k not in ("municipio", "cita")},
-                 [1300, -100], {"conversacion_id": "number", "pasar_a_humano": "boolean"},
+                 dict({k: "={{ %s.%s }}" % (a, k) for k, _ in AVISO_IN if k not in ("municipio", "cita", "origen")},
+                      resumen="={{ $('FaltaAlquiler').first().json.resumen_aviso }}",
+                      detalle="={{ $('FaltaAlquiler').first().json.detalle_aviso }}"),
+                 [1960, -200], {"conversacion_id": "number", "pasar_a_humano": "boolean"},
                  onError="continueRegularOutput", alwaysOutputData=True),
-        code_node("Respuesta", code_wa("cualificar_respuesta.js"), [1520, 0]),
+        code_node("Respuesta", code_wa("cualificar_respuesta.js"), [2180, 0]),
         nota("Nota", "## Cualificacion\n**Compra**: tres preguntas (cuanto tiempo lleva buscando, si "
              "necesita vender para comprar y como lo financia). Si tiene que vender, Sara le pide la "
              "direccion o zona de esa vivienda y la conversacion se marca con la etiqueta **vendedor**. "
              "Despues ofrece la visita.\n\n**Alquiler**: las "
              "cuatro preguntas del telefono (personas, ingresos, mascotas y cuando entrar). Se "
-             "guardan, se avisa al comercial por WhatsApp y la conversacion pasa a *4-intervenir*: "
+             "guardan (pueden llegar en varias veces) y, cuando estan las cuatro, se avisa al comercial por "
+             "WhatsApp y la conversacion pasa a *4-intervenir*: "
              "en alquiler la IA no agenda, decide una persona.", [200, -330], 520, 270),
     ], conn(("Start", 0, "Preparar", 0), ("Preparar", 0, "GuardarFicha", 0),
             ("GuardarFicha", 0, "¿Es vendedor?", 0),
             ("¿Es vendedor?", 0, "MarcarVendedor", 0), ("¿Es vendedor?", 1, "¿Es alquiler?", 0),
             ("MarcarVendedor", 0, "¿Es alquiler?", 0),
-            ("¿Es alquiler?", 0, "PasarAlEquipo", 0), ("¿Es alquiler?", 1, "Respuesta", 0),
-            ("PasarAlEquipo", 0, "Respuesta", 0)))
+            ("¿Es alquiler?", 0, "FaltaAlquiler", 0), ("¿Es alquiler?", 1, "Respuesta", 0),
+            ("FaltaAlquiler", 0, "¿Alquiler completo?", 0),
+            ("¿Alquiler completo?", 0, "MarcarPasado", 0), ("¿Alquiler completo?", 1, "Respuesta", 0),
+            ("MarcarPasado", 0, "PasarAlEquipo", 0), ("PasarAlEquipo", 0, "Respuesta", 0)))
 
 
 # ===========================================================================
