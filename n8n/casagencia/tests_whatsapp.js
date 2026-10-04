@@ -459,6 +459,15 @@ const barato = wa('recomendar_similares.js', inp([{}]), nod({ ...hoja, Start: { 
 const baratoFilas = (barato.referencias || []).map(ref => REAL.find(z => z.ref === ref));
 ck('parecidos y mas baratos que el BN-1528-V: los hay', baratoFilas.length > 0 && baratoFilas.every(x => x.precio < 259000),
    baratoFilas.map(x => `${x.ref} ${x.precio}`).join(', '));
+// Un piso que ya no esta en la cartera (reservado, como el BN-1547-V en eGO): parecidos por su referencia
+{
+  const fuera = 'BN-9999-V';
+  const s2 = wa('recomendar_similares.js', inp([{}]), nod({ ...hoja, Start: { referencia: fuera } }), true)[0].json;
+  const f2 = (s2.referencias || []).map(ref => REAL.find(z => z.ref === ref));
+  ck('parecidos a uno que ya no esta: de venta en su municipio (por la referencia BN)', f2.length > 0
+     && f2.every(x => !/alquil/i.test(x.tipo_transaccion) && x.ref.startsWith('BN')) && /ya no esta en la cartera/.test(s2.respuesta),
+     f2.map(x => x.ref).join(','));
+}
 // Y si el modelo copia los datos del piso como filtros, ya no contesta "no hay nada"
 r = buscar({ operacion: 'venta', municipio: 'Benicasim', zona: 'Pueblo', tipo: 'piso', habitaciones_min: 3,
              banos_min: 2, precio_max: 259000, superficie_min: 90, excluir: 'BN-1528-V' });

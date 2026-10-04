@@ -13,11 +13,28 @@ if (!filas.length) {
 }
 
 const { filas: encontradas } = buscarReferencia(filas, q.referencia);
-if (!encontradas.length) {
+let base = encontradas[0];
+// Si ya no esta en la cartera (vendido, reservado, retirado: la web ya no lo
+// publica), se compara por lo que dice su referencia: la operacion (-V venta,
+// -A alquiler) y el municipio de los de su mismo prefijo (BN, OR, CS, VR...).
+let porReferencia = false;
+if (!base) {
+  const ref = String(q.referencia ?? '').toUpperCase().trim();
+  const pre = prefijoDeReferencia(ref);
+  const op = /-A$/.test(ref) ? 'alquiler' : /-V$/.test(ref) ? 'venta' : '';
+  const hermanos = filas.filter(r => pre && prefijoDeReferencia(r.ref) === pre && (!op || r.operacion === op));
+  if (hermanos.length) {
+    const cuenta = {};
+    for (const r of hermanos) cuenta[r.municipio] = (cuenta[r.municipio] || 0) + 1;
+    base = { ref, operacion: op || hermanos[0].operacion, municipio: Object.entries(cuenta).sort((a, b) => b[1] - a[1])[0][0],
+             zona: '', tipo: '', habitaciones: 0, precio: 0 };
+    porReferencia = true;
+  }
+}
+if (!base) {
   return salida(`No encuentro ${q.referencia || 'esa referencia'} en la cartera para comparar. Si sabes lo que ` +
     'busca el cliente, usa buscarInmuebles con sus criterios.', { total: 0 });
 }
-const base = encontradas[0];
 const excluir = new Set([base.ref.toUpperCase(),
   ...String(q.excluir ?? '').toUpperCase().split(/[,;\s]+/).filter(Boolean)]);
 const limite = Math.min(Math.max(Math.round(aNumero(q.limite)) || 3, 1), 5);
@@ -50,7 +67,10 @@ if (!candidatos.length) {
     '. Diselo con naturalidad y ofrecele buscar con otros criterios o que el equipo le avise si entra algo.', { total: 0 });
 }
 
-return salida(`Parecidos a ${base.ref} (${base.tipo}, ${municipioCorto(base.municipio)}, ${euros(base.precio, base.operacion)}), ` +
+return salida((porReferencia
+  ? `${base.ref} ya no esta en la cartera. Estos son de ${base.operacion} en ${municipioCorto(base.municipio)}, `
+    + 'su misma zona; si quiere afinar (precio, habitaciones), usa buscarInmuebles con lo que te diga. '
+  : `Parecidos a ${base.ref} (${base.tipo}, ${municipioCorto(base.municipio)}, ${euros(base.precio, base.operacion)}), `) +
   'de mas a menos parecido. Ensenale como mucho 3, breve. Las referencias entre corchetes son internas.\n'
   + candidatos.map(x => '- ' + tarjeta(x.r, dirs)).join('\n'),
   { total: candidatos.length, referencias: candidatos.map(x => x.r.ref) });
