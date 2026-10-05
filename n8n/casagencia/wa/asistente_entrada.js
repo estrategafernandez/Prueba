@@ -84,7 +84,6 @@ const procesar = motivos.length === 0;
 // Y los del bot, para que se vea en la ejecucion por que no ha contestado
 if (!botAsignado) motivos.push('bot_sin_seleccionar');
 if (!botEncendido) motivos.push('bot_apagado');
-if (intervenida) motivos.push('conversacion_intervenida');
 
 // Identificador del mensaje: con el se reconocen los avisos repetidos de Chatwoot
 // y se distinguen dos mensajes iguales ("ok", "ok") en la cola de Redis.

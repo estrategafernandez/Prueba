@@ -93,6 +93,10 @@ CW_API     = "%s/api/v1/accounts/%s" % (CW_URL, CW_CUENTA)
 # Ids de Carmen, Gisela y Laurence como agentes del panel (de AGENTES_CHATWOOT)
 COMERCIALES_CW = [int(x) for x in re.findall(r"\d+", const("AGENTES_CHATWOOT", "{}"))]
 assert len(COMERCIALES_CW) == 3, COMERCIALES_CW
+# Las comerciales de zona (Carmen y Gisela): si la conversacion ya es de una de
+# ellas no se reasigna; si es de Laurence (o de nadie), pasa a la de la referencia.
+ASESORAS_CW = [int(x) for x in re.findall(r"(?:Carmen|Gisela):\s*(\d+)", const("AGENTES_CHATWOOT", "{}"))]
+assert len(ASESORAS_CW) == 2, ASESORAS_CW
 ETQ_BIENVENIDA = "1-bienvenida_ia"
 assert ETQ_BIENVENIDA in CONFIG and MARCA and PHONE_ID and WABA_ID
 
@@ -794,6 +798,9 @@ def wf_aviso(ids):
                                        "$json.meta?.assignee?.id", [1960, -80])
     return wf("[WA][SUB] AvisoEquipo", [
         trigger_sub(AVISO_IN),
+        pg_query("ResolverReferencia", SQL_RESOLVER_REF,
+                 "={{ [ String($json.referencia || ''), %s ] }}" % tel_wa("$json.cliente_telefono"), [60, 180],
+                 onError="continueRegularOutput", alwaysOutputData=True),
         code_node("Preparar", code_wa("aviso_preparar.js"), [200, 0]),
         if_node("¿Nota en eGO?", "={{ $json.nota_ego_si }}", "true", [420, 0]),
         exec_sub("NotaEnEgo", ids.get("[EGO][SUB] NotaEnEgo", ""), "[EGO][SUB] NotaEnEgo",
@@ -829,10 +836,13 @@ def wf_aviso(ids):
              "plantilla_aviso directa a Meta (no por Chatwoot, para no abrir una conversacion de cliente con "
              "el comercial), a **la comercial y a Paco**. {{1}} = quien lo recibe, {{2}} = de donde viene "
              "(📞 telefono / 💬 WhatsApp), que, quien, un resumen corto, que tiene que hacer y el enlace al "
-             "chat.\n\nSi hay que pasar a una persona, pone 4-intervenir y la IA deja de contestar. La "
-             "conversacion se asigna en el panel a la asesora de la referencia, salvo que ya la tenga una "
-             "comercial.", [200, -460], 640, 380),
-    ], conn(("Start", 0, "Preparar", 0), ("Preparar", 0, "¿Nota en eGO?", 0),
+             "chat.\n\n**La comercial de la referencia manda siempre** (BN/OR Carmen, CS/VR Gisela): antes se "
+             "comprueba la referencia en la cartera (aunque llegue el numero del enlace de la web) y, si no "
+             "hay, la del lead de ese telefono. Laurence solo si no se sabe ni inmueble ni zona.\n\nSi hay "
+             "que pasar a una persona, pone 4-intervenir (la IA sigue contestando: solo se calla con bot = "
+             "Off). La conversacion se asigna en el panel a la comercial del aviso.", [200, -460], 640, 380),
+    ], conn(("Start", 0, "ResolverReferencia", 0), ("ResolverReferencia", 0, "Preparar", 0),
+            ("Preparar", 0, "¿Nota en eGO?", 0),
             ("¿Nota en eGO?", 0, "NotaEnEgo", 0), ("¿Nota en eGO?", 1, "UnoPorDestino", 0),
             ("NotaEnEgo", 0, "UnoPorDestino", 0), ("UnoPorDestino", 0, "EnviarWhatsApp", 0),
             ("EnviarWhatsApp", 0, "Juntar", 0), ("Juntar", 0, "ApuntarAviso", 0),
@@ -857,7 +867,7 @@ def wf_etiquetar():
              body="={{ JSON.stringify({ labels: $json.labels }) }}", onError="continueRegularOutput"),
         nota("Nota", "## Etiquetas del panel (las de Blue)\n**1-bienvenida_ia** plantilla enviada · "
              "**2-en_proceso** el cliente ha contestado · **3-agendada_ia** visita agendada de "
-             "verdad · **4-intervenir** tiene que entrar una persona (la IA se calla).\n\nChatwoot "
+             "verdad · **4-intervenir** tiene que entrar una persona (la IA sigue contestando).\n\nChatwoot "
              "SUSTITUYE la lista entera, asi que primero se leen las que hay y se manda la union. "
              "Las de estado van de una en una y nunca hacia atras.", [200, -330], 500, 260),
     ], conn(("Start", 0, "¿Hay algo que poner?", 0),
@@ -869,11 +879,26 @@ def wf_etiquetar():
 # La referencia que manda Sara, comprobada en la cartera. Si lo que llega es el
 # numero del enlace de la web (p. ej. "26699629-A" en vez de "BN-C-126-A"), se
 # cambia por la referencia de verdad: de ella sale la asesora que recibe el aviso.
-SQL_RESOLVER_REF = """select coalesce((
-  select ref from wa_cartera
-   where upper(ref) = upper(trim($1))
-      or (length(regexp_replace($1, '\\D', '', 'g')) >= 6 and web_id = regexp_replace($1, '\\D', '', 'g'))
-   order by (upper(ref) = upper(trim($1))) desc limit 1), '') as ref_cartera;"""
+SQL_RESOLVER_REF = """with entrada as (
+  select upper(trim($1)) as r,
+         coalesce((regexp_match($1, '(\\d{6,})\\D*$'))[1], (regexp_match($1, '(\\d{6,})'))[1], '') as num
+), en_cartera as (
+  select c.ref, c.municipio from wa_cartera c, entrada e
+   where (e.r <> '' and upper(c.ref) = e.r) or (e.num <> '' and c.web_id = e.num)
+   order by (upper(c.ref) = e.r) desc limit 1
+), del_lead as (
+  select coalesce(c.ref, l.referencia) as referencia from wa_leads l
+    left join wa_cartera c on upper(c.ref) = upper(l.referencia)
+                           or c.web_id = (regexp_match(l.referencia, '(\\d{6,})'))[1]
+   where $2 <> '' and l.telefono_wa = $2 and l.referencia <> ''
+   order by l.actualizado_en desc, (c.ref is not null) desc limit 1
+)
+select coalesce((select ref from en_cartera), '') as ref_cartera,
+       coalesce((select municipio from en_cartera), '') as municipio_cartera,
+       coalesce((select referencia from del_lead), '') as ref_del_lead;"""
+# Telefono en el formato de wa_leads.telefono_wa (34 + 9 cifras)
+def tel_wa(expr):
+    return "(d => d.length === 9 ? '34' + d : d)(String(%s || '').replace(/\\D/g, ''))" % expr
 
 
 def wf_cualificar(ids):
@@ -889,7 +914,8 @@ def wf_cualificar(ids):
                      ("personas", "string"), ("ingresos", "string"),
                      ("mascotas", "string"), ("entrada", "string"), ("duracion", "string"),
                      ("actividad", "string"), ("resumen", "string"), ("conversacion_id", "number")]),
-        pg_query("ResolverReferencia", SQL_RESOLVER_REF, "={{ [ String($json.referencia || '') ] }}", [80, -180],
+        pg_query("ResolverReferencia", SQL_RESOLVER_REF,
+                 "={{ [ String($json.referencia || ''), %s ] }}" % tel_wa("$json.telefono"), [80, -180],
                  onError="continueRegularOutput", alwaysOutputData=True),
         code_node("Preparar", code_wa("cualificar_preparar.js"), [200, 0]),
         pg_query("GuardarFicha", SQL_CUALIFICAR, valores, [420, 0],
@@ -919,7 +945,7 @@ def wf_cualificar(ids):
              "Despues ofrece la visita.\n\n**Alquiler**: las "
              "cuatro preguntas del telefono (personas, ingresos, mascotas y cuando entrar). Se "
              "guardan (pueden llegar en varias veces) y, cuando estan las cuatro, se avisa al comercial por "
-             "WhatsApp y la conversacion pasa a *4-intervenir*: "
+             "WhatsApp y la conversacion se marca con *4-intervenir*: "
              "en alquiler la IA no agenda, decide una persona.", [200, -330], 520, 270),
     ], conn(("Start", 0, "ResolverReferencia", 0), ("ResolverReferencia", 0, "Preparar", 0),
             ("Preparar", 0, "GuardarFicha", 0),
@@ -1221,15 +1247,16 @@ def wf_recordatorio(ids):
 
 def asignar(prefijo, conv_expr, agente_expr, asignado_expr, pos):
     """IF + POST de asignacion en Chatwoot. Solo asigna si hay comercial para la
-    referencia y la conversacion no la tiene ya una comercial (un cambio a mano
-    se respeta). Devuelve (nodos, nombre_if, nombre_post)."""
+    referencia y la conversacion no la tiene ya Carmen o Gisela (un cambio a mano
+    entre ellas se respeta; si la tiene Laurence, pasa a la comercial).
+    Devuelve (nodos, nombre_if, nombre_post)."""
     x, y = pos
     nif, npost = "¿%s?" % prefijo, prefijo
     return [
         if_node(nif, None, None, [x, y], conds=[
             ("={{ Number(%s || 0) }}" % conv_expr, "gt", 0, "number"),
             ("={{ Number(%s || 0) }}" % agente_expr, "gt", 0, "number"),
-            ("={{ %s.includes(Number(%s || 0)) }}" % (json.dumps(COMERCIALES_CW), asignado_expr),
+            ("={{ %s.includes(Number(%s || 0)) }}" % (json.dumps(ASESORAS_CW), asignado_expr),
              "false", None, "boolean")]),
         http(npost, "POST", "=" + CW_API + "/conversations/{{ Number(%s) }}/assignments" % conv_expr,
              [x + 220, y - 140], cred=CRED_CHATWOOT,
@@ -1459,10 +1486,8 @@ def wf_asistente(ids):
                 der=1, tipo="number"),
         noop("AvisoRepetido", [1100, Y + 200]),
         # --- 2. Filtrar si el bot esta encendido o apagado -------------------
-        # Solo se para con bot = Off (o 4-intervenir). Sin valor, contesta.
-        if_node("Bot on/off", None, None, [1400, Y], conds=[
-            ("={{ %s.bot_encendido }}" % ent, "true", None, "boolean"),
-            ("={{ %s.intervenida }}" % ent, "false", None, "boolean")]),
+        # Solo se para con bot = Off. Sin valor, On o con 4-intervenir, contesta.
+        if_node("Bot on/off", "={{ %s.bot_encendido }}" % ent, "true", [1400, Y]),
         noop("BotApagado", [1620, Y + 200]),
         # --- 3. Separar audio, texto e imagen --------------------------------
         switch_por_tipo("Switch", "={{ %s.tipo }}" % ent, ["audio", "image", "text", "otro"], [1960, Y]),
@@ -1561,8 +1586,8 @@ def wf_asistente(ids):
              "Chatwoot a veces avisa dos veces del mismo mensaje: Redis lo marca y solo pasa una vez.",
              [-60, -300], 1100, 620, color=6),
         nota("Filtrar bot", "## Filtrar si el bot esta encendido o apagado\nAtributo **bot** del contacto, "
-             "como en Blue. **Off**, o la etiqueta **4-intervenir**: la IA se calla y lo lleva una "
-             "persona. **On** o sin valor (*Select value*): contesta la IA.",
+             "como en Blue. **Off**: la IA se calla y lo lleva una persona. **On** o sin valor (*Select "
+             "value*): contesta la IA, tambien con la etiqueta 4-intervenir.",
              [1220, -300], 660, 620),
         nota("Separar", "## Separar audio, texto e imagen\n- **Audio**: se baja de Chatwoot y lo transcribe "
              "OpenAI -> *[nota de voz] ...*\n- **Imagen**: la describe OpenAI (si es un anuncio, copia "

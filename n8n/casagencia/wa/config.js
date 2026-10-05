@@ -102,7 +102,7 @@ const ETIQUETAS = {
   bienvenida: '1-bienvenida_ia',   // la IA ha mandado la plantilla
   en_proceso: '2-en_proceso',      // el cliente ha contestado y la IA esta con el
   agendada:   '3-agendada_ia',     // visita agendada de verdad en el calendario
-  intervenir: '4-intervenir',      // tiene que entrar una persona: la IA se calla
+  intervenir: '4-intervenir',      // tiene que entrar una persona (la IA sigue contestando: solo se calla con bot = Off)
 };
 const ESTADOS = [ETIQUETAS.bienvenida, ETIQUETAS.en_proceso, ETIQUETAS.agendada];
 // Etiquetas que se SUMAN a las de estado (no cuentan como estado):
@@ -187,6 +187,15 @@ const sinAcentos = (s) => String(s ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '
 function prefijoDeReferencia(ref) {
   const m = String(ref ?? '').toUpperCase().match(/[A-Z]{2}/);
   return m ? m[0] : '';
+}
+
+// De varias referencias posibles (la de la cartera, la que manda el agente, la
+// del lead de ese telefono), la primera que tiene comercial (BN/OR -> Carmen,
+// CS/VR -> Gisela). Asi un numero de enlace ("26699629-A") nunca deja el aviso
+// sin comercial si hay otra referencia buena.
+function referenciaBuena(...candidatas) {
+  const limpias = candidatas.map(x => String(x ?? '').toUpperCase().trim()).filter(Boolean);
+  return limpias.find(x => ASESORA_POR_PREFIJO[prefijoDeReferencia(x)]) || limpias[0] || '';
 }
 
 // Asesora por referencia y, si no hay, por municipio. Si no hay ninguna, Laurence.

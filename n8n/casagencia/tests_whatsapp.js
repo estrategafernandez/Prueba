@@ -92,7 +92,7 @@ const casos = [
   ['mensaje vacio y sin adjunto', msj({ content: '' }), false],
   ['nota de voz (sin texto) SI se atiende', msj({ content: '', attachments: [{ file_type: 'audio', data_url: 'https://x/a.ogg' }] }), true],
   ['foto SI se atiende', msj({ content: '', attachments: [{ file_type: 'image', data_url: 'https://x/a.jpg' }] }), true],
-  ['etiqueta 4-intervenir', msj({}, { ...conv, labels: ['2-en_proceso', '4-intervenir'] }), false],
+  ['etiqueta 4-intervenir: SIGUE contestando (solo para con bot Off)', msj({}, { ...conv, labels: ['2-en_proceso', '4-intervenir'] }), true],
   ['conversacion resuelta', msj({}, { ...conv, status: 'resolved' }), false],
   ['bot sin valor ("Select value"): contesta', msj({}, conBot(undefined)), true],
   ['bot vacio: contesta', msj({}, conBot('')), true],
@@ -704,6 +704,32 @@ ck('CS -> para Gisela (agente 4)', av({ referencia: 'CS-1479-A' }).agente_id ===
 ck('VR -> para Gisela', av({ referencia: 'VR-1001-V' }).agente_id === 4);
 ck('sin referencia: a quien va el aviso', av({ destinatario: 'Laurence' }).agente_id === 6);
 ck('la referencia manda sobre el destinatario', av({ referencia: 'OR-1313-V', destinatario: 'Laurence' }).agente_id === 5);
+// Que un aviso de un inmueble NUNCA vaya a Laurence en vez de a la comercial
+const avR = (j, resuelto) => wa('aviso_preparar.js', inp([{}]), nod({
+  Start: { accion: 'INTERVENIR', cliente_telefono: '+34611111111', conversacion_id: 9, ...j },
+  ResolverReferencia: { ref_cartera: '', municipio_cartera: '', ref_del_lead: '', ...resuelto } }))[0].json;
+r = avR({ referencia: '26699629-A', destinatario: 'Laurence' }, { ref_cartera: 'BN-C-126-A', municipio_cartera: 'Benicasim / Benicàssim' });
+ck('caso Paco: numero del enlace + Laurence -> Carmen y Paco, con la referencia buena',
+   r.para_nombre === 'Carmen' && r.destinos.join() === 'Carmen,Paco' && r.agente_id === 5 && r.referencia === 'BN-C-126-A'
+   && /Inmueble BN-C-126-A/.test(r.aviso), r.destinos.join() + ' / ' + r.referencia);
+r = avR({ referencia: '', destinatario: 'Laurence' }, { ref_del_lead: 'CS-1479-A' });
+ck('sin referencia en el aviso: la del lead de ese telefono -> Gisela', r.para_nombre === 'Gisela' && r.agente_id === 4);
+r = avR({ referencia: 'VR-1001-V', destinatario: 'Carmen' }, {});
+ck('la referencia manda tambien sobre otra comercial (VR -> Gisela aunque digan Carmen)', r.para_nombre === 'Gisela');
+r = avR({ referencia: '', municipio: 'Oropesa del Mar', destinatario: 'Laurence' }, {});
+ck('sin referencia pero con municipio de zona -> su comercial', r.para_nombre === 'Carmen');
+r = avR({ referencia: '', destinatario: 'Laurence' }, {});
+ck('solo si no se sabe ni inmueble ni zona -> Laurence', r.para_nombre === 'Laurence' && r.destinos.join() === 'Laurence,Paco');
+ck('toda la cartera real (93 referencias) va a Carmen o a Gisela, nunca a Laurence',
+   REAL.every(f => ['Carmen', 'Gisela'].includes(avR({ referencia: f.ref, destinatario: 'Laurence' }, {}).para_nombre)));
+const wfAv = JSON.parse(fs.readFileSync(B + 'workflows_wa/WA_SUB_AvisoEquipo.json', 'utf8'));
+ck('AvisoEquipo: Start -> ResolverReferencia -> Preparar', wfAv.connections.Start.main[0][0].node === 'ResolverReferencia'
+   && wfAv.connections.ResolverReferencia.main[0][0].node === 'Preparar');
+ck('panel: si la conversacion la tiene Laurence, pasa a la comercial (solo Carmen y Gisela se respetan)',
+   /\[5, ?4\]\.includes/.test(JSON.stringify(wfAv.nodes.find(n => n.name === '¿AsignarConversacion?').parameters)));
+const wf2 = JSON.parse(fs.readFileSync(B + 'workflows_wa/WA_2_Asistente_de_WhatsApp.json', 'utf8'));
+const botIf = wf2.nodes.find(n => n.name === 'Bot on/off').parameters.conditions.conditions;
+ck('bot: solo lo para el bot = Off (no la etiqueta 4-intervenir)', botIf.length === 1 && /bot_encendido/.test(botIf[0].leftValue));
 ck('ningun aviso sale por correo', !('enviar_correo' in av({ referencia: 'BN-1528-V' })) && !('email_para' in av({})));
 r = wa('plantilla_normalizar.js', inp([{ json: {} }]), nod({ Start: { telefono: '600112233', referencia: 'CS-1479-A' } }))[0].json;
 ck('bienvenida: la conversacion para la asesora de la referencia', r.asesora === 'Gisela' && r.agente_id === 4);

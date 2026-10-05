@@ -15,8 +15,8 @@
 const nodo = (n) => { try { return $(n).first().json; } catch (e) { return null; } };
 const j = nodo('Start') || $input.first().json || {};
 const tel = normalizarTelefono(j.telefono);
-const enCartera = String((nodo('ResolverReferencia') || {}).ref_cartera ?? '').trim();
-const referencia = (enCartera || String(j.referencia ?? '')).toUpperCase().trim();
+const c = nodo('ResolverReferencia') || {};
+const referencia = referenciaBuena(c.ref_cartera, j.referencia, c.ref_del_lead);
 const alquiler = esAlquiler(referencia, j.operacion);
 const r = resolverAsesora(referencia);
 
@@ -93,7 +93,7 @@ return [{
     respuesta: alquiler
       ? 'Respuestas guardadas. Dile al cliente, con naturalidad, que le pasas sus datos a la asesora y que '
         + 'alguien del equipo le escribe por aqui para organizar la visita. No le ofrezcas fecha ni hora y '
-        + 'no le hagas mas preguntas: a partir de ahora la conversacion la lleva una persona.'
+        + 'no le vuelvas a hacer las preguntas. Si sigue escribiendo, contestale con normalidad, pero la visita la organiza la asesora.'
       : 'Respuestas guardadas' + (vendedor ? ' (y la conversacion marcada como vendedor)' : '') + '. '
         + (vendedor && !campos.q_vivienda_venta
           ? 'Falta la direccion o zona de la vivienda que tiene que vender: preguntasela antes de seguir y '
