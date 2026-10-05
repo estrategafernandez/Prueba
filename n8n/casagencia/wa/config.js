@@ -156,10 +156,13 @@ const MARCA_ORIGEN = 'Origen: WhatsApp (Sara IA)';
 // --- Pruebas -----------------------------------------------------------------
 // Con estos telefonos el asistente funciona IGUAL que con un cliente, pero:
 //   - los avisos van al que prueba (no a Carmen, Gisela ni Paco), con [PRUEBA];
-//   - las visitas NO se escriben en la agenda real (se consulta de verdad, pero
-//     la reserva se simula), asi no se ocupan huecos ni salta el recordatorio.
+//   - con PRUEBAS_AGENDA_REAL = false las visitas NO se escriben en la agenda
+//     real (se consulta de verdad, pero la reserva se simula). Con true se
+//     escriben como cualquier otra, con [PRUEBA] delante del titulo.
 // Se rellena AL DESPLEGAR desde wa/pruebas.local.json (no esta en git), para no
 // guardar telefonos personales en el repositorio.
+// Desde la salida (6-10-2026) el calendario esta activo para todos, pruebas incluidas.
+const PRUEBAS_AGENDA_REAL = true;
 const PRUEBAS = /*PRUEBAS*/{ telefonos: [], avisar_movil: '', avisar_email: '' }/*FIN_PRUEBAS*/;
 
 // ---------------------------------------------------------------------------

@@ -680,9 +680,10 @@ def wf_confirmar(ids):
         code_node("ValidarAntesDeInsertar", code_tel("cc_validar.js"), [1080, -40]),
         if_node("¿Puede crear?", "={{ $json.puede_crear }}", "true", [1300, -40]),
         code_node("RespuestaRechazo", code_wa("herramienta_respuesta.js"), [1520, 140]),
-        # Numero de prueba: la agenda se ha consultado de verdad, pero la reserva
-        # no se escribe (ni ocupa hueco, ni salta el recordatorio de 24 h).
-        if_node("¿Es prueba?", "={{ $('GuardiaDeAlquiler').first().json.es_prueba }}", "true", [1520, -120]),
+        # Numero de prueba con PRUEBAS_AGENDA_REAL = false: la agenda se ha consultado
+        # de verdad, pero la reserva no se escribe (ni ocupa hueco, ni salta el
+        # recordatorio de 24 h). Con true se escribe, con [PRUEBA] en el titulo.
+        if_node("¿Es prueba?", "={{ $('GuardiaDeAlquiler').first().json.simular_reserva }}", "true", [1520, -120]),
         set_node("SimularReserva", {"id": ("string", "PRUEBA-sin-agenda"), "prueba": ("boolean", "true")},
                  [1740, -260]),
         node("InsertarEnAgenda", "n8n-nodes-base.googleCalendar", {
@@ -694,7 +695,7 @@ def wf_confirmar(ids):
             # titulo es el de las citas del telefono (asi buscarCitaPorTelefono
             # las encuentra) y la marca de origen es lo que mira el recordatorio.
             "additionalFields": {
-                "summary": "={{ 'PRE-RESERVA · ' + $json.titulo }}",
+                "summary": "={{ ($('GuardiaDeAlquiler').first().json.es_prueba ? '[PRUEBA] ' : '') + 'PRE-RESERVA · ' + $json.titulo }}",
                 "color": "5",
                 "description": ("={{ $json.descripcion + '\\n\\nPara confirmarla: llama al cliente y quita "
                                 "PRE-RESERVA del titulo. Si no le va, muevela o borrala.\\n\\n%s\\nConversacion: ' "
@@ -2394,7 +2395,9 @@ def main():
         print("  ACTUALIZADO %-46s %s" % (nombre, ids[nombre]))
     print("\nLos nuevos quedan desactivados; los que ya estaban activos se publican con la version nueva.")
     print("Numeros de prueba: %d %s" % (PRUEBAS_ACTIVAS,
-          "(OJO: con esos telefonos no se escribe en la agenda real)" if PRUEBAS_ACTIVAS
+          ("(con esos telefonos la agenda se escribe de verdad, con [PRUEBA] en el titulo)"
+           if "PRUEBAS_AGENDA_REAL = true" in CONFIG else
+           "(OJO: con esos telefonos no se escribe en la agenda real)") if PRUEBAS_ACTIVAS
           else "(todo en real: agenda y avisos de verdad para todos)"))
 
 

@@ -518,6 +518,15 @@ ck('un cliente normal sigue avisando a Carmen y a Paco', r.envios.map(e => e.met
    && !r.aviso.startsWith('[PRUEBA]'));
 ck('prueba: la guardia lo marca', waP('guardia_alquiler.js', inp([{ json: { referencia: 'BN-1528-V',
   tipo_transaccion: 'compra', telefono: '+34600000009', fecha: MARTES, hora: '17:00', modo: 'reserva' } }]))[0].json.es_prueba === true);
+const guardiaP = waP('guardia_alquiler.js', inp([{ json: { referencia: 'BN-1528-V',
+  tipo_transaccion: 'compra', telefono: '+34600000009', fecha: MARTES, hora: '17:00', modo: 'reserva' } }]))[0].json;
+ck('prueba: con el calendario activo (PRUEBAS_AGENDA_REAL) la reserva se escribe de verdad',
+   guardiaP.simular_reserva === false && guardiaP.seguir === true);
+const wfConf = JSON.parse(fs.readFileSync(B + 'workflows_wa/WA_SUB_confirmarCitaCalendario.json', 'utf8'));
+const insertar = wfConf.nodes.find(n => n.name === 'InsertarEnAgenda');
+ck('agenda: se simula solo con simular_reserva, y la de prueba lleva [PRUEBA] en el titulo',
+   /simular_reserva/.test(wfConf.nodes.find(n => n.name === '¿Es prueba?').parameters.conditions.conditions[0].leftValue)
+   && /\[PRUEBA\] /.test(insertar.parameters.additionalFields.summary) && /PRE-RESERVA · /.test(insertar.parameters.additionalFields.summary));
 ck('sin numeros de prueba configurados nadie es prueba', wa('guardia_alquiler.js', inp([{ json: { referencia: 'BN-1528-V',
   tipo_transaccion: 'compra', telefono: '+34600000009', fecha: MARTES, hora: '17:00', modo: 'reserva' } }]))[0].json.es_prueba === false);
 r = wa('cita_respuesta.js', inp([{}]), nod({ ValidarAntesDeInsertar: val, SimularReserva: { id: 'PRUEBA-sin-agenda', prueba: true },
