@@ -112,6 +112,12 @@ def code_leads(fname):
                         (WA / fname).read_text(encoding="utf-8")])
 
 
+def code_correo(fname):
+    """Nodo que compone correos = config + plantilla de correo (correo_lead.js) + el cuerpo."""
+    return "\n\n".join([CONFIG, (WA / "correo_lead.js").read_text(encoding="utf-8"),
+                        (WA / fname).read_text(encoding="utf-8")])
+
+
 def code_tel(fname, cambios=()):
     """Reutiliza un nodo del telefono tal cual (con su libreria), sin tocar el
     fichero original. `cambios` adapta alguna linea al contexto de WhatsApp y
@@ -372,6 +378,8 @@ create table if not exists leads_entrantes (
   creado_en      timestamptz not null default now(),
   unique (fuente, id_origen)
 );
+-- El correo preparado para los leads que solo dejan su email
+alter table leads_entrantes add column if not exists correo_html text not null default '';
 
 -- Llamadas del asistente telefonico ya puestas en el panel (Retell puede
 -- mandar el mismo aviso de fin de llamada mas de una vez)
@@ -1925,6 +1933,21 @@ def ego(name, ids, metodo, ruta, pos, query="{}", cuerpo="{}", **extra):
                     onError="continueRegularOutput", alwaysOutputData=True, **extra)
 
 
+# La ficha del inmueble del lead y, por si ya no esta, 3 viviendas parecidas
+# (misma operacion y mismo prefijo de referencia = mismo municipio). Una fila siempre.
+SQL_FICHA_CORREO = """select
+  (select row_to_json(c) from wa_cartera c where upper(c.ref) = upper($1) limit 1) as ficha,
+  coalesce((select json_agg(p) from (
+     select ref, tipo_inmueble, municipio, zona, precio, habitaciones, banos, superficie, imagen, enlace, tipo_transaccion
+       from wa_cartera
+      where $1 <> '' and upper(left(ref, 2)) = upper(left($1, 2)) and upper(ref) <> upper($1)
+        and (case when upper($1) like '%-A' then tipo_transaccion ilike '%alquil%' else tipo_transaccion not ilike '%alquil%' end)
+        and tipo_inmueble ~* '(apartamento|piso|chalet|villa|d[uú]plex|town house|village house|casa|estudio|ground floor|[aá]tico|bungalow|adosad)'
+      order by actualizado_en desc, precio limit 3) p), '[]'::json) as parecidos;"""
+SQL_GUARDAR_CORREO = """update leads_entrantes set correo_html = $2, estado = $3, detalle = detalle || $4::jsonb
+ where id = $1;"""
+
+
 def wf_leads_ego(ids):
     """Todas las solicitudes de los portales, desde eGO. En modo 'preparado' solo
     manda a los telefonos de prueba; al resto lo apunta sin mandar."""
@@ -1936,7 +1959,8 @@ def wf_leads_ego(ids):
     entradas["conversacion_id"] = 0
     registro = ("={{ [ 'ego', $json.lead_id, $json.telefono_e164, $json.nombre, $json.referencia, $json.tipo, "
                 "$json.accion, $json.plantilla, $json.param2, $json.asesora, $json.se_puede_contactar ? "
-                "($json.enviar ? 'enviando' : 'preparado') : 'sin_telefono', JSON.stringify({ portal: $json.portal, "
+                "($json.enviar ? 'enviando' : 'preparado') : ($json.por_correo ? 'correo_preparado' : 'sin_telefono'), "
+                "JSON.stringify({ portal: $json.portal, email: $json.email_cliente, "
                 "solicitud: $json.solicitud, estado_inmueble: $json.estado_inmueble, disponible: $json.disponible, "
                 "contacto_creado: $json.contacto_creado, asignado_ego: $json.asignado_ego, asesora_por_referencia: "
                 "$json.asesora_por_referencia, asignacion_coincide: $json.asignacion_coincide, notas: $json.notas }) ] }}")
@@ -1984,6 +2008,28 @@ def wf_leads_ego(ids):
                  [3040, -220], onError="continueRegularOutput", alwaysOutputData=True),
         pg_query("ApuntarEnviado", SQL_ENTRANTE_ESTADO, "={{ [ $('Registrar').item.json.id, 'enviado' ] }}",
                  [3260, -220], onError="continueRegularOutput", alwaysOutputData=True),
+        # Sin telefono pero con correo: correo con la ficha y un boton de WhatsApp
+        if_node("¿Por correo?", None, None, [2160, 320], conds=[
+            ("={{ %s.por_correo }}" % d, "true", None, "boolean"),
+            ("={{ !!$json.id }}", "true", None, "boolean")]),
+        pg_query("FichaParaCorreo", SQL_FICHA_CORREO, "={{ [ %s.referencia || '' ] }}" % d, [2380, 320],
+                 alwaysOutputData=True, onError="continueRegularOutput"),
+        node("ComponerCorreo", "n8n-nodes-base.code", {"mode": "runOnceForEachItem",
+             "jsCode": code_correo("ego_correo.js")}, [2600, 320], 2),
+        pg_query("GuardarCorreo", SQL_GUARDAR_CORREO,
+                 "={{ [ $json.registro_id, $json.html, 'correo_preparado', JSON.stringify({ correo_asunto: $json.asunto, "
+                 "correo_para: $json.para, correo_modo: $json.modo, whatsapp: $json.whatsapp_url }) ] }}",
+                 [2820, 320], onError="continueRegularOutput", alwaysOutputData=True),
+        if_node("¿Se envia el correo?", "={{ $('ComponerCorreo').item.json.enviar }}", "true", [3040, 320]),
+        noop("EnviarCorreo (falta conectar el buzon)", [3260, 240]),
+        noop("Correo preparado (no se envia)", [3260, 420]),
+        nota("NotaCorreo", "## Leads que solo dejan su correo\nSi el lead no trae telefono pero si email, "
+             "se le prepara un correo (wa/correo_lead.js) en su idioma con la **ficha del inmueble** (foto, "
+             "precio, habitaciones, banos, metros, lo destacado), un boton **Escribenos por WhatsApp** que abre "
+             "el chat con Sara con la referencia ya escrita, y otro a la ficha de la web. Si ya no esta "
+             "disponible: 3 parecidos.\n\nSe guarda en *leads_entrantes* (correo_html). **Falta conectar el "
+             "buzon que lo envia**: sustituir *EnviarCorreo* por un nodo de Gmail (a: para, asunto, html, "
+             "responder a: la asesora) y poner CORREO_LEADS.activo = true.", [2380, 520], 640, 300),
         nota("Nota", "## Todas las solicitudes de los portales, desde eGO\nCada 5 minutos, los leads que han "
              "entrado en eGO en las ultimas 3 horas y vienen de un portal (Idealista, Fotocasa, "
              "Properstar...). Cada lead una sola vez (tabla *leads_entrantes*).\n\nEl lead ya trae el "
@@ -2001,7 +2047,11 @@ def wf_leads_ego(ids):
             ("Separar", 0, "¿Hay leads?", 0), ("¿Hay leads?", 0, "YaVistos", 0), ("¿Hay leads?", 1, "NadaNuevo", 0),
             ("YaVistos", 0, "SoloNuevos", 0), ("SoloNuevos", 0, "EstadoDelInmueble", 0),
             ("EstadoDelInmueble", 0, "LaCartera", 0), ("LaCartera", 0, "Decidir", 0),
-            ("Decidir", 0, "Registrar", 0), ("Registrar", 0, "¿Se manda?", 0),
+            ("Decidir", 0, "Registrar", 0), ("Registrar", 0, "¿Se manda?", 0), ("Registrar", 0, "¿Por correo?", 0),
+            ("¿Por correo?", 0, "FichaParaCorreo", 0), ("FichaParaCorreo", 0, "ComponerCorreo", 0),
+            ("ComponerCorreo", 0, "GuardarCorreo", 0), ("GuardarCorreo", 0, "¿Se envia el correo?", 0),
+            ("¿Se envia el correo?", 0, "EnviarCorreo (falta conectar el buzon)", 0),
+            ("¿Se envia el correo?", 1, "Correo preparado (no se envia)", 0),
             ("¿Se manda?", 0, "AltaDelLead", 0), ("¿Se manda?", 1, "Preparado (no se manda)", 0),
             ("AltaDelLead", 0, "¿Lead nuevo?", 0), ("¿Lead nuevo?", 0, "EnviarPrimerWhatsApp", 0),
             ("EnviarPrimerWhatsApp", 0, "MarcarPlantillaEnviada", 0),

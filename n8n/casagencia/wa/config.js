@@ -66,6 +66,19 @@ const EQUIPO = {
 // La direccion: recibe TODOS los avisos por WhatsApp, ademas de la comercial.
 const DIRECCION = { nombre: 'Paco', movil: '34662052387' };
 
+// --- WhatsApp de la IA (para enlaces wa.me) -------------------------------------
+// El numero de la linea de Sara, sin + ni espacios, para los botones de WhatsApp
+// de la web y de los correos.
+const WHATSAPP_IA = '34864893794';
+const LOGO_CASAGENCIA = 'https://media.egorealestate.com/ORIGINAL/70400c69-431c-46bf-b25d-9ac843eb1b7e.png';
+// Mensaje con el que llega quien pulsa la bolita de WhatsApp de casagencia.com
+const MENSAJE_BOLITA_WEB = 'Hola, os acabo de ver por la web y estoy interesado en uno de vuestros inmuebles.';
+
+// --- Correo a los leads que solo dejan su email ---------------------------------
+// La plantilla esta en wa/correo_lead.js. Falta conectar el buzon que los va a
+// mandar: hasta entonces activo = false y el correo solo se prepara y se guarda.
+const CORREO_LEADS = { activo: false, remitente: '', nombre: 'Sara · Casagencia' };
+
 // --- Leads entrantes ------------------------------------------------------------
 // De la WEB salen del buzon formularioscasagencia@gmail.com (credencial "Correo
 // Formulario"): solo los de web@websites.egorealestate.com. Los de los PORTALES

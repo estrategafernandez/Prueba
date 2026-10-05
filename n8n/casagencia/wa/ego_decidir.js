@@ -47,6 +47,9 @@ return nuevos.map((n, k) => {
     se_puede_contactar: tel.valido,
     // Se manda de verdad solo con MODO_LEADS = 'real' (o a un telefono de prueba)
     enviar: tel.valido && !!d.plantilla && leadsEnReal(tel.e164),
+    // Sin telefono pero con correo: se le prepara el correo con la ficha y el WhatsApp
+    por_correo: !tel.valido && /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(b.email),
+    idioma: idiomaDe(b.mensaje),
     nombre: b.nombre,
     email_cliente: b.email,
     referencia: b.referencia,

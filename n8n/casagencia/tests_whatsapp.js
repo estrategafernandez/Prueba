@@ -867,5 +867,60 @@ const prepNota = (tel) => wa('ego_nota_preparar.js', inp([{ json: { telefono: te
 ck('nota: en modo preparado no se escribe en eGO', prepNota('+34600112233').escribir === false && prepNota('+34600112233').nueve === '600112233');
 
 // ===========================================================================
+console.log('== Correo para los leads que solo dejan su email ==');
+r = egoDec([{ ok: true, datos: { realestateStatusId: 2 } }], enLaWeb);
+const sinTel = lead('ego_decidir.js', inp([{}]), nodos({
+  SoloNuevos: [{ ...separados[0], telefono: '', mensaje: 'Hello, I would like more information' }],
+  EstadoDelInmueble: [{ ok: true, datos: { realestateStatusId: 2 } }], LaCartera: { filas: enLaWeb } }))[0].json;
+ck('eGO: sin telefono pero con email -> por correo, en su idioma', sinTel.por_correo === true && sinTel.se_puede_contactar === false
+   && sinTel.enviar === false && sinTel.idioma === 'en' && sinTel.email_cliente === 'ana@ejemplo.com', JSON.stringify([sinTel.por_correo, sinTel.idioma]));
+ck('eGO: con telefono no va por correo', r[0].por_correo === false);
+const sinNada = lead('ego_decidir.js', inp([{}]), nodos({
+  SoloNuevos: [{ ...separados[0], telefono: '', email: 'sin correo' }],
+  EstadoDelInmueble: [{ ok: true, datos: { realestateStatusId: 2 } }], LaCartera: { filas: enLaWeb } }))[0].json;
+ck('eGO: sin telefono ni email valido -> ni WhatsApp ni correo', sinNada.por_correo === false && sinNada.enviar === false);
+
+const CORREO = fs.readFileSync(B + 'wa/correo_lead.js', 'utf8');
+// Nodo ComponerCorreo (una vez por item: $json es la fila de FichaParaCorreo)
+const correo = (decidir, fila, registrar = { id: 77 }) => Function('$json', '$', 'DateTime', '"use strict";' + CFG + '\n' + CORREO + '\n'
+  + fs.readFileSync(B + 'wa/ego_correo.js', 'utf8'))(fila, nodos({ Decidir: decidir, Registrar: registrar }), DateTime).json;
+const piso = REAL.find(f => f.ref === 'BN-1528-V');
+const parecidos = REAL.filter(f => /^BN-.*-V$/.test(f.ref) && f.ref !== 'BN-1528-V').slice(0, 3);
+const datosLead = { nombre: 'Ana Belen Marti', idioma: 'es', referencia: 'bn-1528-v', portal: 'Idealista', disponible: true,
+  asesora: 'Carmen', email_cliente: 'ana@ejemplo.com' };
+const waTexto = (c) => decodeURIComponent(c.whatsapp_url.split('?text=')[1]);
+r = correo(datosLead, { ficha: piso, parecidos: [] });
+ck('correo: disponible -> ficha con foto, precio, datos, boton de WhatsApp y ficha', r.modo === 'ficha'
+   && r.html.includes(piso.imagen) && r.html.includes('259.000') && r.html.includes(piso.enlace)
+   && r.html.includes('Escríbenos por WhatsApp') && r.html.includes('Ver la ficha completa'), r.asunto);
+ck('correo: el WhatsApp va a la linea de Sara con la referencia ya escrita',
+   r.whatsapp_url.startsWith('https://wa.me/34864893794?text=') && /ref\. BN-1528-V/.test(waTexto(r)), waTexto(r));
+ck('correo: se presenta como Sara, IA de Casagencia (nunca asistente virtual)',
+   /Sara, IA de Casagencia/.test(r.html) && !/asistente virtual/i.test(r.html + r.texto));
+ck('correo: saluda por el nombre de pila y nombra el portal y la asesora', /Hola Ana,/.test(r.texto)
+   && /en Idealista/.test(r.texto) && /Carmen, tu asesora/.test(r.html));
+ck('correo: version en texto plano con los enlaces', r.texto.includes(piso.enlace) && r.texto.includes(r.whatsapp_url));
+ck('correo: a quien va, registro y responder a la asesora', r.para === 'ana@ejemplo.com' && r.registro_id === 77
+   && r.responder_a === cfg.EQUIPO.Carmen.email);
+ck('correo: no se envia mientras no este conectado el buzon', r.enviar === false);
+ck('correo: con un trozo de la descripcion, sin el "CASAGENCIA INMOBILIARIA presenta"', /elegante y lleno de luz/.test(r.html)
+   && !/CASAGENCIA INMOBILIARIA/.test(r.html.split('Ver la ficha')[0].replace(/Casagencia Inmobiliaria/g, '')));
+// La ficha llega como texto si el driver no la convierte
+r = correo(datosLead, { ficha: JSON.stringify(piso), parecidos: '[]' });
+ck('correo: acepta la ficha como texto JSON', r.modo === 'ficha' && r.html.includes(piso.imagen));
+r = correo({ ...datosLead, idioma: 'fr' }, { ficha: piso, parecidos: [] });
+ck('correo: en frances, sin la descripcion en espanol', r.idioma === 'fr' && /Bonjour Ana/.test(r.html)
+   && /Écrivez-nous sur WhatsApp/.test(r.html) && /réf\. BN-1528-V/.test(waTexto(r)) && !/elegante y lleno de luz/.test(r.html + r.texto));
+r = correo({ ...datosLead, disponible: false }, { ficha: piso, parecidos });
+ck('correo: ya no esta -> lo dice, 3 parecidos y WhatsApp para ver otros', r.modo === 'ya_no_esta'
+   && /ya no está disponible/.test(r.html) && parecidos.every(f => r.html.includes(f.enlace)) && /otros parecidos/.test(waTexto(r))
+   && !r.html.includes('Ver la ficha completa'), r.asunto);
+r = correo(datosLead, { ficha: null, parecidos: [] });
+ck('correo: disponible pero no esta en la web -> sin tarjeta, con la referencia', r.modo === 'sin_ficha'
+   && /con referencia BN.1528.V/.test(r.texto) && /ref\. BN-1528-V/.test(waTexto(r)));
+r = correo({ ...datosLead, nombre: '<b>Eve</b>' }, { ficha: piso, parecidos: [] });
+ck('correo: el nombre del cliente va escapado', !r.html.includes('<b>Eve</b>') && r.html.includes('&lt;b&gt;Eve'));
+
+// ===========================================================================
 console.log(fallos ? `\n${fallos} FALLOS` : '\nTodo correcto');
 process.exit(fallos ? 1 : 0);
