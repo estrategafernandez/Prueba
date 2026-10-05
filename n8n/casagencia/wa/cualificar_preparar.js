@@ -9,9 +9,14 @@
 //               mascotas y cuando entrar). Se guardan, se avisa al comercial
 //               y la conversacion pasa a una persona: en alquiler la IA no
 //               agenda, decide el equipo.
-const j = $input.first().json || {};
+// Lo que manda Sara llega por Start; antes pasa por ResolverReferencia, que
+// cambia el numero del enlace de la web (p. ej. "26699629-A") por la referencia
+// de la cartera ("BN-C-126-A"), que es la que decide a que asesora va el aviso.
+const nodo = (n) => { try { return $(n).first().json; } catch (e) { return null; } };
+const j = nodo('Start') || $input.first().json || {};
 const tel = normalizarTelefono(j.telefono);
-const referencia = String(j.referencia ?? '').toUpperCase().trim();
+const enCartera = String((nodo('ResolverReferencia') || {}).ref_cartera ?? '').trim();
+const referencia = (enCartera || String(j.referencia ?? '')).toUpperCase().trim();
 const alquiler = esAlquiler(referencia, j.operacion);
 const r = resolverAsesora(referencia);
 

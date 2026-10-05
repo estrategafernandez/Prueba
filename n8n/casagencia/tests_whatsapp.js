@@ -249,6 +249,23 @@ ck('alquiler: a Gisela', r.aviso.destinatario === 'Gisela', r.aviso.destinatario
 ck('alquiler: el aviso lleva las cuatro respuestas',
    ['3', 'nomina indefinida', 'un perro', '1 de noviembre'].every(v => r.aviso.resumen.includes(v)), r.aviso.resumen);
 ck('alquiler: no ofrece hora', /No le ofrezcas fecha ni hora/.test(r.respuesta));
+// Caso de Paco (5-10): Sara mando el numero del enlace ("26699629-A") en vez de la
+// referencia (BN-C-126-A, Benicassim) y el aviso se fue a Laurence en vez de a Carmen
+const entradaPaco = { telefono: '+34662052387', nombre: 'Paco', referencia: '26699629-A', operacion: 'alquiler',
+  personas: '2', ingresos: 'si', mascotas: 'no', entrada: 'esta semana', conversacion_id: 3 };
+r = wa('cualificar_preparar.js', inp([{ json: { ref_cartera: 'BN-C-126-A' } }]),
+  nod({ Start: entradaPaco, ResolverReferencia: { ref_cartera: 'BN-C-126-A' } }))[0].json;
+ck('alquiler con el numero del enlace: se usa la referencia de la cartera y va a Carmen',
+   r.referencia === 'BN-C-126-A' && r.aviso.referencia === 'BN-C-126-A' && r.aviso.destinatario === 'Carmen'
+   && r.asesora === 'Carmen' && r.es_alquiler === true, r.aviso.destinatario + ' / ' + r.referencia);
+r = wa('cualificar_preparar.js', inp([{ json: { ref_cartera: '' } }]),
+  nod({ Start: { ...entradaPaco, referencia: 'CS-1479-A' }, ResolverReferencia: { ref_cartera: '' } }))[0].json;
+ck('si la cartera no la conoce, se queda la que mando Sara', r.referencia === 'CS-1479-A' && r.aviso.destinatario === 'Gisela');
+const wfCual = JSON.parse(fs.readFileSync(B + 'workflows_wa/WA_SUB_guardarCualificacion.json', 'utf8'));
+ck('guardarCualificacion: Start -> ResolverReferencia -> Preparar',
+   wfCual.connections.Start.main[0][0].node === 'ResolverReferencia'
+   && wfCual.connections.ResolverReferencia.main[0][0].node === 'Preparar'
+   && /web_id/.test(wfCual.nodes.find(n => n.name === 'ResolverReferencia').parameters.query));
 {
   // Alquiler en dos veces: primero tres respuestas (falta la fecha), luego la fecha
   const prep = wa('cualificar_preparar.js', inp([{ json: { telefono: '+34600000001', referencia: 'CS-1479-A',

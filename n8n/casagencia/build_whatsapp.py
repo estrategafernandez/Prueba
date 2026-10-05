@@ -866,6 +866,16 @@ def wf_etiquetar():
             ("LeerEtiquetas", 0, "UnirEtiquetas", 0), ("UnirEtiquetas", 0, "GuardarEtiquetas", 0)))
 
 
+# La referencia que manda Sara, comprobada en la cartera. Si lo que llega es el
+# numero del enlace de la web (p. ej. "26699629-A" en vez de "BN-C-126-A"), se
+# cambia por la referencia de verdad: de ella sale la asesora que recibe el aviso.
+SQL_RESOLVER_REF = """select coalesce((
+  select ref from wa_cartera
+   where upper(ref) = upper(trim($1))
+      or (length(regexp_replace($1, '\\D', '', 'g')) >= 6 and web_id = regexp_replace($1, '\\D', '', 'g'))
+   order by (upper(ref) = upper(trim($1))) desc limit 1), '') as ref_cartera;"""
+
+
 def wf_cualificar(ids):
     a = "$('Preparar').first().json.aviso"
     valores = ("={{ [ $json.telefono_wa, $json.telefono_e164, $json.referencia, $json.nombre, "
@@ -879,6 +889,8 @@ def wf_cualificar(ids):
                      ("personas", "string"), ("ingresos", "string"),
                      ("mascotas", "string"), ("entrada", "string"), ("duracion", "string"),
                      ("actividad", "string"), ("resumen", "string"), ("conversacion_id", "number")]),
+        pg_query("ResolverReferencia", SQL_RESOLVER_REF, "={{ [ String($json.referencia || '') ] }}", [80, -180],
+                 onError="continueRegularOutput", alwaysOutputData=True),
         code_node("Preparar", code_wa("cualificar_preparar.js"), [200, 0]),
         pg_query("GuardarFicha", SQL_CUALIFICAR, valores, [420, 0],
                  onError="continueRegularOutput", alwaysOutputData=True),
@@ -909,7 +921,8 @@ def wf_cualificar(ids):
              "guardan (pueden llegar en varias veces) y, cuando estan las cuatro, se avisa al comercial por "
              "WhatsApp y la conversacion pasa a *4-intervenir*: "
              "en alquiler la IA no agenda, decide una persona.", [200, -330], 520, 270),
-    ], conn(("Start", 0, "Preparar", 0), ("Preparar", 0, "GuardarFicha", 0),
+    ], conn(("Start", 0, "ResolverReferencia", 0), ("ResolverReferencia", 0, "Preparar", 0),
+            ("Preparar", 0, "GuardarFicha", 0),
             ("GuardarFicha", 0, "¿Es vendedor?", 0),
             ("¿Es vendedor?", 0, "MarcarVendedor", 0), ("¿Es vendedor?", 1, "¿Es alquiler?", 0),
             ("MarcarVendedor", 0, "¿Es alquiler?", 0),

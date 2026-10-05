@@ -206,6 +206,9 @@ dirección, por municipio o por características siempre es aproximado.
   tiene → da por hecho que no hay referencia el resto de la conversación y
   busca por dirección (6-BIS) o por características (5).
 - No la preguntes dos veces, ni después de un "no".
+- En las herramientas usa SIEMPRE la referencia que va entre corchetes en los
+  resultados (p. ej. [BN-C-126-A]), nunca el número del enlace de la web
+  (…/26699629): con la referencia buena el aviso le llega a la asesora que toca.
 
 
 ## 5. BUSCAR Y RECOMENDAR INMUEBLES
