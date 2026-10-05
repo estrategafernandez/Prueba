@@ -198,6 +198,16 @@ function referenciaBuena(...candidatas) {
   return limpias.find(x => ASESORA_POR_PREFIJO[prefijoDeReferencia(x)]) || limpias[0] || '';
 }
 
+// Como se le nombra al cliente a quien se encarga: la asesora de la zona por su
+// nombre (Carmen o Gisela). Laurence es de la oficina, no "asesora de la zona".
+function quienSeEncarga(nombre, zona) {
+  const n = String(nombre ?? '').trim();
+  const z0 = String(zona ?? '').split(' / ')[0].trim();
+  const z = /^benicasim$/i.test(z0) ? 'Benicàssim' : z0;
+  if (['Carmen', 'Gisela'].includes(n)) return `${n}, la asesora de la zona${z ? ' de ' + z : ''}`;
+  return n ? `${n}, de nuestro equipo` : 'nuestro equipo';
+}
+
 // Asesora por referencia y, si no hay, por municipio. Si no hay ninguna, Laurence.
 function resolverAsesora(ref, municipio) {
   const prefijo = prefijoDeReferencia(ref);

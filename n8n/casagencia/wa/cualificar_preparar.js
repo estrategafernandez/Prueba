@@ -91,9 +91,9 @@ return [{
       etiqueta: '',
     },
     respuesta: alquiler
-      ? 'Respuestas guardadas. Dile al cliente, con naturalidad, que le pasas sus datos a la asesora y que '
-        + 'alguien del equipo le escribe por aqui para organizar la visita. No le ofrezcas fecha ni hora y '
-        + 'no le vuelvas a hacer las preguntas. Si sigue escribiendo, contestale con normalidad, pero la visita la organiza la asesora.'
+      // (la de alquiler la completa Respuesta con el nombre de la asesora que recibe el aviso)
+      ? `Respuestas guardadas. Dile al cliente que le pasas sus datos a ${quienSeEncarga(r.destinatario)} y que se `
+        + 'pondra en contacto con el para organizar la visita. No le ofrezcas fecha ni hora.'
       : 'Respuestas guardadas' + (vendedor ? ' (y la conversacion marcada como vendedor)' : '') + '. '
         + (vendedor && !campos.q_vivienda_venta
           ? 'Falta la direccion o zona de la vivienda que tiene que vender: preguntasela antes de seguir y '

@@ -279,6 +279,18 @@ ck('guardarCualificacion: Start -> ResolverReferencia -> Preparar',
   f = falta({ id: 4, q_personas: '2', q_ingresos: 'nomina', q_mascotas: 'no', q_entrada: '1 de noviembre', q_actividad: '' });
   ck('con la fecha (guardada despues): completo, y el aviso lleva las cuatro', f.completo === true
      && ['2', 'nomina', 'no', '1 de noviembre', 'Pareja interesada.'].every(x => f.resumen_aviso.includes(x)), f.resumen_aviso);
+  // Completo y avisado: Sara nombra a la asesora que ha recibido el aviso (no "alguien del equipo")
+  const fin = (para, zona) => wa('cualificar_respuesta.js', inp([{}]), nod({ Preparar: prep, FaltaAlquiler: f,
+    PasarAlEquipo: { mensaje_registrado: true, para }, ResolverReferencia: { municipio_cartera: zona } }))[0].json;
+  let fr = fin('Carmen', 'Benicasim / Benicàssim');
+  ck('alquiler pasado: "le pasas sus datos a Carmen, la asesora de la zona de Benicàssim"',
+     /le pasas sus datos a Carmen, la asesora de la zona de Benicàssim/.test(fr.respuesta)
+     && /Carmen se pondra en contacto/.test(fr.respuesta) && !/alguien del equipo le/.test(fr.respuesta), fr.respuesta);
+  fr = fin('Gisela', 'Castellón de la Plana / Castelló de la Plana');
+  ck('alquiler pasado en Castellon: Gisela, la asesora de la zona de Castellón de la Plana',
+     /Gisela, la asesora de la zona de Castellón de la Plana/.test(fr.respuesta) && fr.asesora === 'Gisela');
+  fr = fin('Laurence', '');
+  ck('si fuera a Laurence: "Laurence, de nuestro equipo" (no asesora de zona)', /Laurence, de nuestro equipo/.test(fr.respuesta));
   f = falta({ id: 5, q_personas: '', q_ingresos: '', q_mascotas: '', q_entrada: 'enero', q_actividad: 'cafeteria' });
   ck('local o traspaso: basta actividad y fecha', f.completo === true);
 }
@@ -346,6 +358,10 @@ const res = (envios) => wa('aviso_resultado.js', inp([{}]), nod({ Preparar: { pa
   Juntar: { envios } }))[0].json;
 r = res([{ para: 'Carmen', ok: true }, { para: 'Paco', ok: true }]);
 ck('WhatsApp a Carmen y a Paco: avisado', r.mensaje_registrado === true && r.enviado_a.join() === 'Carmen,Paco' && /por WhatsApp/.test(r.respuesta));
+r = wa('aviso_resultado.js', inp([{}]), nod({ Preparar: { para_nombre: 'Gisela', pasar_a_humano: true },
+  Juntar: { envios: [{ para: 'Gisela', ok: true }, { para: 'Paco', ok: true }] } }))[0].json;
+ck('pasar a una persona: Sara la nombra (Gisela, la asesora de la zona)', /Gisela, la asesora de la zona/.test(r.respuesta)
+   && !/despidete y no sigas/.test(r.respuesta), r.respuesta);
 r = res([{ para: 'Carmen', ok: true }, { para: 'Paco', ok: false, error: 'x' }]);
 ck('si solo falla el de Paco, la comercial esta avisada', r.mensaje_registrado === true && /Paco: x/.test(r.error_whatsapp));
 r = res([{ para: 'Carmen', ok: false, error: '(#131049) healthy ecosystem' }, { para: 'Paco', ok: true }]);
