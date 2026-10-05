@@ -8,16 +8,17 @@
 //   - disponible: la ficha (foto, precio, habitaciones, banos, metros, lo
 //     destacado y un trozo de la descripcion) + WhatsApp + ver la ficha.
 //   - ya no esta: que ya no esta disponible + 3 parecidos + WhatsApp.
-// En el idioma en que escribio (es, en, fr). Se inyecta despues de config.js.
+// En el idioma en que escribio (es, en, fr). Se presenta como "Soy Sara, de
+// Casagencia" (en el correo no se dice que es una IA). Se inyecta despues de config.js.
 // ===========================================================================
 
 const CORREO_TEXTOS = {
   es: {
     idioma: 'es',
     hola: (n) => `Hola${n ? ' ' + n : ''},`,
-    intro: (portal) => `soy Sara, IA de Casagencia. Hemos recibido tu solicitud de información${portal ? ' en ' + portal : ''} por este inmueble:`,
-    intro_basico: (portal, ref) => `soy Sara, IA de Casagencia. Hemos recibido tu solicitud de información${portal ? ' en ' + portal : ''} por el inmueble${ref ? ' con referencia ' + ref : ''}.`,
-    intro_no: (portal, ref) => `soy Sara, IA de Casagencia. Hemos recibido tu solicitud de información${portal ? ' en ' + portal : ''}. El inmueble por el que preguntaste${ref ? ' (ref. ' + ref + ')' : ''} ya no está disponible, pero tenemos otros parecidos que te pueden encajar:`,
+    intro: (portal) => `Soy Sara, de Casagencia. Hemos recibido tu solicitud de información${portal ? ' en ' + portal : ''} por este inmueble:`,
+    intro_basico: (portal, ref) => `Soy Sara, de Casagencia. Hemos recibido tu solicitud de información${portal ? ' en ' + portal : ''} por el inmueble${ref ? ' con referencia ' + ref : ''}.`,
+    intro_no: (portal, ref) => `Soy Sara, de Casagencia. Hemos recibido tu solicitud de información${portal ? ' en ' + portal : ''}. El inmueble por el que preguntaste${ref ? ' (ref. ' + ref + ')' : ''} ya no está disponible, pero tenemos otros parecidos que te pueden encajar:`,
     cta: '¿Quieres visitarlo o tienes alguna duda? Escríbenos por WhatsApp y te contestamos al momento.',
     cta_no: '¿Te encaja alguno o buscas otra cosa? Escríbenos por WhatsApp y te enseñamos lo que tenemos.',
     boton_wa: 'Escríbenos por WhatsApp',
@@ -34,9 +35,9 @@ const CORREO_TEXTOS = {
   en: {
     idioma: 'en',
     hola: (n) => `Hi${n ? ' ' + n : ''},`,
-    intro: (portal) => `I'm Sara, Casagencia's AI. We have received your enquiry${portal ? ' on ' + portal : ''} about this property:`,
-    intro_basico: (portal, ref) => `I'm Sara, Casagencia's AI. We have received your enquiry${portal ? ' on ' + portal : ''} about property${ref ? ' ref. ' + ref : ''}.`,
-    intro_no: (portal, ref) => `I'm Sara, Casagencia's AI. We have received your enquiry${portal ? ' on ' + portal : ''}. The property you asked about${ref ? ' (ref. ' + ref + ')' : ''} is no longer available, but we have similar ones that may suit you:`,
+    intro: (portal) => `I'm Sara, from Casagencia. We have received your enquiry${portal ? ' on ' + portal : ''} about this property:`,
+    intro_basico: (portal, ref) => `I'm Sara, from Casagencia. We have received your enquiry${portal ? ' on ' + portal : ''} about property${ref ? ' ref. ' + ref : ''}.`,
+    intro_no: (portal, ref) => `I'm Sara, from Casagencia. We have received your enquiry${portal ? ' on ' + portal : ''}. The property you asked about${ref ? ' (ref. ' + ref + ')' : ''} is no longer available, but we have similar ones that may suit you:`,
     cta: 'Would you like to visit it or do you have any questions? Message us on WhatsApp and we will reply right away.',
     cta_no: 'Does any of them suit you, or are you looking for something else? Message us on WhatsApp and we will show you what we have.',
     boton_wa: 'Message us on WhatsApp',
@@ -53,9 +54,9 @@ const CORREO_TEXTOS = {
   fr: {
     idioma: 'fr',
     hola: (n) => `Bonjour${n ? ' ' + n : ''},`,
-    intro: (portal) => `je suis Sara, l'IA de Casagencia. Nous avons bien reçu votre demande d'information${portal ? ' sur ' + portal : ''} concernant ce bien :`,
-    intro_basico: (portal, ref) => `je suis Sara, l'IA de Casagencia. Nous avons bien reçu votre demande d'information${portal ? ' sur ' + portal : ''} concernant le bien${ref ? ' réf. ' + ref : ''}.`,
-    intro_no: (portal, ref) => `je suis Sara, l'IA de Casagencia. Nous avons bien reçu votre demande d'information${portal ? ' sur ' + portal : ''}. Le bien qui vous intéressait${ref ? ' (réf. ' + ref + ')' : ''} n'est plus disponible, mais nous en avons d'autres similaires :`,
+    intro: (portal) => `Je suis Sara, de Casagencia. Nous avons bien reçu votre demande d'information${portal ? ' sur ' + portal : ''} concernant ce bien :`,
+    intro_basico: (portal, ref) => `Je suis Sara, de Casagencia. Nous avons bien reçu votre demande d'information${portal ? ' sur ' + portal : ''} concernant le bien${ref ? ' réf. ' + ref : ''}.`,
+    intro_no: (portal, ref) => `Je suis Sara, de Casagencia. Nous avons bien reçu votre demande d'information${portal ? ' sur ' + portal : ''}. Le bien qui vous intéressait${ref ? ' (réf. ' + ref + ')' : ''} n'est plus disponible, mais nous en avons d'autres similaires :`,
     cta: 'Vous souhaitez le visiter ou vous avez une question ? Écrivez-nous sur WhatsApp, nous vous répondons tout de suite.',
     cta_no: "L'un d'eux vous plaît, ou vous cherchez autre chose ? Écrivez-nous sur WhatsApp et nous vous montrons ce que nous avons.",
     boton_wa: 'Écrivez-nous sur WhatsApp',

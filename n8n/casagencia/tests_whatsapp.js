@@ -895,8 +895,8 @@ ck('correo: disponible -> ficha con foto, precio, datos, boton de WhatsApp y fic
    && r.html.includes('Escríbenos por WhatsApp') && r.html.includes('Ver la ficha completa'), r.asunto);
 ck('correo: el WhatsApp va a la linea de Sara con la referencia ya escrita',
    r.whatsapp_url.startsWith('https://wa.me/34864893794?text=') && /ref\. BN-1528-V/.test(waTexto(r)), waTexto(r));
-ck('correo: se presenta como Sara, IA de Casagencia (nunca asistente virtual)',
-   /Sara, IA de Casagencia/.test(r.html) && !/asistente virtual/i.test(r.html + r.texto));
+ck('correo: "Soy Sara, de Casagencia", sin decir que es una IA (ni asistente virtual)',
+   /Soy Sara, de Casagencia\./.test(r.html) && !/\bIA\b|asistente virtual/i.test(r.html + r.texto));
 ck('correo: saluda por el nombre de pila y nombra el portal y la asesora', /Hola Ana,/.test(r.texto)
    && /en Idealista/.test(r.texto) && /Carmen, tu asesora/.test(r.html));
 ck('correo: version en texto plano con los enlaces', r.texto.includes(piso.enlace) && r.texto.includes(r.whatsapp_url));
@@ -908,9 +908,11 @@ ck('correo: con un trozo de la descripcion, sin el "CASAGENCIA INMOBILIARIA pres
 // La ficha llega como texto si el driver no la convierte
 r = correo(datosLead, { ficha: JSON.stringify(piso), parecidos: '[]' });
 ck('correo: acepta la ficha como texto JSON', r.modo === 'ficha' && r.html.includes(piso.imagen));
+r = correo({ ...datosLead, idioma: 'en' }, { ficha: piso, parecidos: [] });
+ck('correo: en ingles, "I\'m Sara, from Casagencia" sin AI', /I'm Sara, from Casagencia\./.test(r.texto) && !/\bAI\b/.test(r.html + r.texto));
 r = correo({ ...datosLead, idioma: 'fr' }, { ficha: piso, parecidos: [] });
 ck('correo: en frances, sin la descripcion en espanol', r.idioma === 'fr' && /Bonjour Ana/.test(r.html)
-   && /Écrivez-nous sur WhatsApp/.test(r.html) && /réf\. BN-1528-V/.test(waTexto(r)) && !/elegante y lleno de luz/.test(r.html + r.texto));
+   && /Je suis Sara, de Casagencia\./.test(r.texto) && !/\bIA\b/.test(r.html + r.texto) && /Écrivez-nous sur WhatsApp/.test(r.html) && /réf\. BN-1528-V/.test(waTexto(r)) && !/elegante y lleno de luz/.test(r.html + r.texto));
 r = correo({ ...datosLead, disponible: false }, { ficha: piso, parecidos });
 ck('correo: ya no esta -> lo dice, 3 parecidos y WhatsApp para ver otros', r.modo === 'ya_no_esta'
    && /ya no está disponible/.test(r.html) && parecidos.every(f => r.html.includes(f.enlace)) && /otros parecidos/.test(waTexto(r))
