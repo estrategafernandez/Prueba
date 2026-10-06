@@ -1270,6 +1270,111 @@ def wf_recordatorio(ids):
             ("SoloLosNuevos", 0, "AvisarAlComercial", 0)))
 
 
+# ===========================================================================
+# RECORDATORIO DE LA VISITA AL CLIENTE (24 h y 2 h antes)
+# ===========================================================================
+SQL_RECORDADO = """insert into wa_avisos (evento_id, tipo) values ($1, 'cliente_' || $2)
+on conflict (evento_id, tipo) do nothing
+returning evento_id;"""
+RECORDATORIO_IN = [("tipo", "string"), ("evento_id", "string"), ("telefono", "string"), ("nombre", "string"),
+                   ("referencia", "string"), ("asesora", "string"), ("fecha", "string"), ("hora", "string"),
+                   ("fecha_hora", "string"), ("cuando", "string"), ("conversacion_id", "number")]
+
+
+def wf_recordatorio_cliente_sub(ids):
+    """Un recordatorio: busca (o crea) la conversacion del cliente en el panel y le
+    manda la plantilla de Meta por Chatwoot, con sus datos."""
+    st = "$('Start').first().json"
+    return wf("[WA][SUB] RecordatorioCliente", [
+        trigger_sub(RECORDATORIO_IN),
+        code_node("Config", CONFIG + "\n\nconst c = RECORDATORIO_CLIENTE[$('Start').first().json.tipo] || {};\n"
+                  "return [{ json: { plantilla: c.plantilla || '', idioma: c.idioma || 'es' } }];", [200, 0]),
+        pg_query("FichaDelInmueble", "select tipo_inmueble, zona, municipio from wa_cartera "
+                 "where upper(ref) = upper($1) limit 1;", "={{ [ String(%s.referencia || '') ] }}" % st,
+                 [420, 0], alwaysOutputData=True, onError="continueRegularOutput"),
+        leer_hoja("LeerDirecciones", "Direcciones", [640, 0], executeOnce=True),
+        if_node("¿Tiene conversacion?", "={{ Number(%s.conversacion_id || 0) }}" % st, "gt", [860, 0], der=0,
+                tipo="number"),
+        exec_sub("ConversacionDelContacto", ids.get("[WA][SUB] ConversacionDelContacto", ""),
+                 "[WA][SUB] ConversacionDelContacto",
+                 {"telefono": "={{ %s.telefono }}" % st, "nombre": "={{ %s.nombre }}" % st}, [1080, 160],
+                 onError="continueRegularOutput", alwaysOutputData=True),
+        http("PlantillaMeta", "GET", "%s/%s/message_templates" % (META_API, WABA_ID), [1300, 0],
+             cred=CRED_META, query={"name": "={{ $('Config').first().json.plantilla }}"},
+             onError="continueRegularOutput", alwaysOutputData=True),
+        code_node("Componer", code_wa("recordatorio_cliente_componer.js"), [1520, 0]),
+        if_node("¿Hay conversacion?", "={{ Number($json.conversacion_id || 0) }}", "gt", [1740, 0], der=0,
+                tipo="number"),
+        http("EnviarRecordatorio", "POST", "=" + CW_API + "/conversations/{{ $json.conversacion_id }}/messages",
+             [1960, -80], cred=CRED_CHATWOOT, body="={{ $json.body_mensaje }}",
+             onError="continueRegularOutput", alwaysOutputData=True),
+        # Sara sabe que se le ha recordado la visita (si contesta "no puedo ir", lo entiende)
+        pg_query("GuardarEnMemoriaAgente", "insert into n8n_chat_histories (session_id, message) values ($1, $2);",
+                 "={{ [ %s.telefono, JSON.stringify({ type: 'ai', content: $('Componer').first().json.contenido, "
+                 "tool_calls: [], additional_kwargs: {}, response_metadata: {}, invalid_tool_calls: [] }) ] }}" % st,
+                 [2180, -80], onError="continueRegularOutput", alwaysOutputData=True),
+        set_node("Resultado", {"enviado": ("boolean", "={{ !!$('EnviarRecordatorio').first().json.id }}"),
+                               "conversacion_id": ("number", "={{ $('Componer').first().json.conversacion_id }}")},
+                 [2400, 0]),
+        noop("SinConversacion", [1960, 160]),
+        nota("Nota", "## Un recordatorio de visita al cliente\nPor su conversacion del panel (si no la tiene, "
+             "se busca o se crea por el telefono) con la plantilla de Meta de RECORDATORIO_CLIENTE "
+             "(wa/config.js): {{1}}, {{2}}... segun *parametros*. Se guarda en la memoria de Sara para que "
+             "sepa que se le ha recordado si contesta.", [200, -320], 520, 230),
+    ], conn(("Start", 0, "Config", 0), ("Config", 0, "FichaDelInmueble", 0),
+            ("FichaDelInmueble", 0, "LeerDirecciones", 0), ("LeerDirecciones", 0, "¿Tiene conversacion?", 0),
+            ("¿Tiene conversacion?", 0, "PlantillaMeta", 0), ("¿Tiene conversacion?", 1, "ConversacionDelContacto", 0),
+            ("ConversacionDelContacto", 0, "PlantillaMeta", 0), ("PlantillaMeta", 0, "Componer", 0),
+            ("Componer", 0, "¿Hay conversacion?", 0), ("¿Hay conversacion?", 0, "EnviarRecordatorio", 0),
+            ("¿Hay conversacion?", 1, "SinConversacion", 0),
+            ("EnviarRecordatorio", 0, "GuardarEnMemoriaAgente", 0), ("GuardarEnMemoriaAgente", 0, "Resultado", 0)))
+
+
+def wf_recordatorio_cliente(ids, tipo, nombre):
+    """Cada 15 minutos, las visitas que empiezan dentro de unas N horas (24 o 2)."""
+    horas = {"24h": 24, "2h": 2}[tipo]
+    ventana = ("const ahora = DateTime.now().setZone('Europe/Madrid');\n"
+               "// Visitas que empiezan dentro de unas %d h. La ventana (de %d h 30 min a %d h 15 min)\n"
+               "// es algo mas ancha que los 15 min entre ejecuciones; wa_avisos evita repetir.\n"
+               "return [{ json: { tipo: '%s', desde_iso: ahora.plus({ hours: %d, minutes: 30 }).toISO(),\n"
+               "                  hasta_iso: ahora.plus({ hours: %d, minutes: 15 }).toISO() } }];"
+               % (horas, horas - 1, horas, tipo, horas - 1, horas))
+    tmin, tmax = "={{ $json.desde_iso }}", "={{ $json.hasta_iso }}"
+    entradas = {k: "={{ $json.%s }}" % k for k, _ in RECORDATORIO_IN}
+    return wf(nombre, [
+        node("Cada15Min", "n8n-nodes-base.scheduleTrigger",
+             {"rule": {"interval": [{"field": "minutes", "minutesInterval": 15}]}}, [-40, 0], 1.2),
+        code_node("Ventana", ventana, [180, 0]),
+        cal_getall("LeerAgendaCarmen", CALENDARIOS["Carmen"], tmin, tmax, [400, -120]),
+        cal_getall("LeerAgendaGisela", CALENDARIOS["Gisela"], tmin, tmax, [400, 120]),
+        node("Merge", "n8n-nodes-base.merge", {"numberInputs": 2}, [620, 0], 3.2),
+        code_node("Visitas", code_wa("recordatorio_cliente_visitas.js"), [840, 0]),
+        if_node("¿Se manda?", "={{ $json.enviar }}", "true", [1060, 0]),
+        noop("Preparado (falta la plantilla o no esta activo)", [1280, 180]),
+        pg_query("ApuntarRecordado", SQL_RECORDADO, "={{ [ $json.evento_id, $json.tipo ] }}", [1280, -80],
+                 onError="continueRegularOutput"),
+        code_node("SoloLosNuevos", "const nuevos = new Set($input.all().map(i => String(i.json.evento_id ?? '')));\n"
+                  "return $('Visitas').all().filter(i => i.json.enviar && nuevos.has(String(i.json.evento_id)));",
+                  [1500, -80]),
+        exec_sub("Recordar", ids.get("[WA][SUB] RecordatorioCliente", ""), "[WA][SUB] RecordatorioCliente",
+                 entradas, [1720, -80], {"conversacion_id": "number"}, cada_uno=True,
+                 onError="continueRegularOutput"),
+        nota("Nota", "## Recordatorio de la visita al cliente, %d h antes\nCada 15 minutos mira las agendas "
+             "de Carmen y Gisela y, a cada visita con el telefono del cliente en el titulo (de WhatsApp o "
+             "del telefono) que empieza en unas %d horas, le manda la plantilla de "
+             "RECORDATORIO_CLIENTE['%s'] (wa/config.js) por su conversacion del panel.\n\nMientras la "
+             "plantilla no tenga nombre (o activo = false, salvo los telefonos de prueba) solo se ve aqui a "
+             "quien se le mandaria. Cada visita una sola vez (wa_avisos). No se manda si la visita se "
+             "acaba de reservar (hace menos de %d h)." % (horas, horas, tipo, max(1, horas // 4)),
+             [180, -380], 560, 300),
+    ], conn(("Cada15Min", 0, "Ventana", 0), ("Ventana", 0, "LeerAgendaCarmen", 0),
+            ("Ventana", 0, "LeerAgendaGisela", 0), ("LeerAgendaCarmen", 0, "Merge", 0),
+            ("LeerAgendaGisela", 0, "Merge", 1), ("Merge", 0, "Visitas", 0), ("Visitas", 0, "¿Se manda?", 0),
+            ("¿Se manda?", 0, "ApuntarRecordado", 0),
+            ("¿Se manda?", 1, "Preparado (falta la plantilla o no esta activo)", 0),
+            ("ApuntarRecordado", 0, "SoloLosNuevos", 0), ("SoloLosNuevos", 0, "Recordar", 0)))
+
+
 def asignar(prefijo, conv_expr, agente_expr, asignado_expr, pos):
     """IF + POST de asignacion en Chatwoot. Solo asigna si hay comercial para la
     referencia y la conversacion no la tiene ya Carmen o Gisela (un cambio a mano
@@ -2349,6 +2454,7 @@ ORDEN = [
     "[WA][SUB] guardarCualificacion",
     "[WA][SUB] EnviarPlantilla",
     "[WA][SUB] ConversacionDelContacto",
+    "[WA][SUB] RecordatorioCliente",
     "[WA][SUB] LeadDeLaWeb",
     "[TEL] Llamada al panel",
     "[WA] 0 · Esquema de base de datos",
@@ -2357,6 +2463,8 @@ ORDEN = [
     "[WA] 3 · Recordatorio 24 h al comercial",
     "[WA] 4 · Cartera desde eGO",
     "[WA] 5 · Leads de eGO (portales)",
+    "[WA] 6 · Recordatorio de visita al cliente (24 h)",
+    "[WA] 7 · Recordatorio de visita al cliente (2 h)",
     "[WA] 8 · Prueba sin IA (contexto)",
     "[WA] 9 · Lead a mano",
 ]
@@ -2393,6 +2501,7 @@ def construir(ids):
         "[WA][SUB] guardarCualificacion": wf_cualificar(ids),
         "[WA][SUB] EnviarPlantilla": wf_plantilla(ids),
         "[WA][SUB] ConversacionDelContacto": wf_conversacion_contacto(),
+        "[WA][SUB] RecordatorioCliente": wf_recordatorio_cliente_sub(ids),
         "[WA][SUB] LeadDeLaWeb": wf_lead_web(ids),
         "[TEL] Llamada al panel": wf_llamada_panel(ids),
         "[WA] 0 · Esquema de base de datos": wf_esquema(),
@@ -2401,6 +2510,8 @@ def construir(ids):
         "[WA] 3 · Recordatorio 24 h al comercial": wf_recordatorio(ids),
         "[WA] 4 · Cartera desde eGO": wf_cartera_ego(),
         "[WA] 5 · Leads de eGO (portales)": wf_leads_ego(ids),
+        "[WA] 6 · Recordatorio de visita al cliente (24 h)": wf_recordatorio_cliente(ids, "24h", "[WA] 6 · Recordatorio de visita al cliente (24 h)"),
+        "[WA] 7 · Recordatorio de visita al cliente (2 h)": wf_recordatorio_cliente(ids, "2h", "[WA] 7 · Recordatorio de visita al cliente (2 h)"),
         "[WA] 8 · Prueba sin IA (contexto)": wf_prueba_contexto(),
         "[WA] 9 · Lead a mano": wf_lead_manual(ids),
     }

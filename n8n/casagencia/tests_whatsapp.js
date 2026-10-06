@@ -1011,5 +1011,60 @@ r = correo({ ...datosLead, nombre: '<b>Eve</b>' }, { ficha: piso, parecidos: [] 
 ck('correo: el nombre del cliente va escapado', !r.html.includes('<b>Eve</b>') && r.html.includes('&lt;b&gt;Eve'));
 
 // ===========================================================================
+console.log('== Recordatorio de la visita al cliente (24 h y 2 h) ==');
+{
+  const ahoraR = DateTime.now().setZone('Europe/Madrid');
+  const ev = (id, horasHasta, o = {}) => ({ id, status: 'confirmed',
+    summary: 'PRE-RESERVA · Visita inmueble - BN-1528-V // Cliente: Ana Belen Marti // Telefono Cliente: +34611222333',
+    description: 'Cliente: Ana Belen Marti\nTelefono: +34611222333\nReferencia: BN-1528-V\nAsesora: Carmen\nConversacion: 42',
+    organizer: { email: 'carmen@casagencia.com' }, created: ahoraR.minus({ days: 3 }).toISO(),
+    start: { dateTime: ahoraR.plus({ hours: horasHasta }).toISO() }, ...o });
+  const eventos = [
+    ev('e1', 24),
+    ev('e2', 24, { created: ahoraR.minus({ hours: 1 }).toISO() }),                    // reservada hace 1 h
+    ev('e3', 24, { status: 'cancelled' }),
+    ev('e4', 24, { summary: 'Reunion de equipo', description: '' }),                   // no es una visita
+    ev('e5', 24, { summary: 'Visita inmueble - CS-1479-A // Cliente: Luis // Telefono Cliente: +34 622 333 444',
+                   description: 'Visita del telefono', organizer: { email: 'gisela@casagencia.com' } }),
+    ev('e6', 24, { summary: 'Visita inmueble - CS-1479-A // Cliente: Sin telefono', description: '' }),
+  ];
+  const visitas = (cfg, tipo = '24h') => Function('$input', '$', 'DateTime', 'Buffer', '"use strict";' + cfg + '\n'
+    + fs.readFileSync(B + 'wa/recordatorio_cliente_visitas.js', 'utf8'))(inp(eventos.map(e => ({ json: e }))),
+    nod({ Ventana: { tipo } }), DateTime, Buffer).map(x => x.json);
+  let v = visitas(CFG);
+  ck('recordatorio: solo visitas con telefono, no canceladas ni reservadas a ultima hora', v.map(x => x.evento_id).join() === 'e1,e5',
+     v.map(x => x.evento_id).join());
+  ck('recordatorio: datos de la visita (nombre de pila, referencia, asesora del calendario, conversacion)',
+     v[0].nombre === 'Ana' && v[0].referencia === 'BN-1528-V' && v[0].asesora === 'Carmen' && v[0].conversacion_id === 42
+     && v[0].telefono === '+34611222333' && v[0].prereserva === true && /^mañana /.test(v[0].cuando), JSON.stringify(v[0]));
+  ck('recordatorio: las del telefono tambien (asesora por su calendario)', v[1].asesora === 'Gisela' && v[1].conversacion_id === 0);
+  ck('recordatorio: sin plantilla en Meta todavia, no se manda a nadie', v.every(x => x.enviar === false));
+  const conPlantilla = CFG.replace("'24h': { horas: 24, plantilla: ''", "'24h': { horas: 24, plantilla: 'recordatorio_visita'");
+  v = visitas(conPlantilla);
+  ck('recordatorio: con plantilla pero sin activar, solo a los telefonos de prueba', v.every(x => x.enviar === false));
+  v = visitas(conPlantilla.replace("parametros: ['nombre', 'cuando'", "parametros: ['nombre', 'cuando'").replace(
+    "'24h': { horas: 24, plantilla: 'recordatorio_visita', idioma: 'es', activo: false", "'24h': { horas: 24, plantilla: 'recordatorio_visita', idioma: 'es', activo: true"));
+  ck('recordatorio: con plantilla y activo, a todos', v.length === 2 && v.every(x => x.enviar === true));
+  const comp = (cfg, meta) => Function('$input', '$', 'DateTime', 'Buffer', '"use strict";' + cfg + '\n'
+    + fs.readFileSync(B + 'wa/recordatorio_cliente_componer.js', 'utf8'))(inp([{}]), nod({
+      Start: { ...visitas(cfg)[0] }, FichaDelInmueble: { tipo_inmueble: 'Piso', zona: 'Pueblo', municipio: 'Benicasim / Benicàssim' },
+      LeerDirecciones: [{ ref: 'BN-1528-V', direccion: 'Calle Dolors, 5' }], PlantillaMeta: meta,
+      ConversacionDelContacto: { conversacion_id: 0 } }), DateTime, Buffer)[0].json;
+  const c = comp(conPlantilla, { data: [{ name: 'recordatorio_visita', components: [{ type: 'BODY',
+    text: 'Hola {{1}}, te recordamos tu visita {{2}} al {{3}}. Te atiende {{4}}.' }] }] });
+  const body = JSON.parse(c.body_mensaje);
+  ck('recordatorio: plantilla rellena por orden (nombre, cuando, inmueble, asesora)',
+     /^Hola Ana, te recordamos tu visita mañana .* al Piso en Pueblo \(Benicasim\) · ref\. BN-1528-V\. Te atiende Carmen\.$/.test(c.contenido)
+     && body.template_params.name === 'recordatorio_visita' && Object.keys(body.template_params.processed_params).join() === '1,2,3,4'
+     && c.conversacion_id === 42, c.contenido);
+  ck('recordatorio: si Meta no responde, igualmente sale con los datos', comp(conPlantilla, {}).contenido.startsWith('Ana · mañana'));
+  const wf6 = JSON.parse(fs.readFileSync(B + 'workflows_wa/WA_6_Recordatorio_de_visita_al_cliente_24_h.json', 'utf8'));
+  const wf7 = JSON.parse(fs.readFileSync(B + 'workflows_wa/WA_7_Recordatorio_de_visita_al_cliente_2_h.json', 'utf8'));
+  const vent = (w) => w.nodes.find(n => n.name === 'Ventana').parameters.jsCode;
+  ck('recordatorio: cada 15 min, ventanas de 24 h y 2 h', /hours: 23, minutes: 30/.test(vent(wf6)) && /hours: 24, minutes: 15/.test(vent(wf6))
+     && /hours: 1, minutes: 30/.test(vent(wf7)) && /hours: 2, minutes: 15/.test(vent(wf7)) && /tipo: '2h'/.test(vent(wf7)));
+}
+
+// ===========================================================================
 console.log(fallos ? `\n${fallos} FALLOS` : '\nTodo correcto');
 process.exit(fallos ? 1 : 0);

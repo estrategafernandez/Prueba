@@ -74,6 +74,26 @@ const LOGO_CASAGENCIA = 'https://media.egorealestate.com/ORIGINAL/70400c69-431c-
 // Mensaje con el que llega quien pulsa la bolita de WhatsApp de casagencia.com
 const MENSAJE_BOLITA_WEB = 'Hola, os acabo de ver por la web y estoy interesado en uno de vuestros inmuebles.';
 
+// --- Recordatorio de la visita AL CLIENTE (24 h y 2 h antes) --------------------
+// [WA] 6 (24 h) y [WA] 7 (2 h) miran las agendas de Carmen y Gisela cada 15
+// minutos y le mandan al cliente una plantilla de Meta por su conversacion del
+// panel. Todas las visitas que tengan el telefono del cliente en el titulo (las
+// de WhatsApp y las del telefono). Cada visita se recuerda una sola vez.
+//   plantilla:  nombre de la plantilla en Meta ('' = aun no existe: no se manda)
+//   activo:     false = solo a los telefonos de prueba
+//   parametros: que va en {{1}}, {{2}}... por orden. Disponibles: nombre,
+//               cuando ("manana martes 7 de octubre a las 17:00" / "hoy a las 17:00"),
+//               fecha_hora, hora, inmueble, direccion, asesora, referencia
+const RECORDATORIO_CLIENTE = {
+  '24h': { horas: 24, plantilla: '', idioma: 'es', activo: false,
+           parametros: ['nombre', 'cuando', 'inmueble', 'asesora'] },
+  '2h':  { horas: 2,  plantilla: '', idioma: 'es', activo: false,
+           parametros: ['nombre', 'hora', 'inmueble', 'asesora'] },
+};
+// Tambien a las PRE-RESERVAS que la asesora aun no ha confirmado (el titulo
+// sigue empezando por PRE-RESERVA). false = solo a las confirmadas.
+const RECORDAR_PRERESERVAS = true;
+
 // --- Correo a los leads que solo dejan su email ---------------------------------
 // La plantilla esta en wa/correo_lead.js. Falta conectar el buzon que los va a
 // mandar: hasta entonces activo = false y el correo solo se prepara y se guarda.
