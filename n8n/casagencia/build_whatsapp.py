@@ -2233,7 +2233,8 @@ def wf_leads_ego(ids):
             "emailType": "html",
             "message": "={{ $('ComponerCorreo').item.json.html }}",
             "options": {"appendAttribution": False, "senderName": "={{ $('ComponerCorreo').item.json.nombre_remitente }}",
-                        "replyTo": "={{ $('ComponerCorreo').item.json.responder_a }}"}},
+                        "replyTo": "={{ $('ComponerCorreo').item.json.responder_a }}",
+                        "ccList": "={{ $('ComponerCorreo').item.json.copia }}"}},
             [3480, y], 2.1, credentials=CRED_CORREO[quien], onError="continueRegularOutput", alwaysOutputData=True)
         for quien, y in (("Gisela", 160), ("Carmen", 320))] + [
         pg_query("ApuntarCorreoEnviado", "update leads_entrantes set estado = case when $2 then 'correo_enviado' "

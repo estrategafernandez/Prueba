@@ -102,8 +102,8 @@ const RECORDAR_PRERESERVAS = true;
 // --- Correo a los leads que solo dejan su email ---------------------------------
 // La plantilla esta en wa/correo_lead.js. Sale del Gmail de su asesora (Carmen
 // o Gisela, credenciales "Conexión Correo ..." en n8n), con respuesta a ella.
-// Activo desde el 6-10-2026.
-const CORREO_LEADS = { activo: true, nombre: 'Sara · Casagencia' };
+// Activo desde el 6-10-2026. Paco va en copia de todos.
+const CORREO_LEADS = { activo: true, nombre: 'Sara · Casagencia', copia: 'paco@casagencia.com' };
 
 // --- Leads entrantes ------------------------------------------------------------
 // De la WEB salen del buzon formularioscasagencia@gmail.com (credencial "Correo

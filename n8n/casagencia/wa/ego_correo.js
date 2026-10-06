@@ -19,4 +19,5 @@ return { json: {
   // Buzon desde el que sale: el de su asesora (Gisela; los demas, desde el de Carmen)
   remitente: d.asesora === 'Gisela' ? 'Gisela' : 'Carmen',
   nombre_remitente: CORREO_LEADS.nombre,
+  copia: CORREO_LEADS.copia || '',
 } };
