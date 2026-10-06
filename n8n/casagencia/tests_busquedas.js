@@ -59,9 +59,37 @@ check('la pestana Direcciones manda',
   r.encontrado && r.coincidencias[0].ref === 'CS-1479-A' && r.fiabilidad === 'alta',
   JSON.stringify(r.coincidencias?.map(c=>c.ref)) + ' fiabilidad=' + r.fiabilidad);
 
+// Retell manda los datos dentro de "args" ({ call, name, args }): antes llegaba
+// la direccion vacia en TODAS las llamadas reales ("consulta_vacia").
+r = run('dir_emparejar.js', inputOf(filas.map(f=>({json:f}))),
+  nodeOf({ Webhook: { body: { call: { call_id: 'x' }, name: 'buscarPorDireccion', args: { direccion: 'plaza Fadrell' } } },
+           LeerInmuebles: filas, LeerDirecciones: [] }))[0].json.respuesta;
+check('peticion de Retell (args dentro): encuentra la calle', r.encontrado && r.coincidencias[0].ref === 'CS-1479-A', r.motivo || '');
+// Calle que cruza dos municipios (llamada del 2-10): el cliente dice Benicassim
+// y el piso de esa avenida esta en El Grao de Castellon
+const avenida = [
+  { ref:'BN-1540-V', municipio:'Benicasim / Benicàssim', zona:'Heliópolis', tipo_inmueble:'Apartamento', habitaciones:5, precio:770000, tipo_transaccion:'venta', descripcion:'' },
+  { ref:'CS-1561-V', municipio:'Castellón de la Plana / Castelló de la Plana', zona:'El Grao', tipo_inmueble:'Apartamento', habitaciones:1, precio:165000, tipo_transaccion:'venta', descripcion:'' },
+  { ref:'CS-1531-V', municipio:'Castellón de la Plana / Castelló de la Plana', zona:'Oeste', tipo_inmueble:'Piso', habitaciones:5, precio:315000, tipo_transaccion:'venta', descripcion:'cerca de la avenida Valencia' },
+];
+const dirsAv = [{ ref:'BN-1540-V', direccion:'Avenida Ferrandis Salvador, 140' }, { ref:'CS-1561-V', direccion:'Avenida Ferrandis Salvador, 52' }];
+r = run('dir_emparejar.js', inputOf(avenida.map(f=>({json:f}))),
+  nodeOf({ Webhook: { body: { args: { direccion: 'avenida Ferrandis Salvador 56', municipio: 'Benicasim / Benicàssim', operacion: 'venta' } } },
+           LeerInmuebles: avenida, LeerDirecciones: dirsAv }))[0].json.respuesta;
+const refsAv = (r.coincidencias || []).map(c => c.ref);
+check('calle entre dos municipios: salen los dos de la avenida (tambien el de El Grao)',
+  r.encontrado && refsAv.includes('BN-1540-V') && refsAv.includes('CS-1561-V') && !refsAv.includes('CS-1531-V'), JSON.stringify(refsAv));
+r = run('dir_emparejar.js', inputOf(avenida.map(f=>({json:f}))),
+  nodeOf({ Webhook: { body: { args: { direccion: 'avenida Valencia', municipio: 'Benicasim / Benicàssim' } } },
+           LeerInmuebles: avenida, LeerDirecciones: dirsAv }))[0].json.respuesta;
+check('pero el municipio sigue filtrando lo que solo casa por la descripcion', !(r.coincidencias || []).some(c => c.ref === 'CS-1531-V') || r.encontrado === false,
+  JSON.stringify((r.coincidencias || []).map(c => c.ref)));
+
 console.log('\n== Consultar cita por telefono (nuevo) ==');
 const norm = run('tel_normalizar.js', inputOf([{ json:{ body:{ telefono:'643 97 43 53' } } }]))[0].json;
 check('normaliza a nacional para la busqueda q', norm.telefono_nacional === '643974353', norm.telefono_nacional);
+const normR = run('tel_normalizar.js', inputOf([{ json:{ body:{ call:{}, name:'buscarCitaPorTelefono', args:{ telefono:'643 97 43 53' } } } }]))[0].json;
+check('peticion de Retell (args dentro): tambien normaliza el telefono', normR.telefono_nacional === '643974353' && normR.telefono_valido, normR.telefono_nacional);
 const eventos = [
   { json:{ summary:'Visita inmueble - CS-1479-A // Cliente: Mohan // Telefono Cliente: +34643974353',
            description:'Tel-busqueda: 643974353\nReferencia: CS-1479-A',

@@ -1,5 +1,7 @@
 // BuscarCitaPorTelefono · NormalizarTelefono
-const body = ($input.first().json.body) ?? {};
+// Retell manda los datos dentro de "args" ({ call, name, args }); las pruebas, sueltos.
+const peticion = ($input.first().json.body) ?? {};
+const body = (peticion.args && typeof peticion.args === 'object') ? peticion.args : peticion;
 const ahora = DateTime.now().setZone(ZONA);
 const tel = normalizarTelefono(body.telefono);
 

@@ -8,7 +8,10 @@
 // case dentro de "aroma" o que "playa" convierta media cartera en candidata.
 // Si algun dia se anade una columna "direccion" a la hoja, se usa automaticamente
 // y con el peso mas alto, sin tocar este codigo.
-const body = ($('Webhook').first().json.body) ?? {};
+// Retell manda los datos de la herramienta dentro de "args" ({ call, name, args });
+// las pruebas y el WhatsApp, sueltos. Se aceptan las dos formas.
+const peticion = ($('Webhook').first().json.body) ?? {};
+const body = (peticion.args && typeof peticion.args === 'object') ? peticion.args : peticion;
 const consulta = String(body.direccion ?? '').trim();
 const municipioPedido = String(body.municipio ?? '').trim();
 const operacionPedida = String(body.operacion ?? '').trim().toLowerCase();
@@ -136,12 +139,27 @@ const puntuar = (r) => {
 
 let candidatos = filas.map(r => ({ r, ...puntuar(r) }));
 
+// El numero de portal que dice el cliente, si lo hay
+const portalPedido = numeros.length ? Number(numeros[numeros.length - 1]) : null;
+for (const c of candidatos) {
+  if (!c.casan.length || portalPedido === null) continue;
+  const m = norm(manual[String(c.r.ref).trim().toUpperCase()] || c.r.direccion || '').match(/\b(\d{1,4})\b/);
+  // Portal cercano (52 cuando dice 56): la misma zona de la calle, un punto mas
+  if (m && Number(m[1]) !== portalPedido && Math.abs(Number(m[1]) - portalPedido) <= 10) c.total += 1;
+}
+
 if (municipioPedido) {
   const m = norm(municipioPedido);
-  const conMun = candidatos.filter(c => {
+  const enMunicipio = (c) => {
     const mun = norm(c.r.municipio);
     return m.split(' ').some(w => w.length > 3 && mun.includes(w));
-  });
+  };
+  // Hay calles que cruzan dos municipios (la avenida Ferrandis Salvador va de
+  // El Grao de Castellon a Benicassim): si la DIRECCION del inmueble casa
+  // (peso 8, la puesta a mano), no se descarta por el municipio. Los del
+  // municipio pedido van primero.
+  const conMun = candidatos.filter(c => enMunicipio(c) || (c.casan.length && c.total >= 8));
+  for (const c of conMun) if (enMunicipio(c) && c.casan.length) c.total += 1;
   if (conMun.length) candidatos = conMun;
 }
 if (operacionPedida) {

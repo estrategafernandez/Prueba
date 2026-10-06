@@ -45,6 +45,9 @@ def tool_http(name, path, description, props, required, msg):
         "speak_during_execution": True, "speak_after_execution": True,
         "execution_message_description": msg,
         "timeout_ms": 15000,
+        # Los datos sueltos en el cuerpo, como las herramientas que ya tenia el
+        # agente (n8n acepta tambien { call, name, args }).
+        "args_at_root": True,
         "response_variables": {"call_id": "{{call_id}}"},
         "parameters": {"type": "object", "additionalProperties": False,
                        "properties": props, "required": required},
