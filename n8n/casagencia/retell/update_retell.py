@@ -146,8 +146,14 @@ def construir_tools(actuales):
             "Solo en alquiler. larga_duracion: para vivir todo el ano (alquiler anual, de larga duracion). "
             "temporal: por unos meses (por ejemplo de septiembre a junio, el invierno). indiferente: si le "
             "da igual, no lo ha dicho o es venta.")}
+    # Por defecto vivienda: a quien busca casa no se le ofrecen locales ni garajes.
+    props["tipo"] = {"type": "string", "enum": ["vivienda", "local", "terreno", "garaje"],
+        "description": (
+            "Que busca. vivienda (piso, apartamento, casa, chalet, atico...) salvo que el cliente pida otra "
+            "cosa. local: local comercial, oficina, nave, bar o restaurante (tambien traspasos de negocio). "
+            "terreno: terreno, parcela o solar. garaje: garaje, plaza de parking o trastero.")}
     bi["parameters"]["required"] = list(dict.fromkeys(
-        bi["parameters"]["required"] + ["precio_max", "modalidad"]))
+        bi["parameters"]["required"] + ["precio_max", "modalidad", "tipo"]))
     out.append(bi)
 
     # --- NUEVA: busqueda por direccion --------------------------------------
