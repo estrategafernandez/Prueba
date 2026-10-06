@@ -488,6 +488,12 @@ mensaje **entrante** del inbox WhatsApp se manda a `…/webhook/wa-asistente`
 entrada lo acepta, y hay un test con el payload real (anonimizado) en
 `tests_datos/`.
 
+Automatización *"4-intervenir quita 2-en_proceso"* (en el propio Chatwoot, sin
+n8n): al actualizarse una conversación que tiene `4-intervenir`, se le quita
+`2-en_proceso`. Cubre cuando la pone una persona a mano; cuando la pone la IA
+lo hace ya `[WA][SUB] Etiquetar` (`wa/etiquetas_unir.js`), que además no vuelve
+a poner `2-en_proceso` mientras siga `4-intervenir`.
+
 ### Utilidades
 
 - **`[WA] 9 · Lead a mano`**: da de alta un lead y le manda la bienvenida, como

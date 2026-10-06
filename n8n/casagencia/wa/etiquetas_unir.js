@@ -5,7 +5,9 @@
 //
 // Las de estado (1-bienvenida_ia, 2-en_proceso, 3-agendada_ia) van de una en
 // una y NUNCA hacia atras: si ya esta agendada, un mensaje nuevo del cliente
-// no la devuelve a "en proceso". 4-intervenir se suma a la que haya.
+// no la devuelve a "en proceso". 4-intervenir se suma a la que haya, pero
+// quita 2-en_proceso: la conversacion la lleva ya una persona (y mientras tenga
+// 4-intervenir no se vuelve a poner).
 const actuales = ($input.first().json.payload ?? []).map(String);
 const pedidas = String($('Start').first().json.etiquetas ?? '')
   .split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
@@ -26,6 +28,8 @@ for (const e of pedidas) {
   }
   if (!finales.includes(e)) finales.push(e);
 }
+
+if (finales.includes(ETIQUETAS.intervenir)) finales = finales.filter(x => x !== ETIQUETAS.en_proceso);
 
 const cambia = JSON.stringify([...finales].sort()) !== JSON.stringify([...actuales].sort());
 return [{ json: { labels: finales, cambia } }];

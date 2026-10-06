@@ -385,8 +385,13 @@ const unir = (actuales, pedidas) => wa('etiquetas_unir.js', inp([{ json: { paylo
   nod({ Start: { etiquetas: pedidas } }))[0].json.labels;
 ck('bienvenida -> en proceso', JSON.stringify(unir(['1-bienvenida_ia'], '2-en_proceso')) === '["2-en_proceso"]');
 ck('agendada NO vuelve a en proceso', JSON.stringify(unir(['3-agendada_ia'], '2-en_proceso')) === '["3-agendada_ia"]');
-ck('4-intervenir se suma al estado',
-   JSON.stringify(unir(['2-en_proceso'], '4-intervenir')) === '["2-en_proceso","4-intervenir"]');
+ck('4-intervenir quita 2-en_proceso (la lleva una persona)',
+   JSON.stringify(unir(['2-en_proceso'], '4-intervenir')) === '["4-intervenir"]', JSON.stringify(unir(['2-en_proceso'], '4-intervenir')));
+ck('4-intervenir con otros estados: se suma (y respeta las de las personas)',
+   unir(['vip', '3-agendada_ia'], '4-intervenir').join() === 'vip,3-agendada_ia,4-intervenir'
+   && unir(['1-bienvenida_ia'], '4-intervenir').join() === '1-bienvenida_ia,4-intervenir');
+ck('con 4-intervenir puesto, 2-en_proceso no vuelve', JSON.stringify(unir(['4-intervenir'], '2-en_proceso')) === '["4-intervenir"]'
+   && JSON.stringify(unir(['1-bienvenida_ia', '4-intervenir'], '2-en_proceso')) === '["4-intervenir"]', JSON.stringify(unir(['1-bienvenida_ia', '4-intervenir'], '2-en_proceso')));
 ck('respeta las que pone una persona', unir(['vip', '1-bienvenida_ia'], '3-agendada_ia').join() === 'vip,3-agendada_ia');
 const est = (etq) => wa('estado_en_proceso.js', inp([{}]), nod({ EntradaMensaje: { ...entrada, etiquetas: etq } }))[0].json.marcar;
 ck('al contestar pasa a en proceso', est(['1-bienvenida_ia']) === true);

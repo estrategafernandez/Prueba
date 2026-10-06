@@ -921,7 +921,9 @@ def wf_etiquetar():
              body="={{ JSON.stringify({ labels: $json.labels }) }}", onError="continueRegularOutput"),
         nota("Nota", "## Etiquetas del panel (las de Blue)\n**1-bienvenida_ia** plantilla enviada · "
              "**2-en_proceso** el cliente ha contestado · **3-agendada_ia** visita agendada de "
-             "verdad · **4-intervenir** tiene que entrar una persona (la IA sigue contestando).\n\nChatwoot "
+             "verdad · **4-intervenir** tiene que entrar una persona (la IA sigue contestando); quita "
+             "2-en_proceso y mientras este no se vuelve a poner (si la pone una persona a mano, lo hace la "
+             "automatizacion de Chatwoot).\n\nChatwoot "
              "SUSTITUYE la lista entera, asi que primero se leen las que hay y se manda la union. "
              "Las de estado van de una en una y nunca hacia atras.", [200, -330], 500, 260),
     ], conn(("Start", 0, "¿Hay algo que poner?", 0),
