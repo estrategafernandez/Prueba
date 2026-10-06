@@ -488,6 +488,14 @@ mensaje **entrante** del inbox WhatsApp se manda a `…/webhook/wa-asistente`
 entrada lo acepta, y hay un test con el payload real (anonimizado) en
 `tests_datos/`.
 
+Automatización *"IA WhatsApp: mensajes del equipo a n8n"*: cada mensaje
+**saliente** del inbox WhatsApp va a `…/webhook/wa-equipo` (`[WA] 11`). Si lo
+ha escrito una persona desde el panel (no Sara, que escribe como el usuario
+`CHATWOOT_USUARIO_IA`, ni una nota interna), se guarda en la memoria de Sara como
+`[Carmen, del equipo de Casagencia, le ha escrito al cliente desde el panel]: …`,
+una sola vez. Con el bot en Off, `[WA] 2` guarda también los mensajes del
+cliente: al volver a On, Sara sabe lo que se ha hablado.
+
 Automatización *"4-intervenir quita 2-en_proceso"* (en el propio Chatwoot, sin
 n8n): al actualizarse una conversación que tiene `4-intervenir`, se le quita
 `2-en_proceso`. Cubre cuando la pone una persona a mano; cuando la pone la IA

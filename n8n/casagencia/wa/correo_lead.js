@@ -43,6 +43,13 @@ const CORREO_TEXTOS = {
     wa_busqueda: 'Hola, os dejé un mensaje en la web y me gustaría que me ayudarais a buscar un inmueble',
     wa_propietario: 'Hola, os escribí por la web por mi vivienda',
     pie_web: 'Recibes este correo porque nos escribiste desde nuestra web.',
+    // Varios inmuebles en un solo correo
+    intro_varios: (portal, n) => `Soy Sara, de Casagencia. Hemos recibido tus ${n} solicitudes de información${portal ? ' en ' + portal : ''}. Este es el primero:`,
+    tambien: 'Y estos son los otros por los que nos preguntaste:',
+    cta_varios: '¿Quieres visitarlos o tienes alguna duda? Escríbenos por WhatsApp y te contestamos al momento.',
+    asunto_varios: (n) => `Tu solicitud: los ${n} inmuebles que nos pediste`,
+    wa_varios: (refs) => `Hola, me interesan los inmuebles ref. ${refs}`,
+    responder: (a) => `Si lo prefieres, contesta a este correo y te responde ${a || 'tu asesora'} directamente.`,
   },
   en: {
     idioma: 'en',
@@ -72,6 +79,12 @@ const CORREO_TEXTOS = {
     wa_busqueda: "Hi, I left you a message on your website and I'd like help finding a property",
     wa_propietario: 'Hi, I wrote to you on your website about my property',
     pie_web: 'You are receiving this email because you contacted us through our website.',
+    intro_varios: (portal, n) => `I'm Sara, from Casagencia. We have received your ${n} enquiries${portal ? ' on ' + portal : ''}. This is the first one:`,
+    tambien: 'And these are the others you asked about:',
+    cta_varios: 'Would you like to visit them or do you have any questions? Message us on WhatsApp and we will reply right away.',
+    asunto_varios: (n) => `Your enquiry: the ${n} properties you asked about`,
+    wa_varios: (refs) => `Hi, I'm interested in properties ref. ${refs}`,
+    responder: (a) => `If you prefer, just reply to this email and ${a || 'your agent'} will get back to you.`,
   },
   fr: {
     idioma: 'fr',
@@ -101,6 +114,12 @@ const CORREO_TEXTOS = {
     wa_busqueda: "Bonjour, je vous ai laissé un message sur votre site et j'aimerais de l'aide pour trouver un bien",
     wa_propietario: 'Bonjour, je vous ai écrit sur votre site au sujet de mon bien',
     pie_web: 'Vous recevez cet e-mail car vous nous avez écrit depuis notre site.',
+    intro_varios: (portal, n) => `Je suis Sara, de Casagencia. Nous avons bien reçu vos ${n} demandes d'information${portal ? ' sur ' + portal : ''}. Voici la première :`,
+    tambien: 'Et voici les autres biens qui vous intéressaient :',
+    cta_varios: 'Vous souhaitez les visiter ou vous avez une question ? Écrivez-nous sur WhatsApp, nous vous répondons tout de suite.',
+    asunto_varios: (n) => `Votre demande : les ${n} biens demandés`,
+    wa_varios: (refs) => `Bonjour, les biens réf. ${refs} m'intéressent`,
+    responder: (a) => `Si vous préférez, répondez simplement à cet e-mail et ${a || 'votre conseillère'} vous répondra.`,
   },
 };
 
@@ -229,7 +248,9 @@ function correoGeneral(l, t, idioma, nombre) {
 }
 
 // l: { nombre, idioma, referencia, portal, disponible, asesora,
-//      general: 'busqueda' | 'propietario' (formulario de la web sin inmueble), resumen, municipio }
+//      general: 'busqueda' | 'propietario' (formulario de la web sin inmueble), resumen, municipio,
+//      otros: fichas de otros inmuebles que pidio a la vez (van en el mismo correo),
+//      responder: true = "si lo prefieres, contesta a este correo" (p. ej. si no tiene WhatsApp) }
 // ficha: fila de wa_cartera (o null si ya no esta); parecidos: filas de wa_cartera
 function componerCorreoLead(l, ficha, parecidos = []) {
   const idioma = ['es', 'en', 'fr'].includes(l.idioma) ? l.idioma : 'es';
@@ -244,14 +265,20 @@ function componerCorreoLead(l, ficha, parecidos = []) {
   const basico = !hayFicha && l.disponible !== false;
   const alquiler = hayFicha && /alquil/i.test(String(ficha.tipo_transaccion || ''));
   const titulo = hayFicha ? tituloInmueble(ficha, t) : '';
-  const waTexto = hayFicha || basico ? t.wa(ref, titulo) : t.wa_no(ref);
+  // Otros inmuebles que pidio a la vez (fichas de wa_cartera): en el mismo correo
+  const otros = hayFicha ? [].concat(l.otros || []).filter(f => f && f.ref && String(f.ref).toUpperCase() !== ref).slice(0, 4) : [];
+  const varios = otros.length > 0;
+  const refsTodas = [ref, ...otros.map(f => String(f.ref).toUpperCase())];
+  const refsTexto = refsTodas.slice(0, -1).join(', ') + (refsTodas.length > 1 ? (idioma === 'en' ? ' and ' : idioma === 'fr' ? ' et ' : ' y ') : '') + refsTodas.slice(-1);
+  const waTexto = varios ? t.wa_varios(refsTexto) : hayFicha || basico ? t.wa(ref, titulo) : t.wa_no(ref);
   const wa = enlaceWhatsApp(waTexto);
   const destacados = hayFicha
     ? DESTACAR.filter(([re]) => re.test(String(ficha.caracteristicas || '') + ' ' + String(ficha.descripcion || '')))
         .map(([, n]) => n[idioma]).slice(0, 4)
     : [];
   const precio = hayFicha ? precioTexto(ficha.precio, alquiler, t) : '';
-  const asunto = hayFicha ? t.asunto([titulo, precio].filter(Boolean).join(' · '))
+  const asunto = varios ? t.asunto_varios(otros.length + 1)
+    : hayFicha ? t.asunto([titulo, precio].filter(Boolean).join(' · '))
     : basico ? t.asunto(ref ? 'ref. ' + ref : (portal || 'Casagencia')) : t.asunto_no;
 
   const p = (txt, extra = '') => `<p style="margin:0 0 14px 0;font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.55;color:#3d3d3b;${extra}">${txt}</p>`;
@@ -279,13 +306,16 @@ function componerCorreoLead(l, ficha, parecidos = []) {
     + `<tr><td align="center" style="padding:26px 32px 8px 32px;"><img src="${LOGO_CASAGENCIA}" width="96" height="96" alt="Casagencia Inmobiliaria" style="display:block;border:0;"></td></tr>`
     + `<tr><td style="padding:12px 32px 4px 32px;">`
     + p(escHtml(t.hola(nombre)), 'font-weight:bold;')
-    + p(escHtml(hayFicha ? t.intro(portal) : basico ? t.intro_basico(portal, sinPartir(ref)) : t.intro_no(portal, sinPartir(ref))))
+    + p(escHtml(varios ? t.intro_varios(portal, otros.length + 1) : hayFicha ? t.intro(portal) : basico ? t.intro_basico(portal, sinPartir(ref)) : t.intro_no(portal, sinPartir(ref))))
     + `</td></tr><tr><td style="padding:4px 32px 8px 32px;">${tarjeta}</td></tr>`
+    + (varios ? `<tr><td style="padding:18px 32px 0 32px;">${p(escHtml(t.tambien), 'font-weight:bold;')}`
+      + `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">${otros.map(f => tarjetaPequena(f, t)).join('')}</table></td></tr>` : '')
     + `<tr><td style="padding:18px 32px 8px 32px;">`
     + `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#f2fbf8;border-radius:12px;"><tr><td style="padding:20px 20px 22px 20px;">`
-    + p(escHtml(hayFicha || basico ? t.cta : t.cta_no), 'text-align:center;')
+    + p(escHtml(varios ? t.cta_varios : hayFicha || basico ? t.cta : t.cta_no), 'text-align:center;')
     + boton(wa, t.boton_wa, '#25D366')
     + ((hayFicha || basico) && l.asesora ? `<p style="margin:14px 0 0 0;font-family:Arial,Helvetica,sans-serif;font-size:13px;color:#6b6a66;text-align:center;">${escHtml(t.asesora(l.asesora))}</p>` : '')
+    + (l.responder ? `<p style="margin:8px 0 0 0;font-family:Arial,Helvetica,sans-serif;font-size:13px;color:#6b6a66;text-align:center;">${escHtml(t.responder(l.asesora))}</p>` : '')
     + `</td></tr></table></td></tr>`
     + `<tr><td style="padding:22px 32px 26px 32px;font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:1.5;color:#8d8c86;text-align:center;">`
     + `<strong style="color:#3d3d3b;">Casagencia Inmobiliaria</strong> · Benicàssim · Castellón<br>`
@@ -293,15 +323,17 @@ function componerCorreoLead(l, ficha, parecidos = []) {
     + `</td></tr></table></td></tr></table></body></html>`;
 
   const texto = [
-    t.hola(nombre), '', hayFicha ? t.intro(portal) : basico ? t.intro_basico(portal, ref) : t.intro_no(portal, ref), '',
+    t.hola(nombre), '', varios ? t.intro_varios(portal, otros.length + 1) : hayFicha ? t.intro(portal) : basico ? t.intro_basico(portal, ref) : t.intro_no(portal, ref), '',
     ...(hayFicha
       ? [[titulo, ficha.zona].filter(Boolean).join(' · '), precio, datosInmueble(ficha, t) + (ref ? ` · ref. ${ref}` : ''),
          destacados.join(' · '), '', idioma === 'es' ? resumenDescripcion(ficha.descripcion) : '', '', `${t.boton_ficha}: ${ficha.enlace}`]
       : basico ? [] : parecidos.slice(0, 3).map(f => `- ${tituloInmueble(f, t)} · ${precioTexto(f.precio, /alquil/i.test(String(f.tipo_transaccion || '')), t)} · ${f.enlace}`)),
-    '', hayFicha || basico ? t.cta : t.cta_no, `${t.boton_wa}: ${wa}`, '',
+    ...(varios ? ['', t.tambien, ...otros.map(f => `- ${tituloInmueble(f, t)} · ${precioTexto(f.precio, /alquil/i.test(String(f.tipo_transaccion || '')), t)} · ref. ${String(f.ref).toUpperCase()} · ${f.enlace}`)] : []),
+    '', varios ? t.cta_varios : hayFicha || basico ? t.cta : t.cta_no, `${t.boton_wa}: ${wa}`,
+    ...(l.responder ? [t.responder(l.asesora)] : []), '',
     'Casagencia Inmobiliaria · www.casagencia.com', esWeb ? t.pie_web : t.pie(portal),
   ].filter(x => x !== null && x !== undefined).join('\n');
 
   return { asunto, html, texto, whatsapp_url: wa, whatsapp_texto: waTexto, idioma,
-           modo: hayFicha ? 'ficha' : basico ? 'sin_ficha' : 'ya_no_esta' };
+           modo: varios ? 'varios' : hayFicha ? 'ficha' : basico ? 'sin_ficha' : 'ya_no_esta', referencias: hayFicha ? refsTodas : [ref] };
 }

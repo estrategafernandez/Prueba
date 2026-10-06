@@ -106,6 +106,10 @@ return [{
     adjunto_url: adjunto?.data_url ?? '',
     descripcion_adjunto: descripcionAdjunto,
     contenido,
+    // Lo que se guarda en la memoria de Sara si el bot esta en Off (no se transcribe
+    // ni se mira la imagen: solo que lo ha enviado)
+    texto_memoria: [contenido, tipo === 'audio' ? '[nota de voz]' : tipo === 'image' ? '[imagen]' : descripcionAdjunto]
+      .filter(Boolean).join(' ').trim(),
     telefono_e164: tel.e164,
     telefono_wa: tel.wa_id,
     nombre: String(quien.name ?? '').trim(),

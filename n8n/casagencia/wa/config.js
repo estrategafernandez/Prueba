@@ -14,6 +14,9 @@ const ZONA = 'Europe/Madrid';
 const CHATWOOT_URL    = 'https://panel-casa-agencia.serversvisionarius.com';
 const CHATWOOT_CUENTA = 1;   // "Casa Agencia Inmobiliaria"
 const CHATWOOT_INBOX  = 1;   // inbox "WhatsApp" (whatsapp_cloud, +34 864 89 37 94)
+// Usuario del panel con el que escribe Sara (el del token de la API, "IA Casagencia").
+// Lo que escribe cualquier otro usuario lo ha escrito una persona del equipo.
+const CHATWOOT_USUARIO_IA = 1;
 
 // --- Meta · WhatsApp Cloud API ---------------------------------------------
 // Linea +34 864 89 37 94 (Casa Agencia Inmobiliaria), verificada y conectada.

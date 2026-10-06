@@ -1749,7 +1749,14 @@ def wf_asistente(ids):
         # --- 2. Filtrar si el bot esta encendido o apagado -------------------
         # Solo se para con bot = Off. Sin valor, On o con 4-intervenir, contesta.
         if_node("Bot on/off", "={{ %s.bot_encendido }}" % ent, "true", [1400, Y]),
-        noop("BotApagado", [1620, Y + 200]),
+        # Con el bot en Off contesta una persona: el mensaje del cliente va igual a la
+        # memoria de Sara (y lo que escriba la asesora, por [WA] 11), para que cuando
+        # vuelva a estar en On sepa lo que se ha hablado
+        pg_query("BotApagado", "insert into n8n_chat_histories (session_id, message) values ($1, $2::jsonb);",
+                 "={{ [ %s.telefono_e164, JSON.stringify({ type: 'human', content: 'Mensaje del cliente (con el "
+                 "asistente apagado; le atendia una persona del equipo):\\n' + %s.texto_memoria, "
+                 "additional_kwargs: {}, response_metadata: {} }) ] }}" % (ent, ent),
+                 [1620, Y + 200], onError="continueRegularOutput"),
         # --- 3. Separar audio, texto e imagen --------------------------------
         switch_por_tipo("Switch", "={{ %s.tipo }}" % ent, ["audio", "image", "text", "otro"], [1960, Y]),
         descargar("Descarga el audio", [2220, Y - 380]),
@@ -2597,6 +2604,39 @@ def wf_lead_manual(ids):
             ("MarcarPlantillaEnviada", 0, "EtiquetaDeInicio", 0), ("EtiquetaDeInicio", 0, "RespuestaOK", 0)))
 
 
+SQL_EQUIPO_MEMORIA = """with nuevo as (
+  insert into wa_avisos (evento_id, tipo) values ('equipo:' || $1, 'memoria')
+  on conflict (evento_id, tipo) do nothing
+  returning 1)
+insert into n8n_chat_histories (session_id, message)
+select $2, $3::jsonb from nuevo
+returning id;"""
+
+
+def wf_equipo_memoria():
+    """Cada mensaje que escribe una persona del equipo desde el panel (Chatwoot lo
+    manda con la automatizacion "IA WhatsApp: mensajes del equipo a n8n") se guarda
+    en la memoria de Sara, una sola vez."""
+    return wf("[WA] 11 · Mensajes del equipo a la memoria de Sara", [
+        node("Webhook", "n8n-nodes-base.webhook", {"httpMethod": "POST", "path": "wa-equipo", "options": {}},
+             [0, 0], 2.1, webhookId=str(uuid.uuid5(uuid.NAMESPACE_URL, "casagencia/wa/webhook-equipo"))),
+        code_node("MensajeDelEquipo", code_wa("equipo_memoria.js"), [220, 0]),
+        if_node("¿Lo ha escrito una persona?", "={{ $json.guardar }}", "true", [440, 0]),
+        noop("NoSeGuarda", [660, 160]),
+        pg_query("AMemoriaDeSara", SQL_EQUIPO_MEMORIA,
+                 "={{ [ $json.mensaje_id, $json.telefono_e164, $json.memoria ] }}", [660, -40],
+                 onError="continueRegularOutput"),
+        nota("Nota", "## Lo que escribe el equipo, a la memoria de Sara\nChatwoot (automatizacion *IA WhatsApp: "
+             "mensajes del equipo a n8n*) manda cada mensaje saliente del inbox de WhatsApp. Si lo ha escrito "
+             "una persona desde el panel (no Sara, que escribe como el usuario %s, ni una nota interna), se "
+             "guarda en su memoria como \"[Carmen, del equipo de Casagencia, le ha escrito al cliente desde el "
+             "panel]: ...\". Asi, cuando el bot vuelve a On (o si sigue con 4-intervenir), Sara sabe lo que se "
+             "ha hablado. Los mensajes del cliente con el bot en Off los guarda [WA] 2." % const("CHATWOOT_USUARIO_IA"),
+             [220, -360], 560, 260),
+    ], conn(("Webhook", 0, "MensajeDelEquipo", 0), ("MensajeDelEquipo", 0, "¿Lo ha escrito una persona?", 0),
+            ("¿Lo ha escrito una persona?", 0, "AMemoriaDeSara", 0), ("¿Lo ha escrito una persona?", 1, "NoSeGuarda", 0)))
+
+
 def wf_prueba_contexto():
     """La primera mitad del asistente, sin IA y sin contestar: recibe el mensaje
     como [WA] 2 y monta el contexto EXACTO que leeria Sara. Para probar sin OpenAI."""
@@ -2658,6 +2698,7 @@ ORDEN = [
     "[WA] 8 · Prueba sin IA (contexto)",
     "[WA] 9 · Lead a mano",
     "[WA] 10 · Seguimiento a quien no contesta",
+    "[WA] 11 · Mensajes del equipo a la memoria de Sara",
 ]
 
 # Workflows de la primera version que se reaprovechan con su nombre nuevo, para
@@ -2706,6 +2747,7 @@ def construir(ids):
         "[WA] 8 · Prueba sin IA (contexto)": wf_prueba_contexto(),
         "[WA] 9 · Lead a mano": wf_lead_manual(ids),
         "[WA] 10 · Seguimiento a quien no contesta": wf_seguimiento(),
+        "[WA] 11 · Mensajes del equipo a la memoria de Sara": wf_equipo_memoria(),
     }
     assert list(wfs) == ORDEN
     return wfs

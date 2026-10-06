@@ -1317,5 +1317,62 @@ console.log('\n== Dos solicitudes de la misma persona por inmuebles distintos ==
 }
 
 // ===========================================================================
+console.log('\n== Lo que escribe el equipo (y el cliente con el bot en Off), a la memoria de Sara ==');
+{
+  // El payload real de la automatizacion, con el mensaje cambiado
+  const conMensaje = (m) => { const b = JSON.parse(JSON.stringify(REAL_CW)); const body = b.body || b;
+    body.messages = [{ ...body.messages[0], ...m }]; return b.body ? b : { body }; };
+  const eq = (m) => wa('equipo_memoria.js', inp([{ json: conMensaje(m) }]), nod({}))[0].json;
+  const carmen = { message_type: 1, private: false, sender_type: 'User', sender_id: 5, id: 9001,
+    sender: { id: 5, name: 'Carmen', available_name: 'Carmen', type: 'user' }, content: 'Hola, te puedo enseñar el piso el jueves a las 17:00', attachments: [] };
+  let r = eq(carmen);
+  const mem = JSON.parse(r.memoria);
+  ck('lo que escribe Carmen desde el panel se guarda, como suyo', r.guardar === true && mem.type === 'ai'
+     && mem.content === '[Carmen, del equipo de Casagencia, le ha escrito al cliente desde el panel]: Hola, te puedo enseñar el piso el jueves a las 17:00'
+     && /^\+\d{9,}$/.test(r.telefono_e164) && r.mensaje_id === '9001', mem.content);
+  ck('lo que escribe Sara (usuario IA Casagencia) no se duplica', eq({ ...carmen, sender_id: 1, sender: { id: 1, name: 'IA Casagencia', type: 'user' } }).guardar === false);
+  ck('las notas internas no', eq({ ...carmen, private: true }).guardar === false);
+  ck('los mensajes del cliente no (esos van por [WA] 2)', eq({ ...carmen, message_type: 0, sender_type: 'Contact', sender: { id: 9, type: 'contact' } }).guardar === false);
+  r = eq({ ...carmen, content: '', attachments: [{ file_type: 'image', data_url: 'https://x/y.jpg' }] });
+  ck('una foto sin texto: que la ha enviado', r.guardar && /\(ha enviado una imagen\)$/.test(JSON.parse(r.memoria).content), JSON.parse(r.memoria).content);
+  r = eq({ ...carmen, sender: { id: 3, name: 'Paco Rubio', available_name: 'Paco Rubio', type: 'user' }, sender_id: 3 });
+  ck('tambien Paco o Laurence, con su nombre', r.guardar && JSON.parse(r.memoria).content.startsWith('[Paco Rubio, del equipo'));
+
+  const w11 = JSON.parse(fs.readFileSync(B + 'workflows_wa/WA_11_Mensajes_del_equipo_a_la_memoria_de_Sara.json', 'utf8'));
+  const n11 = (n) => w11.nodes.find(x => x.name === n) || {};
+  ck('[WA] 11: webhook wa-equipo y una sola vez por mensaje (wa_avisos)', n11('Webhook').parameters.path === 'wa-equipo'
+     && /on conflict \(evento_id, tipo\) do nothing/.test(n11('AMemoriaDeSara').parameters.query)
+     && /n8n_chat_histories/.test(n11('AMemoriaDeSara').parameters.query));
+
+  // Con el bot en Off, el mensaje del cliente tambien va a la memoria
+  const w2 = JSON.parse(fs.readFileSync(B + 'workflows_wa/WA_2_Asistente_de_WhatsApp.json', 'utf8'));
+  const off = w2.nodes.find(x => x.name === 'BotApagado');
+  ck('[WA] 2: con el bot en Off, el mensaje del cliente se guarda en la memoria', off.type === 'n8n-nodes-base.postgres'
+     && /type: 'human'/.test(off.parameters.options.queryReplacement) && /texto_memoria/.test(off.parameters.options.queryReplacement)
+     && (w2.connections['Bot on/off'].main[1] || []).some(c => c.node === 'BotApagado'));
+  const entradaDe = (m) => wa('asistente_entrada.js', inp([{ json: conMensaje(m) }]), nod({}))[0].json;
+  ck('texto que se guarda: el mensaje, o que ha mandado una nota de voz o una imagen',
+     entradaDe({ message_type: 0, content: 'Vale, el jueves me va bien', attachments: [] }).texto_memoria === 'Vale, el jueves me va bien'
+     && entradaDe({ message_type: 0, content: '', attachments: [{ file_type: 'audio', data_url: 'https://x/a.ogg' }] }).texto_memoria === '[nota de voz]'
+     && entradaDe({ message_type: 0, content: 'la fachada', attachments: [{ file_type: 'image', data_url: 'https://x/a.jpg' }] }).texto_memoria === 'la fachada [imagen]');
+}
+
+// El correo con varios inmuebles a la vez (p. ej. alguien sin WhatsApp)
+{
+  const CORREO_JS = fs.readFileSync(B + 'wa/correo_lead.js', 'utf8');
+  const comp = (l, ficha) => Function('DateTime', 'l', 'ficha', CFG + '\n' + CORREO_JS + '\nreturn componerCorreoLead(l, ficha, []);')(DateTime, l, ficha);
+  const alq = REAL.filter(f => /^CS-.*-A$/.test(f.ref)).slice(0, 3);
+  const c = comp({ nombre: 'Nikita', idioma: 'es', referencia: alq[0].ref, portal: 'Idealista', disponible: true, asesora: 'Gisela',
+                   otros: alq.slice(1), responder: true }, alq[0]);
+  ck('correo con varios: uno solo, con la ficha del primero y los otros debajo', c.modo === 'varios'
+     && c.asunto === 'Tu solicitud: los 3 inmuebles que nos pediste' && alq.every(f => c.html.includes(f.enlace))
+     && /Y estos son los otros por los que nos preguntaste/.test(c.texto) && c.referencias.length === 3, c.asunto);
+  ck('correo con varios: WhatsApp con las 3 referencias y "contesta a este correo"', alq.every(f => decodeURIComponent(c.whatsapp_url).includes(f.ref))
+     && /contesta a este correo y te responde Gisela/.test(c.texto));
+  const uno = comp({ nombre: 'Ana', idioma: 'es', referencia: alq[0].ref, portal: 'Idealista', disponible: true, asesora: 'Gisela' }, alq[0]);
+  ck('correo de uno: como siempre (sin "contesta a este correo" si no se pide)', uno.modo === 'ficha' && !/contesta a este correo/.test(uno.texto));
+}
+
+// ===========================================================================
 console.log(fallos ? `\n${fallos} FALLOS` : '\nTodo correcto');
 process.exit(fallos ? 1 : 0);
