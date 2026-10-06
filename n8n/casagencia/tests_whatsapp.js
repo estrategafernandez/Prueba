@@ -1037,7 +1037,7 @@ ck('correo: saluda por el nombre de pila y nombra el portal y la asesora', /Hola
 ck('correo: version en texto plano con los enlaces', r.texto.includes(piso.enlace) && r.texto.includes(r.whatsapp_url));
 ck('correo: a quien va, registro y responder a la asesora', r.para === 'ana@ejemplo.com' && r.registro_id === 77
    && r.responder_a === cfg.EQUIPO.Carmen.email);
-ck('correo: no se envia mientras no este conectado el buzon', r.enviar === false);
+ck('correo: en produccion se envia, desde el Gmail de su asesora (Carmen)', r.enviar === true && r.remitente === 'Carmen' && r.responder_a === cfg.EQUIPO.Carmen.email);
 ck('correo: con un trozo de la descripcion, sin el "CASAGENCIA INMOBILIARIA presenta"', /elegante y lleno de luz/.test(r.html)
    && !/CASAGENCIA INMOBILIARIA/.test(r.html.split('Ver la ficha')[0].replace(/Casagencia Inmobiliaria/g, '')));
 // La ficha llega como texto si el driver no la convierte

@@ -42,6 +42,9 @@ CRED_LEAD_MANUAL = {"httpHeaderAuth": {"id": "cFrVkaTH4R4tKWn0", "name": "WA lea
 CRED_OPENAI   = {"openAiApi": {"id": "43TI6Y7wzI9hadIh", "name": "OpenAI Casagencia"}}
 # Buzon de los formularios de la web (formularioscasagencia@gmail.com)
 CRED_FORMULARIO = {"gmailOAuth2": {"id": "V5ZZzoVhgTTledWB", "name": "Correo Formulario"}}
+# Buzones de las asesoras: el correo a los leads sin telefono sale del de su asesora
+CRED_CORREO = {"Carmen": {"gmailOAuth2": {"id": "28CFTBdQ01u2fYQE", "name": "Conexión Correo Carmen"}},
+               "Gisela": {"gmailOAuth2": {"id": "EOojkcNwPPiTNDvR", "name": "Conexion Correo Gisela"}}}
 # API de eGO: usuario y contrasena dentro de la credencial (Custom Auth, en el cuerpo del login)
 CRED_EGO = {"httpCustomAuth": {"id": "D4GGvFsuQmfalTqZ", "name": "eGO API"}}
 
@@ -2221,15 +2224,30 @@ def wf_leads_ego(ids):
                  "correo_para: $json.para, correo_modo: $json.modo, whatsapp: $json.whatsapp_url }) ] }}",
                  [2820, 320], onError="continueRegularOutput", alwaysOutputData=True),
         if_node("¿Se envia el correo?", "={{ $('ComponerCorreo').item.json.enviar }}", "true", [3040, 320]),
-        noop("EnviarCorreo (falta conectar el buzon)", [3260, 240]),
+        # Sale del correo de su asesora (Gisela para CS/VR, Carmen para el resto)
+        if_node("¿De Gisela?", "={{ $('ComponerCorreo').item.json.remitente }}", "equals", [3260, 240],
+                der="Gisela", tipo="string"),
+    ] + [node("EnviarCorreo" + quien, "n8n-nodes-base.gmail", {
+            "sendTo": "={{ $('ComponerCorreo').item.json.para }}",
+            "subject": "={{ $('ComponerCorreo').item.json.asunto }}",
+            "emailType": "html",
+            "message": "={{ $('ComponerCorreo').item.json.html }}",
+            "options": {"appendAttribution": False, "senderName": "={{ $('ComponerCorreo').item.json.nombre_remitente }}",
+                        "replyTo": "={{ $('ComponerCorreo').item.json.responder_a }}"}},
+            [3480, y], 2.1, credentials=CRED_CORREO[quien], onError="continueRegularOutput", alwaysOutputData=True)
+        for quien, y in (("Gisela", 160), ("Carmen", 320))] + [
+        pg_query("ApuntarCorreoEnviado", "update leads_entrantes set estado = case when $2 then 'correo_enviado' "
+                 "else 'correo_fallido' end where id = $1;",
+                 "={{ [ $('Registrar').item.json.id, !!$json.id ] }}", [3700, 240],
+                 onError="continueRegularOutput", alwaysOutputData=True),
         noop("Correo preparado (no se envia)", [3260, 420]),
         nota("NotaCorreo", "## Leads que solo dejan su correo\nSi el lead no trae telefono pero si email, "
              "se le prepara un correo (wa/correo_lead.js) en su idioma con la **ficha del inmueble** (foto, "
              "precio, habitaciones, banos, metros, lo destacado), un boton **Escribenos por WhatsApp** que abre "
              "el chat con Sara con la referencia ya escrita, y otro a la ficha de la web. Si ya no esta "
-             "disponible: 3 parecidos.\n\nSe guarda en *leads_entrantes* (correo_html). **Falta conectar el "
-             "buzon que lo envia**: sustituir *EnviarCorreo* por un nodo de Gmail (a: para, asunto, html, "
-             "responder a: la asesora) y poner CORREO_LEADS.activo = true.", [2380, 520], 640, 300),
+             "disponible: 3 parecidos.\n\nSe guarda en *leads_entrantes* (correo_html) y sale del **Gmail de su "
+             "asesora** (Gisela para CS/VR, Carmen para el resto), con respuesta a ella. Queda apuntado como "
+             "correo_enviado o correo_fallido.", [2380, 520], 640, 300),
         nota("Nota", "## Todas las solicitudes de los portales, desde eGO\nCada 5 minutos, los leads que han "
              "entrado en eGO en las ultimas 3 horas y vienen de un portal (Idealista, Fotocasa, "
              "Properstar...). Cada lead una sola vez (tabla *leads_entrantes*).\n\nEl lead ya trae el "
@@ -2250,7 +2268,9 @@ def wf_leads_ego(ids):
             ("Decidir", 0, "Registrar", 0), ("Registrar", 0, "¿Se manda?", 0), ("Registrar", 0, "¿Por correo?", 0),
             ("¿Por correo?", 0, "FichaParaCorreo", 0), ("FichaParaCorreo", 0, "ComponerCorreo", 0),
             ("ComponerCorreo", 0, "GuardarCorreo", 0), ("GuardarCorreo", 0, "¿Se envia el correo?", 0),
-            ("¿Se envia el correo?", 0, "EnviarCorreo (falta conectar el buzon)", 0),
+            ("¿Se envia el correo?", 0, "¿De Gisela?", 0),
+            ("¿De Gisela?", 0, "EnviarCorreoGisela", 0), ("¿De Gisela?", 1, "EnviarCorreoCarmen", 0),
+            ("EnviarCorreoGisela", 0, "ApuntarCorreoEnviado", 0), ("EnviarCorreoCarmen", 0, "ApuntarCorreoEnviado", 0),
             ("¿Se envia el correo?", 1, "Correo preparado (no se envia)", 0),
             ("¿Se manda?", 0, "AltaDelLead", 0), ("¿Se manda?", 1, "Preparado (no se manda)", 0),
             ("AltaDelLead", 0, "¿Lead nuevo?", 0), ("¿Lead nuevo?", 0, "EnviarPrimerWhatsApp", 0),
