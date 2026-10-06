@@ -24,7 +24,9 @@ return nuevos.map((n, k) => {
   // Lo dice eGO; si eGO no ha contestado, que siga publicado en la web
   const disponible = !b.referencia ? null : (estadoId ? estadoId === EGO_DISPONIBLE : !!c.ref);
   const tel = normalizarTelefono(b.telefono);
-  const alquiler = esAlquiler(b.referencia, b.operacion);
+  // La referencia y la cartera mandan sobre el tipo de solicitud de eGO, que a
+  // veces viene como "Venta" para un piso de alquiler
+  const alquiler = esAlquiler(b.referencia, c.tipo_transaccion || b.operacion);
   const d = decidirPrimerMensaje({
     tipo: alquiler ? 'alquiler' : 'compra',
     referencia: b.referencia,

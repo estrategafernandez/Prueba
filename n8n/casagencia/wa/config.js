@@ -251,6 +251,12 @@ function resolverAsesora(ref, municipio) {
 // Alquiler o compra. Mismo criterio que el telefono: lo dice la operacion o la
 // referencia acaba en -A.
 function esAlquiler(referencia, operacion) {
+  // La referencia manda: en Casagencia las que acaban en -A son de alquiler y las
+  // de -V de venta. eGO a veces marca "Venta" una solicitud de Idealista de un
+  // piso de alquiler (BN-C-126-A, 6-10-2026).
+  const ref = String(referencia ?? '').trim();
+  if (/-A$/i.test(ref)) return true;
+  if (/-V$/i.test(ref)) return false;
   const o = String(operacion ?? '').toLowerCase();
   if (o.includes('alquiler') || o.includes('traspaso') || o.includes('rent')) return true;
   if (o.includes('venta') || o.includes('compra')) return false;

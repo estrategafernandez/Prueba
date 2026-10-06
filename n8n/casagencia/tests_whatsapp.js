@@ -915,6 +915,16 @@ ck('eGO: asignacion de eGO = la de la referencia; sin contacto creado', r[0].asi
    && r[0].asesora_por_referencia === 'Carmen' && r[0].asignacion_coincide === true && r[0].contacto_creado === false);
 ck('eGO: en produccion (MODO_LEADS real) se manda la bienvenida', r[0].enviar === true);
 r = egoDec([{ ok: true, datos: { realestateStatusId: 2 } }, { ok: false, datos: null }], []);
+{
+  // eGO marca "Venta" una solicitud de Idealista de un piso de alquiler (6-10): manda la referencia
+  const venta = lead('ego_decidir.js', inp([{}]), nodos({
+    SoloNuevos: [{ ...separados[0], referencia: 'BN-C-126-A', operacion: 'venta' }],
+    EstadoDelInmueble: [{ ok: true, datos: { realestateStatusId: 2 } }],
+    LaCartera: { filas: [{ ref: 'BN-C-126-A', enlace: 'https://www.casagencia.com/inmueble/x/26699629', tipo_transaccion: 'alquiler' }] } }))[0].json;
+  ck('eGO: referencia -A marcada "Venta" en eGO -> bienvenida de ALQUILER', venta.plantilla === 'bienvenida_alquiler'
+     && venta.operacion === 'alquiler' && venta.es_alquiler === true, venta.plantilla + '/' + venta.operacion);
+  ck('alquiler/venta: la referencia manda sobre la operacion', cfg && Function('DateTime', CFG + '\nreturn [esAlquiler("BN-C-126-A", "venta"), esAlquiler("BN-1528-V", "alquiler"), esAlquiler("", "alquiler")];')(DateTime).join() === 'true,false,true');
+}
 ck('eGO: disponible pero no esta en la web -> bienvenida con la referencia', r[0].accion === 'bienvenida' && r[0].param2 === 'ref. BN-1528-V');
 ck('eGO: si eGO no contesta y no esta en la web -> no disponible', r[1].disponible === false && r[1].accion === 'no_disponible');
 
