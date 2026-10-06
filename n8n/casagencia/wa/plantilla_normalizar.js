@@ -20,6 +20,8 @@ return [{
     wa_id: tel.wa_id,
     telefono_valido: tel.valido,
     nombre: String(j.nombre || '').trim(),
+    // El correo de la solicitud, para ponerlo en el contacto del panel
+    email: /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(String(j.email ?? '').trim()) ? String(j.email).trim().toLowerCase() : '',
     referencia: String(j.referencia || '').toUpperCase(),
     operacion: alquiler ? 'alquiler' : 'venta',
     portal: String(j.portal || ''),

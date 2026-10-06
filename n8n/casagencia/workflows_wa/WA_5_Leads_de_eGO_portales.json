@@ -467,6 +467,7 @@
             "referencia": "={{ $('Decidir').item.json.referencia }}",
             "operacion": "={{ $('Decidir').item.json.operacion }}",
             "portal": "={{ $('Decidir').item.json.portal }}",
+            "email": "={{ $('Decidir').item.json.email_cliente }}",
             "conversacion_id": 0
           },
           "matchingColumns": [],
@@ -537,6 +538,15 @@
             {
               "id": "portal",
               "displayName": "portal",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "email",
+              "displayName": "email",
               "required": false,
               "defaultMatch": false,
               "display": true,

@@ -74,6 +74,18 @@ r = wa('plantilla_normalizar.js', inp([{ json: {} }]), nod({ Start: {
 ck('el idioma lo pone la configuracion, no el que venga', r.idioma === 'en', r.idioma);
 ck('los parametros no llevan saltos de linea (Meta los rechaza)', !/\n/.test(r.param2), JSON.stringify(r.param2));
 r = wa('plantilla_normalizar.js', inp([{ json: {} }]), nod({ Start: { telefono: '+34 666 777 888', referencia: 'BN-1547-V' } }))[0].json;
+ck('bienvenida: el correo de la solicitud pasa al contacto del panel (en minusculas)',
+   wa('plantilla_normalizar.js', inp([{ json: {} }]), nod({ Start: { telefono: '+34600112233', email: ' Ana@Ejemplo.COM ' } }))[0].json.email === 'ana@ejemplo.com'
+   && wa('plantilla_normalizar.js', inp([{ json: {} }]), nod({ Start: { telefono: '+34600112233', email: 'no tengo' } }))[0].json.email === '');
+{
+  const wfP = JSON.parse(fs.readFileSync(B + 'workflows_wa/WA_SUB_EnviarPlantilla.json', 'utf8'));
+  const poner = wfP.nodes.find(n => n.name === 'PonerCorreo');
+  ck('bienvenida: si el contacto no tiene correo se le pone (PUT del contacto), sin parar la plantilla',
+     poner && poner.parameters.method === 'PUT' && poner.onError === 'continueRegularOutput'
+     && wfP.connections['PonerCorreo'] && JSON.stringify(wfP.nodes.find(n => n.name === '¿Poner correo?').parameters).includes('sender?.email'));
+  const wf5 = JSON.parse(fs.readFileSync(B + 'workflows_wa/WA_5_Leads_de_eGO_portales.json', 'utf8'));
+  ck('leads de eGO: mandan el correo a la bienvenida', /email_cliente/.test(wf5.nodes.find(n => n.name === 'EnviarPrimerWhatsApp').parameters.workflowInputs.value.email));
+}
 ck('sin plantilla: la de compra por la referencia', r.plantilla === 'bienvenida_compra' && r.idioma === 'es');
 ck('telefono como lo quiere Meta', r.wa_id === '34666777888', r.wa_id);
 
@@ -745,6 +757,13 @@ ck('panel: si la conversacion la tiene Laurence, pasa a la comercial (solo Carme
    /\[5, ?4\]\.includes/.test(JSON.stringify(wfAv.nodes.find(n => n.name === '¿AsignarConversacion?').parameters)));
 const wf2 = JSON.parse(fs.readFileSync(B + 'workflows_wa/WA_2_Asistente_de_WhatsApp.json', 'utf8'));
 const botIf = wf2.nodes.find(n => n.name === 'Bot on/off').parameters.conditions.conditions;
+const correoIf = wf2.nodes.find(n => n.name === '¿Poner correo?');
+ck('asistente: si el cliente escribe y su contacto no tiene el correo de la solicitud, se le pone (despues de contestar)',
+   correoIf && wf2.connections.JuntarMensajes.main[0].some(c => c.node === 'CorreoDelLead')
+   && wf2.connections['¿Poner correo?'].main[0][0].node === 'PonerCorreo'
+   && wf2.nodes.find(n => n.name === 'CorreoDelLead').position[1] > wf2.nodes.find(n => n.name === 'CodeFechaHoraActual').position[1]);
+ck('entrada: lleva el correo actual del contacto', wa('asistente_entrada.js', inp([{ json: { body: automatizacion({
+  meta: { sender: { id: 7, phone_number: '+34600000001', email: 'x@y.es', custom_attributes: { bot: 'On' } } } }) } }]))[0].json.contacto_email === 'x@y.es');
 ck('bot: solo lo para el bot = Off (no la etiqueta 4-intervenir)', botIf.length === 1 && /bot_encendido/.test(botIf[0].leftValue));
 ck('ningun aviso sale por correo', !('enviar_correo' in av({ referencia: 'BN-1528-V' })) && !('email_para' in av({})));
 r = wa('plantilla_normalizar.js', inp([{ json: {} }]), nod({ Start: { telefono: '600112233', referencia: 'CS-1479-A' } }))[0].json;

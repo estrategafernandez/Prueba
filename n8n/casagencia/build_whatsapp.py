@@ -472,6 +472,17 @@ SQL_FICHA = """select * from wa_leads
  order by actualizado_en desc
  limit 1;"""
 
+# El correo que dejo en su solicitud (lead del portal, de la web o a mano)
+SQL_CORREO_DEL_LEAD = """select coalesce(
+  (select lower(trim(email_cliente)) from wa_leads
+    where telefono_wa = $1 and email_cliente ~ '^[^@ ]+@[^@ ]+[.][^@ ]+$'
+    order by actualizado_en desc limit 1),
+  (select lower(trim(detalle->>'email')) from leads_entrantes
+    where regexp_replace(telefono_e164, '[^0-9]', '', 'g') = $1
+      and coalesce(detalle->>'email', '') ~ '^[^@ ]+@[^@ ]+[.][^@ ]+$'
+    order by creado_en desc limit 1),
+  '') as email;"""
+
 SQL_CUALIFICAR = """insert into wa_leads
   (telefono_wa, telefono_e164, referencia, nombre, operacion, es_alquiler, asesora, estado, conversacion_id, %s)
 values ($1,$2,$3,$4,$5,$6,$7,$8,$9,%s)
@@ -971,7 +982,8 @@ def wf_plantilla(ids):
     return reubicar(wf("[WA][SUB] EnviarPlantilla", nodos_asig + [
         trigger_sub([("telefono", "string"), ("nombre", "string"), ("plantilla", "string"),
                      ("param1", "string"), ("param2", "string"), ("referencia", "string"),
-                     ("operacion", "string"), ("portal", "string"), ("conversacion_id", "number")]),
+                     ("operacion", "string"), ("portal", "string"), ("conversacion_id", "number"),
+                     ("email", "string")]),
         pg_query("EnlaceDeLaWeb", "select enlace from wa_cartera where upper(ref) = upper($1) limit 1;",
                  "={{ [ String($json.referencia || '') ] }}", [180, 160], alwaysOutputData=True,
                  onError="continueRegularOutput"),
@@ -1014,6 +1026,16 @@ def wf_plantilla(ids):
             ("={{ String($json.meta?.sender?.custom_attributes?.bot ?? '') }}", "empty", None, "string")]),
         http("ActivarBot", "PUT", "=" + CW_API + "/contacts/{{ $json.meta.sender.id }}", [3060, -140],
              cred=CRED_CHATWOOT, body="={{ JSON.stringify({ custom_attributes: { bot: 'On' } }) }}",
+             onError="continueRegularOutput", alwaysOutputData=True),
+        # El correo de la solicitud en el contacto del panel, si no tiene uno.
+        # Aparte del alta (Chatwoot no deja dos contactos con el mismo correo):
+        # si falla, la plantilla sale igual.
+        if_node("¿Poner correo?", None, None, [3060, 160], conds=[
+            ("={{ Number($('LeerConversacion').first().json.meta?.sender?.id || 0) }}", "gt", 0, "number"),
+            ("={{ %s.email }}" % norm, "notEmpty", None, "string"),
+            ("={{ String($('LeerConversacion').first().json.meta?.sender?.email ?? '') }}", "empty", None, "string")]),
+        http("PonerCorreo", "PUT", "=" + CW_API + "/contacts/{{ $('LeerConversacion').first().json.meta.sender.id }}",
+             [3280, 160], cred=CRED_CHATWOOT, body="={{ JSON.stringify({ email: %s.email }) }}" % norm,
              onError="continueRegularOutput", alwaysOutputData=True),
         http("PlantillaMeta", "GET", "%s/%s/message_templates" % (META_API, WABA_ID), [3280, 0],
              cred=CRED_META, query={"name": "={{ %s.plantilla }}" % norm},
@@ -1062,12 +1084,15 @@ def wf_plantilla(ids):
             ("IdConversacionCreada", 0, "ConversacionLista", 0),
             ("IdConversacionNueva", 0, "ConversacionLista", 0),
             ("ConversacionLista", 0, "LeerConversacion", 0), ("LeerConversacion", 0, "¿Contacto sin bot?", 0),
-            ("¿Contacto sin bot?", 0, "ActivarBot", 0), ("¿Contacto sin bot?", 1, n_if, 0),
-            ("ActivarBot", 0, n_if, 0), (n_if, 0, n_post, 0), (n_if, 1, "PlantillaMeta", 0),
+            ("¿Contacto sin bot?", 0, "ActivarBot", 0), ("¿Contacto sin bot?", 1, "¿Poner correo?", 0),
+            ("ActivarBot", 0, "¿Poner correo?", 0), ("¿Poner correo?", 0, "PonerCorreo", 0),
+            ("¿Poner correo?", 1, n_if, 0), ("PonerCorreo", 0, n_if, 0),
+            (n_if, 0, n_post, 0), (n_if, 1, "PlantillaMeta", 0),
             (n_post, 0, "PlantillaMeta", 0), ("PlantillaMeta", 0, "RenderizarTexto", 0),
             ("RenderizarTexto", 0, "EnviarPlantilla", 0), ("EnviarPlantilla", 0, "GuardarEnMemoriaAgente", 0),
             ("GuardarEnMemoriaAgente", 0, "MarcarBienvenida", 0), ("MarcarBienvenida", 0, "Resultado", 0))), {
         "LeerConversacion": [2620, 0], "¿Contacto sin bot?": [2840, 0], "ActivarBot": [3060, -160],
+        "¿Poner correo?": [3060, 160], "PonerCorreo": [3170, 320],
         "¿AsignarAsesora?": [3280, 0], "AsignarAsesora": [3500, -160], "PlantillaMeta": [3720, 0],
         "RenderizarTexto": [3940, 0], "EnviarPlantilla": [4160, 0], "GuardarEnMemoriaAgente": [4380, 0],
         "MarcarBienvenida": [4600, 0], "Resultado": [4820, 0], "Nota": [3720, -380]})
@@ -1127,7 +1152,7 @@ def wf_lead_web(ids):
     entradas = {k: "={{ %s.%s }}" % (d, v) for k, v in (
         ("telefono", "telefono_e164"), ("nombre", "nombre"), ("plantilla", "plantilla"),
         ("param1", "param1"), ("param2", "param2"), ("referencia", "referencia"),
-        ("operacion", "operacion"), ("portal", "portal"))}
+        ("operacion", "operacion"), ("portal", "portal"), ("email", "email_cliente"))}
     entradas["conversacion_id"] = 0
     registro = ("={{ [ 'web', %s.mensaje_id, %s.telefono_e164, %s.nombre, %s.referencia, %s.tipo, %s.accion, "
                 "%s.plantilla, %s.param2, %s.asesora, %s.se_puede_contactar ? "
@@ -1554,6 +1579,18 @@ def wf_asistente(ids):
         leer_hoja("LeerDirecciones", "Direcciones", [5640, Y], executeOnce=True),
         code_node("ContextoDelLead", code_wa("asistente_contexto.js", cartera=True), [5860, Y]),
         code_node("EstadoEnProceso", code_wa("estado_en_proceso.js"), [4980, Y - 300]),
+        # --- El correo de la solicitud en el contacto del panel -----------------
+        # Si el cliente dejo su correo en la solicitud y el contacto no lo tiene,
+        # se le pone. Va por debajo: se hace despues de contestar.
+        pg_query("CorreoDelLead", SQL_CORREO_DEL_LEAD, "={{ [ $json.telefono_wa ] }}", [4980, Y + 420],
+                 onError="continueRegularOutput", alwaysOutputData=True),
+        if_node("¿Poner correo?", None, None, [5200, Y + 420], conds=[
+            ("={{ Number($('EntradaMensaje').first().json.contacto_id || 0) }}", "gt", 0, "number"),
+            ("={{ String($json.email || '') }}", "notEmpty", None, "string"),
+            ("={{ String($('EntradaMensaje').first().json.contacto_email || '') }}", "empty", None, "string")]),
+        http("PonerCorreo", "PUT", "=" + CW_API + "/contacts/{{ $('EntradaMensaje').first().json.contacto_id }}",
+             [5420, Y + 360], cred=CRED_CHATWOOT, body="={{ JSON.stringify({ email: $json.email }) }}",
+             onError="continueRegularOutput", alwaysOutputData=True),
         if_node("¿Marcar en proceso?", "={{ $json.marcar }}", "true", [5200, Y - 300]),
         exec_sub("MarcarEnProceso", ids.get("[WA][SUB] Etiquetar", ""), "[WA][SUB] Etiquetar",
                  {"conversacion_id": "={{ $json.conversacion_id }}", "etiquetas": "={{ $json.etiquetas }}"},
@@ -1636,6 +1673,8 @@ def wf_asistente(ids):
         ("MensajesDeLaConversacion", 0, "JuntarMensajes", 0),
         # primero la etiqueta (rapido) y luego el agente
         ("JuntarMensajes", 0, "EstadoEnProceso", 0), ("JuntarMensajes", 0, "CodeFechaHoraActual", 0),
+        ("JuntarMensajes", 0, "CorreoDelLead", 0), ("CorreoDelLead", 0, "¿Poner correo?", 0),
+        ("¿Poner correo?", 0, "PonerCorreo", 0),
         ("EstadoEnProceso", 0, "¿Marcar en proceso?", 0), ("¿Marcar en proceso?", 0, "MarcarEnProceso", 0),
         ("CodeFechaHoraActual", 0, "LeerFichaDelLead", 0),
         ("LeerFichaDelLead", 0, "LeerCartera", 0), ("LeerCartera", 0, "LeerDirecciones", 0),
@@ -1994,7 +2033,7 @@ def wf_leads_ego(ids):
     entradas = {k: "={{ %s.%s }}" % (d, v) for k, v in (
         ("telefono", "telefono_e164"), ("nombre", "nombre"), ("plantilla", "plantilla"),
         ("param1", "param1"), ("param2", "param2"), ("referencia", "referencia"),
-        ("operacion", "operacion"), ("portal", "portal"))}
+        ("operacion", "operacion"), ("portal", "portal"), ("email", "email_cliente"))}
     entradas["conversacion_id"] = 0
     registro = ("={{ [ 'ego', $json.lead_id, $json.telefono_e164, $json.nombre, $json.referencia, $json.tipo, "
                 "$json.accion, $json.plantilla, $json.param2, $json.asesora, $json.se_puede_contactar ? "
@@ -2205,7 +2244,7 @@ def wf_lead_manual(ids):
     entradas = {k: "={{ %s.%s }}" % (j, v) for k, v in (
         ("telefono", "telefono_e164"), ("nombre", "nombre"), ("plantilla", "plantilla"),
         ("param1", "param1"), ("param2", "param2"), ("referencia", "referencia"),
-        ("operacion", "operacion"), ("portal", "portal"))}
+        ("operacion", "operacion"), ("portal", "portal"), ("email", "email_cliente"))}
     entradas["conversacion_id"] = 0
     return wf("[WA] 9 · Lead a mano", [
         node("Webhook", "n8n-nodes-base.webhook", {

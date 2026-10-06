@@ -26,7 +26,7 @@ return [{ json: {
   telefono_e164: tel.e164,
   referencia,
   nombre,
-  email_cliente: '',
+  email_cliente: /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(String(b.email ?? '').trim()) ? String(b.email).trim().toLowerCase() : '',
   portal: String(b.portal ?? 'A mano'),
   operacion: alquiler ? 'alquiler' : 'venta',
   es_alquiler: alquiler,

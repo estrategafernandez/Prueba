@@ -111,6 +111,7 @@ return [{
     nombre: String(quien.name ?? '').trim(),
     conversacion_id: conv.id ?? msg.conversation_id ?? null,
     contacto_id: quien.id ?? null,
+    contacto_email: String(quien.email ?? '').trim(),
     cuenta_id: b.account?.id ?? conv.account_id ?? CHATWOOT_CUENTA,
     etiquetas,
     // Redis: una cola por telefono, y una marca por mensaje para no tratarlo dos veces
