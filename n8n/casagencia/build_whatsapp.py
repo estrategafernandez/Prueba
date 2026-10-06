@@ -61,6 +61,7 @@ CONFIG_DESPLIEGUE = CONFIG            # lo que se sube a n8n
 if _PRUEBAS_FILE.exists():
     _p = json.loads(_PRUEBAS_FILE.read_text(encoding="utf-8"))
     assert _p.get("avisar_movil") and _p.get("avisar_email"), "pruebas.local.json: faltan avisar_movil/avisar_email"
+    _p = {k: _p.get(k) for k in ("telefonos", "avisar_movil", "avisar_email")}   # solo lo que usa config.js
     CONFIG_DESPLIEGUE = CONFIG.replace(_hueco.group(0), json.dumps(_p, ensure_ascii=False))
     PRUEBAS_ACTIVAS = len(_p.get("telefonos", []))
 else:
