@@ -126,8 +126,20 @@ console.log('\n== Telefono · buscarInmuebles: alquiler anual o temporal y presu
   check('presupuesto no excluyente: el de 1.000 sale, marcado POR ENCIMA', /BN-1291-A[^|]*POR ENCIMA DE SU PRESUPUESTO/.test(t), refs(t).join());
   check('pero no el de 5.500 ni el de 2.000', !refs(t).includes('BN-1555-A') && !refs(t).includes('BN-1559-A'), refs(t).join());
   check('dice que es de larga duracion y el precio al mes', /larga duración, para todo el año/.test(t) && /1\.?000€ al mes/.test(t));
+  check('a quien busca casa no le salen locales (aunque le den igual las habitaciones)', !/Local comercial|Bar|Office/.test(t), refs(t).join());
+
+  t = bi({ municipio: 'Castellón de la Plana / Castelló de la Plana', operacion: 'alquiler', habitaciones: 0, precio_min: 0, precio_max: 1100, modalidad: 'larga_duracion', tipo: 'vivienda' });
   const op1 = t.slice(t.indexOf('Opción 1:')).split(' | ')[0];
-  check('primero los que caben en su presupuesto', !/POR ENCIMA/.test(op1) && /POR ENCIMA/.test(t.slice(t.indexOf('Opción 3:'))), op1.slice(0, 120));
+  check('primero los que caben en su presupuesto, luego los que se pasan', !/POR ENCIMA/.test(op1) && /POR ENCIMA/.test(t.slice(t.indexOf('Opción 2:'))), refs(t).join());
+
+  t = bi({ municipio: BEN, operacion: 'alquiler', habitaciones: 0, precio_min: 0, precio_max: 0, modalidad: 'indiferente', tipo: 'local' });
+  check('pidiendo local: solo locales', refs(t).length > 0 && refs(t).every(x => /Local|Bar|Office/.test(HOJA.find(f => f.ref === x).tipo_inmueble)), refs(t).join());
+  t = bi({ municipio: BEN, operacion: 'alquiler', habitaciones: 0, precio_min: 0, precio_max: 0, modalidad: 'indiferente', tipo: 'garaje' });
+  check('pidiendo garaje donde no hay: no le ofrece pisos', /No he encontrado/.test(t) && refs(t).length === 0, t.slice(0, 80));
+  const soloLocales = HOJA.filter(f => /Local/.test(f.tipo_inmueble));
+  t = run('bi_filtrar.js', inputOf([]), nodeOf({ Webhook: { body: { municipio: BEN, operacion: 'alquiler', habitaciones: 0, precio_min: 0 } },
+    BuscarInmuebles: soloLocales, ModalidadCartera: PG }))[0].json.result;
+  check('herramienta antigua (sin tipo) y sin viviendas: ensena lo que haya', refs(t).length > 0, refs(t).join());
 
   t = bi({ municipio: BEN, operacion: 'alquiler', habitaciones: 0, precio_min: 0, precio_max: 0, modalidad: 'temporal' });
   check('temporal: solo temporales, dicho asi', refs(t).length > 0 && refs(t).every(x => MOD[x] === 'temporal')

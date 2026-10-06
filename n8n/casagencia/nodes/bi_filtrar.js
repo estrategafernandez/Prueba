@@ -6,6 +6,8 @@
 //    descripcion.
 //  - El presupuesto (precio_max) no es excluyente: se ensena tambien lo que se
 //    pasa hasta un 30 %, marcado POR ENCIMA DE SU PRESUPUESTO.
+//  - Por defecto solo viviendas: a quien busca casa no se le ofrecen locales ni
+//    garajes (antes salian si decia que le daban igual las habitaciones).
 // Retell manda los datos sueltos (args_at_root); si llegan dentro de "args", tambien.
 const peticion = ($('Webhook').first().json.body) ?? {};
 const body = (peticion.args && typeof peticion.args === 'object') ? peticion.args : peticion;
@@ -60,7 +62,20 @@ const modalidad = !operacion.includes('alquil') ? ''
   : /larga|anual|todo el ano|permanente|indefinid/.test(mq) ? 'larga_duracion'
   : /tempor|invierno|meses/.test(mq) ? 'temporal' : '';
 
+// Que busca. Sin "tipo" (herramienta antigua) se buscan viviendas y, si no hay
+// ninguna, cualquier cosa, como en WhatsApp.
+const TIPOS = {
+  vivienda: /apartamento|piso|chalet|villa|duplex|town house|village house|casa|estudio|ground floor|atico|bungalow|adosad|planta baja|flat|penthouse/,
+  local: /local|comercial|bar|restaurant|oficina|office|nave|negocio/,
+  terreno: /terreno|parcela|solar|suelo|land/,
+  garaje: /garaje|garage|parking|plaza|trastero|storage/,
+};
+const tq = plano(body.tipo);
+const tipo = TIPOS[tq] ? tq : 'vivienda';
+let conTipo = true;
+
 const encaja = (r, techo, conModalidad = true) =>
+  (!conTipo || TIPOS[tipo].test(plano(r.tipo_inmueble))) &&
   r.habitaciones >= hab &&
   plano(r.municipio).includes(municipio) &&
   r.operacion.includes(operacion) &&
@@ -72,16 +87,24 @@ const encaja = (r, techo, conModalidad = true) =>
 // haya. Si salen menos de 3, se completa con los siguientes hasta el doble (si dice
 // 800 y hay de 1.000 y 1.100, se le ensenan; uno de 5.500, no).
 const tope = pmax ? Math.round(pmax * 1.3) : 0;
-let lista = filas.filter(r => encaja(r, tope));
-let sinTope = false;
-if (!lista.length && pmax) {
-  lista = filas.filter(r => encaja(r, 0));
-  sinTope = lista.length > 0;
+function seleccionar() {
+  let lista = filas.filter(r => encaja(r, tope));
+  let sinTope = false;
+  if (!lista.length && pmax) {
+    lista = filas.filter(r => encaja(r, 0));
+    sinTope = lista.length > 0;
+  }
+  if (pmax && !sinTope && lista.length && lista.length < 3) {
+    const ya = new Set(lista.map(r => r.ref));
+    lista = lista.concat(filas.filter(r => !ya.has(r.ref) && encaja(r, pmax * 2))
+      .sort((a, b) => a.precio - b.precio).slice(0, 3 - lista.length));
+  }
+  return { lista, sinTope };
 }
-if (pmax && !sinTope && lista.length && lista.length < 3) {
-  const ya = new Set(lista.map(r => r.ref));
-  lista = lista.concat(filas.filter(r => !ya.has(r.ref) && encaja(r, pmax * 2))
-    .sort((a, b) => a.precio - b.precio).slice(0, 3 - lista.length));
+let { lista, sinTope } = seleccionar();
+if (!lista.length && !TIPOS[tq]) {
+  conTipo = false;
+  ({ lista, sinTope } = seleccionar());
 }
 for (const r of lista) r.encima = !!pmax && r.precio > pmax;
 
