@@ -35,7 +35,11 @@ return [{ json: {
   municipio: c.municipio || '',
   resumen: String(c.resumen || f.mensaje || '').replace(/\s+/g, ' ').slice(0, 400),
   enlace: inmueble.enlace || '',
+  resumen_cliente: String(c.resumen_cliente || '').slice(0, 160),
   // Se manda de verdad solo con MODO_LEADS = 'real' (o a un telefono de prueba)
   enviar: !!f.se_puede_contactar && !!d.plantilla && leadsEnReal(f.telefono_e164),
+  // Con correo, ademas (o en vez de WhatsApp si no dejo telefono), el correo.
+  // Lo que no se entiende (revisar) no: lo mira una persona.
+  por_correo: /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(String(f.email_cliente || '')) && d.accion !== 'revisar',
   notas: `Formulario de la web (${f.origen_url || 'casagencia.com'}): ${f.mensaje}`.slice(0, 1500),
 } }];

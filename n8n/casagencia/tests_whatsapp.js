@@ -914,6 +914,16 @@ r = lead('web_decidir.js', inp([{}]), nod({ LeerFormulario: { mensaje: 'Me inter
   se_puede_contactar: true, nombre: 'Ana', idioma: 'es' }, Clasificar: { choices: [{ message: { content: '{"tipo":"compra"}' } }] },
   LeerInmueble: {} }))[0].json;
 ck('cita una referencia que ya no esta en la cartera: no disponible', r.accion === 'no_disponible', r.accion);
+ck('web: sin correo no hay correo', r.por_correo === false);
+r = lead('web_decidir.js', inp([{}]), nod({ LeerFormulario: { mensaje: 'Busco piso en Benicassim', se_puede_contactar: false,
+  telefono_e164: '', nombre: 'Ana', idioma: 'es', email_cliente: 'ana@ejemplo.com' },
+  Clasificar: { choices: [{ message: { content: '{"tipo":"compra","resumen_cliente":"un piso en Benicassim"}' } }] }, LeerInmueble: {} }))[0].json;
+ck('web: sin telefono pero con correo -> correo (y sin WhatsApp)', r.por_correo === true && r.enviar === false
+   && r.accion === 'busqueda' && r.resumen_cliente === 'un piso en Benicassim', JSON.stringify([r.por_correo, r.accion]));
+r = lead('web_decidir.js', inp([{}]), nod({ LeerFormulario: { mensaje: 'Factura', se_puede_contactar: false, telefono_e164: '',
+  nombre: 'X', idioma: 'es', email_cliente: 'x@ejemplo.com' }, Clasificar: { choices: [{ message: { content: '{"tipo":"otro"}' } }] },
+  LeerInmueble: {} }))[0].json;
+ck('web: lo que no se entiende (revisar) no recibe correo: lo mira una persona', r.accion === 'revisar' && r.por_correo === false);
 
 console.log('\n== 19. eGO: leads de portales, ficha del CRM y notas ==');
 // Nodo que mira varios nodos anteriores, cada uno con su lista de items
@@ -1009,7 +1019,18 @@ const sinTel = lead('ego_decidir.js', inp([{}]), nodos({
   EstadoDelInmueble: [{ ok: true, datos: { realestateStatusId: 2 } }], LaCartera: { filas: enLaWeb } }))[0].json;
 ck('eGO: sin telefono pero con email -> por correo, en su idioma', sinTel.por_correo === true && sinTel.se_puede_contactar === false
    && sinTel.enviar === false && sinTel.idioma === 'en' && sinTel.email_cliente === 'ana@ejemplo.com', JSON.stringify([sinTel.por_correo, sinTel.idioma]));
-ck('eGO: con telefono no va por correo', r[0].por_correo === false);
+ck('eGO: con telefono Y correo -> WhatsApp y ademas el correo', r[0].por_correo === true && r[0].se_puede_contactar === true
+   && r[0].email_cliente === 'ana@ejemplo.com', JSON.stringify([r[0].por_correo, r[0].se_puede_contactar]));
+const conTelSinCorreo = lead('ego_decidir.js', inp([{}]), nodos({
+  SoloNuevos: [{ ...separados[0], email: '' }],
+  EstadoDelInmueble: [{ ok: true, datos: { realestateStatusId: 2 } }], LaCartera: { filas: enLaWeb } }))[0].json;
+ck('eGO: con telefono y sin correo -> solo WhatsApp', conTelSinCorreo.por_correo === false && conTelSinCorreo.se_puede_contactar === true);
+const repetidos = lead('ego_decidir.js', inp([{}]), nodos({
+  SoloNuevos: [separados[0], { ...separados[0], lead_id: 'x2', email: 'ANA@ejemplo.com ' }, { ...separados[0], lead_id: 'x3', referencia: 'BN-1547-V' }],
+  EstadoDelInmueble: [{ ok: true, datos: { realestateStatusId: 2 } }, { ok: true, datos: { realestateStatusId: 2 } }, { ok: true, datos: { realestateStatusId: 2 } }],
+  LaCartera: { filas: enLaWeb } })).map(i => i.json.por_correo);
+ck('eGO: misma direccion y mismo inmueble dos veces en la misma pasada -> un solo correo (otro inmueble, si)',
+   repetidos.join() === 'true,false,true', repetidos.join());
 const sinNada = lead('ego_decidir.js', inp([{}]), nodos({
   SoloNuevos: [{ ...separados[0], telefono: '', email: 'sin correo' }],
   EstadoDelInmueble: [{ ok: true, datos: { realestateStatusId: 2 } }], LaCartera: { filas: enLaWeb } }))[0].json;
@@ -1024,6 +1045,18 @@ const parecidos = REAL.filter(f => /^BN-.*-V$/.test(f.ref) && f.ref !== 'BN-1528
 const datosLead = { nombre: 'Ana Belen Marti', idioma: 'es', referencia: 'bn-1528-v', portal: 'Idealista', disponible: true,
   asesora: 'Carmen', email_cliente: 'ana@ejemplo.com' };
 const waTexto = (c) => decodeURIComponent(c.whatsapp_url.split('?text=')[1]);
+r = correo(datosLead, { ficha: piso, parecidos: [], ya_enviado: true });
+ck('correo: ya se le mando el de este inmueble a esta direccion (30 dias) -> no se repite', r.enviar === false && r.ya_enviado === true);
+r = correo({ ...datosLead, portal: 'Web', accion: 'bienvenida' }, { ficha: piso, parecidos: [] });
+ck('correo de la web con inmueble: "en nuestra web", no "en Web"', r.modo === 'ficha' && /en nuestra web por este inmueble/.test(r.texto)
+   && !/en Web/.test(r.texto) && /nos escribiste desde nuestra web/.test(r.texto), r.texto.split('\n')[2]);
+r = correo({ ...datosLead, portal: 'Web', referencia: '', accion: 'busqueda', resumen_cliente: 'un piso de 3 habitaciones en Benicàssim' }, { ficha: null, parecidos: [] });
+ck('correo de la web sin inmueble (busca algo): general, con lo que busca y el WhatsApp', r.modo === 'busqueda' && r.enviar === true
+   && /Soy Sara, de Casagencia\. Hemos recibido el mensaje que nos dejaste en nuestra web sobre un piso de 3 habitaciones/.test(r.texto)
+   && /wa\.me\/34864893794/.test(r.whatsapp_url) && !/\bIA\b/.test(r.html + r.texto) && !/inmueble con referencia/.test(r.texto), r.texto.split('\n')[2]);
+r = correo({ ...datosLead, portal: 'Web', referencia: '', accion: 'captacion', asesora: 'Gisela', municipio: 'Castellón de la Plana / Castelló de la Plana', idioma: 'en' }, { ficha: null, parecidos: [] });
+ck('correo de la web de un propietario: su asesora le llamara (en su idioma)', r.modo === 'propietario' && r.remitente === 'Gisela'
+   && /your property in Castell/.test(r.texto) && /Gisela, your agent, will contact you/.test(r.texto), r.texto.split('\n')[2]);
 r = correo(datosLead, { ficha: piso, parecidos: [] });
 ck('correo: disponible -> ficha con foto, precio, datos, boton de WhatsApp y ficha', r.modo === 'ficha'
    && r.html.includes(piso.imagen) && r.html.includes('259.000') && r.html.includes(piso.enlace)
@@ -1039,6 +1072,22 @@ ck('correo: a quien va, registro y responder a la asesora', r.para === 'ana@ejem
    && r.responder_a === cfg.EQUIPO.Carmen.email);
 ck('correo: en produccion se envia, desde el Gmail de su asesora (Carmen)', r.enviar === true && r.remitente === 'Carmen' && r.responder_a === cfg.EQUIPO.Carmen.email);
 ck('correo: Paco va en copia', r.copia === 'paco@casagencia.com');
+{
+  const leerWf = (f) => JSON.parse(fs.readFileSync(B + 'workflows_wa/' + f, 'utf8'));
+  const sale = (w, desde) => (w.connections[desde]?.main || []).flat().map(c => c.node);
+  const q = (w, n) => (w.nodes.find(x => x.name === n) || {}).parameters?.query || '';
+  const w5 = leerWf('WA_5_Leads_de_eGO_portales.json'), wWeb = leerWf('WA_SUB_LeadDeLaWeb.json');
+  ck('[WA] 5: de Registrar salen el WhatsApp y el correo, en paralelo', sale(w5, 'Registrar').includes('¿Se manda?') && sale(w5, 'Registrar').includes('¿Por correo?'));
+  ck('LeadDeLaWeb: tambien el correo (con telefono o sin el)', sale(wWeb, '¿Es nuevo?').includes('¿Se manda?') && sale(wWeb, '¿Es nuevo?').includes('¿Por correo?')
+     && ['EnviarCorreoGisela', 'EnviarCorreoCarmen'].every(n => /copia/.test(wWeb.nodes.find(x => x.name === n).parameters.options.ccList)));
+  ck('con varios leads a la vez: cada paso del correo devuelve una fila por lead (returning)', /returning id/.test(q(w5, 'GuardarCorreo'))
+     && /returning id/.test(q(w5, 'ApuntarCorreoEnviado')) && /ya_enviado/.test(q(w5, 'FichaParaCorreo')));
+  ck('el estado del correo no pisa el del WhatsApp (va en detalle.correo_estado)', /correo_estado/.test(q(w5, 'ApuntarCorreoEnviado'))
+     && /when estado in \('sin_telefono', 'correo_preparado'\)/.test(q(w5, 'ApuntarCorreoEnviado')));
+  ck('[WA] 5: el lead se marca enviado en el mismo paso que wa_leads, y los repetidos como repetido',
+     /update leads_entrantes set estado = 'enviado'/.test(q(w5, 'MarcarPlantillaEnviada')) && !w5.nodes.some(x => x.name === 'ApuntarEnviado')
+     && /as nuevo/.test(q(w5, 'AltaDelLead')) && (w5.connections['¿Lead nuevo?'].main[1] || []).some(c => c.node === 'MarcarRepetido'));
+}
 ck('correo: en [WA] 5 los dos Gmail llevan la copia', (() => { const w = JSON.parse(fs.readFileSync(B + 'workflows_wa/WA_5_Leads_de_eGO_portales.json', 'utf8'));
   return ['EnviarCorreoGisela', 'EnviarCorreoCarmen'].every(n => /ComponerCorreo'\)\.item\.json\.copia/.test(w.nodes.find(x => x.name === n).parameters.options.ccList)); })());
 ck('correo: con un trozo de la descripcion, sin el "CASAGENCIA INMOBILIARIA presenta"', /elegante y lleno de luz/.test(r.html)

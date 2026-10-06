@@ -13,6 +13,10 @@ let cartera = [];
 try { cartera = $('LaCartera').first().json.filas || []; } catch (e) { cartera = []; }
 if (typeof cartera === 'string') { try { cartera = JSON.parse(cartera); } catch (e) { cartera = []; } }
 const porRef = Object.fromEntries([].concat(cartera).map(c => [String(c.ref || '').toUpperCase(), c]));
+// Si en la misma pasada llega dos veces el mismo correo con el mismo inmueble
+// (el cliente repite la solicitud), solo se le manda un correo
+const correosVistos = new Set();
+const EMAIL_OK = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 
 return nuevos.map((n, k) => {
   const b = n.json;
@@ -24,6 +28,7 @@ return nuevos.map((n, k) => {
   // Lo dice eGO; si eGO no ha contestado, que siga publicado en la web
   const disponible = !b.referencia ? null : (estadoId ? estadoId === EGO_DISPONIBLE : !!c.ref);
   const tel = normalizarTelefono(b.telefono);
+  const clave = `${String(b.email || '').trim().toLowerCase()}|${String(b.referencia || '').toUpperCase()}`;
   // La referencia y la cartera mandan sobre el tipo de solicitud de eGO, que a
   // veces viene como "Venta" para un piso de alquiler
   const alquiler = esAlquiler(b.referencia, c.tipo_transaccion || b.operacion);
@@ -49,8 +54,9 @@ return nuevos.map((n, k) => {
     se_puede_contactar: tel.valido,
     // Se manda de verdad solo con MODO_LEADS = 'real' (o a un telefono de prueba)
     enviar: tel.valido && !!d.plantilla && leadsEnReal(tel.e164),
-    // Sin telefono pero con correo: se le prepara el correo con la ficha y el WhatsApp
-    por_correo: !tel.valido && /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(b.email),
+    // Con correo, SIEMPRE se le manda tambien el correo con la ficha y el WhatsApp
+    // (tenga telefono o no): si el WhatsApp no le llega, le llega el correo.
+    por_correo: EMAIL_OK.test(b.email) && !correosVistos.has(clave) && !!correosVistos.add(clave),
     idioma: idiomaDe(b.mensaje),
     nombre: b.nombre,
     email_cliente: b.email,

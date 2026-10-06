@@ -473,6 +473,25 @@ SQL_PLANTILLA_ENVIADA = """update wa_leads
    set estado = 'plantilla_enviada', conversacion_id = $2, actualizado_en = now()
  where telefono_wa = $1 and referencia = $3;"""
 
+# [WA] 5: el alta devuelve SIEMPRE una fila por lead, con "nuevo" = false si ya se
+# le escribio por WhatsApp por ese inmueble en los ultimos 30 dias (asi el lead
+# repetido se marca como tal y no se pierde el emparejado con varios a la vez).
+assert SQL_ALTA_LEAD_WEB.rstrip().endswith("returning id, telefono_wa, referencia;")
+SQL_ALTA_LEAD_NUEVO = """with alta as (
+%s
+)
+select id, telefono_wa, referencia, true as nuevo from alta
+union all
+select null::integer, $1::text, $3::text, false where not exists (select 1 from alta);""" % SQL_ALTA_LEAD_WEB.rstrip().rstrip(";")
+
+# [WA] 5: plantilla enviada en wa_leads y lead marcado como enviado, en un paso
+SQL_PLANTILLA_Y_ENTRANTE = """with w as (
+  update wa_leads set estado = 'plantilla_enviada', conversacion_id = $2, actualizado_en = now()
+   where telefono_wa = $1 and referencia = $3
+  returning 1)
+update leads_entrantes set estado = 'enviado' where id = $4
+returning id;"""
+
 SQL_FICHA = """select * from wa_leads
  where telefono_wa = $1
  order by actualizado_en desc
@@ -1162,12 +1181,15 @@ def wf_lead_web(ids):
     entradas["conversacion_id"] = 0
     registro = ("={{ [ 'web', %s.mensaje_id, %s.telefono_e164, %s.nombre, %s.referencia, %s.tipo, %s.accion, "
                 "%s.plantilla, %s.param2, %s.asesora, %s.se_puede_contactar ? "
-                "(%s.enviar ? 'enviando' : 'preparado') : 'sin_telefono', JSON.stringify({ origen: %s.origen_url, idioma: %s.idioma, municipio: %s.municipio, resumen: "
-                "%s.resumen, mensaje: %s.mensaje }) ] }}")
+                "(%s.enviar ? 'enviando' : 'preparado') : (%s.por_correo ? 'correo_preparado' : 'sin_telefono'), "
+                "JSON.stringify({ origen: %s.origen_url, idioma: %s.idioma, municipio: %s.municipio, email: %s.email_cliente, "
+                "resumen: %s.resumen, mensaje: %s.mensaje }) ] }}")
     registro = registro % tuple([d] * registro.count("%s"))
     alta = ("={{ [ %s.telefono_wa, %s.telefono_e164, %s.referencia, %s.nombre, %s.email_cliente, 'Web', "
             "%s.operacion, %s.es_alquiler, %s.asesora, %s.asunto, %s.enlace, %s.plantilla, %s.notas ] }}")
     alta = alta % tuple([d] * alta.count("%s"))
+    # Con correo (tenga telefono o no), tambien el correo, como en [WA] 5
+    correo_nodos, correo_conns = rama_correo(1720, 420)
     return wf("[WA][SUB] LeadDeLaWeb", [
         trigger_sub([("correo", "string")]),
         code_node("LeerFormulario", code_wa("web_parsear.js"), [180, 0]),
@@ -1212,6 +1234,7 @@ def wf_lead_web(ids):
                   "pasar_a_humano": False, "etiqueta": ""},
                  [3260, -320], {"conversacion_id": "number", "pasar_a_humano": "boolean"},
                  onError="continueRegularOutput", alwaysOutputData=True),
+    ] + correo_nodos + [
         nota("Nota", "## Solo los formularios de la WEB\nBuzon *formularioscasagencia@gmail.com* (credencial "
              "*Correo Formulario*): solo los correos de **web@websites.egorealestate.com** (\"Contacto del "
              "WebSite\"). Los de Idealista, Fotocasa... son las mismas solicitudes que entran en eGO: esas "
@@ -1230,6 +1253,7 @@ def wf_lead_web(ids):
             ("Clasificar", 0, "LeerInmueble", 0), ("LeerInmueble", 0, "Decidir", 0),
             ("Decidir", 0, "Registrar", 0), ("Registrar", 0, "¿Es nuevo?", 0),
             ("¿Es nuevo?", 0, "¿Se manda?", 0), ("¿Es nuevo?", 1, "YaEstabaApuntado", 0),
+            ("¿Es nuevo?", 0, "¿Por correo?", 0), *correo_conns,
             ("¿Se manda?", 0, "AltaDelLead", 0), ("¿Se manda?", 1, "Preparado (no se manda)", 0),
             ("AltaDelLead", 0, "¿Lead nuevo?", 0), ("¿Lead nuevo?", 0, "EnviarPrimerWhatsApp", 0),
             ("EnviarPrimerWhatsApp", 0, "MarcarPlantillaEnviada", 0),
@@ -2212,9 +2236,74 @@ SQL_FICHA_CORREO = """select
       where $1 <> '' and upper(left(ref, 2)) = upper(left($1, 2)) and upper(ref) <> upper($1)
         and (case when upper($1) like '%-A' then tipo_transaccion ilike '%alquil%' else tipo_transaccion not ilike '%alquil%' end)
         and tipo_inmueble ~* '(apartamento|piso|chalet|villa|d[uú]plex|town house|village house|casa|estudio|ground floor|[aá]tico|bungalow|adosad)'
-      order by actualizado_en desc, precio limit 3) p), '[]'::json) as parecidos;"""
-SQL_GUARDAR_CORREO = """update leads_entrantes set correo_html = $2, estado = $3, detalle = detalle || $4::jsonb
- where id = $1;"""
+      order by actualizado_en desc, precio limit 3) p), '[]'::json) as parecidos,
+  -- Ya se le mando el correo de este inmueble a esta direccion (30 dias): no se repite
+  exists (select 1 from leads_entrantes e
+           where e.id <> $3::int and $2 <> '' and lower(e.detalle->>'email') = lower($2)
+             and upper(e.referencia) = upper($1)
+             and (e.detalle->>'correo_estado' = 'enviado' or e.estado = 'correo_enviado')
+             and e.creado_en > now() - interval '30 days') as ya_enviado;"""
+# El estado del lead es el del WhatsApp si tiene telefono; si solo dejo el correo,
+# el del correo. El del correo va siempre en detalle.correo_estado.
+# (returning: una fila por lead, para no perder el emparejado con varios a la vez)
+SQL_GUARDAR_CORREO = """update leads_entrantes set correo_html = $2,
+       estado = case when estado in ('sin_telefono', 'correo_preparado') then $3 else estado end,
+       detalle = detalle || $4::jsonb
+ where id = $1
+returning id;"""
+SQL_CORREO_ENVIADO = """update leads_entrantes set
+       estado = case when estado in ('sin_telefono', 'correo_preparado')
+                     then (case when $2 then 'correo_enviado' else 'correo_fallido' end) else estado end,
+       detalle = detalle || jsonb_build_object('correo_estado', case when $2 then 'enviado' else 'fallido' end)
+ where id = $1
+returning id;"""
+
+
+def rama_correo(x, y):
+    """Los nodos del correo al lead (mismos en [WA] 5 y en LeadDeLaWeb): ficha,
+    componer, guardar y mandar desde el Gmail de su asesora con Paco en copia.
+    Entra por "¿Por correo?" desde Registrar. Devuelve (nodos, conexiones)."""
+    d = "$('Decidir').item.json"
+    nodos = [
+        if_node("¿Por correo?", None, None, [x, y], conds=[
+            ("={{ %s.por_correo }}" % d, "true", None, "boolean"),
+            ("={{ !!$json.id }}", "true", None, "boolean")]),
+        pg_query("FichaParaCorreo", SQL_FICHA_CORREO,
+                 "={{ [ %s.referencia || '', %s.email_cliente || '', $('Registrar').item.json.id ] }}" % (d, d),
+                 [x + 220, y], alwaysOutputData=True, onError="continueRegularOutput"),
+        node("ComponerCorreo", "n8n-nodes-base.code", {"mode": "runOnceForEachItem",
+             "jsCode": code_correo("ego_correo.js")}, [x + 440, y], 2),
+        pg_query("GuardarCorreo", SQL_GUARDAR_CORREO,
+                 "={{ [ $json.registro_id, $json.html, $json.ya_enviado ? 'repetido' : 'correo_preparado', "
+                 "JSON.stringify({ correo_asunto: $json.asunto, correo_para: $json.para, correo_modo: $json.modo, "
+                 "whatsapp: $json.whatsapp_url, correo_estado: $json.ya_enviado ? 'repetido' : 'preparado' }) ] }}",
+                 [x + 660, y], onError="continueRegularOutput", alwaysOutputData=True),
+        if_node("¿Se envia el correo?", "={{ $('ComponerCorreo').item.json.enviar }}", "true", [x + 880, y]),
+        # Sale del correo de su asesora (Gisela para CS/VR, Carmen para el resto)
+        if_node("¿De Gisela?", "={{ $('ComponerCorreo').item.json.remitente }}", "equals", [x + 1100, y - 80],
+                der="Gisela", tipo="string"),
+    ] + [node("EnviarCorreo" + quien, "n8n-nodes-base.gmail", {
+            "sendTo": "={{ $('ComponerCorreo').item.json.para }}",
+            "subject": "={{ $('ComponerCorreo').item.json.asunto }}",
+            "emailType": "html",
+            "message": "={{ $('ComponerCorreo').item.json.html }}",
+            "options": {"appendAttribution": False, "senderName": "={{ $('ComponerCorreo').item.json.nombre_remitente }}",
+                        "replyTo": "={{ $('ComponerCorreo').item.json.responder_a }}",
+                        "ccList": "={{ $('ComponerCorreo').item.json.copia }}"}},
+            [x + 1320, y + dy], 2.1, credentials=CRED_CORREO[quien], onError="continueRegularOutput", alwaysOutputData=True)
+        for quien, dy in (("Gisela", -160), ("Carmen", 0))] + [
+        pg_query("ApuntarCorreoEnviado", SQL_CORREO_ENVIADO,
+                 "={{ [ $('ComponerCorreo').item.json.registro_id, !!$json.id ] }}", [x + 1540, y - 80],
+                 onError="continueRegularOutput", alwaysOutputData=True),
+        noop("Correo preparado (no se envia)", [x + 1100, y + 100]),
+    ]
+    conns = [("¿Por correo?", 0, "FichaParaCorreo", 0), ("FichaParaCorreo", 0, "ComponerCorreo", 0),
+             ("ComponerCorreo", 0, "GuardarCorreo", 0), ("GuardarCorreo", 0, "¿Se envia el correo?", 0),
+             ("¿Se envia el correo?", 0, "¿De Gisela?", 0),
+             ("¿De Gisela?", 0, "EnviarCorreoGisela", 0), ("¿De Gisela?", 1, "EnviarCorreoCarmen", 0),
+             ("EnviarCorreoGisela", 0, "ApuntarCorreoEnviado", 0), ("EnviarCorreoCarmen", 0, "ApuntarCorreoEnviado", 0),
+             ("¿Se envia el correo?", 1, "Correo preparado (no se envia)", 0)]
+    return nodos, conns
 
 
 def wf_leads_ego(ids):
@@ -2236,6 +2325,8 @@ def wf_leads_ego(ids):
     alta = ("={{ [ %s.telefono_wa, %s.telefono_e164, %s.referencia, %s.nombre, %s.email_cliente, %s.portal, "
             "%s.operacion, %s.es_alquiler, %s.asesora, %s.asunto, %s.enlace, %s.plantilla, %s.notas ] }}")
     alta = alta % tuple([d] * alta.count("%s"))
+    # A todo el que deja correo (con telefono o sin el), tambien el correo
+    correo_nodos, correo_conns = rama_correo(2160, 420)
     return wf("[WA] 5 · Leads de eGO (portales)", [
         node("Cada5Minutos", "n8n-nodes-base.scheduleTrigger",
              {"rule": {"interval": [{"field": "minutes", "minutesInterval": 5}]}}, [-40, 0], 1.2),
@@ -2266,55 +2357,28 @@ def wf_leads_ego(ids):
             ("={{ %s.enviar }}" % d, "true", None, "boolean"),
             ("={{ !!$json.id }}", "true", None, "boolean")]),
         noop("Preparado (no se manda)", [2380, 200]),
-        pg_query("AltaDelLead", SQL_ALTA_LEAD_WEB, alta, [2380, -120], alwaysOutputData=True,
+        pg_query("AltaDelLead", SQL_ALTA_LEAD_NUEVO, alta, [2380, -120], alwaysOutputData=True,
                  onError="continueRegularOutput"),
-        if_node("¿Lead nuevo?", "={{ $json.id }}", "exists", [2600, -120], tipo="number"),
+        if_node("¿Lead nuevo?", "={{ $json.nuevo }}", "true", [2600, -120]),
         exec_sub("EnviarPrimerWhatsApp", ids.get("[WA][SUB] EnviarPlantilla", ""), "[WA][SUB] EnviarPlantilla",
                  entradas, [2820, -220], {"conversacion_id": "number"}, cada_uno=True,
                  onError="continueRegularOutput"),
-        pg_query("MarcarPlantillaEnviada", SQL_PLANTILLA_ENVIADA,
-                 "={{ [ %s.telefono_wa, $json.conversacion_id || 0, %s.referencia ] }}" % (d, d),
-                 [3040, -220], onError="continueRegularOutput", alwaysOutputData=True),
-        pg_query("ApuntarEnviado", SQL_ENTRANTE_ESTADO, "={{ [ $('Registrar').item.json.id, 'enviado' ] }}",
-                 [3260, -220], onError="continueRegularOutput", alwaysOutputData=True),
-        # Sin telefono pero con correo: correo con la ficha y un boton de WhatsApp
-        if_node("¿Por correo?", None, None, [2160, 320], conds=[
-            ("={{ %s.por_correo }}" % d, "true", None, "boolean"),
-            ("={{ !!$json.id }}", "true", None, "boolean")]),
-        pg_query("FichaParaCorreo", SQL_FICHA_CORREO, "={{ [ %s.referencia || '' ] }}" % d, [2380, 320],
-                 alwaysOutputData=True, onError="continueRegularOutput"),
-        node("ComponerCorreo", "n8n-nodes-base.code", {"mode": "runOnceForEachItem",
-             "jsCode": code_correo("ego_correo.js")}, [2600, 320], 2),
-        pg_query("GuardarCorreo", SQL_GUARDAR_CORREO,
-                 "={{ [ $json.registro_id, $json.html, 'correo_preparado', JSON.stringify({ correo_asunto: $json.asunto, "
-                 "correo_para: $json.para, correo_modo: $json.modo, whatsapp: $json.whatsapp_url }) ] }}",
-                 [2820, 320], onError="continueRegularOutput", alwaysOutputData=True),
-        if_node("¿Se envia el correo?", "={{ $('ComponerCorreo').item.json.enviar }}", "true", [3040, 320]),
-        # Sale del correo de su asesora (Gisela para CS/VR, Carmen para el resto)
-        if_node("¿De Gisela?", "={{ $('ComponerCorreo').item.json.remitente }}", "equals", [3260, 240],
-                der="Gisela", tipo="string"),
-    ] + [node("EnviarCorreo" + quien, "n8n-nodes-base.gmail", {
-            "sendTo": "={{ $('ComponerCorreo').item.json.para }}",
-            "subject": "={{ $('ComponerCorreo').item.json.asunto }}",
-            "emailType": "html",
-            "message": "={{ $('ComponerCorreo').item.json.html }}",
-            "options": {"appendAttribution": False, "senderName": "={{ $('ComponerCorreo').item.json.nombre_remitente }}",
-                        "replyTo": "={{ $('ComponerCorreo').item.json.responder_a }}",
-                        "ccList": "={{ $('ComponerCorreo').item.json.copia }}"}},
-            [3480, y], 2.1, credentials=CRED_CORREO[quien], onError="continueRegularOutput", alwaysOutputData=True)
-        for quien, y in (("Gisela", 160), ("Carmen", 320))] + [
-        pg_query("ApuntarCorreoEnviado", "update leads_entrantes set estado = case when $2 then 'correo_enviado' "
-                 "else 'correo_fallido' end where id = $1;",
-                 "={{ [ $('Registrar').item.json.id, !!$json.id ] }}", [3700, 240],
-                 onError="continueRegularOutput", alwaysOutputData=True),
-        noop("Correo preparado (no se envia)", [3260, 420]),
-        nota("NotaCorreo", "## Leads que solo dejan su correo\nSi el lead no trae telefono pero si email, "
-             "se le prepara un correo (wa/correo_lead.js) en su idioma con la **ficha del inmueble** (foto, "
-             "precio, habitaciones, banos, metros, lo destacado), un boton **Escribenos por WhatsApp** que abre "
-             "el chat con Sara con la referencia ya escrita, y otro a la ficha de la web. Si ya no esta "
-             "disponible: 3 parecidos.\n\nSe guarda en *leads_entrantes* (correo_html) y sale del **Gmail de su "
-             "asesora** (Gisela para CS/VR, Carmen para el resto), con respuesta a ella. Queda apuntado como "
-             "correo_enviado o correo_fallido.", [2380, 520], 640, 300),
+        pg_query("MarcarPlantillaEnviada", SQL_PLANTILLA_Y_ENTRANTE,
+                 "={{ [ %s.telefono_wa, $json.conversacion_id || 0, %s.referencia, $('Registrar').item.json.id ] }}"
+                 % (d, d), [3040, -220], onError="continueRegularOutput", alwaysOutputData=True),
+        # Ya se le escribio por WhatsApp por este inmueble hace menos de 30 dias
+        pg_query("MarcarRepetido", "update leads_entrantes set estado = 'repetido' where id = $1 "
+                 "and estado = 'enviando' returning id;", "={{ [ $('Registrar').item.json.id ] }}",
+                 [2820, -40], onError="continueRegularOutput", alwaysOutputData=True),
+    ] + correo_nodos + [
+        nota("NotaCorreo", "## Correo a todo el que deja su email\nTenga telefono o no: con telefono le "
+             "sale la bienvenida por WhatsApp **y** el correo; solo con correo, el correo. Va en su idioma "
+             "(wa/correo_lead.js) con la **ficha del inmueble** (foto, precio, habitaciones, banos, metros, lo "
+             "destacado), un boton **Escribenos por WhatsApp** con la referencia ya escrita y otro a la ficha de "
+             "la web. Si ya no esta disponible: 3 parecidos.\n\nSale del **Gmail de su asesora** (Gisela para "
+             "CS/VR, Carmen para el resto), con respuesta a ella y Paco en copia. Una vez por direccion e "
+             "inmueble cada 30 dias. En *leads_entrantes*: detalle.correo_estado (enviado / fallido / repetido).",
+             [2380, 720], 640, 300),
         nota("Nota", "## Todas las solicitudes de los portales, desde eGO\nCada 5 minutos, los leads que han "
              "entrado en eGO en las ultimas 3 horas y vienen de un portal (Idealista, Fotocasa, "
              "Properstar...). Cada lead una sola vez (tabla *leads_entrantes*).\n\nEl lead ya trae el "
@@ -2333,16 +2397,11 @@ def wf_leads_ego(ids):
             ("YaVistos", 0, "SoloNuevos", 0), ("SoloNuevos", 0, "EstadoDelInmueble", 0),
             ("EstadoDelInmueble", 0, "LaCartera", 0), ("LaCartera", 0, "Decidir", 0),
             ("Decidir", 0, "Registrar", 0), ("Registrar", 0, "¿Se manda?", 0), ("Registrar", 0, "¿Por correo?", 0),
-            ("¿Por correo?", 0, "FichaParaCorreo", 0), ("FichaParaCorreo", 0, "ComponerCorreo", 0),
-            ("ComponerCorreo", 0, "GuardarCorreo", 0), ("GuardarCorreo", 0, "¿Se envia el correo?", 0),
-            ("¿Se envia el correo?", 0, "¿De Gisela?", 0),
-            ("¿De Gisela?", 0, "EnviarCorreoGisela", 0), ("¿De Gisela?", 1, "EnviarCorreoCarmen", 0),
-            ("EnviarCorreoGisela", 0, "ApuntarCorreoEnviado", 0), ("EnviarCorreoCarmen", 0, "ApuntarCorreoEnviado", 0),
-            ("¿Se envia el correo?", 1, "Correo preparado (no se envia)", 0),
+            *correo_conns,
             ("¿Se manda?", 0, "AltaDelLead", 0), ("¿Se manda?", 1, "Preparado (no se manda)", 0),
             ("AltaDelLead", 0, "¿Lead nuevo?", 0), ("¿Lead nuevo?", 0, "EnviarPrimerWhatsApp", 0),
-            ("EnviarPrimerWhatsApp", 0, "MarcarPlantillaEnviada", 0),
-            ("MarcarPlantillaEnviada", 0, "ApuntarEnviado", 0)))
+            ("¿Lead nuevo?", 1, "MarcarRepetido", 0),
+            ("EnviarPrimerWhatsApp", 0, "MarcarPlantillaEnviada", 0)))
 
 
 def wf_ego_ficha(ids):
