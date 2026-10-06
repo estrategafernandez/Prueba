@@ -25,6 +25,7 @@ const valores = {
   cuando: j.cuando,
   fecha_hora: j.fecha_hora,
   hora: j.hora,
+  hora_texto: horaTexto(j.hora),
   inmueble,
   direccion: direccion || (municipio ? `en ${municipio} (te confirma el punto de encuentro tu asesora)` : 'te la confirma tu asesora'),
   asesora: j.asesora || 'tu asesora',
@@ -33,22 +34,27 @@ const valores = {
 const params = {};
 (conf.parametros || []).forEach((k, i) => { params[String(i + 1)] = paramPlantilla(valores[k] ?? '', 200); });
 
-// El texto de la plantilla, de Meta; si no responde, uno de respaldo
-let cuerpo = '';
-try {
-  const t = (($('PlantillaMeta').first().json || {}).data || []).find(p => p.name === conf.plantilla) || {};
-  cuerpo = ((t.components || []).find(c => c.type === 'BODY') || {}).text || '';
-} catch (e) { cuerpo = ''; }
+// La plantilla en Meta: su texto, idioma, categoria y si ya esta aprobada
+let t = {};
+try { t = (($('PlantillaMeta').first().json || {}).data || []).find(p => p.name === conf.plantilla) || {}; } catch (e) { t = {}; }
+const aprobada = t.status === 'APPROVED';
+let cuerpo = ((t.components || []).find(c => c.type === 'BODY') || {}).text || '';
 if (!cuerpo) cuerpo = Object.keys(params).map(k => `{{${k}}}`).join(' · ');
 let contenido = cuerpo;
 for (const [k, val] of Object.entries(params)) contenido = contenido.split(`{{${k}}}`).join(val);
 
 return [{ json: {
   conversacion_id: conv,
+  aprobada,
+  estado_plantilla: t.status || 'no encontrada',
   contenido,
+  // Para Sara (memoria), no para el cliente: de que visita se trata
+  contexto_visita: `[Recordatorio enviado al cliente: visita ${j.fecha_hora || ''}` +
+    `${j.referencia ? ', inmueble ' + j.referencia : ''}${j.asesora ? ', con ' + j.asesora : ''}]`,
   body_mensaje: JSON.stringify({
     content: contenido,
     message_type: 'outgoing',
-    template_params: { name: conf.plantilla, category: 'UTILITY', language: conf.idioma || 'es', processed_params: params },
+    template_params: { name: conf.plantilla, category: t.category || 'MARKETING', language: t.language || conf.idioma || 'es',
+                       processed_params: params },
   }),
 } }];

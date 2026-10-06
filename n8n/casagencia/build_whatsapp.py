@@ -1303,20 +1303,28 @@ def wf_recordatorio_cliente_sub(ids):
              cred=CRED_META, query={"name": "={{ $('Config').first().json.plantilla }}"},
              onError="continueRegularOutput", alwaysOutputData=True),
         code_node("Componer", code_wa("recordatorio_cliente_componer.js"), [1520, 0]),
-        if_node("¿Hay conversacion?", "={{ Number($json.conversacion_id || 0) }}", "gt", [1740, 0], der=0,
-                tipo="number"),
+        # Solo con la plantilla APROBADA en Meta y una conversacion donde mandarla
+        if_node("¿Se puede mandar?", None, None, [1740, 0], conds=[
+            ("={{ Number($json.conversacion_id || 0) }}", "gt", 0, "number"),
+            ("={{ $json.aprobada }}", "true", None, "boolean")]),
         http("EnviarRecordatorio", "POST", "=" + CW_API + "/conversations/{{ $json.conversacion_id }}/messages",
              [1960, -80], cred=CRED_CHATWOOT, body="={{ $json.body_mensaje }}",
              onError="continueRegularOutput", alwaysOutputData=True),
+        if_node("¿Enviado?", "={{ Number($json.id || 0) }}", "gt", [2180, -80], der=0, tipo="number"),
         # Sara sabe que se le ha recordado la visita (si contesta "no puedo ir", lo entiende)
         pg_query("GuardarEnMemoriaAgente", "insert into n8n_chat_histories (session_id, message) values ($1, $2);",
-                 "={{ [ %s.telefono, JSON.stringify({ type: 'ai', content: $('Componer').first().json.contenido, "
+                 "={{ [ %s.telefono, JSON.stringify({ type: 'ai', content: $('Componer').first().json.contenido + "
+                 "'\\n\\n' + $('Componer').first().json.contexto_visita, "
                  "tool_calls: [], additional_kwargs: {}, response_metadata: {}, invalid_tool_calls: [] }) ] }}" % st,
-                 [2180, -80], onError="continueRegularOutput", alwaysOutputData=True),
-        set_node("Resultado", {"enviado": ("boolean", "={{ !!$('EnviarRecordatorio').first().json.id }}"),
-                               "conversacion_id": ("number", "={{ $('Componer').first().json.conversacion_id }}")},
-                 [2400, 0]),
-        noop("SinConversacion", [1960, 160]),
+                 [2400, -160], onError="continueRegularOutput", alwaysOutputData=True),
+        # No ha salido (plantilla aun sin aprobar, sin conversacion o error): se quita la
+        # marca para que se reintente en la siguiente pasada (si sigue en la ventana)
+        pg_query("Desapuntar", "delete from wa_avisos where evento_id = $1 and tipo = 'cliente_' || $2;",
+                 "={{ [ %s.evento_id, %s.tipo ] }}" % (st, st), [2400, 160],
+                 onError="continueRegularOutput", alwaysOutputData=True),
+        set_node("Resultado", {"conversacion_id": ("number", "={{ $('Componer').first().json.conversacion_id }}"),
+                               "plantilla": ("string", "={{ $('Componer').first().json.estado_plantilla }}")},
+                 [2620, 0]),
         nota("Nota", "## Un recordatorio de visita al cliente\nPor su conversacion del panel (si no la tiene, "
              "se busca o se crea por el telefono) con la plantilla de Meta de RECORDATORIO_CLIENTE "
              "(wa/config.js): {{1}}, {{2}}... segun *parametros*. Se guarda en la memoria de Sara para que "
@@ -1325,9 +1333,11 @@ def wf_recordatorio_cliente_sub(ids):
             ("FichaDelInmueble", 0, "LeerDirecciones", 0), ("LeerDirecciones", 0, "¿Tiene conversacion?", 0),
             ("¿Tiene conversacion?", 0, "PlantillaMeta", 0), ("¿Tiene conversacion?", 1, "ConversacionDelContacto", 0),
             ("ConversacionDelContacto", 0, "PlantillaMeta", 0), ("PlantillaMeta", 0, "Componer", 0),
-            ("Componer", 0, "¿Hay conversacion?", 0), ("¿Hay conversacion?", 0, "EnviarRecordatorio", 0),
-            ("¿Hay conversacion?", 1, "SinConversacion", 0),
-            ("EnviarRecordatorio", 0, "GuardarEnMemoriaAgente", 0), ("GuardarEnMemoriaAgente", 0, "Resultado", 0)))
+            ("Componer", 0, "¿Se puede mandar?", 0), ("¿Se puede mandar?", 0, "EnviarRecordatorio", 0),
+            ("¿Se puede mandar?", 1, "Desapuntar", 0),
+            ("EnviarRecordatorio", 0, "¿Enviado?", 0), ("¿Enviado?", 0, "GuardarEnMemoriaAgente", 0),
+            ("¿Enviado?", 1, "Desapuntar", 0),
+            ("GuardarEnMemoriaAgente", 0, "Resultado", 0), ("Desapuntar", 0, "Resultado", 0)))
 
 
 def wf_recordatorio_cliente(ids, tipo, nombre):

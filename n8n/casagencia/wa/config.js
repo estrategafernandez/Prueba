@@ -82,13 +82,18 @@ const MENSAJE_BOLITA_WEB = 'Hola, os acabo de ver por la web y estoy interesado 
 //   plantilla:  nombre de la plantilla en Meta ('' = aun no existe: no se manda)
 //   activo:     false = solo a los telefonos de prueba
 //   parametros: que va en {{1}}, {{2}}... por orden. Disponibles: nombre,
+//               hora_texto ("5 de la tarde"), hora ("17:00"),
 //               cuando ("manana martes 7 de octubre a las 17:00" / "hoy a las 17:00"),
-//               fecha_hora, hora, inmueble, direccion, asesora, referencia
+//               fecha_hora, inmueble, direccion, asesora, referencia
+// Si la plantilla aun no esta aprobada en Meta, no se manda y se reintenta.
 const RECORDATORIO_CLIENTE = {
-  '24h': { horas: 24, plantilla: '', idioma: 'es', activo: false,
-           parametros: ['nombre', 'cuando', 'inmueble', 'asesora'] },
-  '2h':  { horas: 2,  plantilla: '', idioma: 'es', activo: false,
-           parametros: ['nombre', 'hora', 'inmueble', 'asesora'] },
+  // "Hola {{1}}, Te recuerdo que manana a las {{2}} tenemos una visita agendada.
+  //  Me confirmas tu presencia?" + boton "Si, confirmo"
+  '24h': { horas: 24, plantilla: 'recordatorio_visita_24h', idioma: 'en', activo: true,
+           parametros: ['nombre', 'hora_texto'] },
+  // "Hola {{1}}, En 2 horas nos vemos en la visita. Te veo alli."
+  '2h':  { horas: 2,  plantilla: 'recordatorio_visita_2h', idioma: 'en', activo: true,
+           parametros: ['nombre'] },
 };
 // Tambien a las PRE-RESERVAS que la asesora aun no ha confirmado (el titulo
 // sigue empezando por PRE-RESERVA). false = solo a las confirmadas.
@@ -106,7 +111,8 @@ const CORREO_LEADS = { activo: false, remitente: '', nombre: 'Sara · Casagencia
 const BUZON_LEADS = 'formularioscasagencia@gmail.com';
 // 'preparado': decide que mandaria y lo apunta (tabla leads_entrantes), pero NO
 // manda nada. 'real': manda la plantilla. Se cambia aqui y se vuelve a desplegar.
-const MODO_LEADS = 'preparado';
+// En produccion desde el 6-10-2026.
+const MODO_LEADS = 'real';
 const PORTALES = [
   { nombre: 'Idealista',  de: /idealista\.com/i,   asunto: /idealista/i },
   { nombre: 'Fotocasa',   de: /fotocasa\.es/i,     asunto: /fotocasa/i },
@@ -285,6 +291,20 @@ function fechaLegible(fecha, hora) {
   const d = DateTime.fromFormat(String(fecha), 'yyyy-MM-dd', { zone: ZONA });
   if (!d.isValid) return `${fecha} ${hora || ''}`.trim();
   return `${DIAS[d.weekday - 1]} ${d.day} de ${MESES[d.month - 1]}` + (hora ? ` a las ${hora}` : '');
+}
+
+// "17:00" -> "5 de la tarde", "10:30" -> "10 y media de la mañana", "12:15" ->
+// "12 y cuarto del mediodía". Para las plantillas que dicen "a las {{2}}".
+function horaTexto(hora) {
+  const m = String(hora ?? '').match(/^(\d{1,2}):(\d{2})/);
+  if (!m) return String(hora ?? '');
+  const h = Number(m[1]), min = Number(m[2]);
+  if (h === 13 || h === 1) return `${m[1].padStart(2, '0')}:${m[2]}`;   // "a las una" no encaja
+  const h12 = h % 12 || 12;
+  const franja = h < 6 ? 'de la madrugada' : h < 12 ? 'de la mañana' : h === 12 ? 'del mediodía'
+    : h < 21 ? 'de la tarde' : 'de la noche';
+  const minutos = min === 0 ? '' : min === 30 ? ' y media' : min === 15 ? ' y cuarto' : `:${m[2]}`;
+  return `${h12}${minutos} ${franja}`;
 }
 
 // "Si, tengo que vender el mio" -> true. "No", "no necesito" -> false.
