@@ -1134,5 +1134,78 @@ console.log('== Recordatorio de la visita al cliente (24 h y 2 h) ==');
 }
 
 // ===========================================================================
+console.log('\n== Seguimiento a quien no contesta a la bienvenida ([WA] 10) ==');
+{
+  const { Settings } = require('luxon');
+  const nowAntes = Settings.now;
+  const fijar = (iso) => { Settings.now = nowAntes; const ms = DateTime.fromISO(iso, { zone: 'Europe/Madrid' }).toMillis(); Settings.now = () => ms; };
+  const seg = (iso) => { const antes = Settings.now; Settings.now = nowAntes; const v = Math.floor(DateTime.fromISO(iso, { zone: 'Europe/Madrid' }).toSeconds()); Settings.now = antes; return v; };
+  // Como las devuelve Chatwoot (GET /conversations?labels[]=1-bienvenida_ia)
+  const conv = (id, o = {}) => ({
+    id, status: 'open', labels: ['1-bienvenida_ia'],
+    meta: { sender: { name: 'Ana Prueba Test', phone_number: '+34600000001', custom_attributes: { bot: 'On' } } },
+    last_non_activity_message: { id: id * 10, message_type: 1, private: false, created_at: seg('2026-10-06T14:25'),
+      additional_attributes: { template_params: { name: 'bienvenida_alquiler', processed_params: { body: { 1: 'Ana', 2: 'https://x' } } } } },
+    ...o,
+  });
+  const pagina = (...cs) => ({ data: { meta: {}, payload: cs } });
+  const cand = (paginas, iso = '2026-10-07T10:00') => { fijar(iso); return wa('seguimiento_candidatos.js', inp(paginas.map(p => ({ json: p }))), nod({})).map(i => i.json); };
+  const msj = (o) => ({ ...conv(1).last_non_activity_message, ...o });
+  try {
+    let r = cand([pagina(conv(25))]);
+    ck('bienvenida de ayer a las 14:25, hoy a las 10:00: se le manda', r.length === 1 && r[0].conversacion_id === 25
+       && r[0].nombre === 'Ana' && r[0].telefono === '+34600000001' && r[0].evento_id === 'bienvenida:250', JSON.stringify(r));
+    ck('a las 2:25 se cumplen las 12 h, pero de noche no sale', cand([pagina(conv(25))], '2026-10-07T02:30').length === 0);
+    ck('antes de las 9:00 no sale', cand([pagina(conv(25))], '2026-10-07T08:59').length === 0);
+    ck('a las 9:00 en punto, si', cand([pagina(conv(25))], '2026-10-07T09:00').length === 1);
+    ck('a las 18:50, si; a las 19:00, ya no', cand([pagina(conv(25))], '2026-10-07T18:50').length === 1
+       && cand([pagina(conv(25))], '2026-10-07T19:00').length === 0);
+    ck('bienvenida de hace 11 h: todavia no', cand([pagina(conv(25))], '2026-10-07T01:25').length === 0
+       && cand([pagina(conv(2, { last_non_activity_message: msj({ id: 20, created_at: seg('2026-10-07T00:30') }) }))], '2026-10-07T11:00').length === 0);
+    ck('bienvenida de hace 12 h justas, en horario: si', cand([pagina(conv(2, { last_non_activity_message: msj({ id: 20, created_at: seg('2026-10-06T22:00') }) }))], '2026-10-07T10:00').length === 1);
+    ck('el cliente ha contestado (aunque siga la etiqueta): no',
+       cand([pagina(conv(3, { last_non_activity_message: msj({ message_type: 0, additional_attributes: {} }) }))]).length === 0);
+    ck('alguien del equipo le ha escrito despues: no',
+       cand([pagina(conv(4, { last_non_activity_message: msj({ additional_attributes: {} }) }))]).length === 0);
+    ck('ya se le mando el seguimiento (es lo ultimo): no repite',
+       cand([pagina(conv(5, { last_non_activity_message: msj({ additional_attributes: { template_params: { name: 'seguimiento_1' } } }) }))]).length === 0);
+    ck('una nota interna no cuenta como bienvenida', cand([pagina(conv(6, { last_non_activity_message: msj({ private: true }) }))]).length === 0);
+    ck('bot en Off: no', cand([pagina(conv(7, { meta: { sender: { name: 'X', phone_number: '+34600000002', custom_attributes: { bot: 'Off' } } } }))]).length === 0);
+    ck('conversacion resuelta: no', cand([pagina(conv(8, { status: 'resolved' }))]).length === 0);
+    ck('bienvenida de hace mas de 3 dias (lead antiguo): no', cand([pagina(conv(9))], '2026-10-10T10:00').length === 0);
+    ck('ya en 2-en_proceso: no', cand([pagina(conv(10, { labels: ['2-en_proceso'] }))]).length === 0);
+    r = cand([pagina(conv(11), conv(12)), pagina(conv(12), conv(13))]);
+    ck('varias paginas, sin repetir conversaciones', r.map(x => x.conversacion_id).join() === '11,12,13', r.map(x => x.conversacion_id).join());
+    r = cand([pagina(conv(14, { last_non_activity_message: msj({ additional_attributes: { template_params: { name: 'bienvenida_compra', processed_params: { 1: 'Luis' } } } }) }))]);
+    ck('bienvenida de compra (parametros sin "body"): tambien, con su nombre', r.length === 1 && r[0].nombre === 'Luis', JSON.stringify(r));
+    r = cand([pagina(conv(15, { meta: { sender: { name: '+34 600 00 00 03', phone_number: '+34600000003', custom_attributes: {} } },
+      last_non_activity_message: msj({ additional_attributes: { template_params: { name: 'bienvenida_compra', processed_params: {} } } }) }))]);
+    ck('sin nombre (el contacto es un numero): saludo con la mano, y bot sin valor cuenta como On', r.length === 1 && r[0].nombre === '\u{1F44B}', JSON.stringify(r));
+
+    const plantillaMeta = { data: [{ name: 'seguimiento_1', status: 'APPROVED', language: 'en', category: 'MARKETING',
+      components: [{ type: 'BODY', text: 'Hola *{{1}}*,\n*¿Te sigue interesando visitar el inmueble o necesitas más información?*' }] }] };
+    const cands = cand([pagina(conv(25))]);
+    let c = wa('seguimiento_componer.js', inp([]), nod({ SoloLosNuevos: cands, PlantillaMeta: plantillaMeta }))[0].json;
+    const body = JSON.parse(c.body_mensaje);
+    ck('componer: seguimiento_1 en ingles con {{1}} = nombre, por Chatwoot', c.aprobada && body.template_params.name === 'seguimiento_1'
+       && body.template_params.language === 'en' && body.template_params.processed_params['1'] === 'Ana'
+       && /^Hola \*Ana\*,/.test(body.content) && body.message_type === 'outgoing' && c.conversacion_id === 25, c.body_mensaje);
+    c = wa('seguimiento_componer.js', inp([]), nod({ SoloLosNuevos: cands, PlantillaMeta: { data: [] } }))[0].json;
+    ck('componer: sin la plantilla aprobada en Meta no se manda', c.aprobada === false && c.estado_plantilla === 'no encontrada');
+
+    const w10 = JSON.parse(fs.readFileSync(B + 'workflows_wa/WA_10_Seguimiento_a_quien_no_contesta.json', 'utf8'));
+    const n10 = (n) => w10.nodes.find(x => x.name === n);
+    ck('[WA] 10: cada 15 min de 9:00 a 18:45, hora de Espana', n10('Cada15MinEnHorario').parameters.rule.interval[0].expression === '*/15 9-18 * * *'
+       && w10.settings.timezone === 'Europe/Madrid');
+    ck('[WA] 10: lee todas las paginas de la etiqueta 1-bienvenida_ia', /labels\[\]/.test(JSON.stringify(n10('SinContestar').parameters.queryParameters))
+       && n10('SinContestar').parameters.options.pagination.pagination.maxRequests >= 10);
+    ck('[WA] 10: una sola vez por bienvenida (wa_avisos) y a la memoria de Sara', /seguimiento_1/.test(n10('ApuntarSeguimiento').parameters.options.queryReplacement)
+       && /n8n_chat_histories/.test(n10('GuardarEnMemoriaAgente').parameters.query));
+  } finally {
+    Settings.now = nowAntes;
+  }
+}
+
+// ===========================================================================
 console.log(fallos ? `\n${fallos} FALLOS` : '\nTodo correcto');
 process.exit(fallos ? 1 : 0);

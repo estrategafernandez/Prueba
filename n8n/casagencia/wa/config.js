@@ -74,6 +74,16 @@ const LOGO_CASAGENCIA = 'https://media.egorealestate.com/ORIGINAL/70400c69-431c-
 // Mensaje con el que llega quien pulsa la bolita de WhatsApp de casagencia.com
 const MENSAJE_BOLITA_WEB = 'Hola, os acabo de ver por la web y estoy interesado en uno de vuestros inmuebles.';
 
+// --- Seguimiento a quien no contesta a la bienvenida ---------------------------
+// Si el cliente no contesta a la plantilla de bienvenida (la conversacion sigue
+// en 1-bienvenida_ia y lo ultimo es esa plantilla), a las `horas` se le manda la
+// plantilla de seguimiento ({{1}} = su nombre), una sola vez y solo en horario
+// comercial: de `desde` a `hasta` (hora de Espana). Si las 12 h se cumplen fuera
+// de horario, sale a las 9:00. No se manda si la bienvenida es de hace mas de
+// `max_horas` (para no escribir a leads antiguos), si el bot esta en Off, si la
+// conversacion esta resuelta o si alguien del equipo ya le ha escrito.
+const SEGUIMIENTO = { activo: true, plantilla: 'seguimiento_1', idioma: 'en', horas: 12, desde: 9, hasta: 19, max_horas: 72 };
+
 // --- Recordatorio de la visita AL CLIENTE (24 h y 2 h antes) --------------------
 // [WA] 6 (24 h) y [WA] 7 (2 h) miran las agendas de Carmen y Gisela cada 15
 // minutos y le mandan al cliente una plantilla de Meta por su conversacion del

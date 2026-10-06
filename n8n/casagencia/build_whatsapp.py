@@ -1391,6 +1391,72 @@ def wf_recordatorio_cliente(ids, tipo, nombre):
             ("ApuntarRecordado", 0, "SoloLosNuevos", 0), ("SoloLosNuevos", 0, "Recordar", 0)))
 
 
+# ===========================================================================
+# SEGUIMIENTO A QUIEN NO CONTESTA A LA BIENVENIDA
+# ===========================================================================
+SEG_PLANTILLA = re.search(r"plantilla:\s*'([^']+)'", const("SEGUIMIENTO")).group(1)
+SQL_SEGUIDO = """insert into wa_avisos (evento_id, tipo) values ($1, $2)
+on conflict (evento_id, tipo) do nothing
+returning evento_id;"""
+
+
+def wf_seguimiento():
+    """Cada 15 minutos en horario comercial: a las conversaciones que siguen en
+    1-bienvenida_ia con la bienvenida como ultimo mensaje (de hace 12 h o mas),
+    la plantilla de seguimiento por Chatwoot. Una sola vez por bienvenida."""
+    comp = "$('Componer').item.json"
+    return wf("[WA] 10 · Seguimiento a quien no contesta", [
+        node("Cada15MinEnHorario", "n8n-nodes-base.scheduleTrigger",
+             {"rule": {"interval": [{"field": "cronExpression", "expression": "*/15 9-18 * * *"}]}},
+             [-40, 0], 1.2),
+        # Todas las paginas (25 por pagina) de las conversaciones con la etiqueta
+        http("SinContestar", "GET", CW_API + "/conversations", [180, 0], cred=CRED_CHATWOOT,
+             query={"status": "all", "labels[]": ETQ_BIENVENIDA},
+             options={"pagination": {"pagination": {
+                 "paginationMode": "updateAParameterInEachRequest",
+                 "parameters": {"parameters": [{"type": "qs", "name": "page", "value": "={{ $pageCount + 1 }}"}]},
+                 "paginationCompleteWhen": "other",
+                 "completeExpression": "={{ ($response.body.data?.payload || []).length < 25 }}",
+                 "limitPagesFetched": True, "maxRequests": 20}}}),
+        code_node("Candidatos", code_wa("seguimiento_candidatos.js"), [400, 0]),
+        pg_query("ApuntarSeguimiento", SQL_SEGUIDO, "={{ [ $json.evento_id, '%s' ] }}" % SEG_PLANTILLA,
+                 [620, 0], onError="continueRegularOutput"),
+        code_node("SoloLosNuevos", "const nuevos = new Set($input.all().map(i => String(i.json.evento_id ?? '')));\n"
+                  "return $('Candidatos').all().filter(i => nuevos.has(String(i.json.evento_id)));", [840, 0]),
+        http("PlantillaMeta", "GET", "%s/%s/message_templates" % (META_API, WABA_ID), [1060, 0],
+             cred=CRED_META, query={"name": SEG_PLANTILLA}, executeOnce=True,
+             onError="continueRegularOutput", alwaysOutputData=True),
+        code_node("Componer", code_wa("seguimiento_componer.js"), [1280, 0]),
+        if_node("¿Aprobada?", "={{ $json.aprobada }}", "true", [1500, 0]),
+        http("EnviarSeguimiento", "POST", "=" + CW_API + "/conversations/{{ $json.conversacion_id }}/messages",
+             [1720, -80], cred=CRED_CHATWOOT, body="={{ $json.body_mensaje }}",
+             onError="continueRegularOutput", alwaysOutputData=True),
+        if_node("¿Enviado?", "={{ Number($json.id || 0) }}", "gt", [1940, -80], der=0, tipo="number"),
+        # Sara sabe que se le ha mandado el seguimiento (si pulsa un boton, lo entiende)
+        pg_query("GuardarEnMemoriaAgente", "insert into n8n_chat_histories (session_id, message) values ($1, $2);",
+                 "={{ [ %s.telefono, JSON.stringify({ type: 'ai', content: %s.contenido, tool_calls: [], "
+                 "additional_kwargs: {}, response_metadata: {}, invalid_tool_calls: [] }) ] }}" % (comp, comp),
+                 [2160, -160], onError="continueRegularOutput"),
+        # No ha salido (plantilla sin aprobar o error): se quita la marca y se reintenta
+        pg_query("Desapuntar", "delete from wa_avisos where evento_id = $1 and tipo = $2;",
+                 "={{ [ %s.evento_id, '%s' ] }}" % (comp, SEG_PLANTILLA), [2160, 160],
+                 onError="continueRegularOutput"),
+        nota("Nota", "## Seguimiento a quien no contesta\nCada 15 minutos, de 9:00 a 19:00 (hora de Espana), "
+             "mira las conversaciones del panel con *%s*. Si lo ultimo es la plantilla de bienvenida y es "
+             "de hace 12 h o mas, le manda *%s* ({{1}} = su nombre) por su conversacion. Si las 12 h se "
+             "cumplen de noche, sale a las 9:00.\n\nNo sale si el cliente ha contestado, si alguien del "
+             "equipo le ha escrito, con el bot en Off, con la conversacion resuelta ni si la bienvenida es "
+             "de hace mas de 3 dias. Una sola vez por bienvenida (wa_avisos). Ajustes: SEGUIMIENTO en "
+             "wa/config.js." % (ETQ_BIENVENIDA, SEG_PLANTILLA), [180, -380], 600, 300),
+    ], conn(("Cada15MinEnHorario", 0, "SinContestar", 0), ("SinContestar", 0, "Candidatos", 0),
+            ("Candidatos", 0, "ApuntarSeguimiento", 0), ("ApuntarSeguimiento", 0, "SoloLosNuevos", 0),
+            ("SoloLosNuevos", 0, "PlantillaMeta", 0), ("PlantillaMeta", 0, "Componer", 0),
+            ("Componer", 0, "¿Aprobada?", 0), ("¿Aprobada?", 0, "EnviarSeguimiento", 0),
+            ("¿Aprobada?", 1, "Desapuntar", 0),
+            ("EnviarSeguimiento", 0, "¿Enviado?", 0), ("¿Enviado?", 0, "GuardarEnMemoriaAgente", 0),
+            ("¿Enviado?", 1, "Desapuntar", 0)))
+
+
 def asignar(prefijo, conv_expr, agente_expr, asignado_expr, pos):
     """IF + POST de asignacion en Chatwoot. Solo asigna si hay comercial para la
     referencia y la conversacion no la tiene ya Carmen o Gisela (un cambio a mano
@@ -2510,6 +2576,7 @@ ORDEN = [
     "[WA] 7 · Recordatorio de visita al cliente (2 h)",
     "[WA] 8 · Prueba sin IA (contexto)",
     "[WA] 9 · Lead a mano",
+    "[WA] 10 · Seguimiento a quien no contesta",
 ]
 
 # Workflows de la primera version que se reaprovechan con su nombre nuevo, para
@@ -2557,6 +2624,7 @@ def construir(ids):
         "[WA] 7 · Recordatorio de visita al cliente (2 h)": wf_recordatorio_cliente(ids, "2h", "[WA] 7 · Recordatorio de visita al cliente (2 h)"),
         "[WA] 8 · Prueba sin IA (contexto)": wf_prueba_contexto(),
         "[WA] 9 · Lead a mano": wf_lead_manual(ids),
+        "[WA] 10 · Seguimiento a quien no contesta": wf_seguimiento(),
     }
     assert list(wfs) == ORDEN
     return wfs
