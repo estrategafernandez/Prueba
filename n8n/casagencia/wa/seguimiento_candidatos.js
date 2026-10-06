@@ -26,15 +26,20 @@ for (const c of convs) {
 
   const m = c.last_non_activity_message || {};
   const plantilla = m.additional_attributes?.template_params || {};
-  // Saliente, no nota interna, y que sea una plantilla de bienvenida
-  if (m.message_type !== 1 || m.private || !/^bienvenida/.test(String(plantilla.name || ''))) continue;
+  // Saliente, no nota interna, y que sea una plantilla de bienvenida (o el
+  // "Tambien he visto que te has interesado por este otro inmueble", que es la
+  // bienvenida de una segunda solicitud)
+  const p = plantilla.processed_params || {};
+  const texto2 = String((p.body || p)['2'] ?? '');
+  const esBienvenida = /^bienvenida/.test(String(plantilla.name || ''))
+    || (plantilla.name === PLANTILLAS.abierta.nombre && PREFIJOS_OTRO_INMUEBLE.some(x => texto2.startsWith(x)));
+  if (m.message_type !== 1 || m.private || !esBienvenida) continue;
   const horas = (ahoraSeg - Number(m.created_at || 0)) / 3600;
   if (horas < conf.horas || horas > conf.max_horas) continue;
 
   const tel = normalizarTelefono(contacto.phone_number);
   if (!tel.e164) continue;
   // El mismo nombre que se le puso en la bienvenida; si no, el de pila del contacto
-  const p = plantilla.processed_params || {};
   const deLaBienvenida = String((p.body || p)['1'] ?? '').trim();
   const dePila = String(contacto.name ?? '').trim().split(/\s+/)[0];
   const nombre = (deLaBienvenida && deLaBienvenida !== '-') ? deLaBienvenida

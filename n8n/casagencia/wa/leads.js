@@ -26,6 +26,14 @@ const TEXTOS_ABIERTA = {
     en: (r) => `I'm Sara, Casagencia's AI. We received the message you left on our website${r.resumen_cliente ? ` about ${r.resumen_cliente}` : ''}. Can I help you here? Tell me what you are looking for and I'll show you what we have.`,
     fr: (r) => `Je suis Sara, l'IA de Casagencia. Nous avons bien reçu votre message sur notre site${r.resumen_cliente ? ` concernant ${r.resumen_cliente}` : ''}. Je peux vous aider ici : dites-moi ce que vous cherchez et je vous montre ce que nous avons.`,
   },
+  // Segunda solicitud de la misma persona por OTRO inmueble (en pocos dias): en vez
+  // de repetir la bienvenida, la plantilla abierta con este texto. Tiene que empezar
+  // por uno de PREFIJOS_OTRO_INMUEBLE (config.js): asi lo reconoce el seguimiento.
+  otro_inmueble: {
+    es: (r) => `También he visto que te has interesado por este otro inmueble: ${r.enlace} ¿Lo quieres también visitar?`,
+    en: (r) => `I've also seen that you're interested in this other property: ${r.enlace} Would you like to visit it too?`,
+    fr: (r) => `J'ai aussi vu que ce bien vous intéresse : ${r.enlace} Souhaitez-vous également le visiter ?`,
+  },
   propietario: {
     es: (r) => `Soy Sara, IA de Casagencia. Hemos recibido tu mensaje sobre tu vivienda${r.municipio ? ` en ${r.municipio}` : ''}. ${r.asesora} se pondrá en contacto contigo para hablarlo; si quieres, cuéntame por aquí cómo es.`,
     en: (r) => `I'm Sara, Casagencia's AI. We received your message about your property${r.municipio ? ` in ${r.municipio}` : ''}. ${r.asesora} will contact you to discuss it; meanwhile, feel free to tell me about it here.`,
@@ -61,7 +69,10 @@ function decidirPrimerMensaje(r) {
   if (r.referencia && r.disponible === false) return abierta('no_disponible', 'no_disponible');
   if (r.referencia && r.enlace && (TIPOS_BUSCA.includes(tipo) || tipo === 'otro' || !tipo)) {
     const p = alquiler ? PLANTILLAS.alquiler : PLANTILLAS.compra;
-    return { ...base, accion: 'bienvenida', plantilla: p.nombre, param2: paramPlantilla(r.enlace, 300) };
+    return { ...base, accion: 'bienvenida', plantilla: p.nombre, param2: paramPlantilla(r.enlace, 300),
+             // Si ya le escribimos por otro inmueble hace poco, sale esto en su lugar
+             plantilla_tambien: PLANTILLAS.abierta.nombre,
+             param2_tambien: paramPlantilla(TEXTOS_ABIERTA.otro_inmueble[idioma](r), 900) };
   }
   if (TIPOS_BUSCA.includes(tipo)) return abierta('busqueda', 'busqueda');
   return { ...base, accion: 'revisar', plantilla: '', param2: '' };

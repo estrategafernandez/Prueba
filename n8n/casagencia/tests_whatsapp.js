@@ -1231,6 +1231,11 @@ console.log('\n== Seguimiento a quien no contesta a la bienvenida ([WA] 10) ==')
       last_non_activity_message: msj({ additional_attributes: { template_params: { name: 'bienvenida_compra', processed_params: {} } } }) }))]);
     ck('sin nombre (el contacto es un numero): saludo con la mano, y bot sin valor cuenta como On', r.length === 1 && r[0].nombre === '\u{1F44B}', JSON.stringify(r));
 
+    const tambien = (texto) => conv(16, { last_non_activity_message: msj({ id: 160, additional_attributes: { template_params: {
+      name: 'plantilla_abierta', processed_params: { 1: 'Yaiza', 2: texto } } } }) });
+    r = cand([pagina(tambien('También he visto que te has interesado por este otro inmueble: https://x ¿Lo quieres también visitar?'))]);
+    ck('el "Tambien he visto... otro inmueble" cuenta como bienvenida para el seguimiento', r.length === 1 && r[0].nombre === 'Yaiza', JSON.stringify(r));
+    ck('otra plantilla abierta (p. ej. a un propietario) no', cand([pagina(tambien('Soy Sara, IA de Casagencia. Hemos recibido tu mensaje sobre tu vivienda.'))]).length === 0);
     const plantillaMeta = { data: [{ name: 'seguimiento_1', status: 'APPROVED', language: 'en', category: 'MARKETING',
       components: [{ type: 'BODY', text: 'Hola *{{1}}*,\n*¿Te sigue interesando visitar el inmueble o necesitas más información?*' }] }] };
     const cands = cand([pagina(conv(25))]);
@@ -1253,6 +1258,57 @@ console.log('\n== Seguimiento a quien no contesta a la bienvenida ([WA] 10) ==')
   } finally {
     Settings.now = nowAntes;
   }
+}
+
+// ===========================================================================
+console.log('\n== Dos solicitudes de la misma persona por inmuebles distintos ==');
+{
+  const URL_B = 'https://www.casagencia.com/inmueble/apartamento-en-alquiler-benicasim/26699629';
+  let d = decide('alquiler', { referencia: 'BN-C-126-A', disponible: true, enlace: URL_B, nombre: 'Yaiza' });
+  ck('bienvenida: trae tambien la variante para una segunda solicitud (plantilla abierta)', d.plantilla === 'bienvenida_alquiler'
+     && d.plantilla_tambien === 'plantilla_abierta'
+     && d.param2_tambien === `También he visto que te has interesado por este otro inmueble: ${URL_B} ¿Lo quieres también visitar?`, d.param2_tambien);
+  const pref = Function('DateTime', CFG + '; return PREFIJOS_OTRO_INMUEBLE;')(DateTime);
+  const enOtros = ['en', 'fr'].map(idioma => decide('compra', { referencia: 'BN-1528-V', disponible: true, enlace: URL_B, idioma }).param2_tambien);
+  ck('en ingles y frances tambien, y todos empiezan como espera el seguimiento',
+     [d.param2_tambien, ...enOtros].every((t, i) => t.startsWith(pref[i])) && enOtros.every(t => t.includes(URL_B)), enOtros.join(' | '));
+  ck('si el inmueble ya no esta (no es bienvenida), no hay variante', !decide('compra', { referencia: 'BN-9999-V', disponible: false }).plantilla_tambien);
+
+  // Asi le llega: la plantilla abierta con su nombre y ese texto
+  const norm = wa('plantilla_normalizar.js', inp([{ json: {} }]), nod({ Start: { telefono: '+34600000001', nombre: 'Yaiza Prueba',
+    plantilla: 'plantilla_abierta', param1: 'Yaiza', param2: d.param2_tambien, referencia: 'BN-C-126-A' } }))[0].json;
+  const texto = Function('DateTime', CFG + '; return TEXTO_PLANTILLA.plantilla_abierta;')(DateTime);
+  const ren = wa('plantilla_renderizar.js', inp([{ json: { data: [{ name: 'plantilla_abierta', language: 'en', components: [{ type: 'BODY', text: texto }] }] } }]),
+    nod({ Normalizar: norm, ConversacionLista: { conversacion_id: 29 } }))[0].json;
+  ck('mensaje: "Hola Yaiza, Tambien he visto que te has interesado por este otro inmueble: (enlace) ¿Lo quieres tambien visitar?"',
+     ren.contenido === `Hola *Yaiza*,\nTambién he visto que te has interesado por este otro inmueble: ${URL_B} ¿Lo quieres también visitar?\nUn saludo. Buen día.`, ren.contenido);
+
+  const leerWf = (f) => JSON.parse(fs.readFileSync(B + 'workflows_wa/' + f, 'utf8'));
+  for (const [f, nombre] of [['WA_5_Leads_de_eGO_portales.json', '[WA] 5'], ['WA_SUB_LeadDeLaWeb.json', 'LeadDeLaWeb']]) {
+    const w = leerWf(f);
+    const nodo = (n) => w.nodes.find(x => x.name === n) || {};
+    const envio = JSON.stringify(nodo('EnviarPrimerWhatsApp').parameters);
+    ck(`${nombre}: si ya le escribimos por otro inmueble (otra_ref), sale la plantilla abierta "Tambien..."`,
+       /otra_ref && \$\('Decidir'\)\.\w+(\(\))?\.json\.plantilla_tambien/.test(envio) && /param2_tambien/.test(envio)
+       && /as otra_ref/.test(nodo('AltaDelLead').parameters.query) && /interval '7 days'/.test(nodo('AltaDelLead').parameters.query)
+       && /\$json\.nuevo/.test(JSON.stringify(nodo('¿Lead nuevo?').parameters)));
+  }
+
+  // Sara ve los dos, con su ficha, y las respuestas de cualificacion valen para los dos
+  const piso = REAL.find(f => f.ref === 'BN-1528-V');
+  let c = contexto({ telefono_wa: '34600000001', referencia: 'CS-1479-A', operacion: 'alquiler', es_alquiler: true, asesora: 'Gisela',
+    enlace: 'https://www.casagencia.com/inmueble/a/1',
+    otras_solicitudes: [{ referencia: 'BN-1528-V', enlace: piso.enlace, operacion: 'venta', es_alquiler: false, q_personas: '3', q_mascotas: 'no' }] });
+  ck('Sara: "HA PEDIDO INFORMACION DE 2 INMUEBLES" con los dos y la ficha del otro', /HA PEDIDO INFORMACION DE 2 INMUEBLES/.test(c.contexto)
+     && c.contexto.includes('CS-1479-A') && c.contexto.includes('BN-1528-V') && /FICHA DEL OTRO INMUEBLE QUE PIDIO \(BN-1528-V\)/.test(c.contexto)
+     && JSON.stringify(c.otras_referencias) === '["BN-1528-V"]', c.contexto.split('\n').find(l => /VARIOS|INMUEBLES \(/.test(l)));
+  ck('Sara: lo que contesto en la otra solicitud no se le vuelve a preguntar', JSON.stringify(c.preguntas_pendientes) === '["ingresos","entrada"]',
+     JSON.stringify(c.preguntas_pendientes));
+  c = contexto({ telefono_wa: '34600000001', referencia: 'CS-1479-A', operacion: 'alquiler', es_alquiler: true,
+    otras_solicitudes: JSON.stringify([{ referencia: 'BN-1528-V', enlace: piso.enlace }]) });
+  ck('Sara: tambien si la base de datos lo devuelve como texto', /HA PEDIDO INFORMACION DE 2 INMUEBLES/.test(c.contexto));
+  c = contexto({ telefono_wa: '34600000001', referencia: 'CS-1479-A', operacion: 'alquiler', es_alquiler: true, otras_solicitudes: [] });
+  ck('Sara: con una sola solicitud, como siempre', !/VARIOS|INMUEBLES \(/.test(c.contexto) && !/OTRO INMUEBLE/.test(c.contexto));
 }
 
 // ===========================================================================

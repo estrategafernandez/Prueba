@@ -74,6 +74,17 @@ const LOGO_CASAGENCIA = 'https://media.egorealestate.com/ORIGINAL/70400c69-431c-
 // Mensaje con el que llega quien pulsa la bolita de WhatsApp de casagencia.com
 const MENSAJE_BOLITA_WEB = 'Hola, os acabo de ver por la web y estoy interesado en uno de vuestros inmuebles.';
 
+// --- Varias solicitudes de la misma persona -----------------------------------
+// Si alguien pide informacion de otro inmueble y ya le escribimos por uno en los
+// ultimos OTRA_SOLICITUD_DIAS dias, no se le repite la bienvenida: le sale la
+// plantilla abierta "Tambien he visto que te has interesado por este otro
+// inmueble: <enlace> ¿Lo quieres tambien visitar?" (TEXTOS_ABIERTA.otro_inmueble
+// en leads.js). Sara ve en su contexto todos los que ha pedido.
+const OTRA_SOLICITUD_DIAS = 7;
+// Como empieza ese mensaje en cada idioma (el seguimiento de 12 h lo trata como
+// una bienvenida)
+const PREFIJOS_OTRO_INMUEBLE = ['También he visto que te has interesado', "I've also seen that you're interested", "J'ai aussi vu que ce bien"];
+
 // --- Seguimiento a quien no contesta a la bienvenida ---------------------------
 // Si el cliente no contesta a la plantilla de bienvenida (la conversacion sigue
 // en 1-bienvenida_ia y lo ultimo es esa plantilla), a las `horas` se le manda la

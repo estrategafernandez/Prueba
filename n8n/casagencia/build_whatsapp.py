@@ -480,9 +480,17 @@ assert SQL_ALTA_LEAD_WEB.rstrip().endswith("returning id, telefono_wa, referenci
 SQL_ALTA_LEAD_NUEVO = """with alta as (
 %s
 )
-select id, telefono_wa, referencia, true as nuevo from alta
+select id, telefono_wa, referencia, true as nuevo,
+       -- Otra solicitud de la misma persona por OTRO inmueble hace poco: la segunda
+       -- no repite la bienvenida (plantilla abierta "Tambien he visto...")
+       (select w.referencia from wa_leads w
+         where w.telefono_wa = $1 and w.referencia <> '' and upper(w.referencia) <> upper($3)
+           and w.actualizado_en > now() - interval '%s days'
+         order by w.actualizado_en desc limit 1) as otra_ref
+  from alta
 union all
-select null::integer, $1::text, $3::text, false where not exists (select 1 from alta);""" % SQL_ALTA_LEAD_WEB.rstrip().rstrip(";")
+select null::integer, $1::text, $3::text, false, null::text where not exists (select 1 from alta);""" % (
+    SQL_ALTA_LEAD_WEB.rstrip().rstrip(";"), int(const("OTRA_SOLICITUD_DIAS", "7")))
 
 # [WA] 5: plantilla enviada en wa_leads y lead marcado como enviado, en un paso
 SQL_PLANTILLA_Y_ENTRANTE = """with w as (
@@ -492,10 +500,20 @@ SQL_PLANTILLA_Y_ENTRANTE = """with w as (
 update leads_entrantes set estado = 'enviado' where id = $4
 returning id;"""
 
-SQL_FICHA = """select * from wa_leads
- where telefono_wa = $1
- order by actualizado_en desc
- limit 1;"""
+SQL_FICHA = """select l.*,
+       -- Si ha pedido informacion de varios inmuebles, todos (Sara los tiene presentes)
+       coalesce((select json_agg(to_jsonb(o) - 'notas' order by o.actualizado_en desc)
+                   from wa_leads o
+                  where o.telefono_wa = $1 and o.id <> l.id and o.referencia <> ''
+                    and o.actualizado_en > now() - interval '30 days'), '[]'::json) as otras_solicitudes
+  from (select * from wa_leads where telefono_wa = $1 order by actualizado_en desc limit 1) l;"""
+
+# Primer WhatsApp de un lead: la bienvenida, o si ya se le escribio hace poco por
+# otro inmueble (AltaDelLead devuelve otra_ref), la plantilla abierta "Tambien..."
+def plantilla_primer_whatsapp(d):
+    tambien = "$json.otra_ref && %s.plantilla_tambien" % d
+    return {"plantilla": "={{ %s ? %s.plantilla_tambien : %s.plantilla }}" % (tambien, d, d),
+            "param2": "={{ %s ? %s.param2_tambien : %s.param2 }}" % (tambien, d, d)}
 
 # El correo que dejo en su solicitud (lead del portal, de la web o a mano)
 SQL_CORREO_DEL_LEAD = """select coalesce(
@@ -1178,6 +1196,7 @@ def wf_lead_web(ids):
         ("telefono", "telefono_e164"), ("nombre", "nombre"), ("plantilla", "plantilla"),
         ("param1", "param1"), ("param2", "param2"), ("referencia", "referencia"),
         ("operacion", "operacion"), ("portal", "portal"), ("email", "email_cliente"))}
+    entradas.update(plantilla_primer_whatsapp(d))
     entradas["conversacion_id"] = 0
     registro = ("={{ [ 'web', %s.mensaje_id, %s.telefono_e164, %s.nombre, %s.referencia, %s.tipo, %s.accion, "
                 "%s.plantilla, %s.param2, %s.asesora, %s.se_puede_contactar ? "
@@ -1212,9 +1231,9 @@ def wf_lead_web(ids):
         noop("YaEstabaApuntado", [1720, 200]),
         if_node("¿Se manda?", "={{ %s.enviar }}" % d, "true", [1720, 0]),
         noop("Preparado (no se manda)", [1940, 200]),
-        pg_query("AltaDelLead", SQL_ALTA_LEAD_WEB, alta, [1940, -120], alwaysOutputData=True,
+        pg_query("AltaDelLead", SQL_ALTA_LEAD_NUEVO, alta, [1940, -120], alwaysOutputData=True,
                  onError="continueRegularOutput"),
-        if_node("¿Lead nuevo?", "={{ $json.id }}", "exists", [2160, -120], tipo="number"),
+        if_node("¿Lead nuevo?", "={{ $json.nuevo }}", "true", [2160, -120]),
         exec_sub("EnviarPrimerWhatsApp", ids.get("[WA][SUB] EnviarPlantilla", ""), "[WA][SUB] EnviarPlantilla",
                  entradas, [2380, -220], {"conversacion_id": "number"}, onError="continueRegularOutput"),
         pg_query("MarcarPlantillaEnviada", SQL_PLANTILLA_ENVIADA,
@@ -2314,6 +2333,7 @@ def wf_leads_ego(ids):
         ("telefono", "telefono_e164"), ("nombre", "nombre"), ("plantilla", "plantilla"),
         ("param1", "param1"), ("param2", "param2"), ("referencia", "referencia"),
         ("operacion", "operacion"), ("portal", "portal"), ("email", "email_cliente"))}
+    entradas.update(plantilla_primer_whatsapp(d))
     entradas["conversacion_id"] = 0
     registro = ("={{ [ 'ego', $json.lead_id, $json.telefono_e164, $json.nombre, $json.referencia, $json.tipo, "
                 "$json.accion, $json.plantilla, $json.param2, $json.asesora, $json.se_puede_contactar ? "
