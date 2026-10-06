@@ -363,6 +363,8 @@ create table if not exists wa_cartera (
   imagen           text not null default '',
   actualizado_en   timestamptz not null default now()
 );
+-- Alquiler de larga duracion o temporal (lo dice eGO; [WA] 4)
+alter table wa_cartera add column if not exists modalidad text not null default '';
 
 -- Leads que entran (web por correo y eGO): que se ha decidido mandarles y si
 -- se ha mandado. Con MODO_LEADS = 'preparado' se apunta aqui y no se manda.
@@ -526,7 +528,7 @@ _CARTERA_COLS = [("ref", "text"), ("web_id", "text"), ("enlace", "text"), ("prec
                  ("tipo_transaccion", "text"), ("tipo_inmueble", "text"), ("municipio", "text"),
                  ("zona", "text"), ("habitaciones", "integer"), ("banos", "integer"),
                  ("superficie", "integer"), ("caracteristicas", "text"), ("descripcion", "text"),
-                 ("imagen", "text")]
+                 ("imagen", "text"), ("modalidad", "text")]
 SQL_GUARDAR_CARTERA = """with nuevos as (
   select * from jsonb_to_recordset($1::jsonb) as x(%s)
 ), borrados as (
@@ -587,7 +589,7 @@ def wf_buscar():
                        ("tipo", "string"), ("habitaciones_min", "number"), ("banos_min", "number"),
                        ("precio_min", "number"), ("precio_max", "number"),
                        ("superficie_min", "number"), ("extras", "string"), ("excluir", "string"),
-                       ("limite", "number")],
+                       ("limite", "number"), ("modalidad", "string")],
                       "buscar_inmuebles.js", "Filtrar",
                       "## Busqueda con todos los filtros\nOperacion, municipio, zona, tipo, "
                       "habitaciones, banos, precio minimo y maximo, superficie y extras (piscina, "
@@ -1468,13 +1470,17 @@ def herramientas(ids, x=1900, y=360):
             "Busca en TODA la cartera actual con los filtros que diga el cliente. Manda solo lo que haya "
             "dicho; lo demas vacio o 0. Devuelve cuantos hay y los que mejor encajan.",
             {"operacion": de_la_ia("operacion", "venta o alquiler."),
+             "modalidad": de_la_ia("modalidad", "Solo en alquiler: larga_duracion si lo quiere para todo el ano "
+                                   "(anual, permanente, para vivir); temporal si lo quiere por unos meses de invierno. "
+                                   "Vacio si no lo ha dicho."),
              "municipio": de_la_ia("municipio", "Municipio tal como lo diga el cliente. Vacio si no lo ha dicho."),
              "zona": de_la_ia("zona", "Barrio o zona (centro, playa, Grao...). Vacio si no."),
              "tipo": de_la_ia("tipo", "piso, casa, atico, local, terreno, garaje o trastero. Vacio si le da igual."),
              "habitaciones_min": de_la_ia("habitaciones_min", "Habitaciones minimas. 0 si le da igual.", "number"),
              "banos_min": de_la_ia("banos_min", "Banos minimos. 0 si le da igual.", "number"),
              "precio_min": de_la_ia("precio_min", "Precio minimo en euros, entero. 0 si no lo ha dicho.", "number"),
-             "precio_max": de_la_ia("precio_max", "Precio maximo en euros, entero. 0 si no lo ha dicho.", "number"),
+             "precio_max": de_la_ia("precio_max", "Precio maximo en euros, entero, SOLO si el cliente ha dicho "
+                                    "un presupuesto (nunca te lo inventes). 0 si no lo ha dicho.", "number"),
              "superficie_min": de_la_ia("superficie_min", "Metros cuadrados minimos. 0 si no.", "number"),
              "extras": de_la_ia("extras", "Extras que pide, separados por comas: piscina, terraza, garaje, "
                                 "ascensor, vistas al mar... Vacio si ninguno."),
@@ -2318,7 +2324,7 @@ def wf_ego_nota(ids):
 FEED_EGO = "http://feeds.transporter.janeladigital.com/423E0F5F-30FC-4E01-8FE1-99BD7E14B021/0500013012.xml"
 
 
-def wf_cartera_ego():
+def wf_cartera_ego(ids):
     return wf("[WA] 4 · Cartera desde eGO", [
         node("CadaHora", "n8n-nodes-base.scheduleTrigger",
              {"rule": {"interval": [{"field": "hours", "hoursInterval": 1}]}}, [-40, -80], 1.2),
@@ -2331,9 +2337,13 @@ def wf_cartera_ego():
         node("LeerXML", "n8n-nodes-base.xml", {"options": {}}, [420, 0], 1),
         code_node("Mapear", code_wa("cartera_mapear.js"), [640, 0]),
         if_node("¿Feed correcto?", "={{ $json.ok }}", "true", [860, 0]),
-        pg_query("CrearTablasSiFaltan", DDL, None, [1080, -80], executeOnce=True),
+        # Alquiler de larga duracion o temporal: el tipo de negocio de eGO (una llamada)
+        ego("NegociosEgo", ids, "POST", "/realestate/Realestate/ListRealestateByPage", [1080, -80],
+            cuerpo=json.dumps({"realestateStatus": [2], "pageIndex": 0, "numberOfRecords": 500})),
+        code_node("Modalidad", code_wa("cartera_modalidad.js", cartera=True), [1300, -80]),
+        pg_query("CrearTablasSiFaltan", DDL, None, [1520, -80], executeOnce=True),
         pg_query("GuardarCartera", SQL_GUARDAR_CARTERA,
-                 "={{ [ JSON.stringify($('Mapear').first().json.filas) ] }}", [1300, -80], executeOnce=True),
+                 "={{ [ JSON.stringify($('Modalidad').first().json.filas) ] }}", [1740, -80], executeOnce=True),
         noop("FeedRotoNoSeToca", [1080, 120]),
         nota("Nota", "## La cartera de WhatsApp\nCada hora lee el MISMO feed de eGO que usa el telefono "
              "(solo lectura) y lo guarda COMPLETO en la tabla *wa_cartera*:\n\n"
@@ -2347,7 +2357,8 @@ def wf_cartera_ego():
              "credencial *WA lead a mano*.", [200, -420], 560, 360),
     ], conn(("CadaHora", 0, "DescargarFeed", 0), ("RefrescarAhora", 0, "DescargarFeed", 0),
             ("DescargarFeed", 0, "LeerXML", 0), ("LeerXML", 0, "Mapear", 0),
-            ("Mapear", 0, "¿Feed correcto?", 0), ("¿Feed correcto?", 0, "CrearTablasSiFaltan", 0),
+            ("Mapear", 0, "¿Feed correcto?", 0), ("¿Feed correcto?", 0, "NegociosEgo", 0),
+            ("NegociosEgo", 0, "Modalidad", 0), ("Modalidad", 0, "CrearTablasSiFaltan", 0),
             ("CrearTablasSiFaltan", 0, "GuardarCartera", 0),
             ("¿Feed correcto?", 1, "FeedRotoNoSeToca", 0)))
 
@@ -2519,7 +2530,7 @@ def construir(ids):
         "[WA] 1 · Leads de la web (correo)": wf_leads(ids),
         "[WA] 2 · Asistente de WhatsApp": wf_asistente(ids),
         "[WA] 3 · Recordatorio 24 h al comercial": wf_recordatorio(ids),
-        "[WA] 4 · Cartera desde eGO": wf_cartera_ego(),
+        "[WA] 4 · Cartera desde eGO": wf_cartera_ego(ids),
         "[WA] 5 · Leads de eGO (portales)": wf_leads_ego(ids),
         "[WA] 6 · Recordatorio de visita al cliente (24 h)": wf_recordatorio_cliente(ids, "24h", "[WA] 6 · Recordatorio de visita al cliente (24 h)"),
         "[WA] 7 · Recordatorio de visita al cliente (2 h)": wf_recordatorio_cliente(ids, "2h", "[WA] 7 · Recordatorio de visita al cliente (2 h)"),

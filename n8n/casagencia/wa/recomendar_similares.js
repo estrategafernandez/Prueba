@@ -58,6 +58,8 @@ const puntos = (r) => {
 const VIVIENDA = /apartamento|piso|chalet|villa|duplex|town house|village house|casa|estudio|ground floor|atico|bungalow|adosad/;
 const candidatos = filas
   .filter(r => r.operacion === base.operacion && !excluir.has(r.ref.toUpperCase()))
+  // En alquiler, la misma modalidad: a quien busca todo el ano no se le ofrece uno temporal
+  .filter(r => !base.modalidad || !r.modalidad || r.modalidad === base.modalidad)
   .filter(r => !porReferencia || VIVIENDA.test(sinAcentos(r.tipo)))
   .filter(r => (!pmax || (r.precio && r.precio <= pmax)) && (!pmin || r.precio >= pmin))
   .map(r => ({ r, p: puntos(r) }))

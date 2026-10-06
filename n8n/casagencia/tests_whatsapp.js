@@ -473,6 +473,44 @@ ck('referencia que no esta: no dice que no existe', r.encontrado === false && /N
 
 const buscar = (q) => wa('buscar_inmuebles.js', inp([{}]), nod({ ...hoja, Start: q }), true)[0].json;
 const filas = (q) => { const x = buscar(q); return (x.referencias || []).map(ref => REAL.find(z => z.ref === ref)); };
+{
+  // Rosa Maria (6-10): busca alquiler para todo el ano; Sara le ofrecio temporales y luego dijo que no
+  // habia nada. eGO dice que alquileres son de larga duracion (negocio 2) y cuales temporales (13).
+  const MOD = { 'BN-1291-A': 'larga_duracion', 'BN-1463-A': 'larga_duracion', 'BN-1559-A': 'larga_duracion',
+    'BN-1555-A': 'larga_duracion', 'BN-C-126-A': 'temporal', 'BN-1549-A': 'temporal', 'BN-C-122-A': 'temporal',
+    'BN-632-A': 'temporal', 'BN-1542-A': 'temporal' };
+  const conMod = REAL.map(f => ({ ...f, modalidad: MOD[f.ref] || '' }));
+  const buscarM = (q) => wa('buscar_inmuebles.js', inp([{}]), nod({ ...hoja, LeerCartera: conMod, Start: q }), true)[0].json;
+  let r = buscarM({ operacion: 'alquiler', modalidad: 'todo el año', municipio: 'Benicasim', limite: 8 });
+  ck('alquiler anual en Benicasim: solo los de larga duracion (ningun temporal)',
+     r.referencias.length >= 2 && r.referencias.every(x => MOD[x] !== 'temporal') && r.referencias.includes('BN-1291-A')
+     && /LARGA DURACION/.test(r.respuesta) && !/TEMPORAL/.test(r.respuesta), r.referencias.join());
+  r = buscarM({ operacion: 'alquiler', modalidad: 'larga_duracion', municipio: 'Benicasim', precio_max: 800, limite: 8 });
+  ck('presupuesto 800: no es excluyente, sale el de 1.000 marcado POR ENCIMA (y no uno de 5.500)', r.referencias[0] === 'BN-1291-A'
+     && !r.referencias.includes('BN-1555-A') && /POR ENCIMA DE SU PRESUPUESTO/.test(r.respuesta), r.referencias.join());
+  ck('sin tipo: solo viviendas (ni locales ni bares)', !/Local comercial|Bar/.test(r.respuesta), r.referencias.join());
+  ck('pidiendo local, si salen locales', /Local comercial/.test(buscarM({ operacion: 'alquiler', tipo: 'local', municipio: 'Benicasim' }).respuesta));
+  r = buscarM({ operacion: 'alquiler', modalidad: 'larga_duracion', municipio: 'Benicasim', precio_max: 1000, limite: 8 });
+  ck('presupuesto 1.000: completa hasta 3 con los siguientes hasta el doble (2.000), marcados',
+     r.referencias.join() === 'BN-1291-A,BN-1559-A' && /BN-1559-A.*POR ENCIMA/.test(r.respuesta), r.referencias.join());
+  r = buscarM({ operacion: 'alquiler', modalidad: 'larga_duracion', municipio: 'Benicasim', precio_max: 300, limite: 8 });
+  ck('nada ni con margen: los mas economicos, diciendo que se pasan', r.total > 0 && /No hay nada por debajo de 300/.test(r.respuesta)
+     && r.referencias.includes('BN-1291-A'), r.referencias.join());
+  r = buscarM({ operacion: 'alquiler', modalidad: 'temporal', municipio: 'Benicasim', limite: 8 });
+  ck('alquiler temporal: solo temporales', r.referencias.length > 0 && r.referencias.every(x => MOD[x] !== 'larga_duracion')
+     && /TEMPORAL/.test(r.respuesta) && !/LARGA DURACION/.test(r.respuesta), r.referencias.join());
+  const modDesc = (ref) => Function('$', 'DateTime', CFG + '\n' + CARTERA + `\nreturn modalidadAlquiler('', ${JSON.stringify(REAL.find(f => f.ref === ref).descripcion)});`)(() => ({}), DateTime);
+  ck('sin eGO, por la descripcion: anual / temporada / hasta mayo (y "todo el ano" a secas no basta)',
+     modDesc('BN-1291-A') === 'larga_duracion' && modDesc('BN-C-122-A') === 'temporal' && modDesc('BN-632-A') === 'temporal'
+     && modDesc('BN-C-126-A') === 'temporal' && modDesc('BN-C-119-A') === '',
+     ['BN-1291-A', 'BN-C-122-A', 'BN-632-A', 'BN-C-126-A', 'BN-C-119-A'].map(modDesc).join());
+  const modEgo = Function('$', 'DateTime', CFG + '\n' + CARTERA + '\n' + fs.readFileSync(B + 'wa/cartera_modalidad.js', 'utf8'))(nod({
+    Mapear: { filas: [{ ref: 'BN-1559-A', tipo_transaccion: 'alquiler', descripcion: 'Se alquila magnifica villa' },
+                      { ref: 'BN-1547-V', tipo_transaccion: 'venta', descripcion: '' }] },
+    NegociosEgo: { datos: { realestatesByPageDto: [{ reference: 'BN-1559-A', businesses: [{ businessTypeId: 2 }] }] } } }), DateTime)[0].json;
+  ck('[WA] 4: la modalidad sale del tipo de negocio de eGO (2 = larga duracion)', modEgo.filas[0].modalidad === 'larga_duracion'
+     && modEgo.filas[1].modalidad === '' && modEgo.de_ego === 1);
+}
 let fl = filas({ operacion: 'venta', municipio: 'Benicàssim', limite: 8 });
 ck('venta en "Benicàssim": todo venta y en Benicasim', fl.length > 0 &&
    fl.every(x => x.tipo_transaccion === 'venta' && x.municipio.startsWith('Benicasim')), `${fl.length} resultados`);

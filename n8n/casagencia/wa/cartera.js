@@ -57,11 +57,33 @@ const aNumero = (v) => {
   return Number.isFinite(n) ? n : 0;
 };
 
+// Alquiler de LARGA DURACION (todo el ano) o TEMPORAL (por meses de invierno,
+// p. ej. de septiembre a junio). Lo dice eGO (tipo de negocio 2 = alquiler, 13 =
+// alquiler temporal; [WA] 4 lo guarda en wa_cartera.modalidad) y, si no, la
+// descripcion. Alquiler de verano no se hace.
+function modalidadAlquiler(modalidad, descripcion) {
+  const m = String(modalidad ?? '').trim();
+  if (m === 'temporal' || m === 'larga_duracion') return m;
+  const d = sinAcentos(descripcion).toLowerCase();
+  // Primero lo que dice claramente que es temporal ("de temporada", "de septiembre a
+  // junio"); "todo el ano" a secas no basta (sale en "luz todo el ano").
+  if (/temporada|temporal|no vacacional|por paquete|de (septiembre|octubre|noviembre) (a|hasta)|hasta (final de )?(mayo|junio)/.test(d)) return 'temporal';
+  if (/alquiler anual|larga duracion|(alquiler|apartamento|piso|vivienda|casa|vivir) para todo el ano/.test(d)) return 'larga_duracion';
+  if (/invierno/.test(d)) return 'temporal';
+  return '';
+}
+const MODALIDAD_TEXTO = {
+  larga_duracion: 'alquiler de LARGA DURACION (todo el año)',
+  temporal: 'alquiler TEMPORAL (por meses de invierno, no todo el año)',
+};
+
 function limpiarFila(r) {
+  const operacion = String(r.tipo_transaccion ?? '').toLowerCase().includes('alquil') ? 'alquiler' : 'venta';
   return {
     ref: String(r.ref).trim(),
     precio: aNumero(r.precio),
-    operacion: String(r.tipo_transaccion ?? '').toLowerCase().includes('alquil') ? 'alquiler' : 'venta',
+    operacion,
+    modalidad: operacion === 'alquiler' ? modalidadAlquiler(r.modalidad, r.descripcion) : '',
     tipo: String(r.tipo_inmueble ?? '').trim() || 'Inmueble',
     municipio: String(r.municipio ?? '').trim(),
     zona: String(r.zona ?? '').trim(),
@@ -105,6 +127,8 @@ function tarjeta(r, dirs) {
     r.banos ? `${r.banos} baños` : '',
     r.superficie ? `${r.superficie} m²` : '',
     euros(r.precio, r.operacion),
+    MODALIDAD_TEXTO[r.modalidad] || '',
+    r.encima ? 'POR ENCIMA DE SU PRESUPUESTO' : '',
   ].filter(Boolean);
   const dir = dirs && dirs[r.ref.toUpperCase()];
   const destacado = r.caracteristicas.split(',').map(s => s.trim()).filter(Boolean).slice(0, 3).join(', ');
@@ -140,7 +164,8 @@ function fichaTexto(r, dirs) {
   const dir = dirs && dirs[r.ref.toUpperCase()];
   return [
     `Referencia: ${r.ref}`,
-    `Operacion: ${r.operacion === 'alquiler' ? 'ALQUILER (no se agenda: se cualifica y se pasa al equipo)' : 'VENTA'}`,
+    `Operacion: ${r.operacion === 'alquiler' ? (MODALIDAD_TEXTO[r.modalidad] ? MODALIDAD_TEXTO[r.modalidad].toUpperCase() : 'ALQUILER')
+      + ' (no se agenda: se cualifica y se pasa al equipo)' : 'VENTA'}`,
     `Tipo: ${r.tipo}`,
     `Municipio: ${municipioCorto(r.municipio)}`,
     r.zona ? `Zona: ${r.zona}` : '',
