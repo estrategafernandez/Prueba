@@ -333,29 +333,47 @@ def wf_finalizar(orig):
 
 
 # =========================================================================
-# 6) buscarInmuebles -> arreglar la respuesta vacia cuando no hay resultados
+# 6) buscarInmuebles -> modalidad del alquiler y presupuesto no excluyente
 # =========================================================================
+CRED_PG = {"postgres": {"id": "yvym0TdlOebNMzsm", "name": "Postgres account"}}
+
+
 def wf_buscar_inmuebles(orig):
-    """El nodo Filter no sacaba items cuando no habia resultados, asi que n8n no
-    ejecutaba ni el Code ni el Respond y Retell recibia una respuesta VACIA."""
-    nodes = json.loads(json.dumps(orig["nodes"]))
+    """Antes: Filter (habitaciones, municipio, precio minimo, operacion) + Code.
+    Ahora un solo Code (nodes/bi_filtrar.js) que ademas:
+      - distingue alquiler de larga duracion y temporal (eGO, por wa_cartera);
+      - trata el presupuesto (precio_max) como orientativo, no excluyente;
+      - responde aunque no haya resultados (antes Retell recibia una respuesta vacia)."""
+    viejos = {"Webhook", "Respond to Webhook", "BuscarInmuebles"}
+    nodes = [json.loads(json.dumps(n)) for n in orig["nodes"] if n["name"] in viejos]
     for n in nodes:
-        if n["name"] == "FiltrarHabitacionesMunicipio":
+        if n["name"] == "BuscarInmuebles":
             n["alwaysOutputData"] = True
-        if n["name"] == "FormatearSalidaParaAgenteTelefónico":
-            js = n["parameters"]["jsCode"]
-            viejo = "const items = $input.all();"
-            assert viejo in js, "no encuentro la linea de entrada en buscarInmuebles"
-            js = js.replace(viejo,
-                "// alwaysOutputData en el Filter hace que n8n mande un item vacio cuando no\n"
-                "// hay resultados. Sin ese item, este nodo y el Respond no llegaban a\n"
-                "// ejecutarse y Retell recibia una respuesta vacia.\n"
-                "const items = $input.all().filter(i => i.json && i.json.ref);", 1)
-            n["parameters"]["jsCode"] = js
+            n["position"] = [224, 64]
+        if n["name"] == "Respond to Webhook":
+            n["position"] = [976, 64]
+    nodes.append(node("ModalidadCartera", "n8n-nodes-base.postgres", {
+        "operation": "executeQuery",
+        "query": "select ref, modalidad from wa_cartera where modalidad <> ''",
+        "options": {}}, [448, 64], 2.6, credentials=CRED_PG,
+        alwaysOutputData=True, executeOnce=True, onError="continueRegularOutput"))
+    nodes.append(code_node("FiltrarYFormatear", "bi_filtrar.js", [704, 64]))
+    nodes.append(node("NotaModalidad", "n8n-nodes-base.stickyNote", {"content":
+        "## Alquiler y presupuesto\n*Larga duracion* (todo el ano) o *temporal* (por meses de "
+        "invierno): lo dice eGO; [WA] 4 lo guarda cada hora en wa_cartera.modalidad. Si la "
+        "base de datos falla, se deduce de la descripcion.\n\n*precio_max* es el presupuesto "
+        "del cliente: se ensena tambien lo que se pasa hasta un 30 % (y, si hay menos de 3, "
+        "hasta el doble), marcado POR ENCIMA DE SU PRESUPUESTO.",
+        "height": 260, "width": 460}, [448, -260], 1))
     s = {k: v for k, v in (orig.get("settings") or {}).items() if k in SETTINGS_OK}
     s["timezone"] = "Europe/Madrid"
+    s["executionOrder"] = "v1"
     return {"name": orig["name"], "settings": s, "nodes": nodes,
-            "connections": orig["connections"]}
+            "connections": conn(
+                ("Webhook", 0, "BuscarInmuebles", 0),
+                ("BuscarInmuebles", 0, "ModalidadCartera", 0),
+                ("ModalidadCartera", 0, "FiltrarYFormatear", 0),
+                ("FiltrarYFormatear", 0, "Respond to Webhook", 0))}
 
 
 # =========================================================================

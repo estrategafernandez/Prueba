@@ -128,7 +128,26 @@ def construir_tools(actuales):
         "tenga, y cuando ya conozcas la operacion, un municipio valido y el numero minimo de habitaciones. "
         "Si al cliente le da igual el numero de habitaciones, envia 0. No usar cuando el cliente "
         "proporciona una referencia: en ese caso usa buscarPorReferencia. Si el cliente ha dado una calle o "
-        "una direccion, usa antes buscarPorDireccion. No envies otros filtros.")
+        "una direccion, usa antes buscarPorDireccion. No envies otros filtros. En alquiler, cada resultado "
+        "dice si es de larga duracion (todo el ano) o temporal (por meses de invierno); los marcados POR "
+        "ENCIMA DE SU PRESUPUESTO se pasan del presupuesto del cliente.")
+    props = bi["parameters"]["properties"]
+    props["precio_min"] = {"type": "integer", "description": (
+        "Precio minimo en euros, SOLO si el cliente dice el precio de un anuncio concreto que ha visto "
+        "(\"lo vi por 200.000\") o pide expresamente un minimo (\"a partir de 900\"). Entero sin simbolos "
+        "ni separadores. Si no, envia 0. Su presupuesto NO va aqui: va en precio_max.")}
+    # Presupuesto orientativo: n8n ensena tambien lo que se pasa hasta un 30 %.
+    props["precio_max"] = {"type": "integer", "description": (
+        "Presupuesto maximo del cliente en euros (\"hasta 800\", \"como mucho 800 al mes\", \"tengo unos "
+        "200.000\"). Entero sin simbolos ni separadores. Envia 0 si no lo ha dicho: nunca te lo inventes "
+        "ni lo deduzcas. No es excluyente: la herramienta ensena tambien lo que se pasa un poco.")}
+    props["modalidad"] = {"type": "string", "enum": ["larga_duracion", "temporal", "indiferente"],
+        "description": (
+            "Solo en alquiler. larga_duracion: para vivir todo el ano (alquiler anual, de larga duracion). "
+            "temporal: por unos meses (por ejemplo de septiembre a junio, el invierno). indiferente: si le "
+            "da igual, no lo ha dicho o es venta.")}
+    bi["parameters"]["required"] = list(dict.fromkeys(
+        bi["parameters"]["required"] + ["precio_max", "modalidad"]))
     out.append(bi)
 
     # --- NUEVA: busqueda por direccion --------------------------------------

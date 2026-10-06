@@ -105,5 +105,70 @@ const norm2 = run('tel_normalizar.js', inputOf([{ json:{ body:{ telefono:'600111
 r = run('tel_formatear.js', inputOf(eventos), nodeOf({ NormalizarTelefono: norm2 }))[0].json.respuesta;
 check('telefono sin citas -> encontrado=false', r.encontrado === false && r.motivo === 'sin_citas');
 
+console.log('\n== Telefono · buscarInmuebles: alquiler anual o temporal y presupuesto ==');
+{
+  const HOJA = JSON.parse(fs.readFileSync(B + 'tests_datos/wa_cartera_20261001.json', 'utf8'));
+  // Lo que hay hoy en wa_cartera.modalidad (sale de eGO)
+  const MOD = { 'BN-1291-A':'larga_duracion', 'BN-1347-A':'larga_duracion', 'BN-1463-A':'larga_duracion',
+    'BN-1541-V':'larga_duracion', 'BN-1542-A':'temporal', 'BN-1549-A':'temporal', 'BN-1555-A':'larga_duracion',
+    'BN-1559-A':'larga_duracion', 'BN-632-A':'temporal', 'BN-C-119-A':'larga_duracion', 'BN-C-122-A':'temporal',
+    'BN-C-126-A':'temporal', 'CS-1071-A':'larga_duracion', 'CS-1248-A':'larga_duracion', 'CS-1449-A':'larga_duracion',
+    'CS-1552-A':'larga_duracion', 'CS-1554-A':'larga_duracion', 'CS-G-272-A':'larga_duracion',
+    'CS-G-277-A':'larga_duracion', 'CS-G-387-A':'larga_duracion', 'CS-G-399-A':'larga_duracion', 'OR-1494-A':'temporal' };
+  const PG = Object.entries(MOD).map(([ref, modalidad]) => ({ ref, modalidad }));
+  const BEN = 'Benicasim / Benicàssim';
+  const bi = (body, pg = PG) => run('bi_filtrar.js', inputOf([]),
+    nodeOf({ Webhook: { body }, BuscarInmuebles: HOJA, ModalidadCartera: pg }))[0].json.result;
+  const refs = (t) => [...t.matchAll(/referencia ([A-Z0-9-]+)/g)].map(m => m[1]);
+
+  let t = bi({ municipio: BEN, operacion: 'alquiler', habitaciones: 0, precio_min: 0, precio_max: 800, modalidad: 'larga_duracion' });
+  check('anual hasta 800 en Benicasim: ningun temporal', refs(t).length > 0 && refs(t).every(x => MOD[x] === 'larga_duracion'), refs(t).join());
+  check('presupuesto no excluyente: el de 1.000 sale, marcado POR ENCIMA', /BN-1291-A[^|]*POR ENCIMA DE SU PRESUPUESTO/.test(t), refs(t).join());
+  check('pero no el de 5.500 ni el de 2.000', !refs(t).includes('BN-1555-A') && !refs(t).includes('BN-1559-A'), refs(t).join());
+  check('dice que es de larga duracion y el precio al mes', /larga duración, para todo el año/.test(t) && /1\.?000€ al mes/.test(t));
+  const op1 = t.slice(t.indexOf('Opción 1:')).split(' | ')[0];
+  check('primero los que caben en su presupuesto', !/POR ENCIMA/.test(op1) && /POR ENCIMA/.test(t.slice(t.indexOf('Opción 3:'))), op1.slice(0, 120));
+
+  t = bi({ municipio: BEN, operacion: 'alquiler', habitaciones: 0, precio_min: 0, precio_max: 0, modalidad: 'temporal' });
+  check('temporal: solo temporales, dicho asi', refs(t).length > 0 && refs(t).every(x => MOD[x] === 'temporal')
+    && /alquiler temporal, por meses de invierno/.test(t) && !/larga duración/.test(t), refs(t).join());
+
+  t = bi({ municipio: 'Oropesa del Mar / Orpesa', operacion: 'alquiler', habitaciones: 0, precio_min: 0, precio_max: 0, modalidad: 'larga_duracion' });
+  check('sin anuales en Oropesa: lo dice y avisa de que hay uno temporal', /No hay ningún alquiler de larga duración/.test(t)
+    && /Sí hay 1 de alquiler temporal/.test(t) && /No inventes/.test(t), t.slice(0, 160));
+
+  t = bi({ municipio: BEN, operacion: 'alquiler', habitaciones: 0, precio_min: 0, precio_max: 300, modalidad: 'larga_duracion' });
+  check('nada ni con margen: los mas economicos, diciendo que se pasan', /No hay nada por debajo de 300€/.test(t) && refs(t).length > 0, refs(t).join());
+
+  t = bi({ municipio: BEN, operacion: 'alquiler', habitaciones: 3, precio_min: 0, precio_max: 0, modalidad: 'indiferente' });
+  check('indiferente: anuales y temporales', refs(t).some(x => MOD[x] === 'temporal') && refs(t).some(x => MOD[x] === 'larga_duracion'), refs(t).join());
+
+  // Como antes: venta, sin los campos nuevos (herramienta antigua de Retell)
+  t = bi({ municipio: BEN, operacion: 'venta', habitaciones: 3, precio_min: 0 });
+  const filasV = HOJA.filter(f => f.tipo_transaccion === 'venta' && f.municipio === BEN && Number(f.habitaciones) >= 3);
+  const esperadas = filasV.sort((a, b) => (Number(a.precio) || Infinity) - (Number(b.precio) || Infinity)).slice(0, 5).map(f => f.ref);
+  check('venta sin presupuesto: igual que antes (los 5 mas economicos)', refs(t).join() === esperadas.join()
+    && new RegExp(`He encontrado ${filasV.length} inmuebles`).test(t), refs(t).join() + ' / ' + esperadas.join());
+  check('en venta no pone modalidad ni "al mes"', !/larga duración|temporal|al mes/.test(t));
+  t = bi({ municipio: BEN, operacion: 'venta', habitaciones: 0, precio_min: 200000 });
+  check('precio_min sigue funcionando ("he visto uno de 200.000")', refs(t).length > 0 &&
+    refs(t).every(x => Number(HOJA.find(f => f.ref === x).precio) >= 200000), refs(t).join());
+
+  t = bi({ args: { municipio: BEN, operacion: 'alquiler', habitaciones: 0, precio_min: 0, precio_max: 800, modalidad: 'larga_duracion' } });
+  check('datos dentro de "args": tambien', refs(t).includes('BN-1291-A') && refs(t).every(x => MOD[x] === 'larga_duracion'), refs(t).join());
+
+  t = bi({ municipio: BEN, operacion: 'alquiler', habitaciones: 3, precio_min: 0, precio_max: 0, modalidad: 'larga_duracion' }, [{ error: 'sin conexion' }]);
+  check('sin base de datos: la modalidad sale de la descripcion', refs(t).includes('BN-1291-A') && !refs(t).includes('BN-632-A'), refs(t).join());
+
+  t = bi({ municipio: 'Torreblanca', operacion: 'alquiler', habitaciones: 0, precio_min: 0, precio_max: 0, modalidad: 'larga_duracion' });
+  check('sin resultados: responde (nunca vacio)', /No hay ningún alquiler de larga duración/.test(t), t.slice(0, 100));
+
+  const reglas = (f, ini) => { const src = fs.readFileSync(B + f, 'utf8'); const i = src.indexOf(ini);
+    return [...src.slice(i, i + 900).matchAll(/if \((\/.*?\/)\.test\(d\)\) return '(\w+)'/g)].map(m => m[1] + m[2]).join('\n'); };
+  const rTel = reglas('nodes/bi_filtrar.js', 'function modalidadPorDescripcion');
+  check('la deduccion por la descripcion es la misma que en WhatsApp',
+    rTel && rTel.split('\n').length === 3 && rTel === reglas('wa/cartera.js', 'function modalidadAlquiler'));
+}
+
 console.log('\n' + (fallos ? `*** ${fallos} FALLOS ***` : '*** TODOS LOS TESTS OK ***'));
 process.exit(fallos?1:0);
