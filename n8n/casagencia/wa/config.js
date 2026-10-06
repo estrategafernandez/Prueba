@@ -151,11 +151,12 @@ const PORTALES = [
 // a la que haya y hace que el bot deje de contestar.
 const ETIQUETAS = {
   bienvenida: '1-bienvenida_ia',   // la IA ha mandado la plantilla
+  seguimiento: '1-seguimiento_1', // no contesto a la bienvenida y se le mando el seguimiento de 12 h
   en_proceso: '2-en_proceso',      // el cliente ha contestado y la IA esta con el
   agendada:   '3-agendada_ia',     // visita agendada de verdad en el calendario
   intervenir: '4-intervenir',      // tiene que entrar una persona (la IA sigue contestando: solo se calla con bot = Off)
 };
-const ESTADOS = [ETIQUETAS.bienvenida, ETIQUETAS.en_proceso, ETIQUETAS.agendada];
+const ESTADOS = [ETIQUETAS.bienvenida, ETIQUETAS.seguimiento, ETIQUETAS.en_proceso, ETIQUETAS.agendada];
 // Etiquetas que se SUMAN a las de estado (no cuentan como estado):
 const ETIQUETA_VENDEDOR = 'vendedor';               // el comprador tiene que vender una vivienda
 const ETIQUETA_LLAMADA  = '0-llamada_telefonica';   // la conversacion tiene llamadas del asistente telefonico

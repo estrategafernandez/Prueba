@@ -1439,13 +1439,18 @@ def wf_recordatorio_cliente(ids, tipo, nombre):
 # ===========================================================================
 # SEGUIMIENTO A QUIEN NO CONTESTA A LA BIENVENIDA
 # ===========================================================================
+def const_etiqueta(clave):
+    """El nombre de una etiqueta de ETIQUETAS (wa/config.js)."""
+    return re.search(r"^\s*%s:\s*'([^']+)'" % clave, CONFIG, re.M).group(1)
+
+
 SEG_PLANTILLA = re.search(r"plantilla:\s*'([^']+)'", const("SEGUIMIENTO")).group(1)
 SQL_SEGUIDO = """insert into wa_avisos (evento_id, tipo) values ($1, $2)
 on conflict (evento_id, tipo) do nothing
 returning evento_id;"""
 
 
-def wf_seguimiento():
+def wf_seguimiento(ids):
     """Cada 15 minutos en horario comercial: a las conversaciones que siguen en
     1-bienvenida_ia con la bienvenida como ultimo mensaje (de hace 12 h o mas),
     la plantilla de seguimiento por Chatwoot. Una sola vez por bienvenida."""
@@ -1478,10 +1483,15 @@ def wf_seguimiento():
              onError="continueRegularOutput", alwaysOutputData=True),
         if_node("¿Enviado?", "={{ Number($json.id || 0) }}", "gt", [1940, -80], der=0, tipo="number"),
         # Sara sabe que se le ha mandado el seguimiento (si pulsa un boton, lo entiende)
-        pg_query("GuardarEnMemoriaAgente", "insert into n8n_chat_histories (session_id, message) values ($1, $2);",
+        pg_query("GuardarEnMemoriaAgente", "insert into n8n_chat_histories (session_id, message) values ($1, $2) "
+                 "returning id;",
                  "={{ [ %s.telefono, JSON.stringify({ type: 'ai', content: %s.contenido, tool_calls: [], "
                  "additional_kwargs: {}, response_metadata: {}, invalid_tool_calls: [] }) ] }}" % (comp, comp),
-                 [2160, -160], onError="continueRegularOutput"),
+                 [2160, -160], onError="continueRegularOutput", alwaysOutputData=True),
+        # Y la conversacion pasa de 1-bienvenida_ia a 1-seguimiento_1
+        exec_sub("MarcarSeguimiento", ids.get("[WA][SUB] Etiquetar", ""), "[WA][SUB] Etiquetar",
+                 {"conversacion_id": "={{ %s.conversacion_id }}" % comp, "etiquetas": const_etiqueta("seguimiento")},
+                 [2380, -160], {"conversacion_id": "number"}, cada_uno=True, onError="continueRegularOutput"),
         # No ha salido (plantilla sin aprobar o error): se quita la marca y se reintenta
         pg_query("Desapuntar", "delete from wa_avisos where evento_id = $1 and tipo = $2;",
                  "={{ [ %s.evento_id, '%s' ] }}" % (comp, SEG_PLANTILLA), [2160, 160],
@@ -1491,7 +1501,8 @@ def wf_seguimiento():
              "de hace 12 h o mas, le manda *%s* ({{1}} = su nombre) por su conversacion. Si las 12 h se "
              "cumplen de noche, sale a las 9:00.\n\nNo sale si el cliente ha contestado, si alguien del "
              "equipo le ha escrito, con el bot en Off, con la conversacion resuelta ni si la bienvenida es "
-             "de hace mas de 3 dias. Una sola vez por bienvenida (wa_avisos). Ajustes: SEGUIMIENTO en "
+             "de hace mas de 3 dias. Una sola vez por bienvenida (wa_avisos). Al mandarlo, la conversacion pasa "
+             "de *1-bienvenida_ia* a *1-seguimiento_1*. Ajustes: SEGUIMIENTO en "
              "wa/config.js." % (ETQ_BIENVENIDA, SEG_PLANTILLA), [180, -380], 600, 300),
     ], conn(("Cada15MinEnHorario", 0, "SinContestar", 0), ("SinContestar", 0, "Candidatos", 0),
             ("Candidatos", 0, "ApuntarSeguimiento", 0), ("ApuntarSeguimiento", 0, "SoloLosNuevos", 0),
@@ -1499,6 +1510,7 @@ def wf_seguimiento():
             ("Componer", 0, "¿Aprobada?", 0), ("¿Aprobada?", 0, "EnviarSeguimiento", 0),
             ("¿Aprobada?", 1, "Desapuntar", 0),
             ("EnviarSeguimiento", 0, "¿Enviado?", 0), ("¿Enviado?", 0, "GuardarEnMemoriaAgente", 0),
+            ("GuardarEnMemoriaAgente", 0, "MarcarSeguimiento", 0),
             ("¿Enviado?", 1, "Desapuntar", 0)))
 
 
@@ -2746,7 +2758,7 @@ def construir(ids):
         "[WA] 7 · Recordatorio de visita al cliente (2 h)": wf_recordatorio_cliente(ids, "2h", "[WA] 7 · Recordatorio de visita al cliente (2 h)"),
         "[WA] 8 · Prueba sin IA (contexto)": wf_prueba_contexto(),
         "[WA] 9 · Lead a mano": wf_lead_manual(ids),
-        "[WA] 10 · Seguimiento a quien no contesta": wf_seguimiento(),
+        "[WA] 10 · Seguimiento a quien no contesta": wf_seguimiento(ids),
         "[WA] 11 · Mensajes del equipo a la memoria de Sara": wf_equipo_memoria(),
     }
     assert list(wfs) == ORDEN

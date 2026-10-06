@@ -393,10 +393,15 @@ ck('4-intervenir con otros estados: se suma (y respeta las de las personas)',
 ck('con 4-intervenir puesto, 2-en_proceso no vuelve', JSON.stringify(unir(['4-intervenir'], '2-en_proceso')) === '["4-intervenir"]'
    && JSON.stringify(unir(['1-bienvenida_ia', '4-intervenir'], '2-en_proceso')) === '["4-intervenir"]', JSON.stringify(unir(['1-bienvenida_ia', '4-intervenir'], '2-en_proceso')));
 ck('respeta las que pone una persona', unir(['vip', '1-bienvenida_ia'], '3-agendada_ia').join() === 'vip,3-agendada_ia');
+ck('seguimiento: 1-bienvenida_ia pasa a 1-seguimiento_1', JSON.stringify(unir(['1-bienvenida_ia', 'vip'], '1-seguimiento_1')) === '["vip","1-seguimiento_1"]',
+   JSON.stringify(unir(['1-bienvenida_ia', 'vip'], '1-seguimiento_1')));
+ck('seguimiento: si contesta, pasa a 2-en_proceso', JSON.stringify(unir(['1-seguimiento_1'], '2-en_proceso')) === '["2-en_proceso"]');
+ck('seguimiento: nunca hacia atras (en proceso no vuelve a seguimiento)', JSON.stringify(unir(['2-en_proceso'], '1-seguimiento_1')) === '["2-en_proceso"]');
 const est = (etq) => wa('estado_en_proceso.js', inp([{}]), nod({ EntradaMensaje: { ...entrada, etiquetas: etq } }))[0].json.marcar;
 ck('al contestar pasa a en proceso', est(['1-bienvenida_ia']) === true);
 ck('si ya esta agendada no se toca', est(['3-agendada_ia']) === false);
 ck('si esta en manos de una persona no se toca', est(['4-intervenir']) === false);
+ck('con 1-seguimiento_1, al contestar se marca en proceso', est(['1-seguimiento_1']) === true);
 
 // ===========================================================================
 console.log('\n== 9. Agenda: guardia de WhatsApp + codigo del telefono ==');
@@ -1258,6 +1263,8 @@ console.log('\n== Seguimiento a quien no contesta a la bienvenida ([WA] 10) ==')
        && w10.settings.timezone === 'Europe/Madrid');
     ck('[WA] 10: lee todas las paginas de la etiqueta 1-bienvenida_ia', /labels\[\]/.test(JSON.stringify(n10('SinContestar').parameters.queryParameters))
        && n10('SinContestar').parameters.options.pagination.pagination.maxRequests >= 10);
+    ck('[WA] 10: al mandarlo, la conversacion pasa a 1-seguimiento_1', /1-seguimiento_1/.test(JSON.stringify(n10('MarcarSeguimiento').parameters))
+       && (w10.connections['GuardarEnMemoriaAgente'].main[0] || []).some(c => c.node === 'MarcarSeguimiento'));
     ck('[WA] 10: una sola vez por bienvenida (wa_avisos) y a la memoria de Sara', /seguimiento_1/.test(n10('ApuntarSeguimiento').parameters.options.queryReplacement)
        && /n8n_chat_histories/.test(n10('GuardarEnMemoriaAgente').parameters.query));
   } finally {
