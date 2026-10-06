@@ -205,3 +205,29 @@ Respuesta enviada a Iván (conv 141) a petición del cliente: web de venta + for
   alertas `error_ia` (la IA no respondió).
 - Etiquetadas a mano (conservando sus etiquetas) las conversaciones reales con aviso enviado y sin la etiqueta:
   211, 217, 220, 221, 226, 228, 230, 231, 232, 233. La 204 ya la tenía. No se tocan las de prueba (8, 215).
+
+## Correcciones del 06/10 (tras el informe de alquiler)
+
+Copias previas en `scratchpad/backup/*_antes_v12.json` (Agente AT y Captación).
+
+**Agente AT (`9l8UOsqXN3Bn53ao`)**
+- Prompts Instagram y solicitudes: regla de **mascotas** (solo lo que conste; si no consta, nunca decir que se admiten:
+  consultarlo con un compañero) y regla de **no prometer llamadas** sin haber lanzado antes el aviso (si preguntan si
+  sigue disponible: por lo que consta, sí).
+- Prompt solicitudes (Llavero no disponible): **el aviso sale en cuanto termina la cualificación** (franja horaria) y
+  el nombre y el email se piden después, junto con la despedida. Antes, si el cliente no confirmaba sus datos, el
+  aviso no salía (caso Tanya).
+- **Bloqueo por cliente** (Redis `lock:<teléfono>`): tras la espera de 30 s, `Bloqueo: tomar` (INCR, TTL 150 s) →
+  `¿Bloqueo libre?` (valor 1, o 30 vueltas) → si no, `Espera bloqueo` (4 s) y reintenta. Se suelta al terminar el
+  agente (`Bloqueo: soltar`) o si la ejecución no es la del último mensaje (`Bloqueo: soltar (no es el último)`).
+  Evita que dos mensajes seguidos del mismo cliente se procesen a la vez (pregunta repetida, caso Jaime de Monteys).
+
+**Captación Leads Mobilia (`bbX5mwUMYPdcp2kh`)**
+- Antes de la bienvenida: `Mensajes previos` (GET mensajes de la conversación) → `¿Bienvenida ya enviada?` (ya hay una
+  bienvenida con `ref-<ref>`) → sí: `Nota solicitud repetida` (nota privada, sin reenviar) · no: `Switch3` como antes.
+  `Switch3` lee el inmueble de `Saca Descripción` directamente.
+- Saludo sin nombre: si Mobilia manda el nombre vacío o "No facilitado", la bienvenida dice "Hola 👋" en vez de "Hola **".
+
+**Pendiente de probar**: mi conversación de pruebas (conv 215, contacto 218) ya no existe en Chatwoot.
+**Detectado, sin tocar**: solicitudes de Mobilia sin nombre fallan en `Crear cliente1` / `Enlaza_Solicitud1` y no
+reciben bienvenida (05/10: +34622052160 ref 1202 y 626287561 ref 1203, ambas de venta).
