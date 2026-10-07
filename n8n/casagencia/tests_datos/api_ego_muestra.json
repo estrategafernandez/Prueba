@@ -1,0 +1,1308 @@
+{
+ "inmuebles": [
+  {
+   "id": 31105793,
+   "reference": "BN-C-126-A",
+   "metabaseId": 26699629,
+   "natureTypeId": 2,
+   "locationId": 1596183,
+   "rooms": 2,
+   "bathrooms": 1,
+   "grossArea": 66,
+   "nettArea": 0,
+   "businesses": [
+    {
+     "businessTypeId": 13,
+     "prices": [
+      {
+       "value": 700
+      }
+     ]
+    }
+   ],
+   "features": [
+    {
+     "featureId": 176,
+     "value": "1"
+    },
+    {
+     "featureId": 253,
+     "value": "2"
+    },
+    {
+     "featureId": 202,
+     "value": ""
+    },
+    {
+     "featureId": 247,
+     "value": ""
+    },
+    {
+     "featureId": 267,
+     "value": ""
+    },
+    {
+     "featureId": 283,
+     "value": ""
+    },
+    {
+     "featureId": 305,
+     "value": ""
+    },
+    {
+     "featureId": 367,
+     "value": ""
+    },
+    {
+     "featureId": 293,
+     "value": ""
+    },
+    {
+     "featureId": 1107,
+     "value": ""
+    },
+    {
+     "featureId": 200,
+     "value": "1"
+    },
+    {
+     "featureId": 1104,
+     "value": "3"
+    },
+    {
+     "featureId": 277,
+     "value": ""
+    },
+    {
+     "featureId": 205,
+     "value": ""
+    },
+    {
+     "featureId": 227,
+     "value": ""
+    },
+    {
+     "featureId": 229,
+     "value": ""
+    },
+    {
+     "featureId": 206,
+     "value": ""
+    },
+    {
+     "featureId": 204,
+     "value": ""
+    },
+    {
+     "featureId": 1063,
+     "value": ""
+    },
+    {
+     "featureId": 331,
+     "value": ""
+    },
+    {
+     "featureId": 335,
+     "value": "1974-01-01 12:00:00"
+    },
+    {
+     "featureId": 455,
+     "value": ""
+    },
+    {
+     "featureId": 345,
+     "value": "9"
+    },
+    {
+     "featureId": 301,
+     "value": "66"
+    },
+    {
+     "featureId": 193,
+     "value": ""
+    },
+    {
+     "featureId": 435,
+     "value": "3"
+    },
+    {
+     "featureId": 329,
+     "value": ""
+    },
+    {
+     "featureId": 197,
+     "value": "1"
+    },
+    {
+     "featureId": 208,
+     "value": "1"
+    },
+    {
+     "featureId": 248,
+     "value": ""
+    },
+    {
+     "featureId": 448,
+     "value": ""
+    }
+   ],
+   "firstMedia": {
+    "uid": "01a3da01-0000-0500-0000-00001a7be2ed",
+    "format": ".jpg"
+   },
+   "description": {
+    "ES-ES": "CASAGENCIA INMOBILIARIA ALQUILA apartamento de temporada \r\n\r\nVive el invierno frente al Mediterráneo. Si buscas un lugar tranquilo donde disfrutar de la luz, el mar y unas vistas espectaculares, este apartamento puede ser justo lo que estás buscando.\r\n\r\nDisponible de octubre a mayo, cuenta con dos dormitorios, un baño y cocina independiente, además de un luminoso salón que se abre a su gran protagonista: una espectacular terraza acristalada con vistas al mar. Un espacio perfecto para desayunar contemplando el Mediterráneo, relajarte al final del día o simplemente disfrutar de la luz natural durante todo el año.\r\n\r\nLa vivienda se encuentra en una 9ª planta con ascensor, ofreciendo unas bonitas vistas despejadas. Para mayor confort dispone de calefacción mediante radiadores eléctricos y ventiladores de techo.\r\n\r\nUna oportunidad para disfrutar de una estancia junto al mar durante los meses de invierno, en un ambiente tranquilo y agradable.\r\n\r\nDisponible de octubre a mayo."
+   }
+  },
+  {
+   "id": 30643903,
+   "reference": "CAS_2591",
+   "metabaseId": null,
+   "natureTypeId": 189,
+   "locationId": 1596179,
+   "rooms": null,
+   "bathrooms": null,
+   "grossArea": 400,
+   "nettArea": 0,
+   "businesses": [
+    {
+     "businessTypeId": 1,
+     "prices": [
+      {
+       "value": 0
+      }
+     ]
+    }
+   ],
+   "features": [
+    {
+     "featureId": 301,
+     "value": "400"
+    },
+    {
+     "featureId": 302,
+     "value": "7000"
+    }
+   ],
+   "firstMedia": null,
+   "description": {
+    "ES-ES": "12028A001000650001AW\r\n9499938YK4199N0001UZ\r\n\r\nla casa esta en la entrada de la perrita con terreno a confirma de 10.000e , cuadra para caballos \r\nes de 2000 y esta legalizada pero ver finales de obra !!! \r\nir a verla la semana que viene \r\n"
+   }
+  },
+  {
+   "id": 30021028,
+   "reference": "BN-1537-V",
+   "metabaseId": 25751108,
+   "natureTypeId": 20,
+   "locationId": 235269,
+   "rooms": 1,
+   "bathrooms": 1,
+   "grossArea": 143,
+   "nettArea": 0,
+   "businesses": [
+    {
+     "businessTypeId": 1,
+     "prices": [
+      {
+       "value": 300000
+      }
+     ]
+    }
+   ],
+   "features": [
+    {
+     "featureId": 176,
+     "value": "1"
+    },
+    {
+     "featureId": 253,
+     "value": "1"
+    },
+    {
+     "featureId": 301,
+     "value": "143"
+    },
+    {
+     "featureId": 331,
+     "value": ""
+    },
+    {
+     "featureId": 334,
+     "value": "2025-04-01 12:00:00"
+    },
+    {
+     "featureId": 336,
+     "value": "2"
+    },
+    {
+     "featureId": 158,
+     "value": ""
+    },
+    {
+     "featureId": 177,
+     "value": ""
+    },
+    {
+     "featureId": 216,
+     "value": ""
+    },
+    {
+     "featureId": 194,
+     "value": ""
+    },
+    {
+     "featureId": 202,
+     "value": ""
+    },
+    {
+     "featureId": 156,
+     "value": ""
+    },
+    {
+     "featureId": 239,
+     "value": ""
+    },
+    {
+     "featureId": 267,
+     "value": ""
+    },
+    {
+     "featureId": 455,
+     "value": ""
+    },
+    {
+     "featureId": 382,
+     "value": ""
+    },
+    {
+     "featureId": 208,
+     "value": "2"
+    }
+   ],
+   "firstMedia": {
+    "uid": "a415ca01-0000-0500-0000-0000195cdb5f",
+    "format": ".jpg"
+   },
+   "description": {
+    "ES-ES": "CASAGENCIA INMOBILIARIA VENDE....\r\nHay viviendas… y luego están las que realmente marcan la diferencia desde el primer momento. \r\nEsta casa de pueblo en Benicàssim, completamente reformada y a estrenar, es uno de esos ejemplos donde diseño, calidad y funcionalidad se unen para crear un espacio único.\r\nDesde la entrada se percibe una sensación de amplitud, luz y armonía, con un estilo contemporáneo que respeta el carácter de la vivienda pero lo eleva a otro nivel. El corazón de la casa es una espectacular cocina americana con isla, totalmente equipada con electrodomésticos integrados y detalles poco habituales como cafetera empotrada y campana extractora integrada en la propia isla, pensada tanto para el día a día como para disfrutar de momentos especiales. \r\nEste espacio se abre a un salón-comedor amplio y acogedor, donde los materiales cálidos y los acabados de alta gama aportan personalidad y confort.\r\nLa vivienda cuenta además con un aseo de cortesía y una habitación principal diseñada como un auténtico refugio, con zona destinada a vestidor y un baño en suite de líneas modernas y materiales de alta calidad, cuidando cada detalle.\r\nEn la planta  superior encontramos un espacio que aporta un valor añadido muy importante: zona de aparcamiento con capacidad para dos vehículos, trastero y área de lavandería. \r\nUn espacio versátil que, además, ofrece la posibilidad de adaptarse y ampliarse para crear más habitaciones o una zona independiente según las necesidades del futuro propietario.\r\nY como elemento diferenciador, la vivienda dispone de una terraza privada en la azotea que ocupa toda la superficie de la casa, un verdadero lujo donde poder diseñar una zona de relax, solárium o incluso un espacio de barbacoa, convirtiéndose en un lugar único para disfrutar del clima de Benicàssim.\r\nLa vivienda está equipada con aire acondicionado integrado por conductos, que garantiza el máximo confort durante todo el año, y cuenta además con una chimenea de diseño que aporta calidez y carácter al espacio principal. \r\nSe trata, en definitiva, de una vivienda totalmente nueva, con materiales de alta calidad, diseño actual y una distribución pensada para ofrecer comodidad y posibilidades, ideal tanto como residencia habitual como segunda vivienda o inversión.\r\n\r\nCláusula informativa – Publicidad inmobiliaria\r\n* El precio del inmueble no incluye los honorarios de la agencia, que ascienden al 2 % del precio final del inmueble, más el IVA correspondiente (mínimo 2.500€ más iva ) , ni los gastos de notaría y registro de la propiedad, los cuales están sujetos a los aranceles legalmente establecidos y pueden variar en función del precio de escrituración. Tampoco se incluyen los impuestos aplicables en la Comunitat Valenciana, cuyo importe depende tanto del valor del inmueble como de las circunstancias personales del comprador.\r\n* En Casagencia trabajamos para que toda la información sea lo más clara, transparente y actualizada posible.",
+    "EN-GB": "CASAGENCIA INMOBILIARIA SELLS....\r\nThere are houses... And then there are the ones that really make a difference from the get-go. \r\nThis town house in Benicàssim, completely renovated and brand new, is one of those examples where design, quality and functionality come together to create a unique space.\r\nFrom the entrance you can perceive a feeling of spaciousness, light and harmony, with a contemporary style that respects the character of the house but elevates it to another level. The heart of the house is a spectacular American kitchen with island, fully equipped with integrated appliances and unusual details such as a built-in coffee maker and extractor hood integrated into the island itself, designed both for everyday use and to enjoy special moments. \r\nThis space opens onto a spacious and welcoming living-dining room, where warm materials and high-end finishes provide personality and comfort.\r\nThe house also has a guest toilet and a master bedroom designed as a real refuge, with a dressing area and an en-suite bathroom with modern lines and high quality materials, taking care of every detail.\r\nOn the upper floor we find a space that provides a very important added value: parking area with capacity for two vehicles, storage room and laundry area. \r\nA versatile space that also offers the possibility of adapting and expanding to create more rooms or an independent area according to the needs of the future owner.\r\nAnd as a differentiating element, the house has a private roof terrace that occupies the entire surface of the house, a real luxury where you can design a relaxation area, solarium or even a barbecue space, becoming a unique place to enjoy the climate of Benicàssim.\r\nThe house is equipped with air conditioning integrated by ducts, which guarantees maximum comfort throughout the year, and also has a designer fireplace that brings warmth and character to the main space. \r\nIt is, in short, a totally new home, with high quality materials, modern design and a distribution designed to offer comfort and possibilities, ideal both as a habitual residence and as a second home or investment.\r\n\r\nInformative clause – Real estate advertising\r\n* The price of the property does not include the agency's fees, which amount to 2% of the final price of the property, plus the corresponding VAT (minimum €2,500 plus VAT), nor the notary and land registry expenses, which are subject to the legally established fees and may vary depending on the deed price. Nor are the taxes applicable in the Valencian Community included, the amount of which depends on both the value of the property and the personal circumstances of the buyer.\r\n* At Casagencia we work to ensure that all information is as clear, transparent and up-to-date as possible."
+   }
+  },
+  {
+   "id": 25097728,
+   "reference": "CS-G-272-A",
+   "metabaseId": 21335952,
+   "natureTypeId": 185,
+   "locationId": 1636033,
+   "rooms": 3,
+   "bathrooms": 3,
+   "grossArea": 200,
+   "nettArea": 0,
+   "businesses": [
+    {
+     "businessTypeId": 2,
+     "prices": [
+      {
+       "value": 1300
+      }
+     ]
+    }
+   ],
+   "features": [
+    {
+     "featureId": 382,
+     "value": "1"
+    },
+    {
+     "featureId": 176,
+     "value": "3"
+    },
+    {
+     "featureId": 253,
+     "value": "3"
+    },
+    {
+     "featureId": 177,
+     "value": ""
+    },
+    {
+     "featureId": 216,
+     "value": ""
+    },
+    {
+     "featureId": 194,
+     "value": ""
+    },
+    {
+     "featureId": 202,
+     "value": ""
+    },
+    {
+     "featureId": 156,
+     "value": ""
+    },
+    {
+     "featureId": 239,
+     "value": ""
+    },
+    {
+     "featureId": 267,
+     "value": ""
+    },
+    {
+     "featureId": 200,
+     "value": "1"
+    },
+    {
+     "featureId": 331,
+     "value": ""
+    },
+    {
+     "featureId": 455,
+     "value": ""
+    },
+    {
+     "featureId": 345,
+     "value": "2"
+    },
+    {
+     "featureId": 208,
+     "value": "1"
+    },
+    {
+     "featureId": 301,
+     "value": "200"
+    },
+    {
+     "featureId": 336,
+     "value": "2"
+    },
+    {
+     "featureId": 158,
+     "value": ""
+    }
+   ],
+   "firstMedia": {
+    "uid": "00f67e01-0000-0500-0000-00001359eb91",
+    "format": ".jpg"
+   },
+   "description": {
+    "ES-ES": "***DISPONIBLE A PARTIR DEL 1 DE NOVIEMBRE 2026***\r\nCASAGENCIA alquila Piso dúplex con bonita terraza con barbacoa en el centro de Castellón. El edificio es familiar por lo que es muy tranquilo. En la planta 1 encontramos un amplio recibidor con un bonito salón comedor de grandes dimensiones. También dispone en la misma planta de un aseo, una cocina enorme con salida a una terraza con césped artificial y una bonita barbacoa. También tiene un trastero y una dispensa y una zona de lavadero. \r\nEn la segunda planta, se encuentra la zona de dormitorios. El dormitorio principal tiene un pequeño balcón con vistas despejadas y un baño en suite con ducha y también con una bañera doble con hidromasaje. Dispone de dos habitaciones dobles con armarios empotrados y un baño completo con ducha. Las habitaciones que dan a la calle tiene dobles ventanas para evitar el ruido. \r\nTiene calefacción de gas natural y también aparatos de aire acondicionado y ventiladores. \r\nEl precio incluye una plaza de garaje en la misma calle a escasos metros. Se alquila con muebles. \r\nEl inmueble se encuentra a pocos metros del centro histórico. \r\nDos meses de Fianza. Seguro impago. \r\nLa información contenida en los anuncios es a titulo informativo y sin valor contractual siendo Casagencia Inmobiliaria empresa de intermediación puede contener errores dado que la información es ofrecida por terceros. \r\nEl precio indicado puede sufrir variación sin preaviso.  \r\nEn todos los casos los precios expuestos son más impuestos y gastos derivados de la transmisión del inmueble, así como los honorarios de inmobiliaria.\r\n\r\n",
+    "EN-GB": "CASAGENCIA rents Duplex flat with beautiful terrace with barbecue in the centre of Castellón. The building is family friendly so it is very quiet. On the 1st floor we find a large hall with a beautiful large living room. It also has a toilet on the same floor, a huge kitchen with access to a terrace with artificial grass and a beautiful barbecue. It also has a storage room and a dispensing room and a laundry area. \r\nOn the first floor, there is the sleeping area. The master bedroom has a small balcony with unobstructed views and an en-suite bathroom with shower and also with a double bathtub with hydromassage. It has two double bedrooms with fitted wardrobes and a full bathroom with shower. The street-facing rooms have double windows to avoid noise. \r\nIt has natural gas heating and also air conditioners and fans. \r\nThe price includes a garage space on the same street a few meters away. It is rented with furniture. \r\nThe property is located a few meters from the historic centre. \r\nTwo months of deposit. Unpaid insurance. \r\nThe information contained in the advertisements is for information purposes only and without contractual value, as Casagencia Inmobiliaria is an intermediary company, which may contain errors since the information is offered by third parties. \r\nThe price indicated may vary without prior notice.  \r\nIn all cases, the prices shown are plus taxes and expenses derived from the transfer of the property, as well as real estate fees."
+   }
+  },
+  {
+   "id": 23270346,
+   "reference": "BN-1291-A",
+   "metabaseId": 20000364,
+   "natureTypeId": 2,
+   "locationId": 1596181,
+   "rooms": 3,
+   "bathrooms": 2,
+   "grossArea": 90,
+   "nettArea": 82,
+   "businesses": [
+    {
+     "businessTypeId": 2,
+     "prices": [
+      {
+       "value": 1000
+      }
+     ]
+    }
+   ],
+   "features": [
+    {
+     "featureId": 176,
+     "value": "2"
+    },
+    {
+     "featureId": 253,
+     "value": "3"
+    },
+    {
+     "featureId": 177,
+     "value": ""
+    },
+    {
+     "featureId": 216,
+     "value": ""
+    },
+    {
+     "featureId": 202,
+     "value": ""
+    },
+    {
+     "featureId": 156,
+     "value": ""
+    },
+    {
+     "featureId": 267,
+     "value": ""
+    },
+    {
+     "featureId": 200,
+     "value": "1"
+    },
+    {
+     "featureId": 345,
+     "value": "2"
+    },
+    {
+     "featureId": 301,
+     "value": "90"
+    },
+    {
+     "featureId": 300,
+     "value": "82"
+    },
+    {
+     "featureId": 336,
+     "value": "1"
+    },
+    {
+     "featureId": 194,
+     "value": ""
+    },
+    {
+     "featureId": 239,
+     "value": ""
+    },
+    {
+     "featureId": 331,
+     "value": ""
+    },
+    {
+     "featureId": 455,
+     "value": ""
+    },
+    {
+     "featureId": 158,
+     "value": ""
+    },
+    {
+     "featureId": 208,
+     "value": "1"
+    }
+   ],
+   "firstMedia": {
+    "uid": "ca136301-0000-0500-0000-00001a4f4d3a",
+    "format": ".jpg"
+   },
+   "description": {
+    "ES-ES": "CASAGENCIA BENICÀSSIM ALQUILA – APARTAMENTO PARA TODO EL AÑO EN ZONA ALMADRABA\r\n\r\nCASAGENCIA Inmobiliaria ofrece en alquiler anual este  apartamento situado en la zona Almadraba de Benicàssim, una ubicación privilegiada que permite disfrutar de la cercanía de la playa y, al mismo tiempo, tener el centro del pueblo y todos sus servicios a pocos minutos.\r\nLa vivienda dispone de 3 habitaciones con armarios empotrados, 2 baños, salón-comedor y cocina.\r\nUno de sus principales atractivos es su amplia terraza orientada al norte, un espacio perfecto para disfrutar al aire libre durante gran parte del año.\r\nEl apartamento se encuentra en una urbanización con piscina y agradables zonas comunes y dispone además de plaza de garaje incluida en el precio.\r\nUna vivienda bien situada, ideal para quienes buscan establecer su residencia habitual en Benicàssim y disfrutar de la tranquilidad de la zona Almadraba durante todo el año.\r\n\r\nCaracterísticas principales:\r\nAlquiler para TODO EL AÑO\r\n3 habitaciones\r\nArmarios empotrados\r\n2 baños\r\nGran terraza\r\nPiscina comunitaria\r\nZonas comunes\r\nPlaza de garaje incluida\r\nExcelente ubicación entre el pueblo y la playa\r\n\r\nIMPORTANTE – REQUISITOS PARA EL ALQUILER\r\nSe requiere solvencia económica demostrable. Los interesados deberán aportar documentación económica para el estudio previo de viabilidad del alquiler, incluyendo contrato de trabajo y últimas nóminas.\r\nSe valorará especialmente la estabilidad laboral y económica.\r\nPara más información o concertar una visita, contacte con CASAGENCIA Inmobiliaria – Benicàssim.\r\n\r\n*La información contenida en los anuncios es a titulo informativo y sin valor contractual siendo Casagencia Inmobiliaria empresa de intermediación puede contener errores dado que la información es ofrecida por terceros. \r\nEl precio indicado puede sufrir variación sin preaviso.  \r\n\r\n\r\n",
+    "EN-GB": "CASAGENCIA BENICASIM rents apartment with 3 bedrooms and 2 bathrooms in the Almadraba area for the whole year. It will be available to visit from November 30.  The apartment located in a very good area, is perfect to live comfortably given its proximity to the town and the beach.  The house is rented with parking space included in the price. The highlight of the house apart from its location is its terrace facing north.\r\n\r\nThe information contained in the advertisements is for information purposes and without contractual value being Casagencia Inmobiliaria an intermediation company may contain errors since the information is offered by third parties. \r\nThe price indicated may change without notice.  \r\nIn all cases the prices shown are plus taxes and expenses derived from the transfer of the property, as well as real estate fees.\r\n\r\n"
+   }
+  },
+  {
+   "id": 2701300,
+   "reference": "BN-632-A",
+   "metabaseId": 2352461,
+   "natureTypeId": 2,
+   "locationId": 1596184,
+   "rooms": 3,
+   "bathrooms": 2,
+   "grossArea": 96,
+   "nettArea": 0,
+   "businesses": [
+    {
+     "businessTypeId": 13,
+     "prices": [
+      {
+       "value": 900
+      }
+     ]
+    }
+   ],
+   "features": [
+    {
+     "featureId": 301,
+     "value": "96"
+    },
+    {
+     "featureId": 176,
+     "value": "2"
+    },
+    {
+     "featureId": 225,
+     "value": ""
+    },
+    {
+     "featureId": 179,
+     "value": ""
+    },
+    {
+     "featureId": 258,
+     "value": ""
+    },
+    {
+     "featureId": 253,
+     "value": "3"
+    },
+    {
+     "featureId": 399,
+     "value": ""
+    },
+    {
+     "featureId": 298,
+     "value": ""
+    },
+    {
+     "featureId": 216,
+     "value": ""
+    },
+    {
+     "featureId": 311,
+     "value": ""
+    },
+    {
+     "featureId": 202,
+     "value": ""
+    },
+    {
+     "featureId": 213,
+     "value": ""
+    },
+    {
+     "featureId": 312,
+     "value": ""
+    },
+    {
+     "featureId": 236,
+     "value": ""
+    },
+    {
+     "featureId": 156,
+     "value": ""
+    },
+    {
+     "featureId": 316,
+     "value": ""
+    },
+    {
+     "featureId": 247,
+     "value": ""
+    },
+    {
+     "featureId": 239,
+     "value": ""
+    },
+    {
+     "featureId": 283,
+     "value": ""
+    },
+    {
+     "featureId": 305,
+     "value": ""
+    },
+    {
+     "featureId": 155,
+     "value": ""
+    },
+    {
+     "featureId": 293,
+     "value": ""
+    },
+    {
+     "featureId": 255,
+     "value": ""
+    },
+    {
+     "featureId": 200,
+     "value": "1"
+    },
+    {
+     "featureId": 168,
+     "value": ""
+    },
+    {
+     "featureId": 402,
+     "value": ""
+    },
+    {
+     "featureId": 205,
+     "value": ""
+    },
+    {
+     "featureId": 227,
+     "value": ""
+    },
+    {
+     "featureId": 226,
+     "value": ""
+    },
+    {
+     "featureId": 229,
+     "value": ""
+    },
+    {
+     "featureId": 206,
+     "value": ""
+    },
+    {
+     "featureId": 199,
+     "value": ""
+    },
+    {
+     "featureId": 331,
+     "value": ""
+    },
+    {
+     "featureId": 345,
+     "value": "2"
+    },
+    {
+     "featureId": 208,
+     "value": "1"
+    },
+    {
+     "featureId": 328,
+     "value": ""
+    },
+    {
+     "featureId": 269,
+     "value": ""
+    },
+    {
+     "featureId": 377,
+     "value": ""
+    },
+    {
+     "featureId": 233,
+     "value": "6"
+    },
+    {
+     "featureId": 319,
+     "value": ""
+    },
+    {
+     "featureId": 320,
+     "value": ""
+    },
+    {
+     "featureId": 446,
+     "value": "AT-29311-CS"
+    },
+    {
+     "featureId": 267,
+     "value": ""
+    },
+    {
+     "featureId": 455,
+     "value": ""
+    }
+   ],
+   "firstMedia": {
+    "uid": "f4372900-0000-0500-0000-00001043feaf",
+    "format": ".jpg"
+   },
+   "description": {
+    "ES-ES": "ALQUILER DEL 15 DE SEPTIEMBRE  HASTA FINAL DE MAYO  PRIMERA FILA \r\n¡Tu paraíso te espera en este magnífico apartamento! Disfruta de la brisa del mar y la comodidad de este alojamiento espacioso.\r\n\r\nEste apartamento de playa está situado en primera fila y ofrece impresionantes vistas al mar. La ubicación es ideal para los amantes de la playa que quieran disfrutar del sol, la arena y el mar a tan solo unos pasos de su puerta. \r\n\r\nEl apartamento dispone de dos habitaciones dobles, y una individual lo que lo hace perfecto para familias que buscan un lugar cómodo.\r\nEl salón también es amplio y cómodo y abierto a una terraza frontal totalmente cubierta. \r\nTambién cuenta con dos baños completos y una cocina totalmente equipada, con lavavajillas, microondas, nevera y horno proporcionando a los huéspedes todas las comodidades necesarias para una estancia confortable.\r\n\r\nAire acondicionado y calefacción para tu confort durante los meses de invierno \r\nEstá ubicado en una fantástica urbanización con zonas de juegos para los niños, una gran piscina y dispone de 2 plazas de aparcamiento. \r\n¡No pierdas la oportunidad de vivir una experiencia única en este hermoso apartamento! Disponible para alquiler hasta junio. \r\nContacta con nosotroS para obtener más información y concretar una visita  ¡No dejes que esta oportunidad se escape!\r\n\r\n\r\n*La información contenida en los anuncios es a titulo informativo y sin valor contractual siendo Casagencia Inmobiliaria empresa de intermediación puede contener errores dado que la información es ofrecida por terceros. \r\nEl precio indicado puede sufrir variación sin preaviso.  \r\nEn todos los casos los precios expuestos son más impuestos y gastos derivados de la transmisión del inmueble, así como los honorarios de inmobiliaria.\r\n",
+    "EN-GB": "CASAGENCIA RENTS... Apartment on the beachfront. 3 bedrooms (1 with double bed), and 2 bedrooms with 2 single bedsAir conditioning, heating, dishwasher, microwave, fridge, oven, washing machine, 2 parking spaces, communal pool. ONLY RENTED FOR MINIMUM FORTNIGHTS, Sea views,"
+   }
+  }
+ ],
+ "tipos": [
+  {
+   "id": 2,
+   "name": {
+    "EN-GB": "Apartment",
+    "ES-ES": "Apartamento"
+   }
+  },
+  {
+   "id": 20,
+   "name": {
+    "EN-GB": "Town House",
+    "ES-ES": "Vivienda adosada"
+   }
+  },
+  {
+   "id": 185,
+   "name": {
+    "EN-GB": "Duplex",
+    "ES-ES": "Dúplex"
+   }
+  },
+  {
+   "id": 189,
+   "name": {
+    "EN-GB": "House with land",
+    "ES-ES": "Casa con parcela"
+   }
+  }
+ ],
+ "caracteristicas": [
+  {
+   "id": 155,
+   "name": {
+    "EN-GB": "Air Conditioning",
+    "ES-ES": "Aire acondicionado"
+   }
+  },
+  {
+   "id": 156,
+   "name": {
+    "EN-GB": "Green areas",
+    "ES-ES": "Parques y jardines"
+   }
+  },
+  {
+   "id": 158,
+   "name": {
+    "EN-GB": "Highway",
+    "ES-ES": "Autopista"
+   }
+  },
+  {
+   "id": 168,
+   "name": {
+    "EN-GB": "Bathtub",
+    "ES-ES": "Bañera"
+   }
+  },
+  {
+   "id": 176,
+   "name": {
+    "EN-GB": "Bathroom (s)",
+    "ES-ES": "Baños"
+   }
+  },
+  {
+   "id": 177,
+   "name": {
+    "EN-GB": "City Center",
+    "ES-ES": "Centro urbano"
+   }
+  },
+  {
+   "id": 179,
+   "name": {
+    "EN-GB": "Kitchen(s)",
+    "ES-ES": "Cocina(s)"
+   }
+  },
+  {
+   "id": 193,
+   "name": {
+    "EN-GB": "Equipped Kitchen",
+    "ES-ES": "Cocina equipada"
+   }
+  },
+  {
+   "id": 194,
+   "name": {
+    "EN-GB": "School",
+    "ES-ES": "Escuela"
+   }
+  },
+  {
+   "id": 197,
+   "name": {
+    "EN-GB": "Outdoor Parking",
+    "ES-ES": "Aparcamiento exterior"
+   }
+  },
+  {
+   "id": 199,
+   "name": {
+    "EN-GB": "Extractor Hood",
+    "ES-ES": "Salida de humos"
+   }
+  },
+  {
+   "id": 200,
+   "name": {
+    "EN-GB": "Lift",
+    "ES-ES": "Ascensor"
+   }
+  },
+  {
+   "id": 202,
+   "name": {
+    "EN-GB": "Pharmacy",
+    "ES-ES": "Farmacia"
+   }
+  },
+  {
+   "id": 204,
+   "name": {
+    "EN-GB": "Electric Cooker",
+    "ES-ES": "Vitrocerámica"
+   }
+  },
+  {
+   "id": 205,
+   "name": {
+    "EN-GB": "Oven",
+    "ES-ES": "Horno"
+   }
+  },
+  {
+   "id": 206,
+   "name": {
+    "EN-GB": "Fridge",
+    "ES-ES": "Nevera"
+   }
+  },
+  {
+   "id": 208,
+   "name": {
+    "EN-GB": "Garage",
+    "ES-ES": "Garaje"
+   }
+  },
+  {
+   "id": 213,
+   "name": {
+    "EN-GB": "Gymnasium",
+    "ES-ES": "Gimnasio"
+   }
+  },
+  {
+   "id": 216,
+   "name": {
+    "EN-GB": "Supermarket",
+    "ES-ES": "Comercio"
+   }
+  },
+  {
+   "id": 225,
+   "name": {
+    "EN-GB": "Kitchenette",
+    "ES-ES": "Cocina pequeña"
+   }
+  },
+  {
+   "id": 226,
+   "name": {
+    "EN-GB": "Dishwasher",
+    "ES-ES": "Lavavajillas"
+   }
+  },
+  {
+   "id": 227,
+   "name": {
+    "EN-GB": "Washing Machine",
+    "ES-ES": "Lavadora"
+   }
+  },
+  {
+   "id": 229,
+   "name": {
+    "EN-GB": "Microwave",
+    "ES-ES": "Microondas"
+   }
+  },
+  {
+   "id": 233,
+   "name": {
+    "EN-GB": "Max No. of Adults",
+    "ES-ES": "Nº máximo de adultos"
+   }
+  },
+  {
+   "id": 236,
+   "name": {
+    "EN-GB": "Children's Playground",
+    "ES-ES": "Parque Infantil"
+   }
+  },
+  {
+   "id": 239,
+   "name": {
+    "EN-GB": "Police",
+    "ES-ES": "Policía"
+   }
+  },
+  {
+   "id": 247,
+   "name": {
+    "EN-GB": "Beach",
+    "ES-ES": "Playa"
+   }
+  },
+  {
+   "id": 248,
+   "name": {
+    "EN-GB": "Swimming Pool",
+    "ES-ES": "Piscina"
+   }
+  },
+  {
+   "id": 253,
+   "name": {
+    "EN-GB": "Total bedroom(s)",
+    "ES-ES": "Total dormitorios"
+   }
+  },
+  {
+   "id": 255,
+   "name": {
+    "EN-GB": "Wardrobes",
+    "ES-ES": "Armarios empotrados"
+   }
+  },
+  {
+   "id": 258,
+   "name": {
+    "EN-GB": "Dining Room (s)",
+    "ES-ES": "Comedor"
+   }
+  },
+  {
+   "id": 267,
+   "name": {
+    "EN-GB": "Public Transport",
+    "ES-ES": "Transportes públicos"
+   }
+  },
+  {
+   "id": 269,
+   "name": {
+    "EN-GB": "Terrace",
+    "ES-ES": "Terraza"
+   }
+  },
+  {
+   "id": 277,
+   "name": {
+    "EN-GB": "Double Glazed",
+    "ES-ES": "Cristales dobles"
+   }
+  },
+  {
+   "id": 283,
+   "name": {
+    "EN-GB": "View to Beach",
+    "ES-ES": "Vista a la playa"
+   }
+  },
+  {
+   "id": 293,
+   "name": {
+    "EN-GB": "Furnished",
+    "ES-ES": "Amueblado"
+   }
+  },
+  {
+   "id": 298,
+   "name": {
+    "EN-GB": "Public Library",
+    "ES-ES": "Biblioteca"
+   }
+  },
+  {
+   "id": 300,
+   "name": {
+    "EN-GB": "Net Area",
+    "ES-ES": "Superficie útil"
+   }
+  },
+  {
+   "id": 301,
+   "name": {
+    "EN-GB": "Gross Area",
+    "ES-ES": "Superficie Construida"
+   }
+  },
+  {
+   "id": 302,
+   "name": {
+    "EN-GB": "Land Area",
+    "ES-ES": "Superfície parcela"
+   }
+  },
+  {
+   "id": 305,
+   "name": {
+    "EN-GB": "View to Sea",
+    "ES-ES": "Vista al mar"
+   }
+  },
+  {
+   "id": 311,
+   "name": {
+    "EN-GB": "Train Station",
+    "ES-ES": "Estación de tren"
+   }
+  },
+  {
+   "id": 312,
+   "name": {
+    "EN-GB": "Bus Station",
+    "ES-ES": "Estación de autobuses"
+   }
+  },
+  {
+   "id": 316,
+   "name": {
+    "EN-GB": "Swimming Pools",
+    "ES-ES": "Piscinas"
+   }
+  },
+  {
+   "id": 319,
+   "name": {
+    "EN-GB": "Bedding",
+    "ES-ES": "Sábanas y toallas"
+   }
+  },
+  {
+   "id": 320,
+   "name": {
+    "EN-GB": "Kitchenware",
+    "ES-ES": "Utensilios de cocina"
+   }
+  },
+  {
+   "id": 328,
+   "name": {
+    "EN-GB": "Shared Swimming Pool",
+    "ES-ES": "Piscina compartida"
+   }
+  },
+  {
+   "id": 329,
+   "name": {
+    "EN-GB": "Pets Allowed",
+    "ES-ES": "Se admiten animales"
+   }
+  },
+  {
+   "id": 331,
+   "name": {
+    "EN-GB": "Condition",
+    "ES-ES": "Conservación"
+   }
+  },
+  {
+   "id": 334,
+   "name": {
+    "EN-GB": "Construction started",
+    "ES-ES": "Inicio de la construcción"
+   }
+  },
+  {
+   "id": 335,
+   "name": {
+    "EN-GB": "Construction ended",
+    "ES-ES": "Fin de la construcción"
+   }
+  },
+  {
+   "id": 336,
+   "name": {
+    "EN-GB": "Number of floors",
+    "ES-ES": "Número de plantas"
+   }
+  },
+  {
+   "id": 345,
+   "name": {
+    "EN-GB": "Floor",
+    "ES-ES": "Planta"
+   }
+  },
+  {
+   "id": 367,
+   "name": {
+    "EN-GB": "Lobby",
+    "ES-ES": "Portería"
+   }
+  },
+  {
+   "id": 377,
+   "name": {
+    "EN-GB": "Playground",
+    "ES-ES": "Zona infantil"
+   }
+  },
+  {
+   "id": 382,
+   "name": {
+    "EN-GB": "Half bath",
+    "ES-ES": "Aseo"
+   }
+  },
+  {
+   "id": 399,
+   "name": {
+    "EN-GB": "Dressing room",
+    "ES-ES": "Vestidor"
+   }
+  },
+  {
+   "id": 402,
+   "name": {
+    "EN-GB": "Refrigerator freezer",
+    "ES-ES": "Frigorífico y Congelador"
+   }
+  },
+  {
+   "id": 435,
+   "name": {
+    "EN-GB": "Max No. of Children",
+    "ES-ES": "Nº máximo de niños"
+   }
+  },
+  {
+   "id": 446,
+   "name": {
+    "EN-GB": "Holiday Rental Licence",
+    "ES-ES": "Licencia Turística"
+   }
+  },
+  {
+   "id": 448,
+   "name": {
+    "EN-GB": "Winter Garden",
+    "ES-ES": "Terraza Acristalada "
+   }
+  },
+  {
+   "id": 455,
+   "name": {
+    "EN-GB": "Building",
+    "ES-ES": "Interior/Exterior"
+   }
+  },
+  {
+   "id": 1063,
+   "name": {
+    "EN-GB": "Beach",
+    "ES-ES": "Playa"
+   }
+  },
+  {
+   "id": 1104,
+   "name": {
+    "EN-GB": "Individual heating",
+    "ES-ES": "Calefacción individual"
+   }
+  },
+  {
+   "id": 1107,
+   "name": {
+    "EN-GB": "Built-in wardrobes",
+    "ES-ES": "Armarios empotrados"
+   }
+  }
+ ],
+ "zonas": [
+  {
+   "id": 235269,
+   "name": "Pueblo",
+   "level": 4,
+   "parentId": 228335,
+   "level3": 228335,
+   "level4": 235269
+  },
+  {
+   "id": 1596179,
+   "name": "Montornés - Las Palmas - El Refugio",
+   "level": 4,
+   "parentId": 228335,
+   "level3": 228335,
+   "level4": 1596179
+  },
+  {
+   "id": 1596181,
+   "name": "Torreón - La Almadraba",
+   "level": 4,
+   "parentId": 228335,
+   "level3": 228335,
+   "level4": 1596181
+  },
+  {
+   "id": 1596183,
+   "name": "Heliópolis",
+   "level": 4,
+   "parentId": 228335,
+   "level3": 228335,
+   "level4": 1596183
+  },
+  {
+   "id": 1596184,
+   "name": "La Curva",
+   "level": 4,
+   "parentId": 228335,
+   "level3": 228335,
+   "level4": 1596184
+  },
+  {
+   "id": 1636033,
+   "name": "Hospital - Plaza del Real",
+   "level": 5,
+   "parentId": 234510,
+   "level3": 221894,
+   "level4": 234510
+  }
+ ],
+ "lugares": [
+  {
+   "id": 221894,
+   "name": "Castellón de la Plana / Castelló de la Plana",
+   "level": 3,
+   "parentId": 220285,
+   "level3": 221894,
+   "level4": null
+  },
+  {
+   "id": 228335,
+   "name": "Benicasim / Benicàssim",
+   "level": 3,
+   "parentId": 220285,
+   "level3": 228335,
+   "level4": null
+  },
+  {
+   "id": 234510,
+   "name": "Centro",
+   "level": 4,
+   "parentId": 221894,
+   "level3": 221894,
+   "level4": 234510
+  },
+  {
+   "id": 235269,
+   "name": "Pueblo",
+   "level": 4,
+   "parentId": 228335,
+   "level3": 228335,
+   "level4": 235269
+  },
+  {
+   "id": 1596179,
+   "name": "Montornés - Las Palmas - El Refugio",
+   "level": 4,
+   "parentId": 228335,
+   "level3": 228335,
+   "level4": 1596179
+  },
+  {
+   "id": 1596181,
+   "name": "Torreón - La Almadraba",
+   "level": 4,
+   "parentId": 228335,
+   "level3": 228335,
+   "level4": 1596181
+  },
+  {
+   "id": 1596183,
+   "name": "Heliópolis",
+   "level": 4,
+   "parentId": 228335,
+   "level3": 228335,
+   "level4": 1596183
+  },
+  {
+   "id": 1596184,
+   "name": "La Curva",
+   "level": 4,
+   "parentId": 228335,
+   "level3": 228335,
+   "level4": 1596184
+  }
+ ]
+}

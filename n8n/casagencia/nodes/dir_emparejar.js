@@ -1,7 +1,7 @@
 // BuscarPorDireccion · EmparejarDireccion
-// El feed XML de Janela NO trae la calle: solo municipio, zona, CP y coordenadas,
+// eGO NO da la calle en el listado de inmuebles: solo municipio, zona, CP y coordenadas,
 // y la web de Casagencia tampoco la publica. Por eso hay una pestana "Direcciones"
-// en la hoja de calculo, que la agencia rellena a mano y que XMLCacheo nunca pisa.
+// en la hoja de calculo, que la agencia rellena a mano y que el cacheo nunca pisa.
 // Por eso se extraen los TOPONIMOS del texto de cada inmueble: los nombres que
 // van detras de una palabra de via ("calle X", "plaza Y", "urbanizacion Z").
 // Comparar contra toponimos, y no contra el texto entero, evita que "Roma"

@@ -41,7 +41,7 @@ respuesta vacía**, así que Sara confirmaba citas sin saber si se habían cread
 | 11 | Consultar una cita ya concertada por teléfono | `BuscarCitaPorTelefono` (nuevo) |
 | 13 | La referencia se pide siempre antes de una búsqueda aproximada | `retell/general_prompt.md` |
 | 14 | `buscarInmuebles` devolvía una respuesta VACÍA cuando no había resultados | `buscarInmuebles` |
-| 15 | `XMLCacheo` vaciaba la hoja antes de descargar el feed | `XMLCacheo` |
+| 15 | El cacheo vaciaba la hoja antes de tener los datos | `Cartera (cacheo)` |
 | 16 | Direcciones reales de los 93 inmuebles, sacadas de eGO | pestaña *Direcciones* |
 | 17 | En alquiler ya no se agenda: se cualifica al cliente y llama la asesora | ambos calendarios + prompt |
 | 18 | `registrarMensaje` mandaba 3 correos por un Switch que podía no casar con nada | `registrarMensaje` |
@@ -77,7 +77,7 @@ solo municipio, zona, código postal y coordenadas. **Pero el CRM de eGO sí la
 tiene, y para los 93 inmuebles de la cartera.**
 
 Están volcadas en la pestaña **Direcciones** de la hoja *Inmuebles*
-(`ref`, `direccion`, `numero`, `cp`, `origen`, …), que `XMLCacheo` nunca toca.
+(`ref`, `direccion`, `numero`, `cp`, `origen`, …), que el cacheo nunca toca.
 `BuscarPorDireccion` la lee y le da el peso más alto.
 
 Para refrescarlas cuando entre cartera nueva:
@@ -440,20 +440,41 @@ Lo comprobado con los datos reales:
 nada y no se escriben notas en eGO; con `'real'` se manda el primer WhatsApp y
 se escriben las notas. Con los teléfonos de prueba funciona siempre en real.
 
-### La cartera de WhatsApp (`[WA] 4`)
+### La cartera, desde la API de eGO (`[WA] 4` y `[TEL] Cartera (cacheo)`)
 
-La hoja del teléfono (`[TEL] XMLCacheo`) **corta las descripciones a 500
-caracteres**, y ahí se pierde justo lo que pregunta un cliente: en el BN-1528-V,
-que incluye plaza de parking y trastero, cómo son los baños y los honorarios de
-la agencia. Sin tocar el teléfono, `[WA] 4` lee cada hora el mismo feed de eGO y
-lo guarda **completo** en la tabla `wa_cartera`: descripción entera, superficie,
-características en español y el **enlace de la web** de cada inmueble.
+Los dos asistentes sacan los inmuebles de la **API de eGO**
+(`ListRealestateByPage`, estado 2 = disponible), no del feed XML de Janela, que
+ya no se usa. Los dos comparten el mismo código de mapeo
+(`wa/cartera_api.js`), así que dicen exactamente lo mismo:
 
-El enlace se construye con el id del feed sin el `05` del principio
-(`0525370429` → `…/inmueble/…/25370429`): la web abre la ficha con el id,
-pongas lo que pongas delante. Comprobado con los 83 inmuebles que tenían enlace
-conocido. Con eso Sara puede mandar el enlace de lo que recomienda, y la
-bienvenida lleva enlace aunque el correo del portal no lo traiga.
+- **WhatsApp** (`[WA] 4`, cada hora) lo guarda entero en la tabla `wa_cartera`.
+- **Teléfono** (`[TEL] Cartera (cacheo)`, cada hora) llena la hoja *Inmuebles*
+  que leen `buscarInmuebles`, `buscarPorReferencia` y `BuscarPorDireccion`.
+
+Frente al feed, la API da: los tipos y las características **ya en español**
+(el feed dejaba `Town House`, `Office / Practice`, `Ground floor`…), la
+**superficie construida** de verdad (la del feed era a veces la útil, p. ej.
+409 m² y no 325 en el BN-1382-V), el **tipo de negocio** (2 = alquiler de larga
+duración, 13 = temporal, sin una segunda llamada), la descripción entera y los
+inmuebles que el feed se dejaba. Las fichas sin precio son registros internos y
+no entran.
+
+Hacen falta cuatro diccionarios de la propia API, que se piden en cada pasada:
+`ListNatureType` (tipos), `ListFeature` (características) y dos
+`ListLocationById` (la zona de cada inmueble y, de ahí, su municipio de nivel 3
+y su barrio de nivel 4). La zona que se guarda es la de siempre (`Centro`,
+`Voramar`); si eGO afina más (`Hospital - Plaza del Real`), ese nombre va en
+las características para que quien lo busque así lo encuentre.
+
+El enlace de la web se construye con el `metabaseId` de eGO, que es el id del
+feed de antes, rellenado a ocho cifras (`2352461` → `02352461`): la web abre la
+ficha con el id, pongas lo que pongas delante. Comprobado con enlaces y fotos
+de la cartera real. Con eso Sara puede mandar el enlace de lo que recomienda, y
+la bienvenida lleva enlace aunque el correo del portal no lo traiga.
+
+Orden importante en los dos: **pedir → comprobar → vaciar → escribir**. Si la
+API falla o devuelve cuatro cosas, no se toca nada: mejor una cartera de hace
+una hora que ninguna.
 
 La ficha del inmueble por el que preguntó el cliente **va cargada en el
 contexto de cada turno**: Sara la tiene delante sin llamar a ninguna

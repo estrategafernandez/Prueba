@@ -247,9 +247,9 @@ def wf_direccion():
             code_node("EmparejarDireccion", "dir_emparejar.js", [640, 0]),
             respond("Respond to Webhook", [860, 0]),
             node("Nota", "n8n-nodes-base.stickyNote", {"content":
-                 "## Busqueda por calle\nNi el feed XML ni la web de Casagencia publican la calle.\n\n"
+                 "## Busqueda por calle\nNi eGO ni la web de Casagencia publican la calle en el listado.\n\n"
                  "Fuentes, de mas a menos peso:\n1. Pestana *Direcciones* de la hoja (a mano, la rellena "
-                 "la agencia; XMLCacheo no la toca).\n2. Zona del CRM.\n3. Vias mencionadas en la "
+                 "la agencia; el cacheo no la toca).\n2. Zona del CRM.\n3. Vias mencionadas en la "
                  "descripcion.\n\nSi no hay coincidencia clara devuelve 'no encontrado' a proposito, "
                  "para que Sara no suelte un listado generico.",
                  "height": 280, "width": 430}, [200, -320], 1),
@@ -378,53 +378,101 @@ def wf_buscar_inmuebles(orig):
 
 
 # =========================================================================
-# 7) XMLCacheo -> no vaciar la hoja antes de tener el feed en la mano
+# 7) La cartera del telefono, de la API de eGO (antes, del feed XML)
 # =========================================================================
-def wf_xmlcacheo(orig):
-    """Vaciaba la hoja ANTES de descargar el feed, asi que durante los ~8s que
-    dura el refresco las tres busquedas devolvian 'no encontrado'; y si el feed
-    fallaba, la cartera se quedaba vacia hasta la hora siguiente.
+WA_DIR = BASE / "wa"
+EGO_SUB = "p2vGYI5OZPMw4sPl"          # [EGO][SUB] Llamar a eGO
+CRED_PG_TEL = {"postgres": {"id": "yvym0TdlOebNMzsm", "name": "Postgres account"}}
 
-    Ahora: descargar -> comprobar -> vaciar -> escribir."""
-    nodes = json.loads(json.dumps(orig["nodes"]))
+
+def code_cartera(fname):
+    """Nodo que mapea la cartera: la misma configuracion y el mismo codigo que
+    usa WhatsApp, para que las dos carteras digan exactamente lo mismo."""
+    partes = [(WA_DIR / "config.js").read_text(encoding="utf-8"),
+              (WA_DIR / "cartera.js").read_text(encoding="utf-8"),
+              (WA_DIR / fname).read_text(encoding="utf-8")]
+    return "\n\n".join(partes)
+
+
+def ego_tel(name, metodo, ruta, pos, query="{}", cuerpo="{}"):
+    """Llama a la API de eGO por el sub-workflow comun."""
+    return node(name, "n8n-nodes-base.executeWorkflow", {
+        "workflowId": {"__rl": True, "value": EGO_SUB, "mode": "id"},
+        "workflowInputs": {"mappingMode": "defineBelow",
+                           "value": {"metodo": metodo, "ruta": ruta, "query": query, "cuerpo": cuerpo},
+                           "matchingColumns": [],
+                           "schema": [{"id": k, "displayName": k, "required": False, "defaultMatch": False,
+                                       "display": True, "canBeUsedToMatch": True, "type": "string"}
+                                      for k in ("metodo", "ruta", "query", "cuerpo")],
+                           "attemptToConvertTypes": False, "convertFieldsToString": True},
+        "options": {"waitForSubWorkflow": True},
+    }, pos, 1.2, alwaysOutputData=True)
+
+
+Q_ZONAS_TEL = ("={{ JSON.stringify({ locationIds: [...new Set((($('InmueblesEgo').first().json.datos || {})"
+               ".realestatesByPageDto || []).map(p => p.locationId).filter(Boolean))] }) }}")
+Q_LUGARES_TEL = ("={{ JSON.stringify({ locationIds: [...new Set(($('ZonasEgo').first().json.datos || [])"
+                 ".flatMap(z => [z.level3, z.level4]).filter(Boolean))] }) }}")
+
+
+def wf_cartera_telefono(orig):
+    """La hoja "Inmuebles" que usan las tres busquedas del telefono, llenada
+    desde la API de eGO. Antes venia del feed XML de Janela, que ademas cortaba
+    la descripcion y dejaba los tipos en ingles.
+
+    Orden importante: pedir -> comprobar -> vaciar -> escribir. Si se vacia la
+    hoja antes de tener los datos, durante el refresco las busquedas no
+    devuelven nada."""
+    nodes = [n for n in json.loads(json.dumps(orig["nodes"]))
+             if n["name"] in ("Schedule Trigger", "Clear sheet", "EscribirInmuebles")]
+    nodes += [
+        ego_tel("InmueblesEgo", "POST", "/realestate/Realestate/ListRealestateByPage", [220, 0],
+                cuerpo=json.dumps({"realestateStatus": [2], "pageIndex": 0, "numberOfRecords": 500})),
+        ego_tel("TiposDeInmueble", "GET", "/realestate/Nature/ListNatureType", [440, 0]),
+        ego_tel("CaracteristicasEgo", "GET", "/realestate/Feature/ListFeature", [660, 0]),
+        ego_tel("ZonasEgo", "GET", "/metadata/Location/ListLocationById", [880, 0], query=Q_ZONAS_TEL),
+        ego_tel("LugaresEgo", "GET", "/metadata/Location/ListLocationById", [1100, 0], query=Q_LUGARES_TEL),
+        node("Mapear", "n8n-nodes-base.code", {"jsCode": code_cartera("cartera_api.js")}, [1320, 0], 2),
+        # Guardafuegos ANTES de vaciar la hoja: si la API falla, no se toca nada
+        node("ComprobarCartera", "n8n-nodes-base.code", {"jsCode": (
+            "const j = $('Mapear').first().json;\n"
+            "if (!j.ok) {\n"
+            "  throw new Error(`La API ha devuelto ${j.total} inmuebles. No se vacia la hoja.`);\n"
+            "}\n"
+            "return [{ json: { total: j.total } }];")}, [1540, 0], 2),
+        node("FilasParaLaHoja", "n8n-nodes-base.code", {"jsCode": code("cartera_hoja.js")}, [1980, 0], 2),
+        node("NotaCartera", "n8n-nodes-base.stickyNote", {"content":
+            "## La cartera, de la API de eGO\nCada hora pide a eGO los inmuebles disponibles y rellena la "
+            "hoja *Inmuebles* que leen buscarInmuebles, buscarPorReferencia y BuscarPorDireccion.\n\n"
+            "Es el MISMO codigo que usa WhatsApp (wa/cartera_api.js), asi que los dos asistentes dicen lo "
+            "mismo: tipos y caracteristicas en espanol, superficie construida y la descripcion entera.\n\n"
+            "Orden: pedir -> comprobar -> vaciar -> escribir. Si la API falla, salta el error y la hoja se "
+            "queda como estaba.\n\nLa pestana *Direcciones* la rellena la agencia a mano y aqui no se toca.",
+            "height": 300, "width": 460}, [440, -360], 1),
+    ]
     for n in nodes:
-        # el Code ya no cuelga del XML directamente: lee el nodo por su nombre
-        if n["name"] == "FiltraMapeoVariables":
-            js = n["parameters"]["jsCode"]
-            viejo = "const properties = $input.first().json.root.property;"
-            assert viejo in js, "no encuentro la entrada de FiltraMapeoVariables"
-            n["parameters"]["jsCode"] = js.replace(
-                viejo, "const properties = $('XML5').first().json.root.property;", 1)
-
-    nodes.append(node("ComprobarFeed", "n8n-nodes-base.code", {"jsCode": (
-        "// Guardafuegos: si el feed viene vacio o a medias, se aborta ANTES de\n"
-        "// vaciar la hoja, para no dejar a Sara sin cartera que ofrecer.\n"
-        "const props = $('XML5').first().json?.root?.property;\n"
-        "const lista = Array.isArray(props) ? props : (props ? [props] : []);\n"
-        "if (lista.length < 5) {\n"
-        "  throw new Error(`El feed ha devuelto ${lista.length} inmuebles. No se vacia la hoja.`);\n"
-        "}\n"
-        "return [{ json: { total: lista.length } }];"
-    )}, [400, 200], 2))
-
-    nodes.append(node("NotaCacheo", "n8n-nodes-base.stickyNote", {"content":
-        "## Orden importante\nDescargar -> comprobar -> vaciar -> escribir.\n\n"
-        "Si se vacia la hoja antes de tener el feed, durante el refresco (y una hora "
-        "entera si el feed falla) las busquedas de inmuebles no devuelven nada.",
-        "height": 190, "width": 420}, [400, 380], 1))
-
+        if n["name"] == "Schedule Trigger":
+            n["position"] = [0, 0]
+        if n["name"] == "Clear sheet":
+            n["position"] = [1760, 0]
+        if n["name"] == "EscribirInmuebles":
+            n["position"] = [2200, 0]
     conns = conn(
-        ("Schedule Trigger", 0, "RecogerInmuebles", 0),
-        ("RecogerInmuebles", 0, "XML5", 0),
-        ("XML5", 0, "ComprobarFeed", 0),
-        ("ComprobarFeed", 0, "Clear sheet", 0),
-        ("Clear sheet", 0, "FiltraMapeoVariables", 0),
-        ("FiltraMapeoVariables", 0, "EscribirInmuebles", 0))
-
+        ("Schedule Trigger", 0, "InmueblesEgo", 0),
+        ("InmueblesEgo", 0, "TiposDeInmueble", 0),
+        ("TiposDeInmueble", 0, "CaracteristicasEgo", 0),
+        ("CaracteristicasEgo", 0, "ZonasEgo", 0),
+        ("ZonasEgo", 0, "LugaresEgo", 0),
+        ("LugaresEgo", 0, "Mapear", 0),
+        # pedir -> comprobar -> vaciar -> escribir
+        ("Mapear", 0, "ComprobarCartera", 0),
+        ("ComprobarCartera", 0, "Clear sheet", 0),
+        ("Clear sheet", 0, "FilasParaLaHoja", 0),
+        ("FilasParaLaHoja", 0, "EscribirInmuebles", 0))
     s = {k: v for k, v in (orig.get("settings") or {}).items() if k in SETTINGS_OK}
     s["timezone"] = "Europe/Madrid"
-    w = {"name": orig["name"], "settings": s, "nodes": nodes, "connections": conns}
-    return w
+    s["executionOrder"] = "v1"
+    return {"name": "Cartera (cacheo)", "settings": s, "nodes": nodes, "connections": conns}
 
 
 # =========================================================================
@@ -585,7 +633,7 @@ def main():
         "BuscarPorDireccion":             ("ucw4dMYsUYEeEFVZ", wf_direccion()),
         "BuscarCitaPorTelefono":          ("G5tNbLJgATbL7Bsc", wf_cita_telefono()),
         "buscarInmuebles":                ("3hevfnxUkmxhl8qH", wf_buscar_inmuebles(load("wf_3hevfnxUkmxhl8qH.json"))),
-        "XMLCacheo":                      ("MNuaSmtxlFmA3eTe", wf_xmlcacheo(load("wf_MNuaSmtxlFmA3eTe.json"))),
+        "CarteraCacheo":                  ("MNuaSmtxlFmA3eTe", wf_cartera_telefono(load("wf_MNuaSmtxlFmA3eTe.json"))),
         "registrarMensaje":               ("uUzJlWHmCKm1xZGX", wf_registrar_mensaje(load("wf_uUzJlWHmCKm1xZGX.json"))),
         "buscarPorReferencia":            ("JeYBaWXMzYvLi1e3", wf_buscar_referencia(load("wf_JeYBaWXMzYvLi1e3.json"))),
         "SaludoInicial":                  ("cDQHP3chcEGPkTgX", wf_saludo(load("wf_cDQHP3chcEGPkTgX.json"))),

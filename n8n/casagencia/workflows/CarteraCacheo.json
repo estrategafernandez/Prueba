@@ -1,5 +1,5 @@
 {
-  "name": "[WA] 4 · Cartera desde eGO",
+  "name": "[TEL] Cartera (cacheo)",
   "settings": {
     "executionOrder": "v1",
     "timezone": "Europe/Madrid"
@@ -10,51 +10,248 @@
         "rule": {
           "interval": [
             {
-              "field": "hours",
-              "hoursInterval": 1
+              "field": "hours"
             }
           ]
         }
       },
       "type": "n8n-nodes-base.scheduleTrigger",
-      "typeVersion": 1.2,
+      "typeVersion": 1.3,
       "position": [
-        -40,
-        -80
+        0,
+        0
       ],
-      "id": "84de0641-0425-58cf-b05a-b0e696fb8929",
-      "name": "CadaHora"
+      "id": "8bb633e1-bf47-4168-95d4-8656fa9f4cd5",
+      "name": "Schedule Trigger"
     },
     {
       "parameters": {
-        "httpMethod": "POST",
-        "path": "wa-refrescar-cartera",
-        "authentication": "headerAuth",
+        "operation": "clear",
+        "documentId": {
+          "__rl": true,
+          "value": "1cB2UI-ScDI34QS57k-UD2ZE79P5XhpyPJu78A5zPs3Q",
+          "mode": "list",
+          "cachedResultName": "Inmuebles",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1cB2UI-ScDI34QS57k-UD2ZE79P5XhpyPJu78A5zPs3Q/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Hoja 1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1cB2UI-ScDI34QS57k-UD2ZE79P5XhpyPJu78A5zPs3Q/edit#gid=0"
+        },
+        "clear": "specificRows",
+        "startIndex": 2,
+        "rowsToDelete": 200
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1760,
+        0
+      ],
+      "id": "74252c25-90f7-41fb-ac74-81e67fe1d6b5",
+      "name": "Clear sheet",
+      "executeOnce": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "TPExRnq8a9FlEXAh",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1cB2UI-ScDI34QS57k-UD2ZE79P5XhpyPJu78A5zPs3Q",
+          "mode": "list",
+          "cachedResultName": "Inmuebles",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1cB2UI-ScDI34QS57k-UD2ZE79P5XhpyPJu78A5zPs3Q/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Hoja 1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1cB2UI-ScDI34QS57k-UD2ZE79P5XhpyPJu78A5zPs3Q/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "ref": "={{ $json.ref }}",
+            "precio": "={{ $json.precio }}",
+            "tipo_transaccion": "={{ $json.tipo_transaccion }}",
+            "tipo_inmueble": "={{ $json.tipo_inmueble }}",
+            "municipio": "={{ $json.municipio }}",
+            "zona": "={{ $json.zona }}",
+            "habitaciones": "={{ $json.habitaciones }}",
+            "banos": "={{ $json.banos }}",
+            "superficie": "={{ $json.superficie }}",
+            "caracteristicas": "={{ $json.caracteristicas }}",
+            "descripcion": "={{ $json.descripcion }}",
+            "imagen": "={{ $json.imagen }}",
+            "latitud": "={{ $json.latitud }}",
+            "longitud": "={{ $json.longitud }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "ref",
+              "displayName": "ref",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "precio",
+              "displayName": "precio",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "tipo_transaccion",
+              "displayName": "tipo_transaccion",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "tipo_inmueble",
+              "displayName": "tipo_inmueble",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "municipio",
+              "displayName": "municipio",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "zona",
+              "displayName": "zona",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "habitaciones",
+              "displayName": "habitaciones",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "banos",
+              "displayName": "banos",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "superficie",
+              "displayName": "superficie",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "caracteristicas",
+              "displayName": "caracteristicas",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "descripcion",
+              "displayName": "descripcion",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "imagen",
+              "displayName": "imagen",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "latitud",
+              "displayName": "latitud",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "longitud",
+              "displayName": "longitud",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
         "options": {}
       },
-      "type": "n8n-nodes-base.webhook",
-      "typeVersion": 2.1,
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
       "position": [
-        -40,
-        120
+        2200,
+        0
       ],
-      "id": "d83d4f38-8170-53cb-bb51-cb213a8f421b",
-      "name": "RefrescarAhora",
+      "id": "75332e25-dbe3-4d9d-ae73-31e018d21908",
+      "name": "EscribirInmuebles",
       "credentials": {
-        "httpHeaderAuth": {
-          "id": "cFrVkaTH4R4tKWn0",
-          "name": "WA lead a mano (clave del webhook)"
+        "googleSheetsOAuth2Api": {
+          "id": "TPExRnq8a9FlEXAh",
+          "name": "Google Sheets account"
         }
-      },
-      "webhookId": "e5b6de97-7615-5c5c-9ee5-1d747f3078ca"
+      }
     },
     {
       "parameters": {
         "workflowId": {
           "__rl": true,
           "value": "p2vGYI5OZPMw4sPl",
-          "mode": "list",
-          "cachedResultName": "[EGO][SUB] Llamar a eGO"
+          "mode": "id"
         },
         "workflowInputs": {
           "mappingMode": "defineBelow",
@@ -104,7 +301,7 @@
             }
           ],
           "attemptToConvertTypes": false,
-          "convertFieldsToString": false
+          "convertFieldsToString": true
         },
         "options": {
           "waitForSubWorkflow": true
@@ -113,12 +310,11 @@
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.2,
       "position": [
-        200,
+        220,
         0
       ],
-      "id": "3b6e1c7c-5eea-567b-82df-3f20e060cbbc",
+      "id": "e5e0ffe7-706f-5786-9d16-7d04fe15e5cc",
       "name": "InmueblesEgo",
-      "onError": "continueRegularOutput",
       "alwaysOutputData": true
     },
     {
@@ -126,8 +322,7 @@
         "workflowId": {
           "__rl": true,
           "value": "p2vGYI5OZPMw4sPl",
-          "mode": "list",
-          "cachedResultName": "[EGO][SUB] Llamar a eGO"
+          "mode": "id"
         },
         "workflowInputs": {
           "mappingMode": "defineBelow",
@@ -177,7 +372,7 @@
             }
           ],
           "attemptToConvertTypes": false,
-          "convertFieldsToString": false
+          "convertFieldsToString": true
         },
         "options": {
           "waitForSubWorkflow": true
@@ -186,12 +381,11 @@
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.2,
       "position": [
-        420,
+        440,
         0
       ],
-      "id": "20bdac13-d299-528f-86c2-e5a06ef6fb9e",
+      "id": "e2200714-a864-5d36-ad08-978b567ad8a1",
       "name": "TiposDeInmueble",
-      "onError": "continueRegularOutput",
       "alwaysOutputData": true
     },
     {
@@ -199,8 +393,7 @@
         "workflowId": {
           "__rl": true,
           "value": "p2vGYI5OZPMw4sPl",
-          "mode": "list",
-          "cachedResultName": "[EGO][SUB] Llamar a eGO"
+          "mode": "id"
         },
         "workflowInputs": {
           "mappingMode": "defineBelow",
@@ -250,7 +443,7 @@
             }
           ],
           "attemptToConvertTypes": false,
-          "convertFieldsToString": false
+          "convertFieldsToString": true
         },
         "options": {
           "waitForSubWorkflow": true
@@ -259,12 +452,11 @@
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.2,
       "position": [
-        640,
+        660,
         0
       ],
-      "id": "e7bafb2f-2f98-5784-b7d2-7ddb2859ce63",
+      "id": "c1fd89ab-8a3d-5f29-bea9-74e14f0602e4",
       "name": "CaracteristicasEgo",
-      "onError": "continueRegularOutput",
       "alwaysOutputData": true
     },
     {
@@ -272,8 +464,7 @@
         "workflowId": {
           "__rl": true,
           "value": "p2vGYI5OZPMw4sPl",
-          "mode": "list",
-          "cachedResultName": "[EGO][SUB] Llamar a eGO"
+          "mode": "id"
         },
         "workflowInputs": {
           "mappingMode": "defineBelow",
@@ -323,7 +514,7 @@
             }
           ],
           "attemptToConvertTypes": false,
-          "convertFieldsToString": false
+          "convertFieldsToString": true
         },
         "options": {
           "waitForSubWorkflow": true
@@ -332,12 +523,11 @@
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.2,
       "position": [
-        860,
+        880,
         0
       ],
-      "id": "e5f79ed4-a1f7-5ecc-ae16-a7350267557f",
+      "id": "957e311b-d709-5951-a499-675aeda80310",
       "name": "ZonasEgo",
-      "onError": "continueRegularOutput",
       "alwaysOutputData": true
     },
     {
@@ -345,8 +535,7 @@
         "workflowId": {
           "__rl": true,
           "value": "p2vGYI5OZPMw4sPl",
-          "mode": "list",
-          "cachedResultName": "[EGO][SUB] Llamar a eGO"
+          "mode": "id"
         },
         "workflowInputs": {
           "mappingMode": "defineBelow",
@@ -396,7 +585,7 @@
             }
           ],
           "attemptToConvertTypes": false,
-          "convertFieldsToString": false
+          "convertFieldsToString": true
         },
         "options": {
           "waitForSubWorkflow": true
@@ -405,12 +594,11 @@
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.2,
       "position": [
-        1080,
+        1100,
         0
       ],
-      "id": "a4b5e4ee-eee8-5ff2-9ea7-5004dd9cdb47",
+      "id": "ca23b3e8-719d-5219-9940-56bb3422599a",
       "name": "LugaresEgo",
-      "onError": "continueRegularOutput",
       "alwaysOutputData": true
     },
     {
@@ -420,133 +608,56 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1300,
+        1320,
         0
       ],
-      "id": "2af71781-b9cd-5cea-98e7-9db91e8f9d81",
+      "id": "ac6d4de4-9f01-59e2-aff4-3763c56c66fb",
       "name": "Mapear"
     },
     {
       "parameters": {
-        "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "loose",
-            "version": 3
-          },
-          "conditions": [
-            {
-              "id": "07db38a4-8845-56cb-a4b1-5e9055e35579",
-              "leftValue": "={{ $json.ok }}",
-              "rightValue": "",
-              "operator": {
-                "type": "boolean",
-                "operation": "true",
-                "singleValue": true
-              }
-            }
-          ],
-          "combinator": "and"
-        },
-        "looseTypeValidation": true,
-        "options": {}
+        "jsCode": "const j = $('Mapear').first().json;\nif (!j.ok) {\n  throw new Error(`La API ha devuelto ${j.total} inmuebles. No se vacia la hoja.`);\n}\nreturn [{ json: { total: j.total } }];"
       },
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2.2,
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
       "position": [
-        1520,
+        1540,
         0
       ],
-      "id": "fcf345cd-5ecf-545d-9e86-b1ea32a9e77c",
-      "name": "¿Cartera correcta?"
+      "id": "96d1ef89-0aee-5981-9ac5-e196daa835d0",
+      "name": "ComprobarCartera"
     },
     {
       "parameters": {
-        "operation": "executeQuery",
-        "query": "-- Memoria del agente (la usa el nodo Postgres Chat Memory)\ncreate table if not exists n8n_chat_histories (\n  id         serial primary key,\n  session_id varchar(255) not null,\n  message    jsonb        not null,\n  created_at timestamptz  not null default now()\n);\ncreate index if not exists n8n_chat_histories_sesion on n8n_chat_histories (session_id, id);\n\n-- Ficha de cada lead que entra por correo desde un portal\ncreate table if not exists wa_leads (\n  id              serial primary key,\n  telefono_wa     text not null,\n  telefono_e164   text not null default '',\n  referencia      text not null default '',\n  nombre          text not null default '',\n  email_cliente   text not null default '',\n  portal          text not null default '',\n  enlace          text not null default '',\n  plantilla       text not null default '',\n  operacion       text not null default '',\n  es_alquiler     boolean not null default false,\n  asesora         text not null default '',\n  estado          text not null default 'nuevo',\n  conversacion_id bigint,\n  asunto          text not null default '',\n  notas           text not null default '',\n  creado_en       timestamptz not null default now(),\n  actualizado_en  timestamptz not null default now()\n);\n-- Las respuestas de cualificacion. Con \"add column if not exists\" el script\n-- se puede volver a ejecutar sin miedo aunque la tabla ya exista.\nalter table wa_leads add column if not exists q_tiempo_buscando text not null default '';\nalter table wa_leads add column if not exists q_necesita_vender text not null default '';\nalter table wa_leads add column if not exists q_vivienda_venta text not null default '';\nalter table wa_leads add column if not exists q_financiacion text not null default '';\nalter table wa_leads add column if not exists q_personas text not null default '';\nalter table wa_leads add column if not exists q_ingresos text not null default '';\nalter table wa_leads add column if not exists q_mascotas text not null default '';\nalter table wa_leads add column if not exists q_entrada text not null default '';\nalter table wa_leads add column if not exists q_duracion text not null default '';\nalter table wa_leads add column if not exists q_actividad text not null default '';\nalter table wa_leads add column if not exists cita_fecha text not null default '';\nalter table wa_leads add column if not exists cita_hora text not null default '';\n-- Un lead por telefono e inmueble: el mismo cliente puede preguntar por dos\n-- inmuebles distintos, pero no se le escribe dos veces por el mismo.\ncreate unique index if not exists wa_leads_unico on wa_leads (telefono_wa, referencia);\n\n-- La cartera COMPLETA, desde el feed de eGO ([WA] 4 la rellena cada hora)\ncreate table if not exists wa_cartera (\n  ref              text primary key,\n  web_id           text not null default '',\n  enlace           text not null default '',\n  precio           numeric not null default 0,\n  tipo_transaccion text not null default '',\n  tipo_inmueble    text not null default '',\n  municipio        text not null default '',\n  zona             text not null default '',\n  habitaciones     integer not null default 0,\n  banos            integer not null default 0,\n  superficie       integer not null default 0,\n  caracteristicas  text not null default '',\n  descripcion      text not null default '',\n  imagen           text not null default '',\n  actualizado_en   timestamptz not null default now()\n);\n-- Alquiler de larga duracion o temporal (lo dice eGO; [WA] 4)\nalter table wa_cartera add column if not exists modalidad text not null default '';\n\n-- Leads que entran (web por correo y eGO): que se ha decidido mandarles y si\n-- se ha mandado. Con MODO_LEADS = 'preparado' se apunta aqui y no se manda.\ncreate table if not exists leads_entrantes (\n  id             serial primary key,\n  fuente         text not null,               -- web | ego\n  id_origen      text not null,               -- id del correo o del lead de eGO\n  telefono_e164  text not null default '',\n  nombre         text not null default '',\n  referencia     text not null default '',\n  tipo           text not null default '',    -- compra, alquiler, vender_su_vivienda...\n  accion         text not null default '',    -- bienvenida, no_disponible, busqueda, captacion, revisar\n  plantilla      text not null default '',\n  param2         text not null default '',\n  asesora        text not null default '',\n  estado         text not null default 'preparado',\n  detalle        jsonb not null default '{}'::jsonb,\n  creado_en      timestamptz not null default now(),\n  unique (fuente, id_origen)\n);\n-- El correo preparado para los leads que solo dejan su email\nalter table leads_entrantes add column if not exists correo_html text not null default '';\n\n-- Llamadas del asistente telefonico ya puestas en el panel (Retell puede\n-- mandar el mismo aviso de fin de llamada mas de una vez)\ncreate table if not exists tel_llamadas_panel (\n  call_id          text primary key,\n  telefono_e164    text not null default '',\n  conversacion_id  integer not null default 0,\n  creado_en        timestamptz not null default now()\n);\n\n-- Cada aviso al equipo que sale por WhatsApp (de los dos asistentes). Sirve\n-- para no repetir: si en una llamada ya salio el recado o la pre-reserva, al\n-- colgar no se manda ademas el aviso de LLAMADA.\ncreate table if not exists avisos_enviados (\n  id          serial primary key,\n  telefono    text not null default '',\n  accion      text not null default '',\n  origen      text not null default '',\n  destinos    text not null default '',\n  enviado_en  timestamptz not null default now()\n);\ncreate index if not exists avisos_enviados_tel on avisos_enviados (telefono, enviado_en);\n\n-- Avisos ya enviados (recordatorio de 24 h), para no mandar ninguno dos veces\ncreate table if not exists wa_avisos (\n  id         serial primary key,\n  evento_id  text not null,\n  tipo       text not null,\n  enviado_en timestamptz not null default now()\n);\ncreate unique index if not exists wa_avisos_unico on wa_avisos (evento_id, tipo);\n",
-        "options": {}
+        "jsCode": "// ===========================================================================\n// CASAGENCIA · LIBRERIA COMUN DEL ASISTENTE TELEFONICO\n// ---------------------------------------------------------------------------\n// Este bloque se inyecta automaticamente al principio de los nodos Code de\n// los workflows BuscarDisponibilidadCalendario, ConfirmarCitaCalendario y\n// BuscarCitaPorTelefono.\n//\n// NO editar a mano dentro de n8n: editar este fichero y volver a desplegar\n// con  python3 n8n/casagencia/build_workflows.py --deploy\n// ===========================================================================\n\nconst ZONA = 'Europe/Madrid';\n\n// --- Horario de oficina de cada asesora ------------------------------------\n// La visita dura 1 hora y tiene que caber ENTERA dentro de un bloque.\nconst HORARIOS = {\n  Carmen: { lv: [['09:30', '14:00'], ['16:00', '19:30']], sab: [['10:00', '14:00']], dom: null },\n  Gisela: { lv: [['09:00', '14:00'], ['16:00', '19:00']], sab: null,                 dom: null }\n};\n\n// --- Festivos ---------------------------------------------------------------\n// GUARDAFUEGOS: no depende de que la comercial bloquee nada en su calendario.\n// TODOS  = festivos nacionales y de la Comunitat Valenciana (fecha fija).\n// BN/OR/CS/VR = fiestas locales de cada zona. RELLENAR CADA ANO.\nconst FESTIVOS = {\n  TODOS: [\n    '2026-10-09', // Dia de la Comunitat Valenciana\n    '2026-10-12', // Fiesta Nacional\n    '2026-11-01', // Todos los Santos\n    '2026-12-06', // Constitucion\n    '2026-12-08', // Inmaculada\n    '2026-12-25', // Navidad\n    // Las 12 fiestas de la Comunitat Valenciana de 2027, aprobadas por la\n    // Generalitat. OJO: las tres de marzo son MOVIBLES (dependen de la Pascua),\n    // asi que cada ano hay que volver a mirarlas; no vale copiar las del ano\n    // anterior. El 15 de agosto de 2027 cae en domingo y no esta en la lista\n    // oficial, por eso no aparece aqui.\n    '2027-01-01', '2027-01-06',\n    '2027-03-19',  // San Jose\n    '2027-03-26',  // Viernes Santo\n    '2027-03-29',  // Lunes de Pascua\n    '2027-05-01',\n    '2027-10-09', '2027-10-12', '2027-11-01', '2027-12-06', '2027-12-08', '2027-12-25'\n  ],\n  BN: [], // Benicasim  -> fiestas locales: ANADIR\n  OR: [], // Oropesa    -> fiestas locales: ANADIR\n  CS: [], // Castellon  -> fiestas locales (Magdalena, etc.): ANADIR\n  VR: []  // Vila-real  -> fiestas locales: ANADIR\n};\n\n// --- Routing de asesora (ARREGLO #7: mapeo explicito, sin fallback silencioso)\nconst ASESORA_POR_PREFIJO = { BN: 'Carmen', OR: 'Carmen', CS: 'Gisela', VR: 'Gisela' };\nconst CALENDARIO_POR_ASESORA = {\n  Carmen: 'carmen@casagencia.com',\n  Gisela: 'gisela@casagencia.com'\n};\nconst CALENDARIO_POR_DEFECTO = 'gisela@casagencia.com'; // solo para que el nodo no reviente\n\n// --- Titulos de eventos de dia completo que SI bloquean el dia (ARREGLO #8) --\nconst RE_DIA_BLOQUEANTE = /vacacion|vacanc|baja|festiv|cerrad|ausent|no disponible|libranza|asuntos propios/i;\n\n// ---------------------------------------------------------------------------\n// Telefonos (ARREGLO #12)\n// ---------------------------------------------------------------------------\nfunction normalizarTelefono(raw) {\n  let s = String(raw ?? '').trim();\n  const teniaMas = s.startsWith('+');\n  s = s.replace(/\\D/g, '');\n  if (!teniaMas && s.startsWith('00')) s = s.slice(2);\n  if (/^[6789]\\d{8}$/.test(s)) s = '34' + s;          // movil/fijo espanol sin prefijo\n  const nacional = s.startsWith('34') ? s.slice(2) : s;\n  return {\n    e164: s ? '+' + s : '',\n    nacional,\n    digitos: s,\n    valido: s.length >= 8 && s.length <= 15,\n    original: String(raw ?? '')\n  };\n}\n\n// ---------------------------------------------------------------------------\n// Referencias y asesora\n// ---------------------------------------------------------------------------\nfunction prefijoDeReferencia(ref) {\n  const m = String(ref ?? '').toUpperCase().match(/[A-Z]{2}/);\n  return m ? m[0] : '';\n}\n\nfunction resolverAsesora(ref) {\n  const prefijo = prefijoDeReferencia(ref);\n  const asesora = ASESORA_POR_PREFIJO[prefijo] || null;\n  return {\n    prefijo,\n    asesora,\n    conocida: !!asesora,\n    calendario: asesora ? CALENDARIO_POR_ASESORA[asesora] : CALENDARIO_POR_DEFECTO\n  };\n}\n\n// ---------------------------------------------------------------------------\n// Alquiler: NO se agenda visita (peticion de Casagencia, sept. 2026)\n// ---------------------------------------------------------------------------\n// El mercado de alquiler esta muy tensionado y la mitad de los interesados no\n// pasa la criba de la asesora. Si Sara agendase todas las visitas, el calendario\n// se llenaria de citas que luego hay que deshacer. Asi que en alquiler Sara\n// cualifica al cliente y pasa el aviso: la asesora llama y agenda ella.\n//\n// Las referencias de alquiler acaban en -A y las de venta en -V, pero hay algun\n// caso suelto (un traspaso de local marcado como alquiler con referencia -V).\n// Por eso basta con que CUALQUIERA de las dos senales diga alquiler.\nfunction esPeticionAlquiler(referencia, tipoTransaccion) {\n  const t = String(tipoTransaccion ?? '').toLowerCase();\n  if (t.includes('alquiler') || t.includes('traspaso') || t.includes('rent')) return true;\n  return /-A$/i.test(String(referencia ?? '').trim());\n}\n\nconst MSG_ALQUILER_SIN_AGENDA =\n  'En alquiler NO se agenda la visita desde aqui. Explicale al cliente con naturalidad que, ' +\n  'por la cantidad de solicitudes que hay, es la asesora de la zona quien organiza las visitas ' +\n  'de alquiler y le va a llamar para concretarla. Antes de despedirte, hazle las preguntas de ' +\n  'cualificacion de alquiler y registra el aviso con registrarMensaje.';\n\n// ---------------------------------------------------------------------------\n// Horario / festivos\n// ---------------------------------------------------------------------------\nfunction esFestivo(fecha, prefijo) {\n  const lista = [].concat(FESTIVOS.TODOS || [], FESTIVOS[prefijo] || []);\n  return lista.includes(fecha);\n}\n\nfunction bloquesDelDia(fecha, asesora) {\n  const h = HORARIOS[asesora] || HORARIOS.Gisela;\n  const wd = DateTime.fromFormat(fecha, 'yyyy-MM-dd', { zone: ZONA }).weekday;\n  if (wd === 7) return h.dom;\n  if (wd === 6) return h.sab;\n  return h.lv;\n}\n\n// Devuelve { valido, motivo } para una fecha+hora concretas.\n// motivo: ok | formato | pasado | cerrado | festivo | fuera_horario\nfunction validarFranja(fecha, hora, asesora, prefijo, ahora) {\n  const ini = DateTime.fromFormat(`${fecha} ${hora}`, 'yyyy-MM-dd HH:mm', { zone: ZONA });\n  if (!ini.isValid) return { valido: false, motivo: 'formato' };\n  if (ini < ahora) return { valido: false, motivo: 'pasado' };\n  if (esFestivo(fecha, prefijo)) return { valido: false, motivo: 'festivo' };\n\n  const bloques = bloquesDelDia(fecha, asesora);\n  if (!bloques || !bloques.length) return { valido: false, motivo: 'cerrado' };\n\n  const fin = ini.plus({ hours: 1 });\n  const cabe = bloques.some(([a, b]) => {\n    const ba = DateTime.fromFormat(`${fecha} ${a}`, 'yyyy-MM-dd HH:mm', { zone: ZONA });\n    const bb = DateTime.fromFormat(`${fecha} ${b}`, 'yyyy-MM-dd HH:mm', { zone: ZONA });\n    return ini >= ba && fin <= bb;\n  });\n  return cabe ? { valido: true, motivo: 'ok' } : { valido: false, motivo: 'fuera_horario' };\n}\n\n// ---------------------------------------------------------------------------\n// Ocupacion del calendario (ARREGLO #8)\n// ---------------------------------------------------------------------------\n// Un evento de dia completo (cumpleanos, recordatorio, calendario de festivos\n// importado...) ya NO borra el dia entero. Solo bloquea si su titulo indica\n// ausencia real. Tambien se respeta transparency='transparent' (marcado Libre).\nfunction rangosOcupados(items) {\n  const out = [];\n  for (const it of items) {\n    const j = (it && it.json) ? it.json : it;\n    if (!j || !j.start) continue;\n    if (j.status === 'cancelled') continue;\n    if (j.transparency === 'transparent') continue;\n\n    if (!j.start.dateTime) {\n      if (!RE_DIA_BLOQUEANTE.test(String(j.summary || ''))) continue; // no bloquea\n      const d0 = DateTime.fromISO(j.start.date, { zone: ZONA }).startOf('day');\n      const d1 = j.end && j.end.date\n        ? DateTime.fromISO(j.end.date, { zone: ZONA }).startOf('day')\n        : d0.plus({ days: 1 });\n      out.push({ start: d0, end: d1, titulo: j.summary || '', diaCompleto: true });\n      continue;\n    }\n\n    const s = DateTime.fromISO(j.start.dateTime, { zone: ZONA });\n    const e = j.end && j.end.dateTime\n      ? DateTime.fromISO(j.end.dateTime, { zone: ZONA })\n      : s.plus({ hours: 1 });\n    out.push({ start: s, end: e, titulo: j.summary || '', diaCompleto: false });\n  }\n  return out;\n}\n\nfunction estaLibre(fecha, hora, ocupados) {\n  const ini = DateTime.fromFormat(`${fecha} ${hora}`, 'yyyy-MM-dd HH:mm', { zone: ZONA });\n  const fin = ini.plus({ hours: 1 });\n  return !ocupados.some(o => ini < o.end && fin > o.start);\n}\n\n// Huecos validos de un dia (respeta horario, festivos y ocupacion)\nfunction huecosDelDia(fecha, asesora, prefijo, ocupados, ahora) {\n  if (esFestivo(fecha, prefijo)) return [];\n  const bloques = bloquesDelDia(fecha, asesora);\n  if (!bloques || !bloques.length) return [];\n  const huecos = [];\n  for (const [a, b] of bloques) {\n    let cursor = DateTime.fromFormat(`${fecha} ${a}`, 'yyyy-MM-dd HH:mm', { zone: ZONA });\n    const finBloque = DateTime.fromFormat(`${fecha} ${b}`, 'yyyy-MM-dd HH:mm', { zone: ZONA });\n    while (cursor.plus({ hours: 1 }) <= finBloque) {\n      if (cursor >= ahora && estaLibre(fecha, cursor.toFormat('HH:mm'), ocupados)) {\n        huecos.push(cursor.toFormat('HH:mm'));\n      }\n      cursor = cursor.plus({ minutes: 30 });\n    }\n  }\n  return huecos;\n}\n\nconst DIAS = ['', 'lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo'];\nconst MESES = ['', 'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio',\n               'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];\nfunction nombreDia(fecha) {\n  const d = DateTime.fromFormat(fecha, 'yyyy-MM-dd', { zone: ZONA });\n  if (!d.isValid) return fecha;\n  return `${DIAS[d.weekday]} ${d.day} de ${MESES[d.month]}`;\n}\n// ======================= FIN LIBRERIA COMUN ================================\n\n\n// [TEL] Cartera (cacheo) · FilasParaLaHoja\n// Las mismas filas que guarda WhatsApp en wa_cartera, con las columnas y el\n// orden que espera la hoja \"Inmuebles\" del telefono.\n// La hoja ya se ha vaciado (ComprobarCartera lo ha autorizado antes)\nconst j = $('Mapear').first().json;\nreturn (j.filas || []).map(f => ({ json: {\n  ref: f.ref,\n  precio: f.precio,\n  tipo_transaccion: f.tipo_transaccion,\n  tipo_inmueble: f.tipo_inmueble,\n  municipio: f.municipio,\n  zona: f.zona,\n  habitaciones: f.habitaciones,\n  banos: f.banos,\n  superficie: f.superficie,\n  caracteristicas: f.caracteristicas,\n  descripcion: f.descripcion,\n  imagen: f.imagen,\n  latitud: f.latitud,\n  longitud: f.longitud,\n} }));\n"
       },
-      "type": "n8n-nodes-base.postgres",
-      "typeVersion": 2.6,
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
       "position": [
-        1740,
-        -80
+        1980,
+        0
       ],
-      "id": "69456186-0969-5e67-9712-16fd81bfd884",
-      "name": "CrearTablasSiFaltan",
-      "credentials": {
-        "postgres": {
-          "id": "yvym0TdlOebNMzsm",
-          "name": "Postgres account"
-        }
-      },
-      "executeOnce": true
+      "id": "de1e39bb-3b83-52ef-98e6-ca534d6a4e49",
+      "name": "FilasParaLaHoja"
     },
     {
       "parameters": {
-        "operation": "executeQuery",
-        "query": "with nuevos as (\n  select * from jsonb_to_recordset($1::jsonb) as x(ref text, web_id text, enlace text, precio numeric, tipo_transaccion text, tipo_inmueble text, municipio text, zona text, habitaciones integer, banos integer, superficie integer, caracteristicas text, descripcion text, imagen text, modalidad text)\n), borrados as (\n  delete from wa_cartera where ref not in (select ref from nuevos)\n  returning ref\n)\ninsert into wa_cartera (ref, web_id, enlace, precio, tipo_transaccion, tipo_inmueble, municipio, zona, habitaciones, banos, superficie, caracteristicas, descripcion, imagen, modalidad, actualizado_en)\nselect ref, web_id, enlace, precio, tipo_transaccion, tipo_inmueble, municipio, zona, habitaciones, banos, superficie, caracteristicas, descripcion, imagen, modalidad, now() from nuevos\non conflict (ref) do update set\n  web_id = excluded.web_id,\n  enlace = excluded.enlace,\n  precio = excluded.precio,\n  tipo_transaccion = excluded.tipo_transaccion,\n  tipo_inmueble = excluded.tipo_inmueble,\n  municipio = excluded.municipio,\n  zona = excluded.zona,\n  habitaciones = excluded.habitaciones,\n  banos = excluded.banos,\n  superficie = excluded.superficie,\n  caracteristicas = excluded.caracteristicas,\n  descripcion = excluded.descripcion,\n  imagen = excluded.imagen,\n  modalidad = excluded.modalidad,\n  actualizado_en = now()\nreturning ref;",
-        "options": {
-          "queryReplacement": "={{ [ JSON.stringify($('Mapear').first().json.filas) ] }}"
-        }
-      },
-      "type": "n8n-nodes-base.postgres",
-      "typeVersion": 2.6,
-      "position": [
-        1960,
-        -80
-      ],
-      "id": "b9bf7f27-136b-537a-8e3d-685a8c6d4553",
-      "name": "GuardarCartera",
-      "credentials": {
-        "postgres": {
-          "id": "yvym0TdlOebNMzsm",
-          "name": "Postgres account"
-        }
-      },
-      "executeOnce": true
-    },
-    {
-      "parameters": {},
-      "type": "n8n-nodes-base.noOp",
-      "typeVersion": 1,
-      "position": [
-        1740,
-        120
-      ],
-      "id": "44c69a34-b236-589a-907b-49f2c2a422f8",
-      "name": "CarteraRotaNoSeToca"
-    },
-    {
-      "parameters": {
-        "content": "## La cartera, de la API de eGO\nCada hora pide a eGO los inmuebles DISPONIBLES (ListRealestateByPage, estado 2) y los guarda enteros en *wa_cartera*. Antes esto salia del feed XML de Janela; la API da lo mismo y mejor:\n\n- los tipos y las caracteristicas, ya en espanol (el feed dejaba 'Town House', 'Office / Practice'...);\n- la superficie CONSTRUIDA de verdad (la del feed era a veces la util);\n- el tipo de negocio dice si el alquiler es de larga duracion (2) o temporal (13);\n- la descripcion entera y los inmuebles que el feed se dejaba.\n\nLas fichas sin precio son registros internos y no entran. Si la API falla o devuelve cuatro cosas, no se toca nada: mejor una cartera de hace una hora que ninguna.\n\nPara refrescarla al momento: POST a */webhook/wa-refrescar-cartera* con la clave de la credencial *WA lead a mano*.",
-        "height": 400,
-        "width": 580
+        "content": "## La cartera, de la API de eGO\nCada hora pide a eGO los inmuebles disponibles y rellena la hoja *Inmuebles* que leen buscarInmuebles, buscarPorReferencia y BuscarPorDireccion.\n\nEs el MISMO codigo que usa WhatsApp (wa/cartera_api.js), asi que los dos asistentes dicen lo mismo: tipos y caracteristicas en espanol, superficie construida y la descripcion entera.\n\nOrden: pedir -> comprobar -> vaciar -> escribir. Si la API falla, salta el error y la hoja se queda como estaba.\n\nLa pestana *Direcciones* la rellena la agencia a mano y aqui no se toca.",
+        "height": 300,
+        "width": 460
       },
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        200,
-        -420
+        440,
+        -360
       ],
-      "id": "e5da7b4e-5aeb-50d1-8d57-71866644de89",
-      "name": "Nota"
+      "id": "90a1f7cb-c997-5061-bca5-7367b3b7e8e9",
+      "name": "NotaCartera"
     }
   ],
   "connections": {
-    "CadaHora": {
-      "main": [
-        [
-          {
-            "node": "InmueblesEgo",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "RefrescarAhora": {
+    "Schedule Trigger": {
       "main": [
         [
           {
@@ -616,36 +727,40 @@
       "main": [
         [
           {
-            "node": "¿Cartera correcta?",
+            "node": "ComprobarCartera",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "¿Cartera correcta?": {
+    "ComprobarCartera": {
       "main": [
         [
           {
-            "node": "CrearTablasSiFaltan",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "CarteraRotaNoSeToca",
+            "node": "Clear sheet",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "CrearTablasSiFaltan": {
+    "Clear sheet": {
       "main": [
         [
           {
-            "node": "GuardarCartera",
+            "node": "FilasParaLaHoja",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "FilasParaLaHoja": {
+      "main": [
+        [
+          {
+            "node": "EscribirInmuebles",
             "type": "main",
             "index": 0
           }

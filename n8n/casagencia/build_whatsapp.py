@@ -2511,9 +2511,14 @@ def wf_ego_nota(ids):
 
 
 # ===========================================================================
-# [WA] 4 · Cartera desde eGO
+# [WA] 4 · Cartera desde eGO (por la API, ya no por el feed XML)
 # ===========================================================================
-FEED_EGO = "http://feeds.transporter.janeladigital.com/423E0F5F-30FC-4E01-8FE1-99BD7E14B021/0500013012.xml"
+# Ids de las zonas de los inmuebles y, de esas, el municipio (nivel 3) y el
+# barrio (nivel 4): dos llamadas mas y nos ahorramos el feed.
+Q_ZONAS = ("={{ JSON.stringify({ locationIds: [...new Set((($('InmueblesEgo').first().json.datos || {})"
+           ".realestatesByPageDto || []).map(p => p.locationId).filter(Boolean))] }) }}")
+Q_LUGARES = ("={{ JSON.stringify({ locationIds: [...new Set(($('ZonasEgo').first().json.datos || [])"
+             ".flatMap(z => [z.level3, z.level4]).filter(Boolean))] }) }}")
 
 
 def wf_cartera_ego(ids):
@@ -2524,35 +2529,37 @@ def wf_cartera_ego(ids):
             "httpMethod": "POST", "path": "wa-refrescar-cartera", "authentication": "headerAuth", "options": {}},
             [-40, 120], 2.1, credentials=CRED_LEAD_MANUAL,
             webhookId=str(uuid.uuid5(uuid.NAMESPACE_URL, "casagencia/wa/refrescar-cartera"))),
-        http("DescargarFeed", "GET", FEED_EGO, [200, 0], retryOnFail=True, waitBetweenTries=5000,
-             options={"timeout": 60000}),
-        node("LeerXML", "n8n-nodes-base.xml", {"options": {}}, [420, 0], 1),
-        code_node("Mapear", code_wa("cartera_mapear.js"), [640, 0]),
-        if_node("¿Feed correcto?", "={{ $json.ok }}", "true", [860, 0]),
-        # Alquiler de larga duracion o temporal: el tipo de negocio de eGO (una llamada)
-        ego("NegociosEgo", ids, "POST", "/realestate/Realestate/ListRealestateByPage", [1080, -80],
+        ego("InmueblesEgo", ids, "POST", "/realestate/Realestate/ListRealestateByPage", [200, 0],
             cuerpo=json.dumps({"realestateStatus": [2], "pageIndex": 0, "numberOfRecords": 500})),
-        code_node("Modalidad", code_wa("cartera_modalidad.js", cartera=True), [1300, -80]),
-        pg_query("CrearTablasSiFaltan", DDL, None, [1520, -80], executeOnce=True),
+        ego("TiposDeInmueble", ids, "GET", "/realestate/Nature/ListNatureType", [420, 0]),
+        ego("CaracteristicasEgo", ids, "GET", "/realestate/Feature/ListFeature", [640, 0]),
+        ego("ZonasEgo", ids, "GET", "/metadata/Location/ListLocationById", [860, 0], query=Q_ZONAS),
+        ego("LugaresEgo", ids, "GET", "/metadata/Location/ListLocationById", [1080, 0], query=Q_LUGARES),
+        code_node("Mapear", code_wa("cartera_api.js", cartera=True), [1300, 0]),
+        if_node("¿Cartera correcta?", "={{ $json.ok }}", "true", [1520, 0]),
+        pg_query("CrearTablasSiFaltan", DDL, None, [1740, -80], executeOnce=True),
         pg_query("GuardarCartera", SQL_GUARDAR_CARTERA,
-                 "={{ [ JSON.stringify($('Modalidad').first().json.filas) ] }}", [1740, -80], executeOnce=True),
-        noop("FeedRotoNoSeToca", [1080, 120]),
-        nota("Nota", "## La cartera de WhatsApp\nCada hora lee el MISMO feed de eGO que usa el telefono "
-             "(solo lectura) y lo guarda COMPLETO en la tabla *wa_cartera*:\n\n"
-             "- la descripcion entera (la hoja del telefono la corta a 500 caracteres y se pierden "
-             "cosas como el parking, el trastero o los honorarios);\n"
-             "- la superficie, las caracteristicas en espanol;\n"
-             "- el ENLACE de la web de cada inmueble (la web abre la ficha con el id del feed sin el "
-             "05 del principio).\n\n"
-             "Lo vendido o retirado se borra. Si el feed llega vacio o roto, no se toca nada.\n\n"
+                 "={{ [ JSON.stringify($('Mapear').first().json.filas) ] }}", [1960, -80], executeOnce=True),
+        noop("CarteraRotaNoSeToca", [1740, 120]),
+        nota("Nota", "## La cartera, de la API de eGO\nCada hora pide a eGO los inmuebles DISPONIBLES "
+             "(ListRealestateByPage, estado 2) y los guarda enteros en *wa_cartera*. Antes esto salia del "
+             "feed XML de Janela; la API da lo mismo y mejor:\n\n"
+             "- los tipos y las caracteristicas, ya en espanol (el feed dejaba 'Town House', 'Office / "
+             "Practice'...);\n"
+             "- la superficie CONSTRUIDA de verdad (la del feed era a veces la util);\n"
+             "- el tipo de negocio dice si el alquiler es de larga duracion (2) o temporal (13);\n"
+             "- la descripcion entera y los inmuebles que el feed se dejaba.\n\n"
+             "Las fichas sin precio son registros internos y no entran. Si la API falla o devuelve cuatro "
+             "cosas, no se toca nada: mejor una cartera de hace una hora que ninguna.\n\n"
              "Para refrescarla al momento: POST a */webhook/wa-refrescar-cartera* con la clave de la "
-             "credencial *WA lead a mano*.", [200, -420], 560, 360),
-    ], conn(("CadaHora", 0, "DescargarFeed", 0), ("RefrescarAhora", 0, "DescargarFeed", 0),
-            ("DescargarFeed", 0, "LeerXML", 0), ("LeerXML", 0, "Mapear", 0),
-            ("Mapear", 0, "¿Feed correcto?", 0), ("¿Feed correcto?", 0, "NegociosEgo", 0),
-            ("NegociosEgo", 0, "Modalidad", 0), ("Modalidad", 0, "CrearTablasSiFaltan", 0),
+             "credencial *WA lead a mano*.", [200, -420], 580, 400),
+    ], conn(("CadaHora", 0, "InmueblesEgo", 0), ("RefrescarAhora", 0, "InmueblesEgo", 0),
+            ("InmueblesEgo", 0, "TiposDeInmueble", 0), ("TiposDeInmueble", 0, "CaracteristicasEgo", 0),
+            ("CaracteristicasEgo", 0, "ZonasEgo", 0), ("ZonasEgo", 0, "LugaresEgo", 0),
+            ("LugaresEgo", 0, "Mapear", 0), ("Mapear", 0, "¿Cartera correcta?", 0),
+            ("¿Cartera correcta?", 0, "CrearTablasSiFaltan", 0),
             ("CrearTablasSiFaltan", 0, "GuardarCartera", 0),
-            ("¿Feed correcto?", 1, "FeedRotoNoSeToca", 0)))
+            ("¿Cartera correcta?", 1, "CarteraRotaNoSeToca", 0)))
 
 
 # ===========================================================================

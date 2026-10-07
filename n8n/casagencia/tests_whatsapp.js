@@ -8,8 +8,6 @@ const CARTERA = fs.readFileSync(B + 'wa/cartera.js', 'utf8');
 const LIB = fs.readFileSync(B + 'lib/casagencia_comun.js', 'utf8');
 // La cartera real, tal y como la deja [WA] 4 en wa_cartera (feed de eGO del 1-10-2026)
 const REAL = JSON.parse(fs.readFileSync(B + 'tests_datos/wa_cartera_20261001.json', 'utf8'));
-// Tres inmuebles del feed tal y como los entrega el nodo XML de n8n
-const FEED = JSON.parse(fs.readFileSync(B + 'tests_datos/feed_ego_muestra.json', 'utf8'));
 
 const correr = (codigo, $input, $) =>
   Function('$input', '$', 'DateTime', 'Buffer', '"use strict";' + codigo)($input, $, DateTime, Buffer);
@@ -514,12 +512,7 @@ const filas = (q) => { const x = buscar(q); return (x.referencias || []).map(ref
      modDesc('BN-1291-A') === 'larga_duracion' && modDesc('BN-C-122-A') === 'temporal' && modDesc('BN-632-A') === 'temporal'
      && modDesc('BN-C-126-A') === 'temporal' && modDesc('BN-C-119-A') === '',
      ['BN-1291-A', 'BN-C-122-A', 'BN-632-A', 'BN-C-126-A', 'BN-C-119-A'].map(modDesc).join());
-  const modEgo = Function('$', 'DateTime', CFG + '\n' + CARTERA + '\n' + fs.readFileSync(B + 'wa/cartera_modalidad.js', 'utf8'))(nod({
-    Mapear: { filas: [{ ref: 'BN-1559-A', tipo_transaccion: 'alquiler', descripcion: 'Se alquila magnifica villa' },
-                      { ref: 'BN-1547-V', tipo_transaccion: 'venta', descripcion: '' }] },
-    NegociosEgo: { datos: { realestatesByPageDto: [{ reference: 'BN-1559-A', businesses: [{ businessTypeId: 2 }] }] } } }), DateTime)[0].json;
-  ck('[WA] 4: la modalidad sale del tipo de negocio de eGO (2 = larga duracion)', modEgo.filas[0].modalidad === 'larga_duracion'
-     && modEgo.filas[1].modalidad === '' && modEgo.de_ego === 1);
+  // La modalidad sale del tipo de negocio de eGO; se comprueba en el bloque 12.
 }
 let fl = filas({ operacion: 'venta', municipio: 'Benicàssim', limite: 8 });
 ck('venta en "Benicàssim": todo venta y en Benicasim', fl.length > 0 &&
@@ -569,21 +562,46 @@ ck('buscar con filtros de mas: relaja los secundarios y lo dice', r.total > 0 &&
    (r.referencias || []).join(','));
 
 // ===========================================================================
-console.log('\n== 12. [WA] 4: cartera completa desde el feed de eGO ==');
-const map = wa('cartera_mapear.js', inp([{ json: FEED }]))[0].json;
-ck('con 3 inmuebles no se toca la tabla (feed sospechoso)', map.ok === false && map.total === 3);
-const p1528 = map.filas.find(x => x.ref === 'BN-1528-V');
-ck('descripcion ENTERA, no los 500 caracteres de la hoja del telefono', p1528.descripcion.length > 1500,
-   p1528.descripcion.length + ' caracteres');
-ck('la descripcion trae el parking y el trastero', /parking y trastero/.test(p1528.descripcion));
-ck('y los honorarios de la agencia', /2 %/.test(p1528.descripcion) && /honorarios/.test(p1528.descripcion));
-ck('enlace de la web con el id del feed sin el 05',
-   p1528.enlace === 'https://www.casagencia.com/inmueble/piso-en-venta-benicasim/25370429', p1528.enlace);
-ck('superficie sacada de las caracteristicas (el feed trae 0)', p1528.superficie === 103, String(p1528.superficie));
-ck('caracteristicas en espanol y en singular', /1 plaza de garaje/.test(p1528.caracteristicas)
-   && /ascensor/.test(p1528.caracteristicas) && !/highway|supermarket|good condition/.test(p1528.caracteristicas),
-   p1528.caracteristicas);
-ck('alquiler bien marcado', map.filas.find(x => x.ref === 'CS-1552-A').tipo_transaccion === 'alquiler');
+console.log('\n== 12. [WA] 4: la cartera, desde la API de eGO ==');
+const API = JSON.parse(fs.readFileSync(B + 'tests_datos/api_ego_muestra.json', 'utf8'));
+const carteraApi = (inmuebles = API.inmuebles) => wa('cartera_api.js', inp([{}]), nod({
+  InmueblesEgo: { datos: { realestatesByPageDto: inmuebles } }, TiposDeInmueble: { datos: API.tipos },
+  CaracteristicasEgo: { datos: API.caracteristicas }, ZonasEgo: { datos: API.zonas },
+  LugaresEgo: { datos: API.lugares } }), true)[0].json;
+const mapApi = carteraApi();
+const api1291 = mapApi.filas.find(x => x.ref === 'BN-1291-A');
+ck('con pocos inmuebles NO se toca la tabla', mapApi.ok === false && mapApi.total === 5, `ok=${mapApi.ok} total=${mapApi.total}`);
+ck('la ficha interna sin precio se queda fuera', mapApi.sin_precio.join() === 'CAS_2591'
+   && !mapApi.filas.some(x => x.ref === 'CAS_2591'), mapApi.sin_precio.join());
+ck('tipo y municipio como siempre', api1291.tipo_inmueble === 'Apartamento'
+   && api1291.municipio === 'Benicasim / Benicàssim' && api1291.zona === 'Torreón - La Almadraba', JSON.stringify([api1291.tipo_inmueble, api1291.zona]));
+ck('precio, habitaciones y banos del CRM', api1291.precio === 1000 && api1291.habitaciones === 3 && api1291.banos === 2);
+ck('la superficie es la CONSTRUIDA (la del feed era a veces la util)', api1291.superficie === 90, String(api1291.superficie));
+ck('descripcion entera', api1291.descripcion.length > 1500, api1291.descripcion.length + ' caracteres');
+ck('enlace de la web con el id de eGO', api1291.enlace === 'https://www.casagencia.com/inmueble/apartamento-en-alquiler-benicasim/20000364', api1291.enlace);
+ck('el id de la web lleva ocho cifras (no se pierde el cero de delante)',
+   mapApi.filas.find(x => x.ref === 'BN-632-A').web_id === '02352461', mapApi.filas.find(x => x.ref === 'BN-632-A').web_id);
+ck('foto del inmueble', /^https:\/\/feedmedia\.egorealestate\.com\/.+\.jpg$/.test(api1291.imagen), api1291.imagen);
+ck('caracteristicas en espanol y como se dicen', /colegio cerca/.test(api1291.caracteristicas)
+   && /ascensor/.test(api1291.caracteristicas) && !/\bescuela\b|\bpolicía\b|school|lift/.test(api1291.caracteristicas),
+   api1291.caracteristicas);
+ck('los tipos ya no salen en ingles', mapApi.filas.find(x => x.ref === 'BN-1537-V').tipo_inmueble === 'Vivienda adosada',
+   mapApi.filas.find(x => x.ref === 'BN-1537-V').tipo_inmueble);
+ck('alquiler de larga duracion (negocio 2) y temporal (13)', api1291.modalidad === 'larga_duracion'
+   && mapApi.filas.find(x => x.ref === 'BN-C-126-A').modalidad === 'temporal'
+   && mapApi.filas.find(x => x.ref === 'BN-1537-V').modalidad === '',
+   mapApi.filas.map(x => x.ref + ':' + x.modalidad).join(' '));
+ck('venta y alquiler bien marcados', mapApi.filas.find(x => x.ref === 'BN-1537-V').tipo_transaccion === 'venta'
+   && api1291.tipo_transaccion === 'alquiler');
+{
+  // Castellon: eGO afina la zona ("Hospital - Plaza del Real"); se guarda la de
+  // siempre ("Centro") y la fina va en las caracteristicas, para que se encuentre
+  const cs = mapApi.filas.find(x => x.ref === 'CS-G-272-A');
+  ck('zona como la de siempre, y la fina tambien se puede buscar', cs.zona === 'Centro'
+     && /Hospital - Plaza del Real/.test(cs.caracteristicas), `${cs.zona} | ${cs.caracteristicas.slice(0, 60)}`);
+}
+ck('si la API falla, no se toca la tabla', carteraApi([]).ok === false);
+
 const enteros = REAL.filter(x => x.enlace && /\/\d{6,}$/.test(x.enlace)).length;
 ck('todos los inmuebles de la cartera tienen enlace', enteros === REAL.length, `${enteros} de ${REAL.length}`);
 r = wa('plantilla_normalizar.js', inp([{ json: { enlace: 'https://www.casagencia.com/inmueble/x/25370429' } }]),
