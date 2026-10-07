@@ -61,6 +61,29 @@ if (alternativas.length < 3) {
   }
 }
 
+// Si el cliente pide una hora concreta porque solo puede a esa (sale de
+// trabajar, recoge a los ninos...) y ese dia no queda nada parecido, de poco le
+// sirve que le ofrezcamos las 12:00. Se buscan los proximos dias A SU HORA.
+const CERCA_MIN = 90;
+const aMinutos = (h) => Number(h.slice(0, 2)) * 60 + Number(h.slice(3, 5));
+const minutosPedidos = aMinutos(d.hora);
+const haySuHora = alternativas.some(a => a.fecha === d.fecha && Math.abs(aMinutos(a.hora) - minutosPedidos) <= CERCA_MIN);
+const otrosDiasASuHora = [];
+if (!haySuHora) {
+  let f = DateTime.fromFormat(d.fecha, 'yyyy-MM-dd', { zone: ZONA });
+  for (let i = 0; i < 7 && otrosDiasASuHora.length < 2; i++) {
+    f = f.plus({ days: 1 });
+    const fs = f.toFormat('yyyy-MM-dd');
+    const cerca = huecosDelDia(fs, d.asesora, d.prefijo, ocupados, ahora)
+      .filter(h => Math.abs(aMinutos(h) - minutosPedidos) <= CERCA_MIN)
+      .sort((a, b) => Math.abs(aMinutos(a) - minutosPedidos) - Math.abs(aMinutos(b) - minutosPedidos));
+    if (cerca.length && !alternativas.some(a => a.fecha === fs && a.hora === cerca[0])) {
+      otrosDiasASuHora.push({ fecha: fs, hora: cerca[0], dia: nombreDia(fs) });
+    }
+  }
+  alternativas.push(...otrosDiasASuHora);
+}
+
 const EXPLICACION = {
   festivo: 'ese dia es festivo y la oficina esta cerrada',
   cerrado: 'ese dia la oficina no abre',
@@ -72,13 +95,17 @@ const motivo = v.valido ? 'ocupado' : v.motivo;
 const porque = EXPLICACION[motivo] || 'no es posible a esa hora';
 
 const listado = alternativas.map(a => `${a.dia} a las ${a.hora}`).join('; ');
+const aSuHora = otrosDiasASuHora.length
+  ? ` Ese dia no queda nada a su hora; si solo puede sobre las ${d.hora}, lo que le encaja es: `
+    + otrosDiasASuHora.map(a => `${a.dia} a las ${a.hora}`).join('; ') + '.'
+  : '';
 const mensaje = alternativas.length
-  ? `No puede ser: ${porque}. Diselo al cliente con naturalidad y ofrecele SOLO estas opciones: ${listado}. No inventes otras horas.`
+  ? `No puede ser: ${porque}. Diselo al cliente con naturalidad y ofrecele SOLO estas opciones: ${listado}.${aSuHora} No inventes otras horas.`
   : `No puede ser: ${porque}, y no me quedan huecos en los proximos dias. Pidele al cliente otra fecha o registra un mensaje para que la asesora le llame.`;
 
 return salida({
   disponible: false, motivo, asesora: d.asesora,
-  fecha: d.fecha, hora: d.hora, alternativas,
+  fecha: d.fecha, hora: d.hora, alternativas, a_su_hora: otrosDiasASuHora,
   horario_asesora: bloquesDelDia(d.fecha, d.asesora),
   mensaje_para_sara: mensaje
 });

@@ -91,6 +91,33 @@ const v1 = run(null, 'cc_validar.js', { $input: inputOf([]), $: nodeOf({ Prepara
 check('ConfirmarCita RECHAZA insertar', v1.puede_crear === false, `motivo=${v1.respuesta.motivo}`);
 check('respuesta trae cita_confirmada=false', v1.respuesta.cita_confirmada === false);
 
+// ---------- 3-BIS. El cliente solo puede a una hora ----------
+console.log('\n== El cliente solo puede por la tarde y esa tarde esta llena ==');
+{
+  // Carmen, dia laborable: se le ocupa toda la tarde (16:00-19:30)
+  let dia = HOY.plus({ days: 1 });
+  while (dia.weekday > 5 || FESTIVOS.TODOS.includes(dia.toFormat('yyyy-MM-dd'))) dia = dia.plus({ days: 1 });
+  const f = dia.toFormat('yyyy-MM-dd');
+  const ocupa = (fecha, de, a) => ({ json: { start: { dateTime: `${fecha}T${de}:00+02:00` },
+                                             end: { dateTime: `${fecha}T${a}:00+02:00` } } });
+  const cuerpo = { nombre:'Ana', telefono:'600111222', referencia:'BN-1547-V',
+                   tipo_transaccion:'compra', fecha: f, hora: '18:00' };
+  const prepT = run(null, 'bd_preparar.js', { $input: inputOf([{ json: { body: cuerpo } }]) })[0].json;
+  const rT = run(null, 'bd_calcular.js', { $input: inputOf([ocupa(f, '16:00', '19:30')]),
+                                           $: nodeOf({ PrepararDatos: prepT }) })[0].json.respuesta;
+  check('la tarde llena: 18:00 no puede ser', rT.disponible === false, `motivo=${rT.motivo}`);
+  check('le ofrece OTRO DIA a su hora, no solo las 12:00 de ese dia', rT.a_su_hora.length > 0
+     && rT.a_su_hora.every(x => Math.abs(Number(x.hora.slice(0,2)) * 60 + Number(x.hora.slice(3,5)) - 18 * 60) <= 90),
+     JSON.stringify(rT.a_su_hora.map(x => `${x.dia} ${x.hora}`)));
+  check('y se lo dice a Sara en el mensaje', /si solo puede sobre las 18:00/.test(rT.mensaje_para_sara),
+     rT.mensaje_para_sara.slice(-150));
+  // Si ese mismo dia SI queda algo a su hora, no hace falta irse a otro dia
+  const rLibre = run(null, 'bd_calcular.js', { $input: inputOf([ocupa(f, '18:00', '19:00')]),
+                                               $: nodeOf({ PrepararDatos: prepT }) })[0].json.respuesta;
+  check('si queda hueco de tarde ese dia, no se va a otro dia', rLibre.a_su_hora.length === 0
+     && rLibre.alternativas.some(x => Number(x.hora.slice(0,2)) >= 16), JSON.stringify(rLibre.alternativas.map(x=>x.hora)));
+}
+
 // ---------- 4. Franjas validas / invalidas ----------
 console.log('\n== Validacion de franjas ==');
 const casos = [
