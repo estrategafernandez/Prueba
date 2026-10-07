@@ -439,11 +439,11 @@
             },
             {
               "id": "8ef2fbe7-f000-5aa7-8b88-dcaeebaa14f6",
-              "leftValue": "={{ [5, 4].includes(Number($json.meta?.assignee?.id || 0)) }}",
+              "leftValue": "={{ ![5, 4].includes(Number($json.meta?.assignee?.id || 0)) }}",
               "rightValue": "",
               "operator": {
                 "type": "boolean",
-                "operation": "false",
+                "operation": "true",
                 "singleValue": true
               }
             }

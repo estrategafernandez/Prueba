@@ -32,8 +32,19 @@ const TONO = { Positive: 'positivo', Negative: 'negativo', Neutral: 'neutro', Un
 const inicio = c.start_timestamp ? DateTime.fromMillis(Number(c.start_timestamp), { zone: ZONA }) : null;
 const seg = Math.round(Number(c.duration_ms || 0) / 1000);
 const duracion = seg >= 60 ? `${Math.floor(seg / 60)} min ${seg % 60} s` : `${seg} s`;
+// La comercial: la de la LINEA por la que ha entrado la llamada. La cabecera
+// Diversion lista los desvios del mas reciente al original ("general <- Gisela
+// <- Idealista"): si en la cadena esta el movil de una comercial, la llamada ha
+// entrado por su telefono y es suya. Solo si no (oficina, numero general), la
+// que dice el analisis de Retell, que a veces se equivoca.
+const sip = c.custom_sip_headers || {};
+const variables = c.retell_llm_dynamic_variables || {};
+const cadena = [...String(sip.diversion ?? variables.diversion ?? '').matchAll(/sip:\+?(\d+)@/g)]
+  .map(m => m[1].replace(/^34(?=\d{9}$)/, ''));
+const porMovil = Object.fromEntries(Object.entries(EQUIPO).map(([n, e]) => [String(e.movil).replace(/^34(?=\d{9}$)/, ''), n]));
+const deLaLinea = cadena.map(n => porMovil[n]).find(Boolean) || '';
 const asesoraLlamada = String(a.custom_analysis_data?.asesora ?? '').trim();
-const asesora = EQUIPO[asesoraLlamada] ? asesoraLlamada : '';
+const asesora = deLaLinea || (EQUIPO[asesoraLlamada] ? asesoraLlamada : '');
 const resumen = String(a.call_summary ?? '').trim();
 const tono = TONO[a.user_sentiment] || '';
 
@@ -46,7 +57,7 @@ const nota = [
   resumen || 'Sin resumen de la llamada.',
   '',
   tono ? `Tono del cliente: ${tono}` : '',
-  asesora ? `Asesora: ${asesora}` : '',
+  asesora ? `Asesora: ${asesora}${deLaLinea ? ' (entró por su teléfono)' : ''}` : '',
 ].join('\n').replace(/\n{3,}/g, '\n\n').trim();
 
 // La transcripcion, para sacar el nombre del cliente (con un tope)
@@ -62,6 +73,9 @@ return [{ json: {
   // Desde cuando mirar si ya salio un aviso en esta llamada (recado, pre-reserva)
   inicio_iso: (inicio || DateTime.now().setZone(ZONA).minus({ minutes: 30 })).toUTC().toISO(),
   asesora,
+  // Entro por el movil de esta comercial: la conversacion es suya aunque la
+  // tuviera la otra
+  linea_asesora: deLaLinea,
   agente_id: esPrueba(tel.e164) ? 0 : agenteDe(asesora),
   segundos: seg,
   resumen,

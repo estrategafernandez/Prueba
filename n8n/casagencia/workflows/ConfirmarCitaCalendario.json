@@ -124,7 +124,8 @@
         "end": "={{ DateTime.fromFormat($json.fecha + ' ' + $json.hora,'yyyy-MM-dd HH:mm',{zone:'Europe/Madrid'}).plus({hours:1}).toISO() }}",
         "additionalFields": {
           "summary": "={{ $json.titulo }}",
-          "description": "={{ $json.descripcion }}"
+          "description": "={{ $json.descripcion }}",
+          "color": "10"
         }
       },
       "type": "n8n-nodes-base.googleCalendar",

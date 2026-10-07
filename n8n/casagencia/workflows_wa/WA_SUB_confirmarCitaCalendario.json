@@ -422,7 +422,7 @@
         "end": "={{ DateTime.fromFormat($json.fecha + ' ' + $json.hora,'yyyy-MM-dd HH:mm',{zone:'Europe/Madrid'}).plus({hours:1}).toISO() }}",
         "additionalFields": {
           "summary": "={{ ($('GuardiaDeAlquiler').first().json.es_prueba ? '[PRUEBA] ' : '') + 'PRE-RESERVA · ' + $json.titulo }}",
-          "color": "5",
+          "color": "10",
           "description": "={{ $json.descripcion + '\\n\\nPara confirmarla: llama al cliente y quita PRE-RESERVA del titulo. Si no le va, muevela o borrala.\\n\\nOrigen: WhatsApp (Sara IA)\\nConversacion: ' + ($('Start').first().json.conversacion_id || '') + '\\nResumen: ' + [ String($('LeerCualificacion').first().json.cualificacion || ''), String($('Start').first().json.resumen || '') ].filter(Boolean).join(' · ').replace(/\\n/g, ' ') }}"
         }
       },

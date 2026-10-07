@@ -35,11 +35,11 @@
             },
             {
               "id": "b1679584-8009-59ab-9c02-893e64962115",
-              "leftValue": "={{ [5, 4].includes(Number($('LeerConversacion').first().json.meta?.assignee?.id || 0)) }}",
+              "leftValue": "={{ ![5, 4].includes(Number($('LeerConversacion').first().json.meta?.assignee?.id || 0)) }}",
               "rightValue": "",
               "operator": {
                 "type": "boolean",
-                "operation": "false",
+                "operation": "true",
                 "singleValue": true
               }
             }

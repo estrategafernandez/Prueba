@@ -172,8 +172,9 @@ def wf_confirmar(orig):
                 "calendar": {"__rl": True, "value": "={{ $json.calendario }}", "mode": "id"},
                 "start": "={{ %s.toISO() }}" % ini,
                 "end": "={{ %s.plus({hours:1}).toISO() }}" % ini,
+                # Verde (Albahaca), como lo que agenda la IA por WhatsApp
                 "additionalFields": {"summary": "={{ $json.titulo }}",
-                                     "description": "={{ $json.descripcion }}"},
+                                     "description": "={{ $json.descripcion }}", "color": "10"},
             }, [1080, -120], 1.3, credentials=CRED_CAL, onError="continueErrorOutput"),
             aviso_whatsapp("AvisarAsesora", {
                 "accion": "PRE-RESERVA", "destinatario": "={{ %s.asesora }}" % v,

@@ -754,7 +754,8 @@ def wf_confirmar(ids):
             # las encuentra) y la marca de origen es lo que mira el recordatorio.
             "additionalFields": {
                 "summary": "={{ ($('GuardiaDeAlquiler').first().json.es_prueba ? '[PRUEBA] ' : '') + 'PRE-RESERVA · ' + $json.titulo }}",
-                "color": "5",
+                # Verde (Albahaca): lo que agenda la IA se ve de un vistazo en el calendario
+                "color": "10",
                 "description": ("={{ $json.descripcion + '\\n\\nPara confirmarla: llama al cliente y quita "
                                 "PRE-RESERVA del titulo. Si no le va, muevela o borrala.\\n\\n%s\\nConversacion: ' "
                                 "+ (%s.conversacion_id || '') + '\\nResumen: ' + [ String($('LeerCualificacion')"
@@ -1514,19 +1515,23 @@ def wf_seguimiento(ids):
             ("¿Enviado?", 1, "Desapuntar", 0)))
 
 
-def asignar(prefijo, conv_expr, agente_expr, asignado_expr, pos):
+def asignar(prefijo, conv_expr, agente_expr, asignado_expr, pos, manda_expr=None):
     """IF + POST de asignacion en Chatwoot. Solo asigna si hay comercial para la
     referencia y la conversacion no la tiene ya Carmen o Gisela (un cambio a mano
     entre ellas se respeta; si la tiene Laurence, pasa a la comercial).
+    manda_expr: si es verdadero, se asigna aunque la tenga la otra comercial (una
+    llamada que ha entrado por el movil de una de ellas es suya).
     Devuelve (nodos, nombre_if, nombre_post)."""
     x, y = pos
     nif, npost = "¿%s?" % prefijo, prefijo
+    libre = "!%s.includes(Number(%s || 0))" % (json.dumps(ASESORAS_CW), asignado_expr)
+    if manda_expr:
+        libre = "(%s) || (!!(%s) && Number(%s || 0) !== Number(%s || 0))" % (libre, manda_expr, asignado_expr, agente_expr)
     return [
         if_node(nif, None, None, [x, y], conds=[
             ("={{ Number(%s || 0) }}" % conv_expr, "gt", 0, "number"),
             ("={{ Number(%s || 0) }}" % agente_expr, "gt", 0, "number"),
-            ("={{ %s.includes(Number(%s || 0)) }}" % (json.dumps(ASESORAS_CW), asignado_expr),
-             "false", None, "boolean")]),
+            ("={{ %s }}" % libre, "true", None, "boolean")]),
         http(npost, "POST", "=" + CW_API + "/conversations/{{ Number(%s) }}/assignments" % conv_expr,
              [x + 220, y - 140], cred=CRED_CHATWOOT,
              body="={{ JSON.stringify({ assignee_id: Number(%s) }) }}" % agente_expr,
@@ -2048,7 +2053,7 @@ def wf_llamada_panel(ids):
     d = "$('DatosDelCliente').first().json"
     cv = "$('ConversacionDelContacto').first().json"
     nodos_asig, n_if, n_post = asignar("AsignarAsesora", "%s.conversacion_id" % cv, "%s.agente_id" % d,
-                                       "%s.asignado" % cv, [2420, 0])
+                                       "%s.asignado" % cv, [2420, 0], manda_expr="%s.linea_asesora" % d)
     return wf("[TEL] Llamada al panel", nodos_asig + [
         trigger_sub([("llamada", "string")]),
         code_node("LeerLlamada", code_wa("llamada_preparar.js"), [200, 0]),

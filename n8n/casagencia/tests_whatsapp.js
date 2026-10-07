@@ -837,6 +837,22 @@ ck('nota como en el panel de las otras agencias', r.nota ===
    + 'Busco un piso de alquiler para dos personas.\n\nTono del cliente: positivo\nAsesora: Carmen', JSON.stringify(r.nota));
 ck('asignada a Carmen y con aviso por WhatsApp', r.agente_id === 5 && r.avisar === true && r.asesora === 'Carmen');
 ck('con la grabacion', r.grabacion.endsWith('rec.wav'));
+{
+  // La linea por la que entra: cabecera Diversion ("general <- comercial <- portal"), como la manda Retell
+  const movil = (n) => cfg.EQUIPO[n].movil;
+  const sipDe = (...nums) => nums.map(n => `<sip:+${n}@twilio.com>;reason=unconditional`).join(',');
+  const conLinea = (diversion, asesoraAnalisis) => leer({ ...llamada, custom_sip_headers: { diversion },
+    call_analysis: { ...llamada.call_analysis, custom_analysis_data: { asesora: asesoraAnalisis } } });
+  let x = conLinea(sipDe('34864893794', movil('Gisela')), 'Carmen');
+  ck('llamada por el movil de Gisela: Gisela (aunque el analisis diga Carmen)', x.asesora === 'Gisela' && x.agente_id === 4
+     && x.linea_asesora === 'Gisela' && /Asesora: Gisela \(entró por su teléfono\)/.test(x.nota), x.asesora);
+  x = conLinea(sipDe('34864893794', movil('Carmen'), '34864870199'), 'Laurence');
+  ck('por un portal desviado al movil de Carmen: Carmen', x.asesora === 'Carmen' && x.agente_id === 5 && x.linea_asesora === 'Carmen', x.asesora);
+  x = leer({ ...llamada, retell_llm_dynamic_variables: { diversion: sipDe('34864893794', movil('Gisela')) } });
+  ck('tambien si la cabecera llega en las variables de la llamada', x.asesora === 'Gisela');
+  x = conLinea(sipDe('34864893794', '34964300986'), 'Carmen');
+  ck('por la oficina o el numero general: la del analisis, como antes', x.asesora === 'Carmen' && x.linea_asesora === '');
+}
 ck('para no repetir avisos: se mira desde que empezo la llamada', r.inicio_iso
    === DateTime.fromMillis(llamada.start_timestamp).toUTC().toISO() && r.telefono_wa === '34600000002', r.inicio_iso);
 {
@@ -1378,6 +1394,19 @@ console.log('\n== Lo que escribe el equipo (y el cliente con el bot en Off), a l
      && /contesta a este correo y te responde Gisela/.test(c.texto));
   const uno = comp({ nombre: 'Ana', idioma: 'es', referencia: alq[0].ref, portal: 'Idealista', disponible: true, asesora: 'Gisela' }, alq[0]);
   ck('correo de uno: como siempre (sin "contesta a este correo" si no se pide)', uno.modo === 'ficha' && !/contesta a este correo/.test(uno.texto));
+}
+
+// ===========================================================================
+console.log('\n== Llamadas por la linea de la comercial y agenda en verde ==');
+{
+  const leerWf = (f) => JSON.parse(fs.readFileSync(B + f, 'utf8'));
+  const wl = leerWf('workflows_wa/TEL_Llamada_al_panel.json');
+  const cond = JSON.stringify(wl.nodes.find(n => n.name === '¿AsignarAsesora?').parameters);
+  ck('[TEL] Llamada al panel: si entro por su movil, se le asigna aunque la tuviera la otra', /linea_asesora/.test(cond));
+  const wc = leerWf('workflows_wa/WA_SUB_confirmarCitaCalendario.json');
+  ck('WhatsApp: la visita que agenda Sara sale en verde (Albahaca)', wc.nodes.find(n => n.name === 'InsertarEnAgenda').parameters.additionalFields.color === '10');
+  const wt = leerWf('workflows/ConfirmarCitaCalendario.json');
+  ck('Telefono: la visita que agenda Sara sale en verde', wt.nodes.find(n => n.name === 'InsertarEnAgenda').parameters.additionalFields.color === '10');
 }
 
 // ===========================================================================
