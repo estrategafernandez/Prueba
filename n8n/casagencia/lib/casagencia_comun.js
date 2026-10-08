@@ -24,6 +24,16 @@ const HORARIOS = {
 // BN/OR/CS/VR = fiestas locales de cada zona. RELLENAR CADA ANO.
 const FESTIVOS = {
   TODOS: [
+    // 2026: calendario laboral de la Comunitat Valenciana (los dos PDFs de
+    // Castellon y Benicassim que mando el cliente traen los mismos)
+    '2026-01-01', // Ano Nuevo
+    '2026-01-06', // Reyes
+    '2026-03-19', // San Jose
+    '2026-04-03', // Viernes Santo
+    '2026-04-06', // Lunes de Pascua (autonomica)
+    '2026-05-01', // Fiesta del Trabajo
+    '2026-06-24', // San Juan (autonomica)
+    '2026-08-15', // Asuncion
     '2026-10-09', // Dia de la Comunitat Valenciana
     '2026-10-12', // Fiesta Nacional
     '2026-11-01', // Todos los Santos
@@ -42,10 +52,14 @@ const FESTIVOS = {
     '2027-05-01',
     '2027-10-09', '2027-10-12', '2027-11-01', '2027-12-06', '2027-12-08', '2027-12-25'
   ],
-  BN: [], // Benicasim  -> fiestas locales: ANADIR
-  OR: [], // Oropesa    -> fiestas locales: ANADIR
-  CS: [], // Castellon  -> fiestas locales (Magdalena, etc.): ANADIR
-  VR: []  // Vila-real  -> fiestas locales: ANADIR
+  // Fiestas LOCALES (calendario laboral 2026). RELLENAR CADA ANO.
+  // Se reparten por asesora, no por municipio: si la oficina de Benicassim
+  // cierra, Carmen no ensena nada (ni en Benicassim ni en Oropesa), y lo mismo
+  // con Gisela y Castellon.
+  BN: ['2026-01-17', '2026-09-22'], // Benicassim: San Antonio Abad y Santo Tomas de Villanueva
+  OR: ['2026-01-17', '2026-09-22'], // Oropesa    -> Carmen, misma oficina que Benicassim
+  CS: ['2026-03-09', '2026-06-29'], // Castellon: lunes de Magdalena y San Pedro
+  VR: ['2026-03-09', '2026-06-29']  // Vila-real  -> Gisela, misma oficina que Castellon
 };
 
 // --- Routing de asesora (ARREGLO #7: mapeo explicito, sin fallback silencioso)

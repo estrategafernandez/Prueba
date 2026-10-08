@@ -15,6 +15,7 @@ const nodeOf = (m) => (name) => ({ first: () => ({ json: m[name] }), item: { jso
 // Las fechas se calculan a partir de HOY. Con fechas fijas los tests se caducan
 // solos: en cuanto pasa el dia, todo contesta 'pasado' y deja de probar nada.
 const FESTIVOS = Function('DateTime', LIB + '; return FESTIVOS;')(DateTime);
+const { esFestivo, huecosDelDia } = Function('DateTime', LIB + '; return { esFestivo, huecosDelDia };')(DateTime);
 const HOY = DateTime.now().setZone('Europe/Madrid').startOf('day');
 const AYER = HOY.minus({ days: 1 }).toFormat('yyyy-MM-dd');
 function proximo(diaSemana) {           // 4 = jueves, 6 = sabado, 7 = domingo
@@ -150,6 +151,27 @@ const faltan = OFICIALES_2027.filter(f => !FESTIVOS.TODOS.includes(f));
 const sobran = FESTIVOS.TODOS.filter(f => f.startsWith('2027-') && !OFICIALES_2027.includes(f));
 check('estan las 12 fiestas de 2027', faltan.length === 0, 'faltan: ' + faltan.join(', '));
 check('y no hay ninguna de mas en 2027', sobran.length === 0, 'sobran: ' + sobran.join(', '));
+const OFICIALES_2026 = ['2026-01-01','2026-01-06','2026-03-19','2026-04-03','2026-04-06',
+  '2026-05-01','2026-06-24','2026-08-15','2026-10-09','2026-10-12','2026-11-01','2026-12-06',
+  '2026-12-08','2026-12-25'];
+const faltan26 = OFICIALES_2026.filter(f => !FESTIVOS.TODOS.includes(f));
+const sobran26 = FESTIVOS.TODOS.filter(f => f.startsWith('2026-') && !OFICIALES_2026.includes(f));
+check('estan las fiestas de 2026', faltan26.length === 0, 'faltan: ' + faltan26.join(', '));
+check('y no hay ninguna de mas en 2026', sobran26.length === 0, 'sobran: ' + sobran26.join(', '));
+// Fiestas locales del calendario laboral 2026 que mando el cliente
+check('17 de enero y 22 de septiembre son festivo en Benicassim (Carmen)',
+  esFestivo('2026-01-17', 'BN') && esFestivo('2026-09-22', 'OR')
+  && !esFestivo('2026-01-17', 'CS'));
+check('9 de marzo (Magdalena) y 29 de junio son festivo en Castellon (Gisela)',
+  esFestivo('2026-03-09', 'CS') && esFestivo('2026-06-29', 'VR')
+  && !esFestivo('2026-03-09', 'BN'));
+// Lo que pidio el cliente el 8-10-2026: nada el viernes 9 ni el lunes 12
+check('el viernes 9 y el lunes 12 de octubre de 2026 no dan hueco',
+  huecosDelDia('2026-10-09', 'Carmen', 'BN', [], DateTime.fromISO('2026-10-08T10:00', { zone: 'Europe/Madrid' })).length === 0
+  && huecosDelDia('2026-10-12', 'Gisela', 'CS', [], DateTime.fromISO('2026-10-08T10:00', { zone: 'Europe/Madrid' })).length === 0);
+check('y el martes 13 si da huecos',
+  huecosDelDia('2026-10-13', 'Carmen', 'BN', [], DateTime.fromISO('2026-10-08T10:00', { zone: 'Europe/Madrid' })).length > 0);
+
 check('Viernes Santo de 2027 bloquea la agenda',
   run(null,'bd_calcular.js',{ $input: inputOf([]), $: nodeOf({ PrepararDatos:
     run(null,'bd_preparar.js',{ $input: inputOf([{ json:{ body:{...bodyCompra,
