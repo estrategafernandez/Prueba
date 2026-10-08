@@ -1,0 +1,3 @@
+# Dependencias instaladas para correr los tests (luxon). No van al repo.
+node_modules/
+package-lock.json
