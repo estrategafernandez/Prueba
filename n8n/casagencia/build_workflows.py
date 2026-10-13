@@ -336,6 +336,7 @@ def wf_finalizar(orig):
 # =========================================================================
 # 6) buscarInmuebles -> modalidad del alquiler y presupuesto no excluyente
 # =========================================================================
+CRED_PG_RM = {"postgres": {"id": "yvym0TdlOebNMzsm", "name": "Postgres account"}}
 CRED_PG = {"postgres": {"id": "yvym0TdlOebNMzsm", "name": "Postgres account"}}
 
 
@@ -479,6 +480,32 @@ def wf_cartera_telefono(orig):
 # 8) registrarMensaje -> un solo correo, con la cualificacion de alquiler
 # =========================================================================
 AVISO_RM = "$('ComponerAviso').first().json.aviso"
+CUAL_RM = "$('ComponerAviso').first().json.cualificacion_wa"
+
+# Lo que el cliente contesta por TELEFONO se guarda en su ficha de WhatsApp, para
+# que Sara (WhatsApp) no le vuelva a preguntar lo mismo. Solo rellena lo que este
+# vacio: nunca pisa una respuesta que ya diera por escrito. Si no tiene ficha, se
+# le crea una (con la referencia de la llamada, si la hay).
+SQL_CUALIFICACION_TEL = """with upd as (
+  update wa_leads
+     set q_personas = case when q_personas = '' then $2 else q_personas end,
+         q_ingresos = case when q_ingresos = '' then $3 else q_ingresos end,
+         q_mascotas = case when q_mascotas = '' then $4 else q_mascotas end,
+         q_entrada  = case when q_entrada  = '' then $5 else q_entrada  end,
+         q_duracion = case when q_duracion = '' then $6 else q_duracion end,
+         actualizado_en = now()
+   where telefono_wa = $1 and $7::boolean
+  returning id),
+alta as (
+  insert into wa_leads (telefono_wa, telefono_e164, referencia, nombre, portal, operacion,
+                        es_alquiler, asesora, estado,
+                        q_personas, q_ingresos, q_mascotas, q_entrada, q_duracion)
+  select $1, $8, $9, $10, 'telefono', 'alquiler', true, $11, 'nuevo', $2, $3, $4, $5, $6
+   where $7::boolean and not exists (select 1 from upd)
+  on conflict (telefono_wa, referencia) do nothing
+  returning id)
+select (select count(*) from upd) as fichas_actualizadas, (select count(*) from alta) as fichas_nuevas;"""
+
 
 
 def wf_registrar_mensaje(orig):
@@ -494,6 +521,14 @@ def wf_registrar_mensaje(orig):
         "nodes": [
             webhook("Webhook", "registrarmensaje", [-40, 0], wh.get("webhookId"), wh.get("id")),
             code_node("ComponerAviso", "rm_componer.js", [200, 0]),
+            node("CualificacionParaWhatsApp", "n8n-nodes-base.postgres", {
+                "operation": "executeQuery", "query": SQL_CUALIFICACION_TEL,
+                "options": {"queryReplacement": "={{ [ %s ] }}" % ", ".join(
+                    "%s.%s" % (CUAL_RM, k) for k in (
+                        "telefono_wa", "q_personas", "q_ingresos", "q_mascotas", "q_entrada",
+                        "q_duracion", "guardar", "telefono_e164", "referencia", "nombre", "asesora"))},
+            }, [320, 0], 2.6, credentials=CRED_PG_RM, alwaysOutputData=True,
+                executeOnce=True, onError="continueRegularOutput"),
             aviso_whatsapp("EnviarAviso", {k: "={{ %s.%s }}" % (AVISO_RM, k) for k in AVISO_CAMPOS}, [440, 0]),
             node("¿Aviso enviado?", "n8n-nodes-base.if", {"conditions": {
                 "options": {"caseSensitive": True, "leftValue": "", "typeValidation": "loose", "version": 3},
@@ -517,12 +552,15 @@ def wf_registrar_mensaje(orig):
                  "## Avisos a las asesoras\nPor WhatsApp (a la asesora y a Paco), con el destinatario "
                  "normalizado (si no cuadra, va a Laurence).\n\nLos leads de ALQUILER llegan marcados en el "
                  "asunto y con la cualificacion del cliente: personas, ingresos, mascotas, fecha "
-                 "de entrada y duracion.",
+                 "de entrada y duracion.\n\nEsas respuestas se guardan tambien en la ficha de "
+                 "WhatsApp del cliente (wa_leads), para que Sara no se las vuelva a preguntar si "
+                 "escribe despues. Solo rellena lo que este vacio.",
                  "height": 210, "width": 430}, [200, -240], 1),
         ],
         "connections": conn(
             ("Webhook", 0, "ComponerAviso", 0),
-            ("ComponerAviso", 0, "RespuestaOK" if SIN_EMAIL else "EnviarAviso", 0),
+            ("ComponerAviso", 0, "CualificacionParaWhatsApp", 0),
+            ("CualificacionParaWhatsApp", 0, "RespuestaOK" if SIN_EMAIL else "EnviarAviso", 0),
             *([] if SIN_EMAIL else [("EnviarAviso", 0, "¿Aviso enviado?", 0),
                                     ("¿Aviso enviado?", 0, "RespuestaOK", 0),
                                     ("¿Aviso enviado?", 1, "RespuestaError", 0)]),

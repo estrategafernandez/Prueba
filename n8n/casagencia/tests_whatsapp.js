@@ -1428,5 +1428,136 @@ console.log('\n== Llamadas por la linea de la comercial y agenda en verde ==');
 }
 
 // ===========================================================================
+console.log('\n== El telefono manda los enlaces por WhatsApp ==');
+{
+  const dosReales = REAL.filter(f => f.enlace && f.precio > 0).slice(0, 2);
+  // Lo que devuelve wa_cartera, tal cual
+  const filas = dosReales.map(f => ({
+    ref: f.ref, enlace: f.enlace, tipo_inmueble: f.tipo_inmueble, municipio: f.municipio,
+    zona: f.zona, precio: f.precio, tipo_transaccion: f.tipo_transaccion,
+  }));
+  const pedir = (body) => wa('tel_enlaces_pedir.js', inp([{ json: {} }]), nod({ Webhook: { body } }))[0].json;
+  const componer = (p, encontrados) =>
+    wa('tel_enlaces_componer.js', inp(encontrados.map(j => ({ json: j }))), nod({ LeerPeticion: p }), true)[0].json;
+
+  // 1) Lo normal: dos inmuebles, telefono bueno
+  const p1 = pedir({ telefono: '600111222', nombre: 'Ana Belen Marti',
+                     referencias: `${dosReales[0].ref}, ${dosReales[1].ref}`, idioma: 'es' });
+  ck('lee las referencias que dice Sara y el telefono', p1.puede && p1.refs.length === 2
+     && p1.telefono_e164 === '+34600111222' && p1.refs_sql === dosReales.map(f => f.ref.replace(/-/g, '')).join(','), p1.refs_sql);
+  const c1 = componer(p1, filas);
+  ck('manda la plantilla abierta con los enlaces REALES de la cartera', c1.enviar
+     && c1.plantilla === cfg.PLANTILLAS.abierta.nombre && c1.param1 === 'Ana'
+     && dosReales.every(f => c1.param2.includes(f.enlace))
+     && dosReales.every(f => c1.param2.includes(f.tipo_inmueble)), c1.param2);
+  ck('el texto va en una sola linea (Meta no admite saltos en los parametros)',
+     !/[\r\n\t]/.test(c1.param2) && c1.param2.length <= 900);
+  ck('le dice a Sara que ya esta mandado, con su numero', /Mandado por WhatsApp al \+34600111222/.test(c1.respuesta.mensaje_para_sara));
+
+  // 2) Una referencia que no esta en la cartera: NO se manda esa
+  const p2 = pedir({ telefono: '600111222', nombre: 'Ana', referencias: `${dosReales[0].ref}, BN-9999-V` });
+  const c2 = componer(p2, [filas[0]]);
+  ck('si una referencia no esta en la cartera, se manda el resto y se avisa', c2.enviar
+     && c2.referencias_enviadas.length === 1 && c2.sin_enlace.includes('BN-9999-V')
+     && /OJO: de BN-9999-V no habia enlace/.test(c2.respuesta.mensaje_para_sara));
+
+  // 3) Ninguna referencia encontrada: no se manda nada y Sara no puede decir que si
+  const c3 = componer(pedir({ telefono: '600111222', referencias: 'BN-9999-V' }), []);
+  ck('sin enlaces no se manda nada y se le prohibe decir que se ha mandado', c3.enviar === false
+     && /NO se ha mandado nada/.test(c3.respuesta.mensaje_para_sara) && c3.respuesta.enviado === false);
+
+  // 4) Telefono invalido
+  const c4 = componer(pedir({ telefono: '123', referencias: dosReales[0].ref }), filas);
+  ck('con un telefono que no vale, no se manda', c4.enviar === false
+     && /numero de WhatsApp valido/.test(c4.respuesta.mensaje_para_sara));
+
+  // 5) Nunca mas de 3 inmuebles en el mismo mensaje
+  const p5 = pedir({ telefono: '600111222', referencias: REAL.slice(0, 6).map(f => f.ref).join(',') });
+  ck('como mucho 3 inmuebles por mensaje', p5.refs.length === 3);
+
+  // 6) Las fichas que se guardan para Sara
+  const fichas = wa('tel_enlaces_fichas.js', inp([{ json: {} }]),
+                    nod({ ComponerMensaje: c1, BuscarEnlaces: filas }));
+  ck('queda una ficha en wa_leads por cada inmueble mandado', fichas.length === 2
+     && fichas.every(f => f.json.enlace && f.json.telefono_wa === '34600111222')
+     && fichas[0].json.referencia === dosReales[0].ref);
+
+  // 7) El workflow, montado
+  const we = JSON.parse(fs.readFileSync(B + 'workflows_wa/TEL_EnviarPorWhatsApp.json', 'utf8'));
+  const nombres = we.nodes.map(n => n.name);
+  ck('[TEL] EnviarPorWhatsApp: webhook -> cartera -> plantilla -> fichas',
+     ['Webhook', 'LeerPeticion', 'BuscarEnlaces', 'ComponerMensaje', 'MandarPorWhatsApp', 'GuardarFichas']
+       .every(n => nombres.includes(n)));
+  ck('y si no hay enlaces contesta sin mandar nada',
+     (we.connections['¿Se puede mandar?'].main[1] || []).some(c => c.node === 'RespuestaNoEnviado'));
+
+  // 8) Retell: la herramienta existe y el prompt prohibe deletrear enlaces
+  const prompt = fs.readFileSync(B + 'retell/general_prompt.md', 'utf8');
+  const upd = fs.readFileSync(B + 'retell/update_retell.py', 'utf8');
+  ck('Retell tiene la herramienta enviarPorWhatsApp', /"enviarPorWhatsApp", "tel-enviarporwhatsapp"/.test(upd));
+  ck('y el prompt prohibe decir o deletrear una direccion web',
+     /PROHIBIDO DECIR UNA DIRECCIÓN WEB EN VOZ ALTA/.test(prompt) && /7-BIS\. MANDARLE LA INFORMACIÓN POR WHATSAPP/.test(prompt));
+}
+
+// ===========================================================================
+console.log('\n== El telefono le pasa el contexto a Sara ==');
+{
+  const llamada = {
+    call_id: 'call_ctx', from_number: '+34600111222', direction: 'inbound',
+    start_timestamp: DateTime.fromISO('2026-10-13T11:22', { zone: 'Europe/Madrid' }).toMillis(),
+    duration_ms: 159000, disconnection_reason: 'user_hangup', transcript: 'User: busco piso en Benicasim',
+    call_analysis: { call_summary: 'Busca piso de alquiler de larga duracion en Benicasim para dos personas, con nomina y sin mascotas.',
+                     user_sentiment: 'Positive' },
+  };
+  const l = wa('llamada_preparar.js', inp([{ json: {} }]), nod({ Start: { llamada } }))[0].json;
+  ck('la llamada deja un recuerdo para Sara, como si lo hubiera hablado ella', l.guardar_memoria
+     && JSON.parse(l.memoria).type === 'ai'
+     && /la atendiste tú, Sara/.test(JSON.parse(l.memoria).content)
+     && /No le vuelvas a preguntar/.test(JSON.parse(l.memoria).content));
+  const corta = wa('llamada_preparar.js', inp([{ json: {} }]),
+                   nod({ Start: { llamada: { ...llamada, call_analysis: { call_summary: '' } } } }))[0].json;
+  ck('una llamada sin resumen no ensucia la memoria', corta.guardar_memoria === false);
+
+  const wl = JSON.parse(fs.readFileSync(B + 'workflows_wa/TEL_Llamada_al_panel.json', 'utf8'));
+  ck('[TEL] Llamada al panel guarda ese recuerdo en la memoria de Sara',
+     wl.nodes.some(n => n.name === 'LaLlamadaALaMemoriaDeSara')
+     && (wl.connections['LaLlamadaALaMemoriaDeSara'].main[0] || []).some(c => c.node === 'NotaEnEgo'));
+
+  // La cualificacion que recoge el telefono queda en la ficha de WhatsApp
+  const rm = tel('rm_componer.js', inp([{ json: { body: {
+    destinatario: 'Carmen', telefono: '600111222', nombre: 'Ana', tipo_llamada: 'lead_alquiler',
+    referencia: 'BN-1543-A', motivo: 'Quiere ver el piso', alquiler_personas: '2',
+    alquiler_ingresos: 'nomina fija', alquiler_mascotas: 'no facilitado',
+    alquiler_entrada: 'en noviembre', alquiler_duracion: 'todo el ano',
+  } } }]), nod({}))[0].json;
+  const cw = rm.cualificacion_wa;
+  ck('lo que contesta por telefono se guarda en su ficha de WhatsApp', cw.guardar
+     && cw.telefono_wa === '34600111222' && cw.q_personas === '2' && cw.q_entrada === 'en noviembre'
+     && cw.q_mascotas === 'no facilitado' && cw.asesora === 'Carmen' && cw.referencia === 'BN-1543-A');
+  const rmv = tel('rm_componer.js', inp([{ json: { body: {
+    destinatario: 'Laurence', telefono: '600111222', tipo_llamada: 'queja_problema', motivo: 'Una queja',
+  } } }]), nod({}))[0].json;
+  ck('una llamada que no es un lead de alquiler no toca la ficha', rmv.cualificacion_wa.guardar === false);
+
+  const wr = JSON.parse(fs.readFileSync(B + 'workflows/registrarMensaje.json', 'utf8'));
+  const sql = wr.nodes.find(n => n.name === 'CualificacionParaWhatsApp').parameters.query;
+  ck('registrarMensaje la guarda sin pisar lo que ya hubiera contestado por escrito',
+     /case when q_personas = '' then \$2 else q_personas end/.test(sql) && /not exists \(select 1 from upd\)/.test(sql));
+
+  // Y Sara lo ve en su contexto
+  const ctx = wa('asistente_contexto.js', inp([{ json: {} }]), nod({
+    JuntarMensajes: { telefono_e164: '+34600111222', telefono_wa: '34600111222', nombre: 'Ana', mensaje: 'hola', conversacion_id: 7, cuenta_id: 1 },
+    EntradaMensaje: { etiquetas: ['0-llamada_telefonica'] },
+    LeerFichaDelLead: { telefono_wa: '34600111222', referencia: '', portal: 'telefono', es_alquiler: true,
+                        q_personas: '2', q_ingresos: 'nomina fija', q_mascotas: 'no facilitado', q_entrada: 'en noviembre' },
+    LeerCartera: REAL, LeerDirecciones: [],
+  }), true)[0].json;
+  ck('Sara ve que vino del telefono y que ya no le quedan preguntas',
+     /ha llamado por telefono y le atendiste TU/.test(ctx.contexto)
+     && ctx.preguntas_pendientes.length === 0
+     && /no vuelvas a preguntar/.test(ctx.contexto), ctx.preguntas_pendientes.join(','));
+}
+
+// ===========================================================================
 console.log(fallos ? `\n${fallos} FALLOS` : '\nTodo correcto');
 process.exit(fallos ? 1 : 0);

@@ -161,6 +161,28 @@ const ESTADOS = [ETIQUETAS.bienvenida, ETIQUETAS.seguimiento, ETIQUETAS.en_proce
 const ETIQUETA_VENDEDOR = 'vendedor';               // el comprador tiene que vender una vivienda
 const ETIQUETA_LLAMADA  = '0-llamada_telefonica';   // la conversacion tiene llamadas del asistente telefonico
 
+// --- Enlaces que el telefono manda por WhatsApp -------------------------------
+// En una llamada NO se puede dictar una direccion web: se manda por WhatsApp con
+// la plantilla abierta. Los enlaces salen de wa_cartera, nunca del modelo.
+const ENLACES_TELEFONO = { max: 3 };
+const TEXTOS_ENLACES_TEL = {
+  es: { uno: 'te paso el enlace del inmueble del que hemos hablado por teléfono:',
+        varios: 'te paso los enlaces de los inmuebles de los que hemos hablado por teléfono:',
+        cierre_uno: ' ¿Quieres que te organicemos una visita?',
+        cierre_varios: ' ¿Quieres visitar alguno?',
+        por: 'por', al_mes: ' al mes' },
+  en: { uno: "here's the link to the property we talked about on the phone:",
+        varios: "here are the links to the properties we talked about on the phone:",
+        cierre_uno: ' Would you like us to arrange a viewing?',
+        cierre_varios: ' Would you like to visit any of them?',
+        por: 'for', al_mes: ' per month' },
+  fr: { uno: 'voici le lien du bien dont nous avons parlé au téléphone :',
+        varios: 'voici les liens des biens dont nous avons parlé au téléphone :',
+        cierre_uno: ' Souhaitez-vous que nous organisions une visite ?',
+        cierre_varios: ' Souhaitez-vous en visiter un ?',
+        por: 'à', al_mes: ' par mois' },
+};
+
 // --- El interruptor del bot (atributo "bot" del contacto, como en Blue) -------
 // Off: la IA se calla (se cambia a mano en el panel). On o sin valor ("Select
 // value"): la IA contesta. Con SOLO_CONTACTOS_CON_BOT = true solo contestaria a

@@ -60,9 +60,28 @@ const corto = [
   String(b.resumen_conversacion || '').trim(),
 ].filter(Boolean).join(' · ');
 
+// Lo que ha contestado el cliente por telefono se guarda tambien en su ficha de
+// WhatsApp (wa_leads): asi, si luego escribe, Sara NO le vuelve a preguntar lo
+// mismo. "no facilitado" tambien cuenta como contestado: ya se le pregunto.
+const q = (v) => String(v ?? '').trim().slice(0, 200);
+const cualificacionWa = {
+  guardar: esLeadAlquiler && cualificacion.length > 0,
+  // En WhatsApp el telefono va sin el '+' (34600111222)
+  telefono_wa: tel.digitos,
+  telefono_e164: tel.e164,
+  referencia: String(b.referencia || '').trim(),
+  nombre: nombre === 'Sin nombre' ? '' : nombre,
+  asesora: destinatario === 'Laurence' ? '' : destinatario,
+  q_personas: q(b.alquiler_personas),
+  q_ingresos: q(b.alquiler_ingresos),
+  q_mascotas: q(b.alquiler_mascotas),
+  q_entrada: q(b.alquiler_entrada),
+  q_duracion: q(b.alquiler_duracion),
+};
+
 return [{
   json: {
-    destinatario, para, asunto,
+    destinatario, para, asunto, cualificacion_wa: cualificacionWa,
     cuerpo: lineas.join('\n'),
     aviso: {
       accion: 'AVISO', destinatario, referencia: String(b.referencia || '').trim(), municipio: '',

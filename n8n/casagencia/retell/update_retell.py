@@ -173,6 +173,27 @@ def construir_tools(actuales):
         ["direccion"],
         "Estoy buscando ese inmueble por la direccion... Un momento"))
 
+    # --- NUEVA: mandarle los enlaces por WhatsApp ---------------------------
+    # En una llamada no se puede dictar una direccion web: se manda por WhatsApp.
+    out.append(tool_http(
+        "enviarPorWhatsApp", "tel-enviarporwhatsapp",
+        "Manda al movil del cliente, por WhatsApp, el enlace de uno o varios inmuebles de los que habeis "
+        "hablado en la llamada. USALA SIEMPRE que haya que darle la direccion de un anuncio, la ficha o "
+        "las fotos: en una llamada NUNCA se dice ni se deletrea una direccion web. Los enlaces los pone el "
+        "sistema a partir de la referencia; tu no los escribes ni te los inventas. Ofrecesela tu misma "
+        "despues de presentarle los inmuebles. Devuelve 'enviado' y 'mensaje_para_sara': solo dile al "
+        "cliente que se lo has mandado si 'enviado' es true.",
+        {"telefono": {"type": "string", "minLength": 6, "maxLength": 30, "description": TEL_DESC},
+         "nombre": {"type": "string", "maxLength": 80,
+                    "description": "Nombre de pila del cliente, para el saludo del WhatsApp. Si no lo sabes, dejalo vacio."},
+         "referencias": {"type": "string", "minLength": 3, "maxLength": 120,
+                         "description": "Las referencias internas de los inmuebles que le mandas, separadas por comas y "
+                                        "en el orden en que se las has presentado. Maximo 3. Ejemplo: BN-1543-V, CS-G-397-V."},
+         "idioma": {"type": "string", "enum": ["es", "en", "fr"],
+                    "description": "Idioma en el que estas hablando con el cliente."}},
+        ["telefono", "referencias", "idioma"],
+        "Te lo mando ahora mismo por WhatsApp... un momento"))
+
     # --- NUEVA: consultar cita por telefono ---------------------------------
     out.append(tool_http(
         "buscarCitaPorTelefono", "buscarcitaportelefono",

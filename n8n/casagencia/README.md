@@ -345,6 +345,35 @@ correos de cada llamada (el aviso va por WhatsApp). Sigue subiendo la grabación
 a Drive. Está todo en `build_workflows.py` (`--solo=` para desplegar solo uno). Cada llamada entra
 una sola vez (tabla `tel_llamadas_panel`).
 
+### El teléfono manda los enlaces por WhatsApp (`[TEL] EnviarPorWhatsApp`)
+
+En una llamada **no se dice ni se deletrea una dirección web**: está prohibido en
+el prompt de Retell. Cuando el cliente quiere ver el anuncio, las fotos o la
+ficha, Sara le ofrece mandárselo y ejecuta la herramienta `enviarPorWhatsApp`
+con las referencias (hasta tres).
+
+- Los enlaces salen de `wa_cartera`, **nunca del modelo**: si una referencia no
+  está en la cartera, ese inmueble no se manda y se le dice a Sara (que no puede
+  decirle al cliente que se lo ha mandado).
+- Se envía la **plantilla abierta** por Chatwoot, así que la conversación nace en
+  el panel y en la memoria de Sara, como cualquier otra.
+- La ficha de cada inmueble queda en `wa_leads` (portal `telefono`): cuando el
+  cliente conteste por WhatsApp, Sara ya tiene delante de qué se habló.
+
+### Lo que se habla por teléfono lo sabe Sara (WhatsApp)
+
+Es la misma Sara en los dos canales, así que no vuelve a preguntar lo que el
+cliente ya ha contestado por teléfono:
+
+- **El resumen de la llamada** entra en la memoria del agente
+  (`n8n_chat_histories`) al terminar la llamada, desde `[TEL] Llamada al panel`:
+  *"[Esta persona ha llamado por teléfono el martes 13 de octubre a las 11:22 y
+  la atendiste tú, Sara. Resumen de esa llamada]: …"*.
+- **Las respuestas de cualificación** que recoge el teléfono en los leads de
+  alquiler (personas, ingresos, mascotas, fecha de entrada y duración) se
+  guardan en su ficha de `wa_leads` desde `[TEL] registrarMensaje`. Solo rellenan
+  lo que esté vacío: nunca pisan una respuesta que ya diera por escrito.
+
 ### De dónde salen los leads (revisado el 1-10-2026)
 
 Buzón **formularioscasagencia@gmail.com** (credencial *Correo Formulario*),

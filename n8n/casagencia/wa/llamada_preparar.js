@@ -63,6 +63,14 @@ const nota = [
 // La transcripcion, para sacar el nombre del cliente (con un tope)
 const transcripcion = String(c.transcript ?? '').slice(0, 12000);
 
+// Lo hablado por telefono, a la MEMORIA de Sara (la de WhatsApp): es la misma
+// Sara y el mismo cliente, asi que si luego escribe por WhatsApp no puede
+// volver a preguntarle lo que ya le contesto por telefono.
+const cuando = inicio ? `el ${fechaLegible(inicio.toFormat('yyyy-MM-dd'), inicio.toFormat('HH:mm'))}` : 'hace un momento';
+const textoMemoria = `[Esta persona ${entrante ? 'ha llamado' : 'habló'} por teléfono ${cuando} y la atendiste tú, Sara. ` +
+  'Resumen de esa llamada]: ' + resumen +
+  ' · No le vuelvas a preguntar nada que ya te contara en la llamada.';
+
 return [{ json: {
   call_id: String(c.call_id || ''),
   telefono_e164: tel.e164,
@@ -83,6 +91,10 @@ return [{ json: {
   grabacion: String(c.recording_url || ''),
   transcripcion,
   hay_transcripcion: transcripcion.trim().length > 40,
+  // Sin resumen no hay nada que recordar (llamadas de dos segundos, buzon...)
+  guardar_memoria: resumen.length > 20,
+  memoria: JSON.stringify({ type: 'ai', content: textoMemoria, tool_calls: [], additional_kwargs: {},
+                            response_metadata: {}, invalid_tool_calls: [] }),
   // Aviso por WhatsApp (sustituye al correo de cada llamada) a la comercial de la
   // llamada y a Paco, si ha habido conversacion. Sin asesora: por la referencia
   // que diga el cliente o, si no, Laurence.

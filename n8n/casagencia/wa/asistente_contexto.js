@@ -65,7 +65,10 @@ const pendientes = lista.filter(([, , v]) => !hay(v));
 const lineas = [
   `- Cliente: ${hay(fila.nombre) ? fila.nombre : (d.nombre || 'sin nombre')}`,
   `- Telefono (ya lo tienes, no lo pidas): ${d.telefono_e164}`,
-  `- Como ha llegado: ${hay(fila.telefono_wa) ? 'solicitud de un portal (ya le mandamos la plantilla de bienvenida)' : 'ha escrito el directamente, sin solicitud previa'}`,
+  `- Como ha llegado: ${String(fila.portal ?? '') === 'telefono'
+      ? 'ha llamado por telefono y le atendiste TU (el resumen de la llamada esta en tu memoria): no le vuelvas a preguntar lo que ya te conto'
+      : hay(fila.telefono_wa) ? 'solicitud de un portal (ya le mandamos la plantilla de bienvenida)'
+      : 'ha escrito el directamente, sin solicitud previa'}`,
   `- Portal: ${val(fila.portal)}`,
   `- Referencia del inmueble que pidio: ${val(fila.referencia)}`,
   hay(fila.enlace) ? `- Enlace del anuncio: ${fila.enlace}` : '',

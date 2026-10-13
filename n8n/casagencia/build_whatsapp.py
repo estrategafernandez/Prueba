@@ -2047,6 +2047,11 @@ PROMPT_NOMBRE = (
     '{"nombre": "", "referencia": ""}. Si no lo dice, deja la cadena vacia. No inventes.')
 
 
+SQL_LLAMADA_A_MEMORIA = """insert into n8n_chat_histories (session_id, message)
+select $1, $2::jsonb where $3::boolean
+returning id;"""
+
+
 def wf_llamada_panel(ids):
     """Cada llamada del asistente telefonico, al panel de conversaciones."""
     l = "$('LeerLlamada').first().json"
@@ -2103,6 +2108,9 @@ def wf_llamada_panel(ids):
         pg_query("ApuntarConversacion", "update tel_llamadas_panel set conversacion_id = $2 where call_id = $1;",
                  "={{ [ %s.call_id, %s.conversacion_id ] }}" % (d, cv), [2860, 0], executeOnce=True,
                  onError="continueRegularOutput", alwaysOutputData=True),
+        pg_query("LaLlamadaALaMemoriaDeSara", SQL_LLAMADA_A_MEMORIA,
+                 "={{ [ %s.telefono_e164, %s.memoria, %s.guardar_memoria ] }}" % (l, l, l), [3080, -200],
+                 executeOnce=True, alwaysOutputData=True, onError="continueRegularOutput"),
         exec_sub("NotaEnEgo", ids.get("[EGO][SUB] NotaEnEgo", ""), "[EGO][SUB] NotaEnEgo",
                  {"telefono": "={{ %s.telefono_e164 }}" % d, "texto": "={{ %s.nota }}" % d, "tipo": "llamada"},
                  [3080, 0],
@@ -2129,7 +2137,9 @@ def wf_llamada_panel(ids):
              "Nota privada con el resumen, el tono y la **grabacion** (como audio: se escucha en el panel).\n4. Se asigna a la asesora de la "
              "llamada (si no la tiene ya una comercial).\n5. Aviso por WhatsApp a la asesora y a Paco (si ha "
              "durado al menos %d s); sustituye a los correos de cada llamada. Si en la llamada ya salio un recado o una "
-             "pre-reserva, no se repite.\n6. La misma nota, en el historial de eGO (contacto o lead del cliente; solo "
+             "pre-reserva, no se repite.\n6. El resumen, a la **memoria de Sara** (la de WhatsApp): si el "
+             "cliente escribe despues, no le vuelve a preguntar lo que ya conto por telefono.\n"
+             "7. La misma nota, en el historial de eGO (contacto o lead del cliente; solo "
              "con MODO_LEADS = 'real').\n\nCada llamada entra una sola vez (tabla tel_llamadas_panel)."
              % int(const("LLAMADA_AVISO_MIN_SEGUNDOS", "15")), [640, -520], 620, 360),
     ], conn(("Start", 0, "LeerLlamada", 0), ("LeerLlamada", 0, "CrearTablaSiFalta", 0),
@@ -2144,9 +2154,92 @@ def wf_llamada_panel(ids):
             ("NotaConGrabacion", 0, n_if, 0), ("NotaConGrabacion", 1, "NotaSinGrabacion", 0),
             ("NotaSinGrabacion", 0, n_if, 0),
             (n_if, 0, n_post, 0), (n_if, 1, "ApuntarConversacion", 0), (n_post, 0, "ApuntarConversacion", 0),
-            ("ApuntarConversacion", 0, "NotaEnEgo", 0), ("NotaEnEgo", 0, "¿Ya avisada en la llamada?", 0),
+            ("ApuntarConversacion", 0, "LaLlamadaALaMemoriaDeSara", 0),
+            ("LaLlamadaALaMemoriaDeSara", 0, "NotaEnEgo", 0),
+            ("NotaEnEgo", 0, "¿Ya avisada en la llamada?", 0),
             ("¿Ya avisada en la llamada?", 0, "¿Avisar a la comercial?", 0),
             ("¿Avisar a la comercial?", 0, "AvisoWhatsApp", 0)))
+
+
+# ===========================================================================
+# EL TELEFONO MANDA LOS ENLACES POR WHATSAPP
+# ===========================================================================
+# En una llamada NO se puede dictar una direccion web (ni deletrearla: es
+# ilegible y el cliente no la apunta). Sara ofrece mandarsela por WhatsApp y esta
+# herramienta lo hace, con la plantilla abierta y los enlaces REALES de
+# wa_cartera. Ademas deja la ficha del inmueble en wa_leads, asi que cuando el
+# cliente conteste por WhatsApp, Sara ya sabe de que se hablo por telefono.
+MAX_ENLACES_TEL = int((re.search(r"max:\s*(\d+)", const("ENLACES_TELEFONO", "")) or [0, 3])[1])
+
+SQL_FICHA_DEL_TELEFONO = """insert into wa_leads
+  (telefono_wa, telefono_e164, referencia, nombre, portal, operacion, es_alquiler,
+   asesora, enlace, plantilla, estado)
+values ($1,$2,$3,$4,'telefono',$5,$6,$7,$8,$9,'plantilla_enviada')
+on conflict (telefono_wa, referencia) do update
+   set nombre      = case when wa_leads.nombre = '' then excluded.nombre else wa_leads.nombre end,
+       enlace      = case when wa_leads.enlace = '' then excluded.enlace else wa_leads.enlace end,
+       operacion   = case when wa_leads.operacion = '' then excluded.operacion else wa_leads.operacion end,
+       asesora     = case when wa_leads.asesora = '' then excluded.asesora else wa_leads.asesora end,
+       es_alquiler = excluded.es_alquiler,
+       actualizado_en = now()
+returning id, referencia;"""
+
+# Las referencias se comparan sin guiones ni mayusculas: BN-1543-V = BN1543V
+SQL_ENLACES_CARTERA = """select ref, enlace, tipo_inmueble, municipio, zona, precio, tipo_transaccion
+  from wa_cartera
+ where regexp_replace(upper(ref), '[^A-Z0-9]', '', 'g') = any(string_to_array($1, ','));"""
+
+
+def wf_tel_enlaces(ids):
+    """La herramienta enviarPorWhatsApp del asistente telefonico."""
+    c = "$('ComponerMensaje').first().json"
+    f = "$json"
+    return wf("[TEL] EnviarPorWhatsApp", [
+        node("Webhook", "n8n-nodes-base.webhook", {
+            "httpMethod": "POST", "path": "tel-enviarporwhatsapp",
+            "responseMode": "responseNode", "options": {}}, [-40, 0], 2.1,
+            webhookId=str(uuid.uuid5(uuid.NAMESPACE_URL, "casagencia/tel/enviar-por-whatsapp"))),
+        code_node("LeerPeticion", code_wa("tel_enlaces_pedir.js"), [180, 0]),
+        pg_query("BuscarEnlaces", SQL_ENLACES_CARTERA, "={{ [ $json.refs_sql ] }}", [400, 0],
+                 executeOnce=True, alwaysOutputData=True, onError="continueRegularOutput"),
+        code_node("ComponerMensaje", code_wa("tel_enlaces_componer.js", cartera=True), [620, 0]),
+        if_node("¿Se puede mandar?", "={{ $json.enviar }}", "true", [840, 0]),
+        exec_sub("MandarPorWhatsApp", ids.get("[WA][SUB] EnviarPlantilla", ""), "[WA][SUB] EnviarPlantilla",
+                 {"telefono": "={{ %s.telefono_e164 }}" % c, "nombre": "={{ %s.nombre }}" % c,
+                  "plantilla": "={{ %s.plantilla }}" % c, "param1": "={{ %s.param1 }}" % c,
+                  "param2": "={{ %s.param2 }}" % c, "referencia": "={{ %s.referencia }}" % c,
+                  "operacion": "={{ %s.operacion }}" % c, "portal": "telefono", "email": "",
+                  "conversacion_id": 0},
+                 [1060, -80], {"conversacion_id": "number"}),
+        code_node("FilasDeLosInmuebles", code_wa("tel_enlaces_fichas.js"), [1280, -80]),
+        pg_query("GuardarFichas", SQL_FICHA_DEL_TELEFONO,
+                 "={{ [ %s.telefono_wa, %s.telefono_e164, %s.referencia, %s.nombre, %s.operacion, "
+                 "%s.es_alquiler, %s.asesora, %s.enlace, %s.plantilla ] }}"
+                 % ((f,) * 8 + ("$('ComponerMensaje').first().json",)), [1500, -80],
+                 alwaysOutputData=True, onError="continueRegularOutput"),
+        node("RespuestaOK", "n8n-nodes-base.respondToWebhook", {
+            "respondWith": "json", "responseBody": "={{ %s.respuesta }}" % c,
+            "options": {"responseCode": 200}}, [1720, -80], 1.5),
+        node("RespuestaNoEnviado", "n8n-nodes-base.respondToWebhook", {
+            "respondWith": "json", "responseBody": "={{ %s.respuesta }}" % c,
+            "options": {"responseCode": 200}}, [1060, 160], 1.5),
+        nota("Nota", "## Los enlaces, por WhatsApp\nEn una llamada no se puede dictar una direccion web. "
+             "Sara (telefono) ofrece mandarla y llama a esta herramienta con las referencias de los "
+             "inmuebles de los que han hablado.\n\n1. Los enlaces salen de **wa_cartera**, nunca del "
+             "modelo: una direccion inventada no se manda.\n2. Se envia la **plantilla abierta** por "
+             "Chatwoot (hasta %d inmuebles), asi que la conversacion nace en el panel y en la memoria "
+             "de Sara.\n3. La ficha de cada inmueble queda en **wa_leads**: cuando el cliente conteste "
+             "por WhatsApp, Sara ya sabe de que se hablo por telefono.\n\n`POST /webhook/"
+             "tel-enviarporwhatsapp` con `{ telefono, nombre, referencias, idioma }`."
+             % MAX_ENLACES_TEL,
+             [400, -400], 600, 330),
+    ], conn(("Webhook", 0, "LeerPeticion", 0), ("LeerPeticion", 0, "BuscarEnlaces", 0),
+            ("BuscarEnlaces", 0, "ComponerMensaje", 0), ("ComponerMensaje", 0, "¿Se puede mandar?", 0),
+            ("¿Se puede mandar?", 0, "MandarPorWhatsApp", 0),
+            ("¿Se puede mandar?", 1, "RespuestaNoEnviado", 0),
+            ("MandarPorWhatsApp", 0, "FilasDeLosInmuebles", 0),
+            ("FilasDeLosInmuebles", 0, "GuardarFichas", 0),
+            ("GuardarFichas", 0, "RespuestaOK", 0)))
 
 
 # El unico cambio en el telefono: al terminar cada llamada, [TEL]
@@ -2711,6 +2804,7 @@ ORDEN = [
     "[WA][SUB] RecordatorioCliente",
     "[WA][SUB] LeadDeLaWeb",
     "[TEL] Llamada al panel",
+    "[TEL] EnviarPorWhatsApp",
     "[WA] 0 · Esquema de base de datos",
     "[WA] 1 · Leads de la web (correo)",
     "[WA] 2 · Asistente de WhatsApp",
@@ -2760,6 +2854,7 @@ def construir(ids):
         "[WA][SUB] RecordatorioCliente": wf_recordatorio_cliente_sub(ids),
         "[WA][SUB] LeadDeLaWeb": wf_lead_web(ids),
         "[TEL] Llamada al panel": wf_llamada_panel(ids),
+        "[TEL] EnviarPorWhatsApp": wf_tel_enlaces(ids),
         "[WA] 0 · Esquema de base de datos": wf_esquema(),
         "[WA] 1 · Leads de la web (correo)": wf_leads(ids),
         "[WA] 2 · Asistente de WhatsApp": wf_asistente(ids),
