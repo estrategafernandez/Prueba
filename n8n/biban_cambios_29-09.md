@@ -237,3 +237,9 @@ reciben bienvenida (05/10: +34622052160 ref 1202 y 626287561 ref 1203, ambas de 
 Prompt de Instagram: en venta, primero "¿es para vivir o como inversión?" (va en el mensaje de apertura) y después
 "¿necesitáis vender alguna propiedad para poder comprar?" (si dice que sí, `Etiquetar`). Ajustados también la regla
 especial de Rama B y el orden de los campos del resumen del aviso. Solicitudes de Mobilia sin cambios.
+
+## 14/10 — Zona de la vivienda que vende (Instagram, venta)
+
+Si responde que necesita vender (o lo menciona por su cuenta): tras `Etiquetar`, una sola pregunta sutil sobre en qué
+zona (o dirección) tiene esa vivienda; sin insistir ni reformular. Responda o no, sigue con el flujo normal. La zona
+pasa al resumen del aviso ("Necesita vender: sí (zona …)").
