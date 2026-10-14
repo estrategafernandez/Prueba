@@ -345,6 +345,37 @@ correos de cada llamada (el aviso va por WhatsApp). Sigue subiendo la grabación
 a Drive. Está todo en `build_workflows.py` (`--solo=` para desplegar solo uno). Cada llamada entra
 una sola vez (tabla `tel_llamadas_panel`).
 
+### Vacaciones: las visitas las coge quien sustituye
+
+`AUSENCIAS`, en `lib/casagencia_comun.js` (y la misma lista en `wa/config.js`).
+Mientras una asesora no está, **sus** visitas las hace la otra: la cita se agenda
+en la agenda de la sustituta, **con su horario** (ojo: Gisela no abre los
+sábados) y el aviso le llega a ella. Es por **fecha de la visita**, no por el día
+en que se pide, así que una llamada de hoy para dentro de dos semanas se agenda
+con quien vaya a estar ese día.
+
+El evento del calendario y el aviso dicen de quién es el inmueble ("*Inmueble de
+Carmen; lo lleva Gisela mientras está de vacaciones*"), y Sara lo sabe por su
+contexto, así que nombra a la correcta al hablar con el cliente.
+
+**Hay que quitarlo de la lista cuando vuelva.**
+
+### Quién se queda la llamada (revisado el 14-10-2026)
+
+Las líneas de los portales están desviadas por el **móvil de una de las
+comerciales**, pero las comparten las dos. Por eso, al asignar la conversación de
+una llamada:
+
+1. Si el cliente marcó el **móvil de una comercial**, la conversación es suya.
+2. Si no (portal, oficina, número general), manda el **inmueble** del que han
+   hablado (la referencia que saca OpenAI de la transcripción).
+3. Si tampoco hay inmueble, **no se asigna a nadie**: ya la asignará bien el lead
+   del portal cuando llegue su correo, o la coge quien la atienda.
+
+Antes se miraba toda la cadena de desvíos, así que *todas* las llamadas de
+Idealista acababan en Carmen y las de Fotocasa en Gisela, por el teléfono por el
+que pasaban. De 60 llamadas reales, 21 estaban mal repartidas.
+
 ### Las tres preguntas de compra, también por teléfono (14-10-2026)
 
 Antes de mirar la agenda para una visita de VENTA, Sara pregunta por teléfono lo

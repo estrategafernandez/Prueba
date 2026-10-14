@@ -74,6 +74,15 @@ const lineas = [
   hay(fila.enlace) ? `- Enlace del anuncio: ${fila.enlace}` : '',
   `- Operacion: ${esAlq ? 'ALQUILER' : (hay(fila.operacion) ? 'COMPRA' : 'no lo sabemos')}`,
   `- Comercial que le corresponde: ${asesora}`,
+  (() => {
+    // Si la comercial de este inmueble esta de vacaciones, las visitas de esos
+    // dias las hace la que la sustituye: Sara tiene que nombrar a la correcta.
+    const a = (typeof AUSENCIAS !== 'undefined' ? AUSENCIAS : [])
+      .find(x => x.asesora === asesora && x.hasta >= DateTime.now().setZone(ZONA).toFormat('yyyy-MM-dd'));
+    return a ? `- OJO: ${a.asesora} esta de ${a.motivo} del ${fechaLegible(a.desde)} al ${fechaLegible(a.hasta)}. `
+      + `Las visitas de esos dias las hace ${a.sustituye}: si agendas en esas fechas, dile al cliente que le `
+      + `llamara ${a.sustituye}, no ${a.asesora}. Fuera de esas fechas, ${a.asesora} como siempre.` : '';
+  })(),
   `- Estado de la conversacion: ${(e.etiquetas || []).join(', ') || 'sin etiqueta'}`,
   contestadas.length
     ? `- Ya ha contestado: ${contestadas.map(([, k, v]) => `${k} = ${v}`).join('; ')}`

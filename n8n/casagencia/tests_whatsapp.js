@@ -404,8 +404,16 @@ ck('con 1-seguimiento_1, al contestar se marca en proceso', est(['1-seguimiento_
 // ===========================================================================
 console.log('\n== 9. Agenda: guardia de WhatsApp + codigo del telefono ==');
 const FESTIVOS = Function('DateTime', LIB + '; return FESTIVOS;')(DateTime);
+const AUSENCIAS_T = Function('DateTime', LIB + '; return AUSENCIAS;')(DateTime);
+// Un dia normal: ni festivo ni con una asesora de vacaciones (eso tiene su
+// propio bloque mas abajo). Si no, estos tests fallarian cada vez que alguien
+// se fuera de vacaciones, que es justo cuando NO queremos ruido.
+const normal = (d) => {
+  const f = d.toFormat('yyyy-MM-dd');
+  return !FESTIVOS.TODOS.includes(f) && !AUSENCIAS_T.some(a => f >= a.desde && f <= a.hasta);
+};
 let dia = DateTime.now().setZone('Europe/Madrid').plus({ days: 1 });
-while (dia.weekday !== 2 || FESTIVOS.TODOS.includes(dia.toFormat('yyyy-MM-dd'))) dia = dia.plus({ days: 1 });
+while (dia.weekday !== 2 || !normal(dia)) dia = dia.plus({ days: 1 });
 const MARTES = dia.toFormat('yyyy-MM-dd');
 const guardia = (j) => wa('guardia_alquiler.js', inp([{ json: j }]))[0].json;
 
@@ -753,7 +761,7 @@ console.log('\n== 15. Cada referencia: su asesora, su calendario y su horario ==
 const resolver = Function('DateTime', CFG + '; return resolverAsesora;')(DateTime);
 const CAL = { Carmen: 'carmen@casagencia.com', Gisela: 'gisela@casagencia.com' };
 let sabado = DateTime.now().setZone('Europe/Madrid').plus({ days: 1 });
-while (sabado.weekday !== 6 || FESTIVOS.TODOS.includes(sabado.toFormat('yyyy-MM-dd'))) sabado = sabado.plus({ days: 1 });
+while (sabado.weekday !== 6 || !normal(sabado)) sabado = sabado.plus({ days: 1 });
 const SABADO = sabado.toFormat('yyyy-MM-dd');
 const malas = [];
 const huecoA = (ref, fecha, hora) => {
@@ -852,8 +860,8 @@ const leer = (c) => wa('llamada_preparar.js', inp([{}]), nod({ Start: { llamada:
 r = leer(llamada);
 ck('nota como en el panel de las otras agencias', r.nota ===
    'LLAMADA DE LA IA — Colgó la IA\nNos llamó · +34600000002 · 1/10 a las 16:51 · 2 min 39 s\n\n'
-   + 'Busco un piso de alquiler para dos personas.\n\nTono del cliente: positivo\nAsesora: Carmen', JSON.stringify(r.nota));
-ck('asignada a Carmen y con aviso por WhatsApp', r.agente_id === 5 && r.avisar === true && r.asesora === 'Carmen');
+   + 'Busco un piso de alquiler para dos personas.\n\nTono del cliente: positivo', JSON.stringify(r.nota));
+ck('con aviso por WhatsApp', r.avisar === true && r.asesora === 'Carmen');
 ck('con la grabacion', r.grabacion.endsWith('rec.wav'));
 {
   // La linea por la que entra: cabecera Diversion ("general <- comercial <- portal"), como la manda Retell
@@ -862,10 +870,13 @@ ck('con la grabacion', r.grabacion.endsWith('rec.wav'));
   const conLinea = (diversion, asesoraAnalisis) => leer({ ...llamada, custom_sip_headers: { diversion },
     call_analysis: { ...llamada.call_analysis, custom_analysis_data: { asesora: asesoraAnalisis } } });
   let x = conLinea(sipDe('34864893794', movil('Gisela')), 'Carmen');
-  ck('llamada por el movil de Gisela: Gisela (aunque el analisis diga Carmen)', x.asesora === 'Gisela' && x.agente_id === 4
-     && x.linea_asesora === 'Gisela' && /Asesora: Gisela \(entró por su teléfono\)/.test(x.nota), x.asesora);
+  ck('llamada al movil de Gisela: Gisela (aunque el analisis diga Carmen)',
+     x.asesora === 'Gisela' && x.linea_asesora === 'Gisela', x.asesora);
+  // El numero del portal esta desviado por el movil de una comercial, pero lo
+  // comparten las dos: NO es "su linea" (fallo real del 14-10-2026)
   x = conLinea(sipDe('34864893794', movil('Carmen'), '34864870199'), 'Laurence');
-  ck('por un portal desviado al movil de Carmen: Carmen', x.asesora === 'Carmen' && x.agente_id === 5 && x.linea_asesora === 'Carmen', x.asesora);
+  ck('por un portal desviado al movil de Carmen: NO es de Carmen',
+     x.linea_asesora === '' && x.linea === 'Idealista', `${x.linea_asesora} / ${x.linea}`);
   x = leer({ ...llamada, retell_llm_dynamic_variables: { diversion: sipDe('34864893794', movil('Gisela')) } });
   ck('tambien si la cabecera llega en las variables de la llamada', x.asesora === 'Gisela');
   x = conLinea(sipDe('34864893794', '34964300986'), 'Carmen');
@@ -1640,6 +1651,86 @@ console.log('\n== Como se presenta Sara ==');
   ck('y pide que IA se diga rapido, no deletreado', /IA se dice rápido/.test(prompt));
   const sal = fs.readFileSync(B + 'nodes/sal_datos.js', 'utf8');
   ck('ningun saludo dice "la IA"', !/\bla IA\b/.test(sal.split('\n').filter(l => /saludo:|const CORTO/.test(l)).join('\n')));
+}
+
+// ===========================================================================
+console.log('\n== Quien se queda la llamada (la linea del portal NO manda) ==');
+{
+  const via = (n) => `<sip:+34${n}@10.233.15.132;user=phone>;reason=unknown;counter=1`;
+  const TW = '<sip:+34864893794@twilio.com>;reason=unconditional';
+  const llamar = (diversion, analisis, extraido) => {
+    const llamada = { call_id: 'c' + Math.random(), from_number: '+34642683504', direction: 'inbound',
+      start_timestamp: Date.now() - 600000, duration_ms: 90000, disconnection_reason: 'user_hangup',
+      custom_sip_headers: { diversion },
+      call_analysis: { call_summary: 'Pregunta por un piso.', user_sentiment: 'Neutral',
+                       custom_analysis_data: { asesora: analisis } } };
+    const l = wa('llamada_preparar.js', inp([{ json: {} }]), nod({ Start: { llamada } }))[0].json;
+    return wa('llamada_nombre.js', inp([{ json: {} }]), nod({ LeerLlamada: l,
+      NombreEnLaTranscripcion: { choices: [{ message: { content: JSON.stringify(extraido || {}) } }] } }))[0].json;
+  };
+  // El caso real del 14-10-2026: marco Idealista, que esta desviado por el movil
+  // de Carmen, pero el piso es de Castellon. Antes se le asignaba a Carmen.
+  const erika = llamar([TW, via('654907386'), via('864870199')].join(', '), 'Laurence',
+                       { nombre: 'Erika', referencia: 'CS-1449-A' });
+  ck('llamada de Idealista por un piso de Castellon -> Gisela, no Carmen',
+     erika.asesora === 'Gisela' && erika.agente_id === 4 && erika.linea_asesora === '',
+     `${erika.asesora} / agente ${erika.agente_id}`);
+  ck('y la nota dice por donde entro y por que es suya',
+     /Entró por: Idealista/.test(erika.nota) && /Asesora: Gisela \(por el inmueble CS-1449-A\)/.test(erika.nota));
+  // Si marca el movil de la comercial, sigue siendo suya aunque el piso sea del otro
+  const propio = llamar([TW, via('654907386')].join(', '), '', { referencia: 'CS-1449-A' });
+  ck('si marca el movil de Carmen, la llamada es de Carmen', propio.asesora === 'Carmen'
+     && propio.linea_asesora === 'Carmen' && /marcó su teléfono/.test(propio.nota));
+  // Sin inmueble y sin movil propio: NO se asigna (ya lo hara el lead del portal)
+  const dudosa = llamar([TW, via('690027772'), via('936060117')].join(', '), 'Laurence', {});
+  ck('portal sin inmueble: no se asigna a nadie a dedo', dudosa.agente_id === 0
+     && /sin confirmar/.test(dudosa.nota), `agente ${dudosa.agente_id}`);
+  const wl = JSON.parse(fs.readFileSync(B + 'workflows_wa/TEL_Llamada_al_panel.json', 'utf8'));
+  ck('[TEL] Llamada al panel asigna con lo que decide DatosDelCliente',
+     /DatosDelCliente'\)\.first\(\)\.json\.agente_id/.test(
+       JSON.stringify(wl.nodes.find(n => n.name === '¿AsignarAsesora?').parameters)));
+}
+
+// ===========================================================================
+console.log('\n== Vacaciones: las visitas las coge quien sustituye ==');
+{
+  const { AUSENCIAS, quienAtiende } = Function('DateTime', CFG + '; return { AUSENCIAS, quienAtiende };')(DateTime);
+  const delTel = Function('DateTime', LIB + '; return { AUSENCIAS, quienAtiende };')(DateTime);
+  ck('la lista es la misma en el telefono y en WhatsApp',
+     JSON.stringify(AUSENCIAS) === JSON.stringify(delTel.AUSENCIAS));
+  const prep = (fecha, ref) => tel('bd_preparar.js', inp([{ json: { body:
+    { referencia: ref || 'BN-1465-V', telefono: '600111222', fecha, hora: '11:00' } } }]), nod({}))[0].json;
+  ck('el 15 (antes de irse) la visita es de Carmen', prep('2026-10-15').asesora === 'Carmen');
+  ck('del 16 al 26 las visitas de Carmen las hace Gisela, en SU agenda',
+     ['2026-10-16', '2026-10-20', '2026-10-24', '2026-10-26'].every(f => {
+       const p = prep(f);
+       return p.asesora === 'Gisela' && p.calendario === 'gisela@casagencia.com'
+         && p.sustituida && p.asesora_titular === 'Carmen';
+     }));
+  ck('el 27 vuelve a ser de Carmen', prep('2026-10-27').asesora === 'Carmen'
+     && prep('2026-10-27').sustituida === false);
+  ck('los inmuebles de Gisela no cambian', prep('2026-10-20', 'CS-1449-A').asesora === 'Gisela'
+     && prep('2026-10-20', 'CS-1449-A').sustituida === false);
+  // Con Gisela cubriendo no hay sabados (ella no abre) y manda SU horario
+  const { huecosDelDia } = Function('DateTime', LIB + '; return { huecosDelDia };')(DateTime);
+  const AHORA = DateTime.fromISO('2026-10-14T10:00', { zone: 'Europe/Madrid' });
+  ck('el sabado 17 no hay visitas (Gisela no abre sabados)',
+     huecosDelDia('2026-10-17', 'Gisela', 'BN', [], AHORA).length === 0);
+  ck('pero el viernes 16 si, con el horario de Gisela',
+     huecosDelDia('2026-10-16', 'Gisela', 'BN', [], AHORA).length > 0);
+  // Lo que ve la asesora en el evento y en el aviso
+  const v = tel('cc_validar.js', inp([]), nod({ PrepararDatos: prep('2026-10-20') }))[0].json;
+  ck('el evento del calendario dice que cubre a Carmen',
+     /Inmueble de Carmen; lo lleva Gisela mientras esta de vacaciones/.test(v.descripcion), v.descripcion);
+  // Y Sara, por WhatsApp, nombra a la correcta
+  const ctx = wa('asistente_contexto.js', inp([{ json: {} }]), nod({
+    JuntarMensajes: { telefono_e164: '+34600111222', telefono_wa: '34600111222', nombre: 'Ana', mensaje: 'hola', conversacion_id: 7, cuenta_id: 1 },
+    EntradaMensaje: { etiquetas: [] },
+    LeerFichaDelLead: { telefono_wa: '34600111222', referencia: 'BN-1465-V', portal: 'Idealista', operacion: 'venta', es_alquiler: false },
+    LeerCartera: REAL, LeerDirecciones: [],
+  }), true)[0].json;
+  ck('Sara sabe que esos dias le llamara Gisela',
+     /Carmen esta de vacaciones/.test(ctx.contexto) && /dile al cliente que le llamara Gisela/.test(ctx.contexto));
 }
 
 // ===========================================================================

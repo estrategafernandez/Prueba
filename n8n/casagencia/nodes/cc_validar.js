@@ -61,8 +61,9 @@ return [{
       `Referencia: ${d.referencia}`,
       `Operacion: ${d.tipo_transaccion}`,
       `Asesora: ${d.asesora}`,
+      d.sustituida ? `(Inmueble de ${d.asesora_titular}; lo lleva ${d.asesora} mientras esta de ${d.motivo_ausencia || 'ausencia'})` : '',
       '',
-      'PRE-RESERVA creada por Sara (IA). Pendiente de confirmar con el cliente.'
+      'PRE-RESERVA creada por Sara, IA. Pendiente de confirmar con el cliente.'
     ].join('\n')
   }
 }];

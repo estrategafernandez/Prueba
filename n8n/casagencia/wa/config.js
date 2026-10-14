@@ -67,6 +67,17 @@ const EQUIPO = {
   Laurence: { movil: '34618724192', email: 'laurence@casagencia.com' },
 };
 // La direccion: recibe TODOS los avisos por WhatsApp, ademas de la comercial.
+// Los numeros a los que llama la gente. OJO: los de los portales estan
+// desviados por el movil de UNA de las comerciales, pero los comparten las dos:
+// que una llamada de Idealista pase por el telefono de Carmen no la hace suya.
+// Solo es "su linea" si el cliente marco el movil de la comercial.
+const LINEAS_ENTRADA = {
+  '654907386': 'Carmen', '690027772': 'Gisela', '618724192': 'Laurence',
+  '964300986': 'oficina de Benicassim', '964742549': 'oficina de Castellón',
+  '864893794': 'número general',
+  '864870199': 'Idealista', '936060117': 'Fotocasa', '864870288': 'un portal',
+};
+
 const DIRECCION = { nombre: 'Paco', movil: '34662052387' };
 
 // --- WhatsApp de la IA (para enlaces wa.me) -------------------------------------
@@ -254,6 +265,34 @@ function normalizarTelefono(raw) {
     nacional: s.startsWith('34') ? s.slice(2) : s,
     valido: s.length >= 8 && s.length <= 15,
   };
+}
+
+// --- Vacaciones y ausencias ---------------------------------------------------
+// Mientras una asesora no esta, SUS visitas las hace la otra: la cita se agenda
+// en la agenda de la sustituta, con SU horario (ojo: Gisela no abre los
+// sabados), y el aviso le llega a ella. Es por FECHA DE LA VISITA, no por el dia
+// en que se pide: una llamada de hoy para dentro de dos semanas se agenda con
+// quien vaya a estar ese dia.
+// RELLENAR cuando una se vaya de vacaciones, y quitarlo cuando vuelva.
+const AUSENCIAS = [
+  // Carmen, vacaciones: del viernes 16 al domingo 25 de octubre de 2026.
+  // Se incluye el lunes 26 (vuelve) como margen, que lo pidio Paco: ella tiene
+  // los lunes por la manana bloqueados y asi no se le cuela una visita temprana.
+  { asesora: 'Carmen', sustituye: 'Gisela', motivo: 'vacaciones',
+    desde: '2026-10-16', hasta: '2026-10-26' },
+];
+
+// Quien atiende de verdad a esa asesora en esa fecha ('yyyy-MM-dd').
+function quienAtiende(asesora, fecha) {
+  const f = String(fecha ?? '');
+  const a = AUSENCIAS.find(x => x.asesora === asesora && f >= x.desde && f <= x.hasta);
+  return a && a.sustituye ? a.sustituye : asesora;
+}
+
+// La ausencia que aplica (para poder explicarlo en los avisos), o null.
+function ausenciaDe(asesora, fecha) {
+  const f = String(fecha ?? '');
+  return AUSENCIAS.find(x => x.asesora === asesora && f >= x.desde && f <= x.hasta) || null;
 }
 
 const sinAcentos = (s) => String(s ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();

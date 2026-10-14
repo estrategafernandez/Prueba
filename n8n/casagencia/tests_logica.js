@@ -18,11 +18,15 @@ const FESTIVOS = Function('DateTime', LIB + '; return FESTIVOS;')(DateTime);
 const { esFestivo, huecosDelDia } = Function('DateTime', LIB + '; return { esFestivo, huecosDelDia };')(DateTime);
 const HOY = DateTime.now().setZone('Europe/Madrid').startOf('day');
 const AYER = HOY.minus({ days: 1 }).toFormat('yyyy-MM-dd');
+const AUSENCIAS = Function('DateTime', LIB + '; return AUSENCIAS;')(DateTime);
 function proximo(diaSemana) {           // 4 = jueves, 6 = sabado, 7 = domingo
   let d = HOY.plus({ days: 1 });
-  for (let i = 0; i < 40; i++) {
+  for (let i = 0; i < 60; i++) {
     const f = d.toFormat('yyyy-MM-dd');
-    if (d.weekday === diaSemana && !FESTIVOS.TODOS.includes(f)) return f;
+    // Ni festivo ni con una asesora de vacaciones: esos dias los cubre la otra,
+    // con SU horario, y eso se prueba en su propio bloque (tests_whatsapp.js).
+    if (d.weekday === diaSemana && !FESTIVOS.TODOS.includes(f)
+        && !AUSENCIAS.some(a => f >= a.desde && f <= a.hasta)) return f;
     d = d.plus({ days: 1 });
   }
   throw new Error('no encuentro un ' + diaSemana + ' libre');

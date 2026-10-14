@@ -70,6 +70,34 @@ const CALENDARIO_POR_ASESORA = {
 };
 const CALENDARIO_POR_DEFECTO = 'gisela@casagencia.com'; // solo para que el nodo no reviente
 
+// --- Vacaciones y ausencias ---------------------------------------------------
+// Mientras una asesora no esta, SUS visitas las hace la otra: la cita se agenda
+// en la agenda de la sustituta, con SU horario (ojo: Gisela no abre los
+// sabados), y el aviso le llega a ella. Es por FECHA DE LA VISITA, no por el dia
+// en que se pide: una llamada de hoy para dentro de dos semanas se agenda con
+// quien vaya a estar ese dia.
+// RELLENAR cuando una se vaya de vacaciones, y quitarlo cuando vuelva.
+const AUSENCIAS = [
+  // Carmen, vacaciones: del viernes 16 al domingo 25 de octubre de 2026.
+  // Se incluye el lunes 26 (vuelve) como margen, que lo pidio Paco: ella tiene
+  // los lunes por la manana bloqueados y asi no se le cuela una visita temprana.
+  { asesora: 'Carmen', sustituye: 'Gisela', motivo: 'vacaciones',
+    desde: '2026-10-16', hasta: '2026-10-26' },
+];
+
+// Quien atiende de verdad a esa asesora en esa fecha ('yyyy-MM-dd').
+function quienAtiende(asesora, fecha) {
+  const f = String(fecha ?? '');
+  const a = AUSENCIAS.find(x => x.asesora === asesora && f >= x.desde && f <= x.hasta);
+  return a && a.sustituye ? a.sustituye : asesora;
+}
+
+// La ausencia que aplica (para poder explicarlo en los avisos), o null.
+function ausenciaDe(asesora, fecha) {
+  const f = String(fecha ?? '');
+  return AUSENCIAS.find(x => x.asesora === asesora && f >= x.desde && f <= x.hasta) || null;
+}
+
 // --- Titulos de eventos de dia completo que SI bloquean el dia (ARREGLO #8) --
 const RE_DIA_BLOQUEANTE = /vacacion|vacanc|baja|festiv|cerrad|ausent|no disponible|libranza|asuntos propios/i;
 
@@ -100,12 +128,19 @@ function prefijoDeReferencia(ref) {
   return m ? m[0] : '';
 }
 
-function resolverAsesora(ref) {
+// Con `fecha` ('yyyy-MM-dd'), si la asesora de la zona esta de vacaciones ese
+// dia, devuelve a la que la sustituye (y SU calendario y SU horario).
+function resolverAsesora(ref, fecha) {
   const prefijo = prefijoDeReferencia(ref);
-  const asesora = ASESORA_POR_PREFIJO[prefijo] || null;
+  const deLaZona = ASESORA_POR_PREFIJO[prefijo] || null;
+  const asesora = (deLaZona && fecha) ? quienAtiende(deLaZona, fecha) : deLaZona;
   return {
     prefijo,
     asesora,
+    // La de la zona, aunque hoy la sustituya otra (para decir de quien es)
+    titular: deLaZona,
+    sustituida: !!(deLaZona && asesora && asesora !== deLaZona),
+    ausencia: deLaZona && fecha ? ausenciaDe(deLaZona, fecha) : null,
     conocida: !!asesora,
     calendario: asesora ? CALENDARIO_POR_ASESORA[asesora] : CALENDARIO_POR_DEFECTO
   };

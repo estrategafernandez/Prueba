@@ -191,7 +191,8 @@ def wf_confirmar(orig):
                 "cliente_nombre": "={{ %s.nombre }}" % v, "cliente_telefono": "={{ %s.telefono_e164 }}" % v,
                 "cita": "={{ %s.dia_texto + ' a las ' + %s.hora }}" % (v, v),
                 "resumen": "={{ 'Pre-reservada por telefono (' + (%s.tipo_transaccion || 'compra') + '). Falta "
-                           "confirmarla con el cliente.' }}" % v,
+                           "confirmarla con el cliente.' + (%s.sustituida ? ' Es un inmueble de ' + "
+                           "%s.asesora_titular + ', que esta de ' + (%s.motivo_ausencia || 'ausencia') + '.' : '') }}" % (v, v, v, v),
                 "detalle": "={{ 'Pre-reservada por telefono por Sara, IA. Falta confirmarla con el cliente.'"
                            " + (%s.cualificacion_texto ? '\\n\\nCUALIFICACION DE LA COMPRA\\n' + "
                            "%s.cualificacion_texto.split(' · ').join('\\n') : '') }}" % (

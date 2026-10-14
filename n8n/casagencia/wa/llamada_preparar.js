@@ -33,17 +33,27 @@ const inicio = c.start_timestamp ? DateTime.fromMillis(Number(c.start_timestamp)
 const seg = Math.round(Number(c.duration_ms || 0) / 1000);
 const duracion = seg >= 60 ? `${Math.floor(seg / 60)} min ${seg % 60} s` : `${seg} s`;
 // La comercial: la de la LINEA por la que ha entrado la llamada. La cabecera
-// Diversion lista los desvios del mas reciente al original ("general <- Gisela
-// <- Idealista"): si en la cadena esta el movil de una comercial, la llamada ha
-// entrado por su telefono y es suya. Solo si no (oficina, numero general), la
-// que dice el analisis de Retell, que a veces se equivoca.
+// Diversion lista los desvios del MAS RECIENTE al ORIGINAL, asi que el ULTIMO
+// de la cadena es el numero que marco el cliente (igual que en el saludo,
+// nodes/sal_datos.js):
+//   "general <- Carmen <- Idealista" = marco el numero de IDEALISTA, que esta
+//   desviado por el movil de Carmen.
+// Por eso solo es "su linea" si marco el movil de la comercial. Los numeros de
+// los portales estan desviados por el movil de una de ellas, pero los comparten
+// las dos: una llamada de Idealista por un piso de Castellon no es de Carmen
+// por pasar por su telefono (fallo real del 14-10-2026, conversacion de Erika).
 const sip = c.custom_sip_headers || {};
 const variables = c.retell_llm_dynamic_variables || {};
 const cadena = [...String(sip.diversion ?? variables.diversion ?? '').matchAll(/sip:\+?(\d+)@/g)]
   .map(m => m[1].replace(/^34(?=\d{9}$)/, ''));
+const marcado = cadena.length ? cadena[cadena.length - 1] : '';
 const porMovil = Object.fromEntries(Object.entries(EQUIPO).map(([n, e]) => [String(e.movil).replace(/^34(?=\d{9}$)/, ''), n]));
-const deLaLinea = cadena.map(n => porMovil[n]).find(Boolean) || '';
+const deLaLinea = porMovil[marcado] || '';
+// Por donde ha entrado, para la nota ("entro por Idealista")
+const porDonde = LINEAS_ENTRADA[marcado] || '';
 const asesoraLlamada = String(a.custom_analysis_data?.asesora ?? '').trim();
+// La asesora definitiva se decide en DatosDelCliente, que ya sabe de que
+// inmueble hablaron: la referencia manda sobre lo que diga el analisis.
 const asesora = deLaLinea || (EQUIPO[asesoraLlamada] ? asesoraLlamada : '');
 const resumen = String(a.call_summary ?? '').trim();
 const tono = TONO[a.user_sentiment] || '';
@@ -57,7 +67,6 @@ const nota = [
   resumen || 'Sin resumen de la llamada.',
   '',
   tono ? `Tono del cliente: ${tono}` : '',
-  asesora ? `Asesora: ${asesora}${deLaLinea ? ' (entró por su teléfono)' : ''}` : '',
 ].join('\n').replace(/\n{3,}/g, '\n\n').trim();
 
 // La transcripcion, para sacar el nombre del cliente (con un tope)
@@ -81,9 +90,12 @@ return [{ json: {
   // Desde cuando mirar si ya salio un aviso en esta llamada (recado, pre-reserva)
   inicio_iso: (inicio || DateTime.now().setZone(ZONA).minus({ minutes: 30 })).toUTC().toISO(),
   asesora,
-  // Entro por el movil de esta comercial: la conversacion es suya aunque la
-  // tuviera la otra
+  // Marco el movil de esta comercial: la conversacion es suya aunque la tuviera
+  // la otra. Vacio si entro por un portal, la oficina o el numero general.
   linea_asesora: deLaLinea,
+  // El numero que marco y, si lo conocemos, que linea es (Idealista, oficina...)
+  numero_marcado: marcado,
+  linea: porDonde,
   agente_id: esPrueba(tel.e164) ? 0 : agenteDe(asesora),
   segundos: seg,
   resumen,
