@@ -231,3 +231,9 @@ Copias previas en `scratchpad/backup/*_antes_v12.json` (Agente AT y Captación).
 **Pendiente de probar**: mi conversación de pruebas (conv 215, contacto 218) ya no existe en Chatwoot.
 **Detectado, sin tocar**: solicitudes de Mobilia sin nombre fallan en `Crear cliente1` / `Enlaza_Solicitud1` y no
 reciben bienvenida (05/10: +34622052160 ref 1202 y 626287561 ref 1203, ambas de venta).
+
+## 14/10 — Orden de las preguntas de venta (Instagram)
+
+Prompt de Instagram: en venta, primero "¿es para vivir o como inversión?" (va en el mensaje de apertura) y después
+"¿necesitáis vender alguna propiedad para poder comprar?" (si dice que sí, `Etiquetar`). Ajustados también la regla
+especial de Rama B y el orden de los campos del resumen del aviso. Solicitudes de Mobilia sin cambios.
