@@ -26,6 +26,15 @@ const cualificacion = [
   ['Duración', b.alquiler_duracion]
 ].filter(([, v]) => String(v || '').trim());
 
+// Cualificacion de compra: las tres preguntas. Llegan aqui cuando la visita no
+// se ha podido cerrar, para que ese trabajo no se pierda.
+const cualificacionCompra = [
+  ['Lleva buscando', b.compra_tiempo_buscando],
+  ['Necesita vender', b.compra_necesita_vender],
+  ['Vivienda que vende', b.compra_vivienda_venta],
+  ['Financiación', b.compra_financiacion]
+].filter(([, v]) => String(v || '').trim());
+
 const lineas = [
   `Cliente: ${nombre}`,
   `Teléfono: ${tel.e164 || b.telefono || '-'}`,
@@ -37,6 +46,11 @@ if (b.urgencia) lineas.push(`Urgencia: ${b.urgencia}`);
 if (cualificacion.length) {
   lineas.push('', '--- CUALIFICACIÓN DEL ALQUILER ---');
   for (const [k, v] of cualificacion) lineas.push(`${k}: ${v}`);
+}
+
+if (cualificacionCompra.length) {
+  lineas.push('', '--- CUALIFICACIÓN DE LA COMPRA ---');
+  for (const [k, v] of cualificacionCompra) lineas.push(`${k}: ${v}`);
 }
 
 lineas.push('', '--- RESUMEN DE LA LLAMADA ---', String(b.resumen_conversacion || '-'));
@@ -56,7 +70,7 @@ const corto = [
   esLeadAlquiler ? 'LEAD ALQUILER (sin agendar)' : '',
   String(b.motivo || '').trim(),
   b.urgencia ? `Urgencia: ${String(b.urgencia).trim()}` : '',
-  cualificacion.map(([, v]) => String(v).trim()).join(' · '),
+  cualificacion.concat(cualificacionCompra).map(([, v]) => String(v).trim()).join(' · '),
   String(b.resumen_conversacion || '').trim(),
 ].filter(Boolean).join(' · ');
 
@@ -65,7 +79,7 @@ const corto = [
 // mismo. "no facilitado" tambien cuenta como contestado: ya se le pregunto.
 const q = (v) => String(v ?? '').trim().slice(0, 200);
 const cualificacionWa = {
-  guardar: esLeadAlquiler && cualificacion.length > 0,
+  guardar: (esLeadAlquiler && cualificacion.length > 0) || cualificacionCompra.length > 0,
   // En WhatsApp el telefono va sin el '+' (34600111222)
   telefono_wa: tel.digitos,
   telefono_e164: tel.e164,
@@ -77,6 +91,11 @@ const cualificacionWa = {
   q_mascotas: q(b.alquiler_mascotas),
   q_entrada: q(b.alquiler_entrada),
   q_duracion: q(b.alquiler_duracion),
+  q_tiempo_buscando: q(b.compra_tiempo_buscando),
+  q_necesita_vender: q(b.compra_necesita_vender),
+  q_vivienda_venta: q(b.compra_vivienda_venta),
+  q_financiacion: q(b.compra_financiacion),
+  es_alquiler: esLeadAlquiler,
 };
 
 return [{

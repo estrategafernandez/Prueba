@@ -71,6 +71,19 @@ def construir_tools(actuales):
         t["timeout_ms"] = 15000
         out.append(t)
 
+    # --- las tres preguntas de compra (las mismas que hace Sara por WhatsApp) ---
+    # Viajan con la cita y, si la cita no se cierra, con el aviso a la asesora.
+    COMPRA = {
+        "compra_tiempo_buscando": "Cuanto tiempo lleva buscando para comprar, tal y como lo haya dicho el cliente.",
+        "compra_necesita_vender": "Si necesita vender una vivienda para poder comprar (si/no y lo que haya contado).",
+        "compra_vivienda_venta": "Solo si necesita vender: donde esta esa vivienda, la direccion o la zona.",
+        "compra_financiacion": "Como va a financiar la compra: hipoteca, recursos propios o hipoteca ya preconcedida.",
+    }
+    COMPRA_PROPS = {k: {"type": "string", "maxLength": 200,
+                        "description": v + " Solo en VENTA. Si se lo has preguntado y no ha querido contestar, pon "
+                                           "'no facilitado'. Lo que no le hayas preguntado, dejalo vacio."}
+                    for k, v in COMPRA.items()}
+
     # --- descripciones con el contrato nuevo --------------------------------
     for t in out:
         if t.get("name") == "BuscarDisponibilidadCalendario":
@@ -84,6 +97,7 @@ def construir_tools(actuales):
                 "las horas de 'alternativas'. NO la uses para inmuebles en ALQUILER o traspaso: en alquiler "
                 "no se agenda visita, se cualifica al cliente y llama la asesora (flujo 8-TER).")
         if t.get("name") == "confirmarCitaCalendario":
+            t["parameters"]["properties"].update(COMPRA_PROPS)
             t["description"] = (
                 "Crea la cita de visita en el Google Calendar de la asesora. Usala solo despues de que "
                 "BuscarDisponibilidadCalendario haya dicho que hay hueco y el cliente haya aceptado esa fecha "
@@ -110,10 +124,13 @@ def construir_tools(actuales):
         "description": "Solo en lead_alquiler. Si conviven con mascotas y cuales. Si no lo facilita, pon 'no facilitado'."}
     props["alquiler_entrada"] = {"type": "string", "maxLength": 120,
         "description": "Solo en lead_alquiler. Para que fecha necesitaria entrar a vivir. Si no lo facilita, pon 'no facilitado'."}
+    props.update(COMPRA_PROPS)
     props["alquiler_duracion"] = {"type": "string", "maxLength": 120,
         "description": "Solo en lead_alquiler. Si lo quiere para todo el ano o por temporada, y cuanto tiempo."}
     rm["description"] = (
-        "Registra un aviso y envia una notificacion a Laurence, Carmen o Gisela. Usala siempre que "
+        "Registra un aviso y envia una notificacion a Laurence, Carmen o Gisela. Si has recogido las "
+        "respuestas de compra y al final no se ha cerrado la visita, mandalas aqui para que no se pierdan. "
+        "Usala siempre que "
         "Sara diga que va a tomar nota, avisar o pedir que devuelvan la llamada, y SIEMPRE al cerrar "
         "un lead de alquiler (tipo_llamada 'lead_alquiler') con los datos de cualificacion. Antes de "
         "usarla, obten al menos el telefono y, si es posible, el nombre. Devuelve 'mensaje_registrado' "
@@ -213,7 +230,15 @@ def construir_tools(actuales):
 # sobre el segundo 3, asi que Sara arranca justo despues y ya no se pisan.
 BEGIN_MESSAGE = "Hola, {{saludovariable}} ¿En qué puedo ayudarte?"
 
+# "IA" se decia deletreado y lentisimo ("i" ... "a"). Aqui se le dice a la voz
+# como se pronuncia: una sola palabra de dos silabas, con el acento en la i.
+# Si la voz no admitiera el diccionario, el plan B es escribirlo como "ía".
+PRONUNCIACION = [
+    {"word": "IA", "alphabet": "ipa", "phoneme": "ˈi.a"},
+]
+
 AGENTE = {
+    "pronunciation_dictionary": PRONUNCIACION,
     "begin_message_delay_ms": 3500,
     "responsiveness": 0.55,          # antes 0.85: arrancaba antes de que el cliente terminara
     "interruption_sensitivity": 0.45,  # antes 0.7: cualquier ruido la cortaba

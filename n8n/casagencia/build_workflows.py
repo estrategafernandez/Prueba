@@ -162,6 +162,15 @@ def wf_confirmar(orig):
                        "={{ DateTime.fromFormat(%s,'yyyy-MM-dd',{zone:'Europe/Madrid'}).endOf('day').toISO() }}" % dia,
                        [400, 0]),
             code_node("ValidarAntesDeInsertar", "cc_validar.js", [620, 0]),
+            # Las tres preguntas de compra, a la ficha de WhatsApp del cliente: asi
+            # Sara no se las vuelve a preguntar si luego escribe. Va en paralelo:
+            # pase lo que pase con la cita, las respuestas no se pierden.
+            node("CualificacionParaWhatsApp", "n8n-nodes-base.postgres", {
+                "operation": "executeQuery", "query": SQL_CUALIFICACION_TEL,
+                "options": {"queryReplacement": "={{ [ %s ] }}" % ", ".join(
+                    "$('PrepararDatos').first().json.%s" % k for k in VALORES_CUAL)},
+            }, [840, 220], 2.6, credentials=CRED_PG_RM, alwaysOutputData=True,
+                executeOnce=True, onError="continueRegularOutput"),
             node("PuedeCrear", "n8n-nodes-base.if", {"conditions": {
                 "options": {"caseSensitive": True, "leftValue": "", "typeValidation": "strict", "version": 3},
                 "conditions": [{"id": "puede-crear", "leftValue": "={{ $json.puede_crear }}",
@@ -183,7 +192,10 @@ def wf_confirmar(orig):
                 "cita": "={{ %s.dia_texto + ' a las ' + %s.hora }}" % (v, v),
                 "resumen": "={{ 'Pre-reservada por telefono (' + (%s.tipo_transaccion || 'compra') + '). Falta "
                            "confirmarla con el cliente.' }}" % v,
-                "detalle": "={{ 'Pre-reservada por telefono por Sara (IA). Falta confirmarla con el cliente.' }}",
+                "detalle": "={{ 'Pre-reservada por telefono por Sara, IA. Falta confirmarla con el cliente.'"
+                           " + (%s.cualificacion_texto ? '\\n\\nCUALIFICACION DE LA COMPRA\\n' + "
+                           "%s.cualificacion_texto.split(' · ').join('\\n') : '') }}" % (
+                               "$('PrepararDatos').first().json", "$('PrepararDatos').first().json"),
                 "conversacion_id": 0, "pasar_a_humano": False, "etiqueta": "", "origen": "telefono"},
                 [1320, -200]),
             node("RespuestaOK", "n8n-nodes-base.set", {"assignments": {"assignments": [
@@ -208,14 +220,17 @@ def wf_confirmar(orig):
             node("Nota", "n8n-nodes-base.stickyNote", {"content":
                  "## Segundo cortafuegos\nAunque BuscarDisponibilidad haya dicho que si, aqui se vuelve a validar "
                  "horario, festivo, telefono y ocupacion antes de escribir en la agenda.\n"
-                 "El aviso (WhatsApp a la asesora y a Paco) SOLO sale si la cita se ha creado de verdad.",
-                 "height": 190, "width": 430}, [620, -260], 1),
+                 "El aviso (WhatsApp a la asesora y a Paco) SOLO sale si la cita se ha creado de verdad.\n\n"
+                 "Las tres preguntas de compra que hace Sara antes de mirar la agenda van en el aviso y "
+                 "se guardan en la ficha de WhatsApp del cliente, para que no se las vuelva a preguntar.",
+                 "height": 250, "width": 430}, [620, -300], 1),
         ],
         "connections": conn(
             ("Webhook", 0, "PrepararDatos", 0),
             ("PrepararDatos", 0, "LeerAgendaDelDia", 0),
             ("LeerAgendaDelDia", 0, "ValidarAntesDeInsertar", 0),
             ("ValidarAntesDeInsertar", 0, "PuedeCrear", 0),
+            ("ValidarAntesDeInsertar", 0, "CualificacionParaWhatsApp", 0),
             ("PuedeCrear", 0, "InsertarEnAgenda", 0),
             ("PuedeCrear", 1, "RespondRechazo", 0),
             ("InsertarEnAgenda", 0, "RespuestaOK" if SIN_EMAIL else "AvisarAsesora", 0),
@@ -486,25 +501,38 @@ CUAL_RM = "$('ComponerAviso').first().json.cualificacion_wa"
 # que Sara (WhatsApp) no le vuelva a preguntar lo mismo. Solo rellena lo que este
 # vacio: nunca pisa una respuesta que ya diera por escrito. Si no tiene ficha, se
 # le crea una (con la referencia de la llamada, si la hay).
+Q_TEL = ["q_personas", "q_ingresos", "q_mascotas", "q_entrada", "q_duracion",
+         "q_tiempo_buscando", "q_necesita_vender", "q_vivienda_venta", "q_financiacion"]
+
 SQL_CUALIFICACION_TEL = """with upd as (
   update wa_leads
-     set q_personas = case when q_personas = '' then $2 else q_personas end,
-         q_ingresos = case when q_ingresos = '' then $3 else q_ingresos end,
-         q_mascotas = case when q_mascotas = '' then $4 else q_mascotas end,
-         q_entrada  = case when q_entrada  = '' then $5 else q_entrada  end,
-         q_duracion = case when q_duracion = '' then $6 else q_duracion end,
+     set %s,
          actualizado_en = now()
-   where telefono_wa = $1 and $7::boolean
+   where telefono_wa = $1 and $%d::boolean
   returning id),
 alta as (
   insert into wa_leads (telefono_wa, telefono_e164, referencia, nombre, portal, operacion,
-                        es_alquiler, asesora, estado,
-                        q_personas, q_ingresos, q_mascotas, q_entrada, q_duracion)
-  select $1, $8, $9, $10, 'telefono', 'alquiler', true, $11, 'nuevo', $2, $3, $4, $5, $6
-   where $7::boolean and not exists (select 1 from upd)
+                        es_alquiler, asesora, estado, %s)
+  select $1, $%d, $%d, $%d, 'telefono', case when $%d::boolean then 'alquiler' else 'venta' end,
+         $%d::boolean, $%d, 'nuevo', %s
+   where $%d::boolean and not exists (select 1 from upd)
   on conflict (telefono_wa, referencia) do nothing
   returning id)
-select (select count(*) from upd) as fichas_actualizadas, (select count(*) from alta) as fichas_nuevas;"""
+select (select count(*) from upd) as fichas_actualizadas, (select count(*) from alta) as fichas_nuevas;""" % (
+    # $2..$10 = las respuestas; solo rellenan lo que este vacio
+    ",\n         ".join("%s = case when %s = '' then $%d else %s end" % (q, q, i + 2, q)
+                        for i, q in enumerate(Q_TEL)),
+    len(Q_TEL) + 2,                                   # $11 guardar
+    ", ".join(Q_TEL),
+    len(Q_TEL) + 3, len(Q_TEL) + 4, len(Q_TEL) + 5,   # $12 telefono, $13 referencia, $14 nombre
+    len(Q_TEL) + 6, len(Q_TEL) + 6,                   # $15 es_alquiler (operacion y columna)
+    len(Q_TEL) + 7,                                   # $16 asesora
+    ", ".join("$%d" % (i + 2) for i in range(len(Q_TEL))),
+    len(Q_TEL) + 2)
+
+# El orden en el que van los valores, igual para los dos workflows que la usan
+VALORES_CUAL = ["telefono_wa"] + Q_TEL + ["guardar", "telefono_e164", "referencia", "nombre",
+                                          "es_alquiler", "asesora"]
 
 
 
@@ -524,9 +552,7 @@ def wf_registrar_mensaje(orig):
             node("CualificacionParaWhatsApp", "n8n-nodes-base.postgres", {
                 "operation": "executeQuery", "query": SQL_CUALIFICACION_TEL,
                 "options": {"queryReplacement": "={{ [ %s ] }}" % ", ".join(
-                    "%s.%s" % (CUAL_RM, k) for k in (
-                        "telefono_wa", "q_personas", "q_ingresos", "q_mascotas", "q_entrada",
-                        "q_duracion", "guardar", "telefono_e164", "referencia", "nombre", "asesora"))},
+                    "%s.%s" % (CUAL_RM, k) for k in VALORES_CUAL)},
             }, [320, 0], 2.6, credentials=CRED_PG_RM, alwaysOutputData=True,
                 executeOnce=True, onError="continueRegularOutput"),
             aviso_whatsapp("EnviarAviso", {k: "={{ %s.%s }}" % (AVISO_RM, k) for k in AVISO_CAMPOS}, [440, 0]),

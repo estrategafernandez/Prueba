@@ -11,18 +11,19 @@ const body = $input.first().json.body ?? $input.first().json;
 const entrante = body?.call_inbound ?? {};
 const cab = entrante.custom_sip_headers ?? {};
 
-const CORTO = 'soy Sara, la IA de Casa Agencia';
+// "IA", sin articulo delante ("Sara, IA de...", nunca "Sara, la IA de...").
+const CORTO = 'soy Sara, IA de la oficina';
 
 // Numeros propios de Casagencia. Comprobado contra las llamadas reales:
 // el movil de Carmen acaba atendiendo inmuebles BN/OR y el de Gisela CS/VR.
 const LINEAS = {
   // moviles de las comerciales
-  '654907386': { quien: 'Carmen',   saludo: 'soy Sara, la IA de Carmen, asesora comercial de Casagencia' },
-  '690027772': { quien: 'Gisela',   saludo: 'soy Sara, la IA de Gisela, asesora comercial de Casagencia' },
-  '618724192': { quien: 'Laurence', saludo: 'soy Sara, la IA de Laurence, directora de Casagencia Inmobiliaria en Benicassim y Castellón' },
+  '654907386': { quien: 'Carmen',   saludo: 'soy Sara, IA de Carmen, asesora comercial de Casagencia' },
+  '690027772': { quien: 'Gisela',   saludo: 'soy Sara, IA de Gisela, asesora comercial de Casagencia' },
+  '618724192': { quien: 'Laurence', saludo: 'soy Sara, IA de Laurence, directora de Casagencia Inmobiliaria en Benicassim y Castellón' },
   // oficinas
-  '964300986': { quien: 'oficina Benicassim', saludo: CORTO + ', está llamando a la oficina de Benicassim' },
-  '964742549': { quien: 'oficina Castellon',  saludo: CORTO + ', está llamando a la oficina de Castellón' },
+  '964300986': { quien: 'oficina Benicassim', saludo: 'soy Sara, IA de la oficina de Benicassim' },
+  '964742549': { quien: 'oficina Castellon',  saludo: 'soy Sara, IA de la oficina de Castellón' },
   // numero general
   '864893794': { quien: 'general', saludo: CORTO },
   // lineas de portales: el cliente llama por un anuncio, no conoce a la

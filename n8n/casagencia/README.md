@@ -345,6 +345,26 @@ correos de cada llamada (el aviso va por WhatsApp). Sigue subiendo la grabación
 a Drive. Está todo en `build_workflows.py` (`--solo=` para desplegar solo uno). Cada llamada entra
 una sola vez (tabla `tel_llamadas_panel`).
 
+### Las tres preguntas de compra, también por teléfono (14-10-2026)
+
+Antes de mirar la agenda para una visita de VENTA, Sara pregunta por teléfono lo
+mismo que por WhatsApp: cuánto lleva buscando, si necesita vender una vivienda
+(y dónde está) y cómo va a financiar la compra.
+
+- Las respuestas viajan en `confirmarCitaCalendario` y, si la visita no se
+  cierra, en el `registrarMensaje` que se hace para la asesora.
+- Van en el aviso a la asesora y se guardan en la ficha de WhatsApp del cliente
+  (`wa_leads`), rellenando solo lo que esté vacío.
+- Así, si luego escribe por WhatsApp, Sara ya no se las vuelve a preguntar.
+
+### Cómo se presenta Sara por teléfono
+
+«soy Sara, **IA de la oficina**» (o *IA de Carmen*, *IA de la oficina de
+Benicàssim*… según el número al que llamen: `nodes/sal_datos.js`). Nunca «la IA»
+con artículo. Y «IA» se pronuncia rápido, como una palabra de dos sílabas: el
+agente de Retell lleva un diccionario de pronunciación (`ˈi.a`) para que la voz
+no lo deletree.
+
 ### El teléfono manda los enlaces por WhatsApp (`[TEL] EnviarPorWhatsApp`)
 
 En una llamada **no se dice ni se deletrea una dirección web**: está prohibido en

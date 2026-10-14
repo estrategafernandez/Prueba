@@ -20,26 +20,37 @@ const ck = (n, c, e = '') => { console.log((c ? '  OK   ' : '  FALLA') + '  ' + 
 
 console.log('== Cada movil da su saludo ==');
 const casos = [
-  ['movil de Carmen',        T + via('654907386'),                      'Carmen',   /la IA de Carmen, asesora comercial/],
-  ['movil de Gisela',        T + via('690027772'),                      'Gisela',   /la IA de Gisela, asesora comercial/],
-  ['movil de Laurence',      T + via('618724192'),                      'Laurence', /la IA de Laurence, directora/],
-  ['oficina de Benicassim',  T + via('964300986'),                      'oficina Benicassim', /oficina de Benicassim/],
-  ['oficina de Castellon',   T + via('964742549'),                      'oficina Castellon',  /oficina de Castellón/],
-  ['numero general',         T,                                         'general',  /^soy Sara, la IA de Casa Agencia$/],
-  ['Idealista via Carmen',   T + via('654907386') + via('864870199'),   'Idealista', /^soy Sara, la IA de Casa Agencia$/],
-  ['Fotocasa via Carmen',    T + via('654907386') + via('936060117'),   'Fotocasa',  /^soy Sara, la IA de Casa Agencia$/],
-  ['portal 864870288 via Gisela', T + via('690027772') + via('864870288'), 'portal sin identificar', /^soy Sara, la IA de Casa Agencia$/],
+  ['movil de Carmen',        T + via('654907386'),                      'Carmen',   /^soy Sara, IA de Carmen, asesora comercial/],
+  ['movil de Gisela',        T + via('690027772'),                      'Gisela',   /^soy Sara, IA de Gisela, asesora comercial/],
+  ['movil de Laurence',      T + via('618724192'),                      'Laurence', /^soy Sara, IA de Laurence, directora/],
+  ['oficina de Benicassim',  T + via('964300986'),                      'oficina Benicassim', /^soy Sara, IA de la oficina de Benicassim$/],
+  ['oficina de Castellon',   T + via('964742549'),                      'oficina Castellon',  /^soy Sara, IA de la oficina de Castellón$/],
+  ['numero general',         T,                                         'general',  /^soy Sara, IA de la oficina$/],
+  ['Idealista via Carmen',   T + via('654907386') + via('864870199'),   'Idealista', /^soy Sara, IA de la oficina$/],
+  ['Fotocasa via Carmen',    T + via('654907386') + via('936060117'),   'Fotocasa',  /^soy Sara, IA de la oficina$/],
+  ['portal 864870288 via Gisela', T + via('690027772') + via('864870288'), 'portal sin identificar', /^soy Sara, IA de la oficina$/],
 ];
 for (const [nombre, div, linea, re] of casos) {
   const r = saludar(div, '+34643974353');
   ck(nombre, r.linea === linea && re.test(r.saludo), `${r.linea} | "${r.saludo.slice(0, 48)}"`);
 }
 
+console.log('\n== Como se presenta ==');
+{
+  const todos = ['654907386', '690027772', '618724192', '964300986', '964742549', '864893794',
+                 '864870199', '936060117', '864870288'].map(n => saludar(T + via(n), '+34643974353').saludo)
+                 .concat(saludar(null, '+34643974353').saludo);
+  ck('nunca dice "la IA" (sin articulo delante de IA)', todos.every(s => !/\bla IA\b/.test(s)),
+     todos.find(s => /\bla IA\b/.test(s)) || '');
+  ck('siempre se presenta como "Sara, IA de ..."', todos.every(s => /^soy Sara, IA de /.test(s)),
+     todos.find(s => !/^soy Sara, IA de /.test(s)) || '');
+}
+
 console.log('\n== Lo que rompia antes ==');
 let r = saludar(null, '+34643974353');
-ck('sin cabecera de desvio -> saludo generico', /Casa Agencia/.test(r.saludo), r.linea);
+ck('sin cabecera de desvio -> saludo generico', /^soy Sara, IA de la oficina$/.test(r.saludo), r.linea);
 r = saludar(T + via('999999999'), '+34643974353');
-ck('numero que no es nuestro -> saludo generico', r.linea === 'desconocido' && /Casa Agencia/.test(r.saludo));
+ck('numero que no es nuestro -> saludo generico', r.linea === 'desconocido' && /^soy Sara, IA de la oficina$/.test(r.saludo));
 r = saludar(T + via('654907386'), '+34643974353');
 ck('Carmen NO da el saludo de Gisela', !/Gisela/.test(r.saludo));
 

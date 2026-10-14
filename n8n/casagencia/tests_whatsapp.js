@@ -1559,5 +1559,89 @@ console.log('\n== El telefono le pasa el contexto a Sara ==');
 }
 
 // ===========================================================================
+console.log('\n== El telefono hace las tres preguntas de compra ==');
+{
+  const cc = (body) => tel('cc_preparar.js', inp([{ json: { body } }]), nod({}))[0].json;
+  const base = { nombre: 'Ana', telefono: '600111222', referencia: 'BN-1300-V',
+                 tipo_transaccion: 'venta', fecha: '2026-10-20', hora: '11:00' };
+  const con = cc({ ...base, compra_tiempo_buscando: 'tres meses', compra_necesita_vender: 'si',
+                   compra_vivienda_venta: 'calle Mayor 3, Benicasim', compra_financiacion: 'hipoteca preconcedida' });
+  ck('las respuestas llegan con la cita y van a la ficha de WhatsApp', con.guardar
+     && con.telefono_wa === '34600111222' && con.q_tiempo_buscando === 'tres meses'
+     && con.q_vivienda_venta === 'calle Mayor 3, Benicasim' && con.es_alquiler === false);
+  ck('y la asesora las ve en su aviso', /Lleva buscando: tres meses/.test(con.cualificacion_texto)
+     && /Financiación: hipoteca preconcedida/.test(con.cualificacion_texto), con.cualificacion_texto);
+  const sin = cc(base);
+  ck('una cita sin preguntas no toca la ficha', sin.guardar === false);
+  const parcial = cc({ ...base, compra_tiempo_buscando: 'un mes', compra_financiacion: 'no facilitado' });
+  ck('"no facilitado" cuenta como contestada; lo no preguntado va vacio',
+     parcial.q_financiacion === 'no facilitado' && parcial.q_necesita_vender === ''
+     && parcial.guardar);
+
+  // Y si la visita no se cierra, viajan en el aviso de registrarMensaje
+  const rm = tel('rm_componer.js', inp([{ json: { body: {
+    destinatario: 'Carmen', telefono: '600111222', nombre: 'Ana', tipo_llamada: 'visita_pendiente_agendar',
+    referencia: 'BN-1300-V', motivo: 'No hemos encontrado hueco', compra_tiempo_buscando: 'tres meses',
+    compra_necesita_vender: 'no', compra_financiacion: 'hipoteca',
+  } } }]), nod({}))[0].json;
+  ck('si la visita no se cierra, las respuestas van en el aviso a la asesora',
+     /CUALIFICACIÓN DE LA COMPRA/.test(rm.cuerpo) && /Lleva buscando: tres meses/.test(rm.cuerpo));
+  ck('y tambien a la ficha de WhatsApp', rm.cualificacion_wa.guardar
+     && rm.cualificacion_wa.q_tiempo_buscando === 'tres meses'
+     && rm.cualificacion_wa.es_alquiler === false);
+
+  // El workflow, montado
+  const wc = JSON.parse(fs.readFileSync(B + 'workflows/ConfirmarCitaCalendario.json', 'utf8'));
+  ck('ConfirmarCitaCalendario guarda la cualificacion pase lo que pase con la cita',
+     (wc.connections['ValidarAntesDeInsertar'].main[0] || []).some(c => c.node === 'CualificacionParaWhatsApp'));
+  const sql = wc.nodes.find(n => n.name === 'CualificacionParaWhatsApp').parameters.query;
+  ck('sin pisar lo que ya hubiera contestado por escrito',
+     /case when q_tiempo_buscando = '' then \$7 else q_tiempo_buscando end/.test(sql));
+  // El fallo que se escapo: el nodo decia "guardar_cualificacion" y el SQL pedia
+  // "guardar", asi que no guardaba nada. Esto lo caza antes de desplegar.
+  const pedidos = [...wc.nodes.find(n => n.name === 'CualificacionParaWhatsApp')
+    .parameters.options.queryReplacement.matchAll(/PrepararDatos'\)\.first\(\)\.json\.(\w+)/g)].map(m => m[1]);
+  ck('los campos que pide el SQL existen todos en PrepararDatos', pedidos.length === 16
+     && pedidos.every(k => k in con), pedidos.filter(k => !(k in con)).join(', '));
+  const wr2 = JSON.parse(fs.readFileSync(B + 'workflows/registrarMensaje.json', 'utf8'));
+  const pedidos2 = [...wr2.nodes.find(n => n.name === 'CualificacionParaWhatsApp')
+    .parameters.options.queryReplacement.matchAll(/cualificacion_wa\.(\w+)/g)].map(m => m[1]);
+  ck('y los que pide en registrarMensaje tambien', pedidos2.length === 16
+     && pedidos2.every(k => k in rm.cualificacion_wa), pedidos2.filter(k => !(k in rm.cualificacion_wa)).join(', '));
+
+  const upd = fs.readFileSync(B + 'retell/update_retell.py', 'utf8');
+  ck('Retell manda las respuestas en confirmarCitaCalendario y en registrarMensaje',
+     /COMPRA_PROPS/.test(upd) && /compra_tiempo_buscando/.test(upd));
+  const prompt = fs.readFileSync(B + 'retell/general_prompt.md', 'utf8');
+  ck('y el prompt del telefono las pregunta antes de mirar la agenda',
+     /Las tres preguntas de compra \(antes de buscar hueco\)/.test(prompt)
+     && /Cómo tiene pensado financiar la compra/.test(prompt));
+
+  // Sara (WhatsApp) ya no las repite
+  const ctx = wa('asistente_contexto.js', inp([{ json: {} }]), nod({
+    JuntarMensajes: { telefono_e164: '+34600111222', telefono_wa: '34600111222', nombre: 'Ana', mensaje: 'hola', conversacion_id: 7, cuenta_id: 1 },
+    EntradaMensaje: { etiquetas: [] },
+    LeerFichaDelLead: { telefono_wa: '34600111222', referencia: 'BN-1300-V', portal: 'telefono',
+                        es_alquiler: false, operacion: 'venta', q_tiempo_buscando: 'tres meses',
+                        q_necesita_vender: 'si', q_vivienda_venta: 'calle Mayor 3', q_financiacion: 'hipoteca' },
+    LeerCartera: REAL, LeerDirecciones: [],
+  }), true)[0].json;
+  ck('Sara no vuelve a preguntar por WhatsApp lo que ya contesto por telefono',
+     ctx.preguntas_pendientes.length === 0 && /Ya ha contestado/.test(ctx.contexto),
+     ctx.preguntas_pendientes.join(','));
+}
+
+// ===========================================================================
+console.log('\n== Como se presenta Sara ==');
+{
+  const prompt = fs.readFileSync(B + 'retell/general_prompt.md', 'utf8');
+  ck('el prompt del telefono dice "Sara, IA de la oficina" y prohibe "la IA"',
+     /"Sí, soy Sara, IA de la oficina"/.test(prompt) && /Nunca "la IA"/.test(prompt));
+  ck('y pide que IA se diga rapido, no deletreado', /IA se dice rápido/.test(prompt));
+  const sal = fs.readFileSync(B + 'nodes/sal_datos.js', 'utf8');
+  ck('ningun saludo dice "la IA"', !/\bla IA\b/.test(sal.split('\n').filter(l => /saludo:|const CORTO/.test(l)).join('\n')));
+}
+
+// ===========================================================================
 console.log(fallos ? `\n${fallos} FALLOS` : '\nTodo correcto');
 process.exit(fallos ? 1 : 0);
