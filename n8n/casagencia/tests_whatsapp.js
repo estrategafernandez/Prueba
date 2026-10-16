@@ -1734,5 +1734,40 @@ console.log('\n== Vacaciones: las visitas las coge quien sustituye ==');
 }
 
 // ===========================================================================
+console.log('\n== Si OpenAI falla, la conversacion no se queda muerta ==');
+{
+  const w = JSON.parse(fs.readFileSync(B + 'workflows_wa/WA_2_Asistente_de_WhatsApp.json', 'utf8'));
+  const n = (x) => w.nodes.find(y => y.name === x);
+  // 1) Antes de darse por vencida, lo reintenta: el fallo real fue un
+  //    "Connection error" de OpenAI (16-10-2026, conversacion de Susana).
+  ck('el modelo de OpenAI reintenta antes de fallar',
+     n('ModeloOpenAI').retryOnFail === true && n('ModeloOpenAI').maxTries >= 3);
+  ck('y el agente tambien', n('Agente').retryOnFail === true && n('Agente').maxTries >= 2);
+  // 2) Si aun asi falla, no se queda en "te atendemos enseguida"
+  const fallo = n('AvisoDeFallo').parameters.jsonBody || n('AvisoDeFallo').parameters.body || '';
+  ck('ya no le dice "te atendemos enseguida" y le invita a seguir',
+     !/atendemos enseguida/i.test(fallo) && /escribeme y seguimos/i.test(fallo), fallo.slice(0, 120));
+  const sig = (x) => (w.connections[x] ? (w.connections[x].main.flat() || []).map(c => c.node) : []);
+  ck('deja nota en el panel y avisa a la asesora para que la cierre ella',
+     sig('AvisoDeFallo').includes('NotaDeFallo') && sig('NotaDeFallo').includes('AvisoFalloAlEquipo'));
+  const aviso = JSON.stringify(n('AvisoFalloAlEquipo').parameters);
+  ck('ese aviso pasa la conversacion a una persona (4-intervenir)',
+     /pasar_a_humano/.test(aviso) && /4-intervenir/.test(aviso));
+  ck('la nota es privada: el cliente no la ve',
+     /private: true/.test(n('NotaDeFallo').parameters.jsonBody || n('NotaDeFallo').parameters.body || ''));
+
+  // 3) Y la regla de Sara: ningun mensaje sin siguiente paso
+  const pr = fs.readFileSync(B + 'wa/prompt_asistente.md', 'utf8');
+  ck('el prompt le prohibe cerrar sin siguiente paso',
+     /NUNCA cierres tu turno sin el siguiente paso/.test(pr)
+     && /atendemos enseguida/.test(pr) && /la conversación se muere ahí/.test(pr));
+  ck('y una respuesta vaga cuenta como contestada', /Una respuesta vaga TAMBIÉN es una respuesta/.test(pr)
+     && /de momento verlo/.test(pr));
+  const tel = fs.readFileSync(B + 'retell/general_prompt.md', 'utf8');
+  ck('el telefono tiene la misma regla', /No dejes la llamada a medias/.test(tel)
+     && /TAMBIÉN es una respuesta/.test(tel));
+}
+
+// ===========================================================================
 console.log(fallos ? `\n${fallos} FALLOS` : '\nTodo correcto');
 process.exit(fallos ? 1 : 0);

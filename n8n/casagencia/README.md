@@ -345,6 +345,24 @@ correos de cada llamada (el aviso va por WhatsApp). Sigue subiendo la grabación
 a Drive. Está todo en `build_workflows.py` (`--solo=` para desplegar solo uno). Cada llamada entra
 una sola vez (tabla `tel_llamadas_panel`).
 
+### Si OpenAI falla, la conversación no se queda muerta (16-10-2026)
+
+Pasó con la conversación de Susana: OpenAI devolvió un *Connection error*, Sara
+mandó "Te atendemos enseguida, dame un momento" y ahí se quedó. Ella no vuelve a
+escribir por su cuenta, así que la clienta se perdió.
+
+- **ModeloOpenAI** y **Agente** reintentan antes de darse por vencidos.
+- Si aun así falla: el mensaje al cliente ya no es un callejón sin salida
+  ("escríbeme y seguimos donde lo dejamos", que al contestar vuelve a arrancar a
+  Sara con toda su memoria), se deja una **nota privada** en el panel y se avisa
+  por WhatsApp a la asesora con la etiqueta **4-intervenir**, para que la cierre
+  una persona si el cliente no vuelve.
+- En el prompt: **ningún mensaje de Sara puede acabar sin el siguiente paso**.
+  Prohibido "te atendemos enseguida", "dame un momento" o "ahora te digo".
+- Y una **respuesta vaga es una respuesta**: "primero tengo que verla", "de
+  momento verlo" se guardan tal cual y se pasa ya a ofrecer la visita, que es lo
+  que el cliente está pidiendo. La misma regla en el teléfono.
+
 ### Vacaciones: las visitas las coge quien sustituye
 
 `AUSENCIAS`, en `lib/casagencia_comun.js` (y la misma lista en `wa/config.js`).

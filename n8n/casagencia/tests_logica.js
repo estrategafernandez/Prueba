@@ -190,8 +190,11 @@ const DIA_SIGUIENTE = DateTime.fromFormat(JUEVES, 'yyyy-MM-dd', { zone: 'Europe/
 const pC = run(null,'bd_preparar.js',{ $input: inputOf([{ json:{ body:{...bodyCompra, fecha:JUEVES, hora:'17:00', referencia:'BN-1547-V'} } }]) })[0].json;
 const cumple = [ev({ summary:'Cumpleanos de Pepe', start:{date:JUEVES}, end:{date:DIA_SIGUIENTE} })];
 const vaca   = [ev({ summary:'VACACIONES',        start:{date:JUEVES}, end:{date:DIA_SIGUIENTE} })];
-const reu    = [ev({ summary:'Reunion', start:{dateTime:`${JUEVES}T17:00:00+02:00`}, end:{dateTime:`${JUEVES}T18:00:00+02:00`} })];
-const libre  = [ev({ summary:'Recordatorio', transparency:'transparent', start:{dateTime:`${JUEVES}T17:00:00+02:00`}, end:{dateTime:`${JUEVES}T18:00:00+02:00`} })];
+// El desfase horario de ESE dia (en invierno es +01:00, no +02:00: con la hora
+// pegada a mano el test fallaba en cuanto la fecha caia despues del cambio)
+const enMadrid = (h) => DateTime.fromFormat(`${JUEVES} ${h}`, 'yyyy-MM-dd HH:mm', { zone: 'Europe/Madrid' }).toISO();
+const reu    = [ev({ summary:'Reunion', start:{dateTime:enMadrid('17:00')}, end:{dateTime:enMadrid('18:00')} })];
+const libre  = [ev({ summary:'Recordatorio', transparency:'transparent', start:{dateTime:enMadrid('17:00')}, end:{dateTime:enMadrid('18:00')} })];
 const rr = (items) => run(null,'bd_calcular.js',{ $input: inputOf(items), $: nodeOf({ PrepararDatos: pC }) })[0].json.respuesta;
 check('un cumpleanos NO bloquea el dia entero', rr(cumple).disponible === true);
 check('"VACACIONES" SI bloquea el dia entero', rr(vaca).disponible === false, `motivo=${rr(vaca).motivo}`);

@@ -1744,10 +1744,14 @@ def wf_asistente(ids):
     5 Calculo de la fecha actual · 6 Generar respuesta · 7 Enviar en varias partes."""
     ent = "$('EntradaMensaje').first().json"
     mensajes_url = "=" + CW_API + "/conversations/{{ %s.conversacion_id }}/messages" % CTX
+    # OpenAI falla de vez en cuando con un "Connection error" de red. Antes eso
+    # dejaba la conversacion muerta con un "te atendemos enseguida" (16-10-2026,
+    # conversacion de Susana). Ahora se reintenta antes de darla por perdida.
     modelo = node("ModeloOpenAI", "@n8n/n8n-nodes-langchain.lmChatOpenAi", {
         "model": {"__rl": True, "value": MODELO, "mode": "list", "cachedResultName": MODELO},
-        "options": {"temperature": 0.3},
-    }, [6200, 420], 1.2, credentials=CRED_OPENAI)
+        "options": {"temperature": 0.3, "timeout": 120000, "maxRetries": 3},
+    }, [6200, 420], 1.2, credentials=CRED_OPENAI,
+        retryOnFail=True, maxTries=3, waitBetweenTries=2000)
     tools = herramientas(ids, x=6560, y=420)
     Y = 0
     nodos = [
@@ -1862,14 +1866,36 @@ def wf_asistente(ids):
                     "- Fecha y hora actual: {{ $('CodeFechaHoraActual').first().json.fecha_hora }}"
                     "\n\nMensaje del cliente:\n{{ $json.mensaje }}",
             "options": {"systemMessage": "=" + PROMPT, "maxIterations": 12},
-        }, [6280, Y], 1.8, onError="continueErrorOutput"),
+        }, [6280, Y], 1.8, onError="continueErrorOutput",
+            retryOnFail=True, maxTries=2, waitBetweenTries=5000),
         modelo,
         node("MemoriaPostgres", "@n8n/n8n-nodes-langchain.memoryPostgresChat", {
             "sessionIdType": "customKey", "sessionKey": "={{ %s.telefono_e164 }}" % CTX, "contextWindowLength": 40,
         }, [6380, 420], 1.3, credentials=CRED_PG),
+        # Si aun con los reintentos no sale la respuesta, la conversacion NO se
+        # queda muerta: se le dice al cliente que siga escribiendo (su siguiente
+        # mensaje vuelve a arrancar a Sara, que tiene toda la memoria), se deja
+        # una nota en el panel y se avisa a la asesora para que la cierre ella.
         http("AvisoDeFallo", "POST", mensajes_url, [6640, Y + 200], cred=CRED_CHATWOOT,
-             body="={{ JSON.stringify({ content: 'Te atendemos enseguida, dame un momento.', "
+             body="={{ JSON.stringify({ content: 'Perdona, he tenido un problema tecnico y se me ha "
+                  "cortado la respuesta 😅 Sigo aqui: escribeme y seguimos donde lo dejamos.', "
                   "message_type: 'outgoing', private: false }) }}", onError="continueRegularOutput"),
+        http("NotaDeFallo", "POST", mensajes_url, [6860, Y + 200], cred=CRED_CHATWOOT,
+             body="={{ JSON.stringify({ content: 'LA IA NO HA PODIDO CONTESTAR (fallo tecnico). El "
+                  "ultimo mensaje del cliente fue: \"' + (%s.mensaje || '').slice(0, 300) + '\". "
+                  "Si no vuelve a escribir, contesta tu y cierra la visita.', message_type: 'outgoing', "
+                  "private: true }) }}" % CTX, onError="continueRegularOutput"),
+        exec_sub("AvisoFalloAlEquipo", ids.get("[WA][SUB] AvisoEquipo", ""), "[WA][SUB] AvisoEquipo",
+                 {"accion": "AVISO", "destinatario": "={{ %s.asesora }}" % CTX,
+                  "referencia": "={{ %s.referencia }}" % CTX, "municipio": "",
+                  "cliente_nombre": "={{ %s.nombre }}" % CTX, "cliente_telefono": "={{ %s.telefono_e164 }}" % CTX,
+                  "cita": "", "resumen": "={{ 'La IA no ha podido contestarle por un fallo tecnico: "
+                           "entra tu y cierra la conversacion.' }}",
+                  "detalle": "={{ 'Ultimo mensaje del cliente: ' + (%s.mensaje || '') }}" % CTX,
+                  "conversacion_id": "={{ %s.conversacion_id }}" % CTX,
+                  "pasar_a_humano": True, "etiqueta": const_etiqueta("intervenir"), "origen": "whatsapp"},
+                 [7080, Y + 200], {"conversacion_id": "number", "pasar_a_humano": "boolean"},
+                 onError="continueRegularOutput", alwaysOutputData=True),
         # --- 7. Se estructura y envia en varias partes ------------------------
         code_node("DividirRespuesta", code_wa("asistente_dividir.js"), [7560, Y]),
         http("EnviarMensajes", "POST", mensajes_url, [7800, Y], cred=CRED_CHATWOOT,
@@ -1940,6 +1966,7 @@ def wf_asistente(ids):
         ("LeerFichaDelLead", 0, "LeerCartera", 0), ("LeerCartera", 0, "LeerDirecciones", 0),
         ("LeerDirecciones", 0, "ContextoDelLead", 0), ("ContextoDelLead", 0, "Agente", 0),
         ("Agente", 0, "DividirRespuesta", 0), ("Agente", 1, "AvisoDeFallo", 0),
+        ("AvisoDeFallo", 0, "NotaDeFallo", 0), ("NotaDeFallo", 0, "AvisoFalloAlEquipo", 0),
         ("DividirRespuesta", 0, "EnviarMensajes", 0))
     ai = ai_conn("Agente", [("ModeloOpenAI", "ai_languageModel"), ("MemoriaPostgres", "ai_memory")]
                  + [(t["name"], "ai_tool") for t in tools])
