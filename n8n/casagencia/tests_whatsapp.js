@@ -1769,5 +1769,27 @@ console.log('\n== Si OpenAI falla, la conversacion no se queda muerta ==');
 }
 
 // ===========================================================================
+console.log('\n== Fechas y precios: nada inventado ==');
+{
+  const pr = fs.readFileSync(B + 'wa/prompt_asistente.md', 'utf8');
+  const tel = fs.readFileSync(B + 'retell/general_prompt.md', 'utf8');
+  ck('WhatsApp: prohibido inventarse fechas y proponer una ya pasada',
+     /LAS FECHAS NO TE LAS INVENTAS NUNCA/.test(pr)
+     && /PROHIBIDO proponer una fecha que ya ha pasado/.test(pr)
+     && /a partir del 1 de septiembre/.test(pr));
+  ck('y prohibido inventarse de donde sale un precio',
+     /NO EXPLIQUES DE DÓNDE SALE UN PRECIO/.test(pr) && /avisarEquipo/.test(
+       pr.slice(pr.indexOf('NO EXPLIQUES DE DÓNDE SALE UN PRECIO'), pr.indexOf('NO EXPLIQUES DE DÓNDE SALE UN PRECIO') + 900)));
+  ck('el telefono tiene las dos reglas', /LAS FECHAS NO TE LAS INVENTAS NUNCA/.test(tel)
+     && /NO EXPLIQUES DE DÓNDE SALE UN PRECIO/.test(tel));
+  // La fecha de hoy va pegada al mensaje, no solo arriba del todo
+  const w = JSON.parse(fs.readFileSync(B + 'workflows_wa/WA_2_Asistente_de_WhatsApp.json', 'utf8'));
+  const texto = w.nodes.find(n => n.name === 'Agente').parameters.text;
+  ck('en cada turno se le repite la fecha de hoy junto al mensaje',
+     (texto.match(/CodeFechaHoraActual/g) || []).length >= 2
+     && /No escribas ninguna fecha anterior a hoy/.test(texto));
+}
+
+// ===========================================================================
 console.log(fallos ? `\n${fallos} FALLOS` : '\nTodo correcto');
 process.exit(fallos ? 1 : 0);

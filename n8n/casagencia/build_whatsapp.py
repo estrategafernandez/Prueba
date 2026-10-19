@@ -1862,9 +1862,14 @@ def wf_asistente(ids):
         # --- 6. Generar respuesta del asistente -------------------------------
         node("Agente", "@n8n/n8n-nodes-langchain.agent", {
             "promptType": "define",
+            # La fecha de hoy, pegada al mensaje y repetida: Sara llego a ofrecer una
+            # visita "a partir del 1 de septiembre" estando a 19 de octubre.
             "text": "=Datos del cliente:\n{{ $json.contexto }}\n"
                     "- Fecha y hora actual: {{ $('CodeFechaHoraActual').first().json.fecha_hora }}"
-                    "\n\nMensaje del cliente:\n{{ $json.mensaje }}",
+                    "\n\nMensaje del cliente:\n{{ $json.mensaje }}"
+                    "\n\nRECUERDA: hoy es {{ $('CodeFechaHoraActual').first().json.fecha_hora }}. "
+                    "No escribas ninguna fecha anterior a hoy ni te inventes fechas de "
+                    "disponibilidad o de entrada que no esten en la ficha.",
             "options": {"systemMessage": "=" + PROMPT, "maxIterations": 12},
         }, [6280, Y], 1.8, onError="continueErrorOutput",
             retryOnFail=True, maxTries=2, waitBetweenTries=5000),
