@@ -36,7 +36,8 @@ return [{ json: {
   nombre: limpio(extraido.nombre).slice(0, 80),
   referencia: ref,
   asesora,
-  agente_id: (esPrueba(l.telefono_e164) || !segura) ? 0 : agenteDe(segura),
+  // Si la comercial esta de vacaciones, la conversacion la lleva su sustituta
+  agente_id: (esPrueba(l.telefono_e164) || !segura) ? 0 : agenteDeHoy(segura),
   // La nota del panel, ya con la asesora (aqui es donde se sabe de verdad)
   nota: [l.nota, l.linea ? `Entró por: ${l.linea}` : '',
          asesora ? `Asesora: ${asesora}${porQue}` : '']

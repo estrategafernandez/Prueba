@@ -362,6 +362,14 @@ Dos cosas distintas hacían que una conversación acabara en Paco:
    reglas de siempre: solo si hay comercial y no la lleva ya Carmen o Gisela
    (un cambio a mano entre ellas se respeta).
 
+**Y si la comercial de la zona está de vacaciones**, la conversación se la
+queda **quien la sustituye** (`agenteDeHoy`, que mira `AUSENCIAS`). Vale para
+las tres puertas de entrada: quien escribe directo, los leads de portal y las
+llamadas. Es por el día de HOY, porque es quien tiene que atender al cliente
+ahora; **la visita**, en cambio, va a quien vaya a estar **el día de la cita**.
+En cuanto vuelve de vacaciones, las nuevas vuelven a ser suyas solas: no hay
+que tocar nada.
+
 ### Si OpenAI falla, la conversación no se queda muerta (16-10-2026)
 
 Pasó con la conversación de Susana: OpenAI devolvió un *Connection error*, Sara

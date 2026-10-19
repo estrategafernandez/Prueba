@@ -413,6 +413,16 @@ function agenteDe(nombre) {
   return Number(AGENTES_CHATWOOT[String(nombre ?? '').trim()] || 0);
 }
 
+// Quien se queda la conversacion en el panel HOY: la comercial de la zona o,
+// si esta de vacaciones (AUSENCIAS), la que la sustituye. Es por el dia de hoy
+// porque es quien tiene que atender al cliente ahora; la VISITA, en cambio, va
+// a quien vaya a estar el dia de la cita (eso lo decide resolverAsesora con la
+// fecha). En cuanto vuelve de vacaciones, las nuevas vuelven a ser suyas solas.
+function agenteDeHoy(nombre) {
+  const hoy = DateTime.now().setZone(ZONA).toFormat('yyyy-MM-dd');
+  return agenteDe(quienAtiende(nombre, hoy));
+}
+
 function esPrueba(telefono) {
   const t = normalizarTelefono(telefono).wa_id;
   return !!t && (PRUEBAS.telefonos || []).includes(t);

@@ -1822,5 +1822,42 @@ console.log('\n== Las conversaciones son de las comerciales, de nadie mas ==');
 }
 
 // ===========================================================================
+console.log('\n== Mientras una esta de vacaciones, su sustituta lleva las nuevas ==');
+{
+  const { AUSENCIAS, agenteDeHoy, agenteDe } = Function('DateTime',
+    CFG + '; return { AUSENCIAS, agenteDeHoy, agenteDe };')(DateTime);
+  const hoy = DateTime.now().setZone('Europe/Madrid').toFormat('yyyy-MM-dd');
+  const fuera = AUSENCIAS.find(a => hoy >= a.desde && hoy <= a.hasta);
+  // La regla, pase lo que pase con el calendario: quien esta de vacaciones no
+  // se queda conversaciones nuevas, y quien no lo esta se queda las suyas.
+  for (const a of AUSENCIAS) {
+    const deVacaciones = hoy >= a.desde && hoy <= a.hasta;
+    ck(`${a.asesora} ${deVacaciones ? 'esta de ' + a.motivo + ': sus conversaciones nuevas son de ' + a.sustituye
+        : 'ha vuelto: sus conversaciones nuevas vuelven a ser suyas'}`,
+       agenteDeHoy(a.asesora) === agenteDe(deVacaciones ? a.sustituye : a.asesora),
+       `agente ${agenteDeHoy(a.asesora)}`);
+  }
+  ck('la que no esta de vacaciones se queda las suyas igual',
+     agenteDeHoy('Gisela') === agenteDe('Gisela'));
+
+  // Y las tres puertas de entrada usan la misma regla
+  const dentro = (f) => fs.readFileSync(B + f, 'utf8');
+  ck('quien escribe directo', /agenteDeHoy\(asesora\)/.test(dentro('wa/asistente_contexto.js')));
+  ck('los leads de portal (bienvenida)', /agenteDeHoy\(resolverAsesora/.test(dentro('wa/plantilla_normalizar.js')));
+  ck('y las llamadas del telefono', /agenteDeHoy\(segura\)/.test(dentro('wa/llamada_nombre.js')));
+
+  // Lo que ve el panel con un inmueble de Carmen, hoy
+  const ctx = wa('asistente_contexto.js', inp([{ json: {} }]), nod({
+    JuntarMensajes: { telefono_e164: '+34600111222', telefono_wa: '34600111222', nombre: 'Roxy', mensaje: 'hola', conversacion_id: 174, cuenta_id: 1 },
+    EntradaMensaje: { etiquetas: [] },
+    LeerFichaDelLead: { telefono_wa: '34600111222', referencia: 'BN-1465-V', operacion: 'venta' },
+    LeerCartera: REAL, LeerDirecciones: [],
+  }), true)[0].json;
+  ck('un inmueble de Benicasim: la lleva Carmen salvo que este fuera',
+     ctx.asesora === 'Carmen' && ctx.agente_id === agenteDe(fuera && fuera.asesora === 'Carmen' ? fuera.sustituye : 'Carmen'),
+     `asesora ${ctx.asesora}, agente ${ctx.agente_id}`);
+}
+
+// ===========================================================================
 console.log(fallos ? `\n${fallos} FALLOS` : '\nTodo correcto');
 process.exit(fallos ? 1 : 0);

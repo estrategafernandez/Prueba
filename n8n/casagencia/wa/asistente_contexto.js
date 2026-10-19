@@ -130,7 +130,8 @@ return [{
     // Para asignarle la conversacion en el panel. Los que escriben directos (sin
     // pasar por un portal) no la tenian asignada y se la quedaba quien pillara
     // la auto-asignacion de Chatwoot, incluido Paco.
-    agente_id: agenteDe(asesora),
+    // Si la de la zona esta de vacaciones, se la queda quien la sustituye.
+    agente_id: agenteDeHoy(asesora),
     telefono_e164: d.telefono_e164,
     telefono_wa: d.telefono_wa,
     nombre: hay(fila.nombre) ? fila.nombre : (d.nombre || ''),

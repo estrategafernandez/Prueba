@@ -36,6 +36,8 @@ return [{
     conversacion_id: Number(j.conversacion_id || 0),
     // En el panel, la conversacion para la asesora de la referencia (como el telefono)
     asesora: resolverAsesora(j.referencia).destinatario,
-    agente_id: esPrueba(j.telefono) ? 0 : agenteDe(resolverAsesora(j.referencia).destinatario),
+    // Si la comercial de la zona esta de vacaciones, la conversacion es de quien
+    // la sustituye (y vuelve a ser suya sola cuando vuelve)
+    agente_id: esPrueba(j.telefono) ? 0 : agenteDeHoy(resolverAsesora(j.referencia).destinatario),
   }
 }];
