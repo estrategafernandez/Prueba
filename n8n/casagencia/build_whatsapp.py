@@ -1842,6 +1842,13 @@ def wf_asistente(ids):
         leer_cartera("LeerCartera", [5420, Y]),
         leer_hoja("LeerDirecciones", "Direcciones", [5640, Y], executeOnce=True),
         code_node("ContextoDelLead", code_wa("asistente_contexto.js", cartera=True), [5860, Y]),
+        # La conversacion, para la comercial de la zona. Hace falta aqui porque
+        # los clientes que escriben directos (el boton de la web, o quien guarda
+        # el numero) no pasan por la bienvenida, asi que nadie se la asignaba y
+        # acababa en quien tocara por la auto-asignacion de Chatwoot (Paco,
+        # 19-10-2026). Respeta el cambio a mano entre Carmen y Gisela.
+        *asignar("AsignarConversacion", "%s.conversacion_id" % CTX, "%s.agente_id" % CTX,
+                 "$('EntradaMensaje').first().json.asignada_a", [6060, Y - 300])[0],
         code_node("EstadoEnProceso", code_wa("estado_en_proceso.js"), [4980, Y - 300]),
         # --- El correo de la solicitud en el contacto del panel -----------------
         # Si el cliente dejo su correo en la solicitud y el contacto no lo tiene,
@@ -1969,7 +1976,10 @@ def wf_asistente(ids):
         ("EstadoEnProceso", 0, "¿Marcar en proceso?", 0), ("¿Marcar en proceso?", 0, "MarcarEnProceso", 0),
         ("CodeFechaHoraActual", 0, "LeerFichaDelLead", 0),
         ("LeerFichaDelLead", 0, "LeerCartera", 0), ("LeerCartera", 0, "LeerDirecciones", 0),
-        ("LeerDirecciones", 0, "ContextoDelLead", 0), ("ContextoDelLead", 0, "Agente", 0),
+        ("LeerDirecciones", 0, "ContextoDelLead", 0),
+        ("ContextoDelLead", 0, "¿AsignarConversacion?", 0),
+        ("¿AsignarConversacion?", 0, "AsignarConversacion", 0),
+        ("¿AsignarConversacion?", 1, "Agente", 0), ("AsignarConversacion", 0, "Agente", 0),
         ("Agente", 0, "DividirRespuesta", 0), ("Agente", 1, "AvisoDeFallo", 0),
         ("AvisoDeFallo", 0, "NotaDeFallo", 0), ("NotaDeFallo", 0, "AvisoFalloAlEquipo", 0),
         ("DividirRespuesta", 0, "EnviarMensajes", 0))

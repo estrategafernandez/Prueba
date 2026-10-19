@@ -345,6 +345,23 @@ correos de cada llamada (el aviso va por WhatsApp). Sigue subiendo la grabación
 a Drive. Está todo en `build_workflows.py` (`--solo=` para desplegar solo uno). Cada llamada entra
 una sola vez (tabla `tel_llamadas_panel`).
 
+### Las conversaciones son de las comerciales, de nadie más (19-10-2026)
+
+Dos cosas distintas hacían que una conversación acabara en Paco:
+
+1. **Chatwoot tenía la auto-asignación encendida** en el inbox de WhatsApp
+   ("Asignado a X por Default Policy"), que reparte por turnos entre TODOS los
+   miembros del inbox: Carmen, Gisela, Laurence, Paco y la propia IA. **Ya está
+   apagada** (`enable_auto_assignment: false` en el inbox 1). Es un ajuste del
+   panel, no del código: si alguien lo vuelve a encender, vuelve el problema.
+2. **Quien escribe directo no pasaba por ninguna asignación.** Los leads de
+   portal se asignan al mandar la bienvenida, y las llamadas al entrar en el
+   panel; pero quien escribe por su cuenta (el botón de la web, o quien tiene
+   guardado el número) no pasa por ninguna de las dos. Ahora **[WA] 2 asigna la
+   conversación** a la comercial de la zona en cada mensaje, con las mismas
+   reglas de siempre: solo si hay comercial y no la lleva ya Carmen o Gisela
+   (un cambio a mano entre ellas se respeta).
+
 ### Si OpenAI falla, la conversación no se queda muerta (16-10-2026)
 
 Pasó con la conversación de Susana: OpenAI devolvió un *Connection error*, Sara

@@ -1791,5 +1791,36 @@ console.log('\n== Fechas y precios: nada inventado ==');
 }
 
 // ===========================================================================
+console.log('\n== Las conversaciones son de las comerciales, de nadie mas ==');
+{
+  const w = JSON.parse(fs.readFileSync(B + 'workflows_wa/WA_2_Asistente_de_WhatsApp.json', 'utf8'));
+  const nombres = w.nodes.map(n => n.name);
+  ck('[WA] 2 asigna la conversacion a la comercial de la zona',
+     nombres.includes('¿AsignarConversacion?') && nombres.includes('AsignarConversacion'));
+  const cond = JSON.stringify(w.nodes.find(n => n.name === '¿AsignarConversacion?').parameters);
+  // Solo si hay comercial y no la tiene ya una de ellas (un cambio a mano se respeta)
+  ck('solo si hay comercial y no la lleva ya Carmen o Gisela',
+     /agente_id/.test(cond) && /asignada_a/.test(cond) && /\[5,4\]|\[4,5\]/.test(cond.replace(/\s/g, '')), cond.slice(-240));
+  const sig = (x) => (w.connections[x] ? w.connections[x].main.flat().map(c => c.node) : []);
+  ck('asigne o no, la conversacion sigue su curso (no se queda parada)',
+     sig('¿AsignarConversacion?').includes('Agente') && sig('AsignarConversacion').includes('Agente'));
+  // El contexto da el id de agente de la comercial que toca
+  const ctx = wa('asistente_contexto.js', inp([{ json: {} }]), nod({
+    JuntarMensajes: { telefono_e164: '+34600111222', telefono_wa: '34600111222', nombre: 'Roxy', mensaje: 'hola', conversacion_id: 174, cuenta_id: 1 },
+    EntradaMensaje: { etiquetas: [] },
+    LeerFichaDelLead: { telefono_wa: '34600111222', referencia: 'CS-G-399-A', es_alquiler: true },
+    LeerCartera: REAL, LeerDirecciones: [],
+  }), true)[0].json;
+  ck('un inmueble de Castellon se asigna a Gisela (agente 4)',
+     ctx.asesora === 'Gisela' && ctx.agente_id === 4, `${ctx.asesora} / ${ctx.agente_id}`);
+  // Y el nodo de entrada dice quien la tiene ahora
+  const ent = wa('asistente_entrada.js', inp([{ json: { body: { event: 'message_created',
+    message_type: 'incoming', id: 9, content: 'hola', conversation: { id: 174, inbox_id: 1,
+      meta: { assignee: { id: 3 }, sender: { id: 7, phone_number: '+34600111222' } } },
+    sender: { id: 7, phone_number: '+34600111222' }, account: { id: 1 } } } }]), nod({}))[0].json;
+  ck('se sabe si la tiene alguien que no es comercial (Paco = 3)', ent.asignada_a === 3, String(ent.asignada_a));
+}
+
+// ===========================================================================
 console.log(fallos ? `\n${fallos} FALLOS` : '\nTodo correcto');
 process.exit(fallos ? 1 : 0);

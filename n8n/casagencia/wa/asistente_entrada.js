@@ -115,6 +115,8 @@ return [{
     nombre: String(quien.name ?? '').trim(),
     conversacion_id: conv.id ?? msg.conversation_id ?? null,
     contacto_id: quien.id ?? null,
+    // Quien tiene asignada la conversacion en el panel (0 = nadie)
+    asignada_a: Number(conv.meta?.assignee?.id ?? b.conversation?.meta?.assignee?.id ?? 0) || 0,
     contacto_email: String(quien.email ?? '').trim(),
     cuenta_id: b.account?.id ?? conv.account_id ?? CHATWOOT_CUENTA,
     etiquetas,

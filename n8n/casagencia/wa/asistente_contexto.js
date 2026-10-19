@@ -127,6 +127,10 @@ return [{
     referencia: hay(fila.referencia) ? String(fila.referencia) : '',
     otras_referencias: otras.map(o => String(o.referencia)),
     asesora,
+    // Para asignarle la conversacion en el panel. Los que escriben directos (sin
+    // pasar por un portal) no la tenian asignada y se la quedaba quien pillara
+    // la auto-asignacion de Chatwoot, incluido Paco.
+    agente_id: agenteDe(asesora),
     telefono_e164: d.telefono_e164,
     telefono_wa: d.telefono_wa,
     nombre: hay(fila.nombre) ? fila.nombre : (d.nombre || ''),
