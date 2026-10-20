@@ -1275,7 +1275,10 @@ console.log('\n== Seguimiento a quien no contesta a la bienvenida ([WA] 10) ==')
        cand([pagina(conv(5, { last_non_activity_message: msj({ additional_attributes: { template_params: { name: 'seguimiento_1' } } }) }))]).length === 0);
     ck('una nota interna no cuenta como bienvenida', cand([pagina(conv(6, { last_non_activity_message: msj({ private: true }) }))]).length === 0);
     ck('bot en Off: no', cand([pagina(conv(7, { meta: { sender: { name: 'X', phone_number: '+34600000002', custom_attributes: { bot: 'Off' } } } }))]).length === 0);
-    ck('conversacion resuelta: no', cand([pagina(conv(8, { status: 'resolved' }))]).length === 0);
+    ck('cerrada en el panel sin escribirle: SI sale (cerrar no es renunciar al lead)',
+       cand([pagina(conv(8, { status: 'resolved' }))]).length === 1);
+    ck('cerrada y ademas la asesora le escribio: no (lo ultimo no es la bienvenida)',
+       cand([pagina(conv(8, { status: 'resolved', last_non_activity_message: msj({ additional_attributes: {} }) }))]).length === 0);
     ck('bienvenida de hace mas de 3 dias (lead antiguo): no', cand([pagina(conv(9))], '2026-10-10T10:00').length === 0);
     ck('ya en 2-en_proceso: no', cand([pagina(conv(10, { labels: ['2-en_proceso'] }))]).length === 0);
     r = cand([pagina(conv(11), conv(12)), pagina(conv(12), conv(13))]);
@@ -1291,6 +1294,12 @@ console.log('\n== Seguimiento a quien no contesta a la bienvenida ([WA] 10) ==')
     r = cand([pagina(tambien('También he visto que te has interesado por este otro inmueble: https://x ¿Lo quieres también visitar?'))]);
     ck('el "Tambien he visto... otro inmueble" cuenta como bienvenida para el seguimiento', r.length === 1 && r[0].nombre === 'Yaiza', JSON.stringify(r));
     ck('otra plantilla abierta (p. ej. a un propietario) no', cand([pagina(tambien('Soy Sara, IA de Casagencia. Hemos recibido tu mensaje sobre tu vivienda.'))]).length === 0);
+    ck('"ya no esta disponible" tampoco', cand([pagina(tambien('Soy Sara, IA de Casagencia. El inmueble por el que nos preguntaste (ref. X) ya no está disponible, pero tenemos otros parecidos.'))]).length === 0);
+    r = cand([pagina(tambien('Soy Sara, IA de Casagencia. Hemos recibido el mensaje que nos dejaste en nuestra web sobre un ático. ¿Te ayudo por aquí?'))]);
+    ck('un lead de la WEB si se persigue, pero como tipo "web"', r.length === 1 && r[0].tipo === 'web', JSON.stringify(r));
+    ck('el que pregunto por un inmueble es tipo "inmueble"', cand([pagina(conv(25))])[0].tipo === 'inmueble');
+    r = cand([pagina(tambien("I'm Sara, Casagencia's AI. We received the message you left on our website. Can I help you here?"))]);
+    ck('y en ingles tambien', r.length === 1 && r[0].tipo === 'web');
     const plantillaMeta = { data: [{ name: 'seguimiento_1', status: 'APPROVED', language: 'en', category: 'MARKETING',
       components: [{ type: 'BODY', text: 'Hola *{{1}}*,\n*¿Te sigue interesando visitar el inmueble o necesitas más información?*' }] }] };
     const cands = cand([pagina(conv(25))]);
@@ -1301,6 +1310,20 @@ console.log('\n== Seguimiento a quien no contesta a la bienvenida ([WA] 10) ==')
        && /^Hola \*Ana\*,/.test(body.content) && body.message_type === 'outgoing' && c.conversacion_id === 25, c.body_mensaje);
     c = wa('seguimiento_componer.js', inp([]), nod({ SoloLosNuevos: cands, PlantillaMeta: { data: [] } }))[0].json;
     ck('componer: sin la plantilla aprobada en Meta no se manda', c.aprobada === false && c.estado_plantilla === 'no encontrada');
+
+    // Los leads de la web llevan su propia plantilla (no hay inmueble que "volver a visitar")
+    const webMeta = { data: [...plantillaMeta.data, { name: 'seguimiento_web', status: 'APPROVED', language: 'es',
+      category: 'MARKETING', components: [{ type: 'BODY', text: 'Hola *{{1}}*, ¿sigues buscando?' }] }] };
+    const candWeb = cand([pagina(tambien('Soy Sara, IA de Casagencia. Hemos recibido el mensaje que nos dejaste en nuestra web. ¿Te ayudo por aquí?'))]);
+    c = wa('seguimiento_componer.js', inp([]), nod({ SoloLosNuevos: candWeb, PlantillaMeta: webMeta }))[0].json;
+    ck('componer: un lead de la web lleva seguimiento_web, no seguimiento_1',
+       c.aprobada && c.plantilla === 'seguimiento_web' && JSON.parse(c.body_mensaje).template_params.name === 'seguimiento_web'
+       && /^Hola \*Yaiza\*, ¿sigues/.test(c.contenido), c.body_mensaje);
+    c = wa('seguimiento_componer.js', inp([]), nod({ SoloLosNuevos: candWeb, PlantillaMeta: plantillaMeta }))[0].json;
+    ck('componer: si seguimiento_web aun no esta en Meta, a ese no se le manda', c.aprobada === false);
+    const mezcla = wa('seguimiento_componer.js', inp([]), nod({ SoloLosNuevos: [...cands, ...candWeb], PlantillaMeta: plantillaMeta })).map(x => x.json);
+    ck('componer: y eso no frena a los de inmueble, que salen igual',
+       mezcla.length === 2 && mezcla[0].aprobada === true && mezcla[1].aprobada === false, JSON.stringify(mezcla.map(x => [x.plantilla, x.aprobada])));
 
     const w10 = JSON.parse(fs.readFileSync(B + 'workflows_wa/WA_10_Seguimiento_a_quien_no_contesta.json', 'utf8'));
     const n10 = (n) => w10.nodes.find(x => x.name === n);

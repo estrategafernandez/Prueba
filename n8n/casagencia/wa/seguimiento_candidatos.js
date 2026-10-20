@@ -7,7 +7,12 @@
 //    contestado ni nadie del equipo le ha escrito despues (y si ya se le mando el
 //    seguimiento, lo ultimo es el seguimiento, asi que tampoco sale);
 //  - la bienvenida es de hace 12 h o mas (y no de hace mas de max_horas);
-//  - el bot no esta en Off y la conversacion no esta resuelta.
+//  - el bot no esta en Off.
+// Que este CERRADA en el panel no lo impide: si la asesora le hubiera escrito,
+// su mensaje seria lo ultimo y ya no saldria por la regla de arriba. Cerrarla
+// sin escribirle es ordenar el panel, no renunciar al lead.
+// Sale `tipo`: 'inmueble' (pregunto por uno concreto) o 'web' (nos escribio por
+// la web, sin inmueble); cada uno lleva su plantilla de seguimiento.
 const conf = SEGUIMIENTO;
 const ahora = DateTime.now().setZone(ZONA);
 if (!conf.activo || ahora.hour < conf.desde || ahora.hour >= conf.hasta) return [];
@@ -20,7 +25,6 @@ for (const c of convs) {
   if (!c || !c.id || vistas.has(c.id)) continue;
   vistas.add(c.id);
   if (!(c.labels || []).includes(ETIQUETAS.bienvenida)) continue;
-  if (c.status === 'resolved') continue;
   const contacto = c.meta?.sender || {};
   if (String(contacto.custom_attributes?.bot ?? '').trim().toLowerCase() === 'off') continue;
 
@@ -31,9 +35,14 @@ for (const c of convs) {
   // bienvenida de una segunda solicitud)
   const p = plantilla.processed_params || {};
   const texto2 = String((p.body || p)['2'] ?? '');
+  const abierta = plantilla.name === PLANTILLAS.abierta.nombre;
+  // Un lead de la web no pregunto por ningun inmueble: su seguimiento es otro
+  const esWeb = abierta && PREFIJOS_LEAD_WEB.some(x => texto2.startsWith(x));
   const esBienvenida = /^bienvenida/.test(String(plantilla.name || ''))
-    || (plantilla.name === PLANTILLAS.abierta.nombre && PREFIJOS_OTRO_INMUEBLE.some(x => texto2.startsWith(x)));
-  if (m.message_type !== 1 || m.private || !esBienvenida) continue;
+    || (abierta && PREFIJOS_OTRO_INMUEBLE.some(x => texto2.startsWith(x)));
+  // Las demas plantillas abiertas (captacion de propietarios, "ya no esta
+  // disponible") no se persiguen: el seguimiento no tendria sentido
+  if (m.message_type !== 1 || m.private || !(esBienvenida || esWeb)) continue;
   const horas = (ahoraSeg - Number(m.created_at || 0)) / 3600;
   if (horas < conf.horas || horas > conf.max_horas) continue;
 
@@ -52,6 +61,7 @@ for (const c of convs) {
     telefono: tel.e164,
     nombre,
     bienvenida: plantilla.name,
+    tipo: esWeb ? 'web' : 'inmueble',
     horas_desde_bienvenida: Math.round(horas * 10) / 10,
   } });
 }

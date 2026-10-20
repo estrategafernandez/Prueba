@@ -98,6 +98,15 @@ const OTRA_SOLICITUD_DIAS = 7;
 // Como empieza ese mensaje en cada idioma (el seguimiento de 12 h lo trata como
 // una bienvenida)
 const PREFIJOS_OTRO_INMUEBLE = ['También he visto que te has interesado', "I've also seen that you're interested", "J'ai aussi vu que ce bien"];
+// Y como empieza el primer mensaje a un lead de la WEB (TEXTOS_ABIERTA.busqueda
+// en leads.js). Tambien sale con la plantilla abierta, pero no hay un inmueble
+// concreto, asi que su seguimiento es otro (SEGUIMIENTO.plantilla_web). Los
+// prefijos llegan hasta "nuestra web" a proposito: el de captacion de
+// propietarios empieza igual ("Soy Sara, IA de Casagencia. Hemos recibido...")
+// y ese NO se persigue.
+const PREFIJOS_LEAD_WEB = ['Soy Sara, IA de Casagencia. Hemos recibido el mensaje que nos dejaste en nuestra web',
+                           "I'm Sara, Casagencia's AI. We received the message you left on our website",
+                           "Je suis Sara, l'IA de Casagencia. Nous avons bien reçu votre message sur notre site"];
 
 // --- Seguimiento a quien no contesta a la bienvenida ---------------------------
 // Si el cliente no contesta a la plantilla de bienvenida (la conversacion sigue
@@ -105,9 +114,24 @@ const PREFIJOS_OTRO_INMUEBLE = ['También he visto que te has interesado', "I've
 // plantilla de seguimiento ({{1}} = su nombre), una sola vez y solo en horario
 // comercial: de `desde` a `hasta` (hora de Espana). Si las 12 h se cumplen fuera
 // de horario, sale a las 9:00. No se manda si la bienvenida es de hace mas de
-// `max_horas` (para no escribir a leads antiguos), si el bot esta en Off, si la
-// conversacion esta resuelta o si alguien del equipo ya le ha escrito.
-const SEGUIMIENTO = { activo: true, plantilla: 'seguimiento_1', idioma: 'en', horas: 12, desde: 9, hasta: 19, max_horas: 72 };
+// `max_horas` (para no escribir a leads antiguos), si el bot esta en Off o si
+// alguien del equipo ya le ha escrito.
+//
+// Que la conversacion este CERRADA en el panel no lo impide: cerrarla sin
+// haberle escrito al cliente es ordenar el panel, no decidir que no se le
+// persigue. Si la asesora si le ha escrito, su mensaje es lo ultimo de la
+// conversacion y entonces no sale (esa regla no cambia).
+//
+//   plantilla:     a quien pregunto por un inmueble concreto (portales y web
+//                  con referencia). "¿Te sigue interesando visitar el inmueble
+//                  o necesitas mas informacion?"
+//   plantilla_web: a los leads de la web sin inmueble (TEXTOS_ABIERTA.busqueda),
+//                  donde no hay nada que "volver a visitar". Texto propuesto:
+//                  "Hola {{1}}, ¿sigues buscando? Cuentame que necesitas y te
+//                  enseño lo que tenemos." Mientras no este dada de alta y
+//                  aprobada en Meta no se manda nada a esos leads (se reintenta
+//                  en cada pasada, hasta max_horas).
+const SEGUIMIENTO = { activo: true, plantilla: 'seguimiento_1', plantilla_web: 'seguimiento_web', idioma: 'en', horas: 12, desde: 9, hasta: 19, max_horas: 72 };
 
 // --- Recordatorio de la visita AL CLIENTE (24 h y 2 h antes) --------------------
 // [WA] 6 (24 h) y [WA] 7 (2 h) miran las agendas de Carmen y Gisela cada 15

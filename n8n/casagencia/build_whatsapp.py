@@ -1445,7 +1445,8 @@ def const_etiqueta(clave):
     return re.search(r"^\s*%s:\s*'([^']+)'" % clave, CONFIG, re.M).group(1)
 
 
-SEG_PLANTILLA = re.search(r"plantilla:\s*'([^']+)'", const("SEGUIMIENTO")).group(1)
+SEG_PLANTILLA = re.search(r"\bplantilla:\s*'([^']+)'", const("SEGUIMIENTO")).group(1)
+SEG_PLANTILLA_WEB = re.search(r"\bplantilla_web:\s*'([^']+)'", const("SEGUIMIENTO")).group(1)
 SQL_SEGUIDO = """insert into wa_avisos (evento_id, tipo) values ($1, $2)
 on conflict (evento_id, tipo) do nothing
 returning evento_id;"""
@@ -1474,8 +1475,9 @@ def wf_seguimiento(ids):
                  [620, 0], onError="continueRegularOutput"),
         code_node("SoloLosNuevos", "const nuevos = new Set($input.all().map(i => String(i.json.evento_id ?? '')));\n"
                   "return $('Candidatos').all().filter(i => nuevos.has(String(i.json.evento_id)));", [840, 0]),
+        # Todas: hacen falta la de inmueble y la de los leads de la web
         http("PlantillaMeta", "GET", "%s/%s/message_templates" % (META_API, WABA_ID), [1060, 0],
-             cred=CRED_META, query={"name": SEG_PLANTILLA}, executeOnce=True,
+             cred=CRED_META, query={"limit": 200}, executeOnce=True,
              onError="continueRegularOutput", alwaysOutputData=True),
         code_node("Componer", code_wa("seguimiento_componer.js"), [1280, 0]),
         if_node("¿Aprobada?", "={{ $json.aprobada }}", "true", [1500, 0]),
@@ -1500,11 +1502,14 @@ def wf_seguimiento(ids):
         nota("Nota", "## Seguimiento a quien no contesta\nCada 15 minutos, de 9:00 a 19:00 (hora de Espana), "
              "mira las conversaciones del panel con *%s*. Si lo ultimo es la plantilla de bienvenida y es "
              "de hace 12 h o mas, le manda *%s* ({{1}} = su nombre) por su conversacion. Si las 12 h se "
-             "cumplen de noche, sale a las 9:00.\n\nNo sale si el cliente ha contestado, si alguien del "
-             "equipo le ha escrito, con el bot en Off, con la conversacion resuelta ni si la bienvenida es "
-             "de hace mas de 3 dias. Una sola vez por bienvenida (wa_avisos). Al mandarlo, la conversacion pasa "
-             "de *1-bienvenida_ia* a *1-seguimiento_1*. Ajustes: SEGUIMIENTO en "
-             "wa/config.js." % (ETQ_BIENVENIDA, SEG_PLANTILLA), [180, -380], 600, 300),
+             "cumplen de noche, sale a las 9:00.\n\nA los leads de la WEB (los que escriben por el "
+             "formulario, sin inmueble) les toca *%s* en su lugar: mientras esa no este aprobada en Meta, "
+             "a esos no se les manda nada y se reintenta.\n\nNo sale si el cliente ha contestado, si "
+             "alguien del equipo le ha escrito, con el bot en Off ni si la bienvenida es de hace mas de 3 "
+             "dias. Que la conversacion este CERRADA no lo impide: si la asesora le hubiera escrito, su "
+             "mensaje seria lo ultimo y no saldria. Una sola vez por bienvenida (wa_avisos). Al mandarlo, "
+             "la conversacion pasa de *1-bienvenida_ia* a *1-seguimiento_1*. Ajustes: SEGUIMIENTO en "
+             "wa/config.js." % (ETQ_BIENVENIDA, SEG_PLANTILLA, SEG_PLANTILLA_WEB), [180, -380], 600, 320),
     ], conn(("Cada15MinEnHorario", 0, "SinContestar", 0), ("SinContestar", 0, "Candidatos", 0),
             ("Candidatos", 0, "ApuntarSeguimiento", 0), ("ApuntarSeguimiento", 0, "SoloLosNuevos", 0),
             ("SoloLosNuevos", 0, "PlantillaMeta", 0), ("PlantillaMeta", 0, "Componer", 0),
