@@ -181,16 +181,20 @@ const PORTALES = [
 ];
 
 // --- Etiquetas de Chatwoot ---------------------------------------------------
-// Las mismas que Blue, creadas ya en el panel. Las tres primeras son el estado
-// de la conversacion (solo una a la vez y nunca hacia atras); la cuarta se suma
-// a la que haya y hace que el bot deje de contestar.
+// Las mismas que Blue, creadas ya en el panel. Las cuatro primeras son el estado
+// de la conversacion (solo una a la vez y nunca hacia atras); 4-intervenir se
+// suma a la que haya y hace que el bot deje de contestar.
 const ETIQUETAS = {
   bienvenida: '1-bienvenida_ia',   // la IA ha mandado la plantilla
-  seguimiento: '1-seguimiento_1', // no contesto a la bienvenida y se le mando el seguimiento de 12 h
+  seguimiento: '5-seguimiento_1',  // no contesto a la bienvenida y se le mando el seguimiento de 12 h
   en_proceso: '2-en_proceso',      // el cliente ha contestado y la IA esta con el
   agendada:   '3-agendada_ia',     // visita agendada de verdad en el calendario
   intervenir: '4-intervenir',      // tiene que entrar una persona (la IA sigue contestando: solo se calla con bot = Off)
 };
+// OJO: el orden de ESTADOS es el del embudo, NO el del numero del nombre. El
+// seguimiento va entre la bienvenida y "en proceso" aunque se llame 5-, que es
+// como lo tiene puesto el equipo en el panel. Cambiar este orden hace que una
+// conversacion pueda volver hacia atras.
 const ESTADOS = [ETIQUETAS.bienvenida, ETIQUETAS.seguimiento, ETIQUETAS.en_proceso, ETIQUETAS.agendada];
 // Etiquetas que se SUMAN a las de estado (no cuentan como estado):
 const ETIQUETA_VENDEDOR = 'vendedor';               // el comprador tiene que vender una vivienda

@@ -1491,7 +1491,7 @@ def wf_seguimiento(ids):
                  "={{ [ %s.telefono, JSON.stringify({ type: 'ai', content: %s.contenido, tool_calls: [], "
                  "additional_kwargs: {}, response_metadata: {}, invalid_tool_calls: [] }) ] }}" % (comp, comp),
                  [2160, -160], onError="continueRegularOutput", alwaysOutputData=True),
-        # Y la conversacion pasa de 1-bienvenida_ia a 1-seguimiento_1
+        # Y la conversacion pasa de 1-bienvenida_ia a 5-seguimiento_1
         exec_sub("MarcarSeguimiento", ids.get("[WA][SUB] Etiquetar", ""), "[WA][SUB] Etiquetar",
                  {"conversacion_id": "={{ %s.conversacion_id }}" % comp, "etiquetas": const_etiqueta("seguimiento")},
                  [2380, -160], {"conversacion_id": "number"}, cada_uno=True, onError="continueRegularOutput"),
@@ -1508,7 +1508,7 @@ def wf_seguimiento(ids):
              "alguien del equipo le ha escrito, con el bot en Off ni si la bienvenida es de hace mas de 3 "
              "dias. Que la conversacion este CERRADA no lo impide: si la asesora le hubiera escrito, su "
              "mensaje seria lo ultimo y no saldria. Una sola vez por bienvenida (wa_avisos). Al mandarlo, "
-             "la conversacion pasa de *1-bienvenida_ia* a *1-seguimiento_1*. Ajustes: SEGUIMIENTO en "
+             "la conversacion pasa de *1-bienvenida_ia* a *5-seguimiento_1*. Ajustes: SEGUIMIENTO en "
              "wa/config.js." % (ETQ_BIENVENIDA, SEG_PLANTILLA, SEG_PLANTILLA_WEB), [180, -380], 600, 320),
     ], conn(("Cada15MinEnHorario", 0, "SinContestar", 0), ("SinContestar", 0, "Candidatos", 0),
             ("Candidatos", 0, "ApuntarSeguimiento", 0), ("ApuntarSeguimiento", 0, "SoloLosNuevos", 0),
