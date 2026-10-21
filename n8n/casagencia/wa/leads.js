@@ -34,6 +34,15 @@ const TEXTOS_ABIERTA = {
     en: (r) => `I've also seen that you're interested in this other property: ${r.enlace} Would you like to visit it too?`,
     fr: (r) => `J'ai aussi vu que ce bien vous intéresse : ${r.enlace} Souhaitez-vous également le visiter ?`,
   },
+  // Vuelve a preguntar por el MISMO inmueble antes de 30 dias. No se le repite
+  // la bienvenida (ya la tiene): se le abre conversacion para que cuente que
+  // necesita. Si el inmueble ha cambiado de estado desde la vez anterior, no
+  // sale esto sino "no_disponible", que le dice algo que no sabe.
+  vuelve_a_preguntar: {
+    es: () => `Hemos visto que has vuelto a mostrar interés por este inmueble. ¿En qué te puedo ayudar?`,
+    en: () => `We've seen that you're interested in this property again. How can I help you?`,
+    fr: () => `Nous avons vu que ce bien vous intéresse à nouveau. Comment puis-je vous aider ?`,
+  },
   propietario: {
     es: (r) => `Soy Sara, IA de Casagencia. Hemos recibido tu mensaje sobre tu vivienda${r.municipio ? ` en ${r.municipio}` : ''}. ${r.asesora} se pondrá en contacto contigo para hablarlo; si quieres, cuéntame por aquí cómo es.`,
     en: (r) => `I'm Sara, Casagencia's AI. We received your message about your property${r.municipio ? ` in ${r.municipio}` : ''}. ${r.asesora} will contact you to discuss it; meanwhile, feel free to tell me about it here.`,

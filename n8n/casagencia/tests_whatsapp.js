@@ -1051,6 +1051,47 @@ ck('eGO: alquilado -> plantilla_abierta (ya no esta), en el idioma del cliente',
 ck('eGO: asignacion de eGO = la de la referencia; sin contacto creado', r[0].asignado_ego === 'Carmen'
    && r[0].asesora_por_referencia === 'Carmen' && r[0].asignacion_coincide === true && r[0].contacto_creado === false);
 ck('eGO: en produccion (MODO_LEADS real) se manda la bienvenida', r[0].enviar === true);
+{
+  // Vuelve a preguntar por el MISMO inmueble antes de 30 dias (caso Ana Belen, 21-10):
+  // antes se marcaba como repetido y no le escribia nadie.
+  const vuelve = lead('ego_vuelta_componer.js', inp([{}]), nodos({ Decidir: [{
+    telefono_e164: '+34607913050', nombre: 'Ana Belen', referencia: 'CS-G-272-A', portal: 'Fotocasa',
+    operacion: 'alquiler', email_cliente: 'ana@ejemplo.com', idioma: 'es', estado_inmueble: 'Reservado',
+    asesora_por_referencia: 'Gisela', notas: 'Holaaaaa!!!! Está alquilado ya????' }] }))[0].json;
+  ck('vuelve a preguntar: plantilla abierta, no la bienvenida', vuelve.plantilla === 'plantilla_abierta'
+     && vuelve.accion === 'vuelve_a_preguntar', JSON.stringify([vuelve.plantilla, vuelve.accion]));
+  ck('vuelve a preguntar: el texto que pidio Paco, con su nombre', vuelve.param1 === 'Ana'
+     && vuelve.param2 === 'Hemos visto que has vuelto a mostrar interés por este inmueble. ¿En qué te puedo ayudar?', vuelve.param2);
+  ck('vuelve a preguntar: el aviso a la asesora dice por cual y de donde',
+     /Ha vuelto a preguntar por CS-G-272-A \(Reservado\) desde Fotocasa/.test(vuelve.resumen_vuelta), vuelve.resumen_vuelta);
+  const enIngles = lead('ego_vuelta_componer.js', inp([{}]), nodos({ Decidir: [{
+    telefono_e164: '+34607913050', nombre: '', referencia: 'CS-G-272-A', idioma: 'en' }] }))[0].json;
+  ck('vuelve a preguntar: en su idioma, y sin nombre sale el saludo', /How can I help you/.test(enIngles.param2)
+     && enIngles.param1 === '\u{1F44B}', JSON.stringify([enIngles.param1, enIngles.param2]));
+
+  const w5 = JSON.parse(fs.readFileSync(B + 'workflows_wa/WA_5_Leads_de_eGO_portales.json', 'utf8'));
+  const c5 = w5.connections;
+  ck('[WA] 5: el repetido ya no muere en MarcarRepetido', c5['¿Lead nuevo?'].main[1][0].node === 'MarcarRepetido'
+     && c5.MarcarRepetido.main[0][0].node === 'ComponerVuelta'
+     && c5.ComponerVuelta.main[0][0].node === 'EnviarVuelta');
+  ck('[WA] 5: se le escribe, se reabre su conversacion y se avisa a la asesora',
+     c5.EnviarVuelta.main[0][0].node === 'ReabrirConversacion'
+     && c5.ReabrirConversacion.main[0][0].node === 'AvisoVuelta');
+  const reabrir = w5.nodes.find(n => n.name === 'ReabrirConversacion').parameters;
+  ck('[WA] 5: reabrir es toggle_status open', /toggle_status$/.test(reabrir.url) && /'open'/.test(reabrir.jsonBody));
+  const aviso = JSON.stringify(w5.nodes.find(n => n.name === 'AvisoVuelta').parameters);
+  ck('[WA] 5: el aviso no se lleva la conversacion a una persona (Sara sigue)',
+     /"pasar_a_humano": ?false/.test(aviso) || /pasar_a_humano[^,]*false/.test(aviso), aviso.slice(0, 200));
+
+  // La regla de los 30 dias: se la salta si el inmueble ha cambiado de estado
+  const alta = w5.nodes.find(n => n.name === 'AltaDelLead').parameters.query;
+  ck('[WA] 5: el alta guarda el estado del inmueble', /estado_inmueble = excluded\.estado_inmueble/.test(alta)
+     && /plantilla, estado_inmueble, notas, estado\)/.test(alta));
+  ck('[WA] 5: y se salta los 30 dias si ese estado ha cambiado',
+     /or \(wa_leads\.estado_inmueble <> ''[\s\S]*?<> excluded\.estado_inmueble\)/.test(alta));
+  ck('[WA] 5: si no lo teniamos guardado, NO cuenta como cambio (nada de golpe a los viejos)',
+     /wa_leads\.estado_inmueble <> ''\s+and excluded\.estado_inmueble <> ''/.test(alta));
+}
 r = egoDec([{ ok: true, datos: { realestateStatusId: 2 } }, { ok: false, datos: null }], []);
 {
   // eGO marca "Venta" una solicitud de Idealista de un piso de alquiler (6-10): manda la referencia

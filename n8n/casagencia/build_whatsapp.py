@@ -338,6 +338,9 @@ create table if not exists wa_leads (
   conversacion_id bigint,
   asunto          text not null default '',
   notas           text not null default '',
+  -- Estado del inmueble en eGO la ultima vez que escribio (Disponible,
+  -- Reservado...). Si cambia, se le vuelve a escribir aunque repita pronto.
+  estado_inmueble text not null default '',
   creado_en       timestamptz not null default now(),
   actualizado_en  timestamptz not null default now()
 );
@@ -421,6 +424,7 @@ create table if not exists wa_avisos (
   enviado_en timestamptz not null default now()
 );
 create unique index if not exists wa_avisos_unico on wa_avisos (evento_id, tipo);
+alter table wa_leads add column if not exists estado_inmueble text not null default '';
 """ % "\n".join("alter table wa_leads add column if not exists %s text not null default '';" % q
                 for q in _Q + _CITA_COLS)
 
@@ -428,16 +432,23 @@ create unique index if not exists wa_avisos_unico on wa_avisos (evento_id, tipo)
 # de 30 dias. Si no devuelve nada, ya se le escribio: no se le vuelve a escribir.
 SQL_ALTA_LEAD = """insert into wa_leads
   (telefono_wa, telefono_e164, referencia, nombre, email_cliente, portal,
-   operacion, es_alquiler, asesora, asunto, enlace, plantilla, estado)
-values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,'nuevo')
+   operacion, es_alquiler, asesora, asunto, enlace, plantilla, estado_inmueble, estado)
+values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,'nuevo')
 on conflict (telefono_wa, referencia) do update
    set nombre   = case when wa_leads.nombre = '' then excluded.nombre else wa_leads.nombre end,
        portal   = excluded.portal,
        asunto   = excluded.asunto,
        enlace   = case when excluded.enlace <> '' then excluded.enlace else wa_leads.enlace end,
+       estado_inmueble = excluded.estado_inmueble,
        estado   = 'nuevo',
        actualizado_en = now()
  where wa_leads.actualizado_en < now() - interval '30 days'
+    -- O si el inmueble ha cambiado de estado desde la vez anterior (p. ej. ha
+    -- pasado a reservado): entonces tiene algo nuevo que saber y se le escribe
+    -- aunque repita pronto. Si no lo teniamos guardado, NO cuenta como cambio:
+    -- asi los leads de antes de guardar el estado no reciben nada de golpe.
+    or (wa_leads.estado_inmueble <> '' and excluded.estado_inmueble <> ''
+        and wa_leads.estado_inmueble <> excluded.estado_inmueble)
 returning id, telefono_wa, referencia;"""
 
 SQL_REGISTRAR_ENTRANTE = """insert into leads_entrantes
@@ -450,10 +461,10 @@ SQL_ENTRANTE_ESTADO = """update leads_entrantes set estado = $2 where id = $1;""
 
 # Alta de un lead de la web: como el del correo, con lo que escribio en la web en notas
 SQL_ALTA_LEAD_WEB = SQL_ALTA_LEAD.replace(
-    "asunto, enlace, plantilla, estado)", "asunto, enlace, plantilla, notas, estado)").replace(
-    "$10,$11,$12,'nuevo')", "$10,$11,$12,$13,'nuevo')").replace(
+    "plantilla, estado_inmueble, estado)", "plantilla, estado_inmueble, notas, estado)").replace(
+    "$10,$11,$12,$13,'nuevo')", "$10,$11,$12,$13,$14,'nuevo')").replace(
     "       estado   = 'nuevo',", "       notas    = excluded.notas,\n       estado   = 'nuevo',")
-assert "$13" in SQL_ALTA_LEAD_WEB and "notas    = excluded.notas" in SQL_ALTA_LEAD_WEB
+assert "$14" in SQL_ALTA_LEAD_WEB and "notas    = excluded.notas" in SQL_ALTA_LEAD_WEB
 
 # Alta a mano: a diferencia del correo, SIEMPRE se manda (lo pide una persona)
 # y las respuestas de cualificacion de antes se ponen a cero.
@@ -1208,8 +1219,9 @@ def wf_lead_web(ids):
                 "JSON.stringify({ origen: %s.origen_url, idioma: %s.idioma, municipio: %s.municipio, email: %s.email_cliente, "
                 "resumen: %s.resumen, mensaje: %s.mensaje }) ] }}")
     registro = registro % tuple([d] * registro.count("%s"))
+    # Los leads de la web no pasan por eGO: no hay estado de inmueble que guardar
     alta = ("={{ [ %s.telefono_wa, %s.telefono_e164, %s.referencia, %s.nombre, %s.email_cliente, 'Web', "
-            "%s.operacion, %s.es_alquiler, %s.asesora, %s.asunto, %s.enlace, %s.plantilla, %s.notas ] }}")
+            "%s.operacion, %s.es_alquiler, %s.asesora, %s.asunto, %s.enlace, %s.plantilla, '', %s.notas ] }}")
     alta = alta % tuple([d] * alta.count("%s"))
     # Con correo (tenga telefono o no), tambien el correo, como en [WA] 5
     correo_nodos, correo_conns = rama_correo(1720, 420)
@@ -2568,6 +2580,14 @@ def wf_leads_ego(ids):
         ("operacion", "operacion"), ("portal", "portal"), ("email", "email_cliente"))}
     entradas.update(plantilla_primer_whatsapp(d))
     entradas["conversacion_id"] = 0
+    # Vuelve a preguntar por el mismo inmueble: lo mismo, pero con lo que ha
+    # compuesto ComponerVuelta (plantilla abierta en vez de la bienvenida)
+    v = "$('ComponerVuelta').item.json"
+    vuelta = {k: "={{ %s.%s }}" % (v, x) for k, x in (
+        ("telefono", "telefono_e164"), ("nombre", "nombre"), ("plantilla", "plantilla"),
+        ("param1", "param1"), ("param2", "param2"), ("referencia", "referencia"),
+        ("operacion", "operacion"), ("portal", "portal"), ("email", "email_cliente"))}
+    vuelta["conversacion_id"] = 0
     registro = ("={{ [ 'ego', $json.lead_id, $json.telefono_e164, $json.nombre, $json.referencia, $json.tipo, "
                 "$json.accion, $json.plantilla, $json.param2, $json.asesora, $json.se_puede_contactar ? "
                 "($json.enviar ? 'enviando' : 'preparado') : ($json.por_correo ? 'correo_preparado' : 'sin_telefono'), "
@@ -2576,7 +2596,8 @@ def wf_leads_ego(ids):
                 "contacto_creado: $json.contacto_creado, asignado_ego: $json.asignado_ego, asesora_por_referencia: "
                 "$json.asesora_por_referencia, asignacion_coincide: $json.asignacion_coincide, notas: $json.notas }) ] }}")
     alta = ("={{ [ %s.telefono_wa, %s.telefono_e164, %s.referencia, %s.nombre, %s.email_cliente, %s.portal, "
-            "%s.operacion, %s.es_alquiler, %s.asesora, %s.asunto, %s.enlace, %s.plantilla, %s.notas ] }}")
+            "%s.operacion, %s.es_alquiler, %s.asesora, %s.asunto, %s.enlace, %s.plantilla, "
+            "%s.estado_inmueble, %s.notas ] }}")
     alta = alta % tuple([d] * alta.count("%s"))
     # A todo el que deja correo (con telefono o sin el), tambien el correo
     correo_nodos, correo_conns = rama_correo(2160, 420)
@@ -2623,6 +2644,35 @@ def wf_leads_ego(ids):
         pg_query("MarcarRepetido", "update leads_entrantes set estado = 'repetido' where id = $1 "
                  "and estado = 'enviando' returning id;", "={{ [ $('Registrar').item.json.id ] }}",
                  [2820, -40], onError="continueRegularOutput", alwaysOutputData=True),
+        # Solo si el alta ha dicho de verdad que es repetido. Si fallara (p. ej.
+        # falta la columna estado_inmueble porque no se ha pasado [WA] 0), $json.nuevo
+        # llega vacio y NO se le manda nada: un lead nuevo no puede recibir el
+        # mensaje de "has vuelto" ni darse por tratado sin estarlo.
+        if_node("¿Repetido de verdad?", "={{ $('AltaDelLead').item.json.nuevo === false }}", "true",
+                [3040, -40]),
+        noop("Alta fallida (se revisa a mano)", [3260, 160]),
+        # ...pero vuelve a preguntar, asi que no se le deja sin contestar: la
+        # plantilla abierta ("has vuelto a mostrar interes, ¿en que te ayudo?"),
+        # su conversacion se reabre y la asesora se entera.
+        code_node("ComponerVuelta", code_leads("ego_vuelta_componer.js"), [3260, -40]),
+        exec_sub("EnviarVuelta", ids.get("[WA][SUB] EnviarPlantilla", ""), "[WA][SUB] EnviarPlantilla",
+                 vuelta, [3480, -40], {"conversacion_id": "number"}, cada_uno=True,
+                 onError="continueRegularOutput", alwaysOutputData=True),
+        http("ReabrirConversacion", "POST",
+             "=" + CW_API + "/conversations/{{ $json.conversacion_id }}/toggle_status", [3700, -40],
+             cred=CRED_CHATWOOT, body="={{ JSON.stringify({ status: 'open' }) }}",
+             onError="continueRegularOutput", alwaysOutputData=True),
+        exec_sub("AvisoVuelta", ids.get("[WA][SUB] AvisoEquipo", ""), "[WA][SUB] AvisoEquipo",
+                 {"accion": "AVISO", "destinatario": "={{ %s.asesora_por_referencia }}" % v,
+                  "referencia": "={{ %s.referencia }}" % v, "municipio": "",
+                  "cliente_nombre": "={{ %s.nombre }}" % v,
+                  "cliente_telefono": "={{ %s.telefono_e164 }}" % v, "cita": "",
+                  "resumen": "={{ %s.resumen_vuelta }}" % v,
+                  "detalle": "={{ 'Lo que ha escrito ahora: ' + (%s.notas || '') }}" % v,
+                  "conversacion_id": "={{ $('EnviarVuelta').item.json.conversacion_id || 0 }}",
+                  "pasar_a_humano": False, "etiqueta": "", "origen": "whatsapp"},
+                 [3920, -40], {"conversacion_id": "number", "pasar_a_humano": "boolean"},
+                 cada_uno=True, onError="continueRegularOutput"),
     ] + correo_nodos + [
         nota("NotaCorreo", "## Correo a todo el que deja su email\nTenga telefono o no: con telefono le "
              "sale la bienvenida por WhatsApp **y** el correo; solo con correo, el correo. Va en su idioma "
@@ -2654,6 +2704,11 @@ def wf_leads_ego(ids):
             ("¿Se manda?", 0, "AltaDelLead", 0), ("¿Se manda?", 1, "Preparado (no se manda)", 0),
             ("AltaDelLead", 0, "¿Lead nuevo?", 0), ("¿Lead nuevo?", 0, "EnviarPrimerWhatsApp", 0),
             ("¿Lead nuevo?", 1, "MarcarRepetido", 0),
+            ("MarcarRepetido", 0, "¿Repetido de verdad?", 0),
+            ("¿Repetido de verdad?", 0, "ComponerVuelta", 0),
+            ("¿Repetido de verdad?", 1, "Alta fallida (se revisa a mano)", 0),
+            ("ComponerVuelta", 0, "EnviarVuelta", 0),
+            ("EnviarVuelta", 0, "ReabrirConversacion", 0), ("ReabrirConversacion", 0, "AvisoVuelta", 0),
             ("EnviarPrimerWhatsApp", 0, "MarcarPlantillaEnviada", 0)))
 
 
