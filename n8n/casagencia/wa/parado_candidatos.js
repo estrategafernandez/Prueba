@@ -46,11 +46,17 @@ for (const c of convs) {
   const tel = normalizarTelefono(contacto.phone_number);
   if (!tel.e164) continue;
 
+  // Se le llama por su nombre de pila. Si el contacto no tiene nombre (o es su
+  // propio telefono), va vacio y el mensaje sale sin nombre.
+  const dePila = String(contacto.name ?? '').trim().split(/\s+/)[0];
+  const nombre = /^[\p{L}][\p{L}'-]*$/u.test(dePila) ? dePila : '';
+
   salida.push({ json: {
     conversacion_id: c.id,
     // Clave para no repetirla dos veces: la pregunta que se quedo sin contestar
     evento_id: `parado:${m.id}`,
     telefono: tel.e164,
+    nombre,
     pregunta: texto,
     horas_parado: Math.round(horas * 10) / 10,
   } });

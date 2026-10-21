@@ -155,11 +155,14 @@ function idiomaDePregunta(texto) {
   if (/\b(you|your|how|what|when|which|would|do|are|is)\b/.test(t)) return 'en';
   return 'es';
 }
-// Como se le repite la pregunta, en su idioma
+// Como se le vuelve a hacer la pregunta, en su idioma. Por su nombre y sin
+// echarle en cara que no ha contestado: nada de "¿sigues ahi?" ni "te repito
+// la pregunta", que suena a reproche. Si no sabemos como se llama, igual pero
+// sin el nombre.
 const TEXTOS_REPETIR = {
-  es: (p) => `¿Sigues ahí? Te repito la pregunta:\n\n${p}`,
-  en: (p) => `Are you still there? Let me ask you again:\n\n${p}`,
-  fr: (p) => `Vous êtes toujours là ? Je vous repose la question :\n\n${p}`,
+  es: (p, n) => (n ? `${n}, cuéntame: ${p}` : `Cuéntame: ${p}`),
+  en: (p, n) => (n ? `${n}, tell me: ${p}` : `Tell me: ${p}`),
+  fr: (p, n) => (n ? `${n}, dites-moi : ${p}` : `Dites-moi : ${p}`),
 };
 
 // --- Recordatorio de la visita AL CLIENTE (24 h y 2 h antes) --------------------

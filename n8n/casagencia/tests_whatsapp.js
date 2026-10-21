@@ -1410,13 +1410,19 @@ console.log('\n== Seguimiento a quien no contesta a la bienvenida ([WA] 10) ==')
     // El mensaje: la misma pregunta, en su idioma, sin plantilla de Meta
     let cm = wa('parado_componer.js', inp([]), nod({ SoloLosNuevos: par([pagina(enProc(30))]) }))[0].json;
     let cuerpo = JSON.parse(cm.body_mensaje);
-    ck('el mensaje repite la pregunta tal cual, en espanol', cm.idioma === 'es'
-       && /^¿Sigues ahí\? Te repito la pregunta:/.test(cuerpo.content)
-       && cuerpo.content.includes('¿Para cuántas personas sería la vivienda?')
+    ck('el mensaje le llama por su nombre y repite la pregunta tal cual', cm.idioma === 'es'
+       && cuerpo.content === 'Ana, cuéntame: ¿Para cuántas personas sería la vivienda?'
        && cuerpo.message_type === 'outgoing' && !cuerpo.template_params, cm.body_mensaje);
+    ck('nada de "sigues ahi" ni "te repito la pregunta"', !/sigues ahí|repito la pregunta/i.test(cuerpo.content));
+    // Sin nombre util (el contacto es su propio telefono): igual pero sin nombre
+    cm = wa('parado_componer.js', inp([]), nod({ SoloLosNuevos: par([pagina(enProc(41, {
+      meta: { sender: { name: '+34 600 00 00 01', phone_number: '+34600000001', custom_attributes: {} } } }))]) }))[0].json;
+    ck('si no sabemos como se llama, sale sin nombre', JSON.parse(cm.body_mensaje).content
+       === 'Cuéntame: ¿Para cuántas personas sería la vivienda?', cm.contenido);
     cm = wa('parado_componer.js', inp([]), nod({ SoloLosNuevos: par([pagina(enProc(40, {
       last_non_activity_message: ultimo({ id: 400, content: 'How many people would be living in the property?' }) }))]) }))[0].json;
-    ck('y en ingles, en ingles', cm.idioma === 'en' && /^Are you still there\?/.test(JSON.parse(cm.body_mensaje).content), cm.contenido);
+    ck('y en ingles, en ingles', cm.idioma === 'en'
+       && JSON.parse(cm.body_mensaje).content === 'Ana, tell me: How many people would be living in the property?', cm.contenido);
 
     const w12 = JSON.parse(fs.readFileSync(B + 'workflows_wa/WA_12_Seguimiento_a_la_hora_al_que_se_queda_parado.json', 'utf8'));
     const n12 = (n) => w12.nodes.find(x => x.name === n);
