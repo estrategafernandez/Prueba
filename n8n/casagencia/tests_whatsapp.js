@@ -1072,8 +1072,12 @@ ck('eGO: en produccion (MODO_LEADS real) se manda la bienvenida', r[0].enviar ==
   const w5 = JSON.parse(fs.readFileSync(B + 'workflows_wa/WA_5_Leads_de_eGO_portales.json', 'utf8'));
   const c5 = w5.connections;
   ck('[WA] 5: el repetido ya no muere en MarcarRepetido', c5['¿Lead nuevo?'].main[1][0].node === 'MarcarRepetido'
-     && c5.MarcarRepetido.main[0][0].node === 'ComponerVuelta'
+     && c5.MarcarRepetido.main[0][0].node === '¿Repetido de verdad?'
+     && c5['¿Repetido de verdad?'].main[0][0].node === 'ComponerVuelta'
      && c5.ComponerVuelta.main[0][0].node === 'EnviarVuelta');
+  ck('[WA] 5: si el alta falla NO se le manda el "has vuelto" (seria un lead nuevo)',
+     c5['¿Repetido de verdad?'].main[1][0].node === 'Alta fallida (se revisa a mano)'
+     && /nuevo === false/.test(w5.nodes.find(n => n.name === '¿Repetido de verdad?').parameters.conditions.conditions[0].leftValue));
   ck('[WA] 5: se le escribe, se reabre su conversacion y se avisa a la asesora',
      c5.EnviarVuelta.main[0][0].node === 'ReabrirConversacion'
      && c5.ReabrirConversacion.main[0][0].node === 'AvisoVuelta');
