@@ -996,14 +996,15 @@ def wf_cualificar(ids):
                  [1960, -200], {"conversacion_id": "number", "pasar_a_humano": "boolean"},
                  onError="continueRegularOutput", alwaysOutputData=True),
         code_node("Respuesta", code_wa("cualificar_respuesta.js"), [2180, 0]),
-        nota("Nota", "## Cualificacion\n**Compra**: tres preguntas (cuanto tiempo lleva buscando, si "
-             "necesita vender para comprar y como lo financia). Si tiene que vender, Sara le pide la "
-             "direccion o zona de esa vivienda y la conversacion se marca con la etiqueta **vendedor**. "
-             "Despues ofrece la visita.\n\n**Alquiler**: las "
-             "cuatro preguntas del telefono (personas, ingresos, mascotas y cuando entrar). Se "
-             "guardan (pueden llegar en varias veces) y, cuando estan las cuatro, se avisa al comercial por "
+        nota("Nota", "## Cualificacion\n**Compra**: dos preguntas (si necesita vender para comprar y "
+             "como lo financia). Si tiene que vender, Sara le pide la direccion o zona de esa vivienda y "
+             "la conversacion se marca con la etiqueta **vendedor**. Despues ofrece la "
+             "visita.\n\n**Alquiler**: tres preguntas (personas, ingresos y mascotas). Se "
+             "guardan (pueden llegar en varias veces) y, cuando estan las tres, se avisa al comercial por "
              "WhatsApp y la conversacion se marca con *4-intervenir*: "
-             "en alquiler la IA no agenda, decide una persona.", [200, -330], 520, 270),
+             "en alquiler la IA no agenda, decide una persona.\n\nCuanto lleva buscando y la fecha de "
+             "entrada ya NO se preguntan (las averigua la asesora al llamar); si el cliente las dice, se "
+             "guardan igual y salen en el aviso.", [200, -330], 520, 290),
     ], conn(("Start", 0, "ResolverReferencia", 0), ("ResolverReferencia", 0, "Preparar", 0),
             ("Preparar", 0, "GuardarFicha", 0),
             ("GuardarFicha", 0, "¿Es vendedor?", 0),
@@ -1520,6 +1521,72 @@ def wf_seguimiento(ids):
             ("¿Enviado?", 1, "Desapuntar", 0)))
 
 
+ETQ_EN_PROCESO = const_etiqueta("en_proceso")
+SEG_PARADO_TIPO = "parado_1h"
+
+
+def wf_seguimiento_parado(ids):
+    """Cada 15 minutos en horario comercial: a las conversaciones en 2-en_proceso
+    cuya ultima cosa es una pregunta de Sara sin contestar desde hace 1 h, se les
+    repite esa misma pregunta y pasan a 4-intervenir. Una sola vez por pregunta."""
+    comp = "$('Componer').item.json"
+    return wf("[WA] 12 · Seguimiento a la hora al que se queda parado", [
+        node("Cada15MinEnHorario", "n8n-nodes-base.scheduleTrigger",
+             {"rule": {"interval": [{"field": "cronExpression", "expression": "*/15 9-18 * * *"}]}},
+             [-40, 0], 1.2),
+        # Todas las paginas (25 por pagina) de las conversaciones con la etiqueta
+        http("EnProceso", "GET", CW_API + "/conversations", [180, 0], cred=CRED_CHATWOOT,
+             query={"status": "all", "labels[]": ETQ_EN_PROCESO},
+             options={"pagination": {"pagination": {
+                 "paginationMode": "updateAParameterInEachRequest",
+                 "parameters": {"parameters": [{"type": "qs", "name": "page", "value": "={{ $pageCount + 1 }}"}]},
+                 "paginationCompleteWhen": "other",
+                 "completeExpression": "={{ ($response.body.data?.payload || []).length < 25 }}",
+                 "limitPagesFetched": True, "maxRequests": 20}}}),
+        code_node("Candidatos", code_wa("parado_candidatos.js"), [400, 0]),
+        pg_query("ApuntarParado", SQL_SEGUIDO, "={{ [ $json.evento_id, '%s' ] }}" % SEG_PARADO_TIPO,
+                 [620, 0], onError="continueRegularOutput"),
+        code_node("SoloLosNuevos", "const nuevos = new Set($input.all().map(i => String(i.json.evento_id ?? '')));\n"
+                  "return $('Candidatos').all().filter(i => nuevos.has(String(i.json.evento_id)));", [840, 0]),
+        code_node("Componer", code_wa("parado_componer.js"), [1060, 0]),
+        http("RepetirPregunta", "POST", "=" + CW_API + "/conversations/{{ $json.conversacion_id }}/messages",
+             [1280, 0], cred=CRED_CHATWOOT, body="={{ $json.body_mensaje }}",
+             onError="continueRegularOutput", alwaysOutputData=True),
+        if_node("¿Enviado?", "={{ Number($json.id || 0) }}", "gt", [1500, 0], der=0, tipo="number"),
+        # Sara sabe que se la ha repetido (si contesta, no la vuelve a hacer)
+        pg_query("GuardarEnMemoriaAgente", "insert into n8n_chat_histories (session_id, message) values ($1, $2) "
+                 "returning id;",
+                 "={{ [ %s.telefono, JSON.stringify({ type: 'ai', content: %s.contenido, tool_calls: [], "
+                 "additional_kwargs: {}, response_metadata: {}, invalid_tool_calls: [] }) ] }}" % (comp, comp),
+                 [1720, -80], onError="continueRegularOutput", alwaysOutputData=True),
+        # Y a partir de aqui la lleva una persona
+        exec_sub("MarcarIntervenir", ids.get("[WA][SUB] Etiquetar", ""), "[WA][SUB] Etiquetar",
+                 {"conversacion_id": "={{ %s.conversacion_id }}" % comp, "etiquetas": const_etiqueta("intervenir")},
+                 [1940, -80], {"conversacion_id": "number"}, cada_uno=True, onError="continueRegularOutput"),
+        # No ha salido: se quita la marca y se reintenta en la siguiente pasada
+        pg_query("Desapuntar", "delete from wa_avisos where evento_id = $1 and tipo = $2;",
+                 "={{ [ %s.evento_id, '%s' ] }}" % (comp, SEG_PARADO_TIPO), [1720, 160],
+                 onError="continueRegularOutput"),
+        nota("Nota", "## Se ha quedado parado en una pregunta\nCada 15 minutos, de 9:00 a 19:00 (hora de "
+             "Espana), mira las conversaciones con *%s*. Si lo ultimo es una pregunta que escribio Sara y "
+             "lleva **1 hora** sin contestar, se la repite tal cual (en su idioma) y la conversacion pasa a "
+             "*%s*: a partir de ahi la lleva una persona.\n\nNo es una plantilla de Meta, es un mensaje "
+             "normal, asi que solo vale dentro de la ventana de 24 h de WhatsApp: por eso no se manda si "
+             "lleva parado mas de %d h (p. ej. desde el viernes por la tarde).\n\nNo sale si la pregunta la "
+             "hizo una persona del equipo, si fue una plantilla, con el bot en Off ni si la conversacion ya "
+             "tiene *%s*. Una sola vez por pregunta (wa_avisos). Ajustes: SEGUIMIENTO_PARADO en "
+             "wa/config.js." % (ETQ_EN_PROCESO, const_etiqueta("intervenir"),
+                                int(re.search(r"max_horas:\s*(\d+)", const("SEGUIMIENTO_PARADO")).group(1)),
+                                const_etiqueta("intervenir")),
+             [180, -380], 600, 320),
+    ], conn(("Cada15MinEnHorario", 0, "EnProceso", 0), ("EnProceso", 0, "Candidatos", 0),
+            ("Candidatos", 0, "ApuntarParado", 0), ("ApuntarParado", 0, "SoloLosNuevos", 0),
+            ("SoloLosNuevos", 0, "Componer", 0), ("Componer", 0, "RepetirPregunta", 0),
+            ("RepetirPregunta", 0, "¿Enviado?", 0), ("¿Enviado?", 0, "GuardarEnMemoriaAgente", 0),
+            ("GuardarEnMemoriaAgente", 0, "MarcarIntervenir", 0),
+            ("¿Enviado?", 1, "Desapuntar", 0)))
+
+
 def asignar(prefijo, conv_expr, agente_expr, asignado_expr, pos, manda_expr=None):
     """IF + POST de asignacion en Chatwoot. Solo asigna si hay comercial para la
     referencia y la conversacion no la tiene ya Carmen o Gisela (un cambio a mano
@@ -1666,13 +1733,13 @@ def herramientas(ids, x=1900, y=360):
             "ofrece la visita. Manda SOLO lo que el cliente te haya contestado: lo que aun no le has "
             "preguntado va vacio. Si mas tarde te da o te corrige un dato, vuelve a usarla solo con ese "
             "dato. ALQUILER: "
-            "cuando tengas las cuatro (personas, ingresos, mascotas, entrada); avisa al comercial y pasa la "
+            "cuando tengas las tres (personas, ingresos, mascotas); avisa al comercial y pasa la "
             "conversacion a una persona.",
             {"telefono": TEL_CLIENTE, "conversacion_id": CONV,
              "nombre": de_la_ia("nombre", "Nombre del cliente. Vacio si no lo sabes."),
              "referencia": de_la_ia("referencia", REF_DESC),
              "operacion": de_la_ia("operacion", "venta o alquiler."),
-             "tiempo_buscando": de_la_ia("tiempo_buscando", "Solo compra. Cuanto tiempo lleva buscando, con sus palabras. Vacio si no aplica."),
+             "tiempo_buscando": de_la_ia("tiempo_buscando", "Solo compra. YA NO SE PREGUNTA: mandalo solo si el cliente lo dice por su cuenta. Vacio si no."),
              "necesita_vender": de_la_ia("necesita_vender", "Solo compra. Si necesita vender para comprar, con sus palabras. Vacio si no aplica."),
              "es_vendedor": de_la_ia("es_vendedor", "Solo compra. true si necesita vender una vivienda para comprar; false si no o si no lo sabes.", "boolean"),
              "vivienda_a_vender": de_la_ia("vivienda_a_vender", "Solo compra y si necesita vender: direccion o zona (y municipio) de la vivienda que tiene que vender, con sus palabras. VACIO si todavia no se lo has preguntado; 'no facilitado' solo si se lo preguntaste y no quiso decirlo."),
@@ -1680,7 +1747,7 @@ def herramientas(ids, x=1900, y=360):
              "personas": de_la_ia("personas", "Solo alquiler. Para cuantas personas. 'no facilitado' si no quiso decirlo."),
              "ingresos": de_la_ia("ingresos", "Solo alquiler. Lo que dijo de ingresos fijos, nomina o contrato, sin valorarlo."),
              "mascotas": de_la_ia("mascotas", "Solo alquiler. Si conviven con mascotas y cuales."),
-             "entrada": de_la_ia("entrada", "Solo alquiler. Para que fecha necesitan entrar."),
+             "entrada": de_la_ia("entrada", "Solo alquiler. YA NO SE PREGUNTA en viviendas: mandalo solo si el cliente lo dice por su cuenta, o si es un local o un traspaso (ahi si se pregunta). Vacio si no."),
              "duracion": de_la_ia("duracion", "Solo alquiler. Todo el ano o temporada, si lo ha dicho."),
              "actividad": de_la_ia("actividad", "Solo locales, oficinas o traspasos: para que actividad."),
              "resumen": de_la_ia("resumen", "Resumen de la conversacion en UNA o dos frases cortas (maximo 200 "
@@ -2864,6 +2931,7 @@ ORDEN = [
     "[WA] 9 · Lead a mano",
     "[WA] 10 · Seguimiento a quien no contesta",
     "[WA] 11 · Mensajes del equipo a la memoria de Sara",
+    "[WA] 12 · Seguimiento a la hora al que se queda parado",
 ]
 
 # Workflows de la primera version que se reaprovechan con su nombre nuevo, para
@@ -2914,6 +2982,7 @@ def construir(ids):
         "[WA] 9 · Lead a mano": wf_lead_manual(ids),
         "[WA] 10 · Seguimiento a quien no contesta": wf_seguimiento(ids),
         "[WA] 11 · Mensajes del equipo a la memoria de Sara": wf_equipo_memoria(),
+        "[WA] 12 · Seguimiento a la hora al que se queda parado": wf_seguimiento_parado(ids),
     }
     assert list(wfs) == ORDEN
     return wfs

@@ -133,6 +133,35 @@ const PREFIJOS_LEAD_WEB = ['Soy Sara, IA de Casagencia. Hemos recibido el mensaj
 //                  en cada pasada, hasta max_horas).
 const SEGUIMIENTO = { activo: true, plantilla: 'seguimiento_1', plantilla_web: 'seguimiento_web', idioma: 'en', horas: 12, desde: 9, hasta: 19, max_horas: 72 };
 
+// --- Seguimiento a la hora al que se queda parado en una pregunta --------------
+// Otro caso distinto del de arriba: aqui el cliente YA contesto (la conversacion
+// esta en 2-en_proceso) y se ha quedado callado a mitad de la cualificacion. Si
+// lo ultimo es una pregunta de Sara sin contestar desde hace `horas`, se le
+// repite ESA MISMA pregunta y la conversacion pasa a 4-intervenir: a partir de
+// ahi la lleva una persona. Una sola vez por pregunta.
+//
+// No es una plantilla de Meta, es un mensaje normal: por eso `max_horas` se
+// queda por debajo de las 24 h de la ventana de WhatsApp. Si se pasa de ahi
+// (p. ej. se quedo parado un viernes por la tarde), ya no se le escribe: se
+// manda fuera de la ventana y Meta lo rechazaria.
+const SEGUIMIENTO_PARADO = { activo: true, horas: 1, desde: 9, hasta: 19, max_horas: 20 };
+// El idioma de una pregunta que escribio Sara. No vale idiomaDe() de leads.js:
+// esa mira el saludo del cliente ("hello", "bonjour") y una pregunta no lo lleva.
+// En espanol el '¿' es definitivo; si no, se mira si es frances y si no, ingles.
+function idiomaDePregunta(texto) {
+  const t = sinAcentos(texto);
+  if (/[¿¡]/.test(String(texto ?? ''))) return 'es';
+  if (/\b(vous|votre|quel|quelle|combien|est-ce|souhaitez|avez|seriez)\b/.test(t)) return 'fr';
+  if (/\b(you|your|how|what|when|which|would|do|are|is)\b/.test(t)) return 'en';
+  return 'es';
+}
+// Como se le repite la pregunta, en su idioma
+const TEXTOS_REPETIR = {
+  es: (p) => `¿Sigues ahí? Te repito la pregunta:\n\n${p}`,
+  en: (p) => `Are you still there? Let me ask you again:\n\n${p}`,
+  fr: (p) => `Vous êtes toujours là ? Je vous repose la question :\n\n${p}`,
+};
+
 // --- Recordatorio de la visita AL CLIENTE (24 h y 2 h antes) --------------------
 // [WA] 6 (24 h) y [WA] 7 (2 h) miran las agendas de Carmen y Gisela cada 15
 // minutos y le mandan al cliente una plantilla de Meta por su conversacion del

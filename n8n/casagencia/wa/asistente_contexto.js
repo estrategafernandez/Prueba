@@ -44,16 +44,17 @@ const q = (k) => (hay(fila[k]) ? fila[k] : (otras.find(o => hay(o[k])) || {})[k]
 const esAlq = fila.es_alquiler === true || esAlquiler(fila.referencia, fila.operacion);
 const asesora = hay(fila.asesora) ? fila.asesora : resolverAsesora(fila.referencia).destinatario;
 
+// La fecha de entrada ya no se pregunta: la averigua la asesora en la primera
+// llamada (el campo sigue existiendo por si llega del telefono o de antes).
 const PREGUNTAS_ALQUILER = [
   ['personas', 'para cuantas personas seria la vivienda', q('q_personas')],
   ['ingresos', 'ingresos fijos demostrables (nomina o contrato)', q('q_ingresos')],
   ['mascotas', 'si conviven con alguna mascota', q('q_mascotas')],
-  ['entrada', 'para que fecha necesitan entrar a vivir', q('q_entrada')],
 ];
 // Si tiene que vender, la direccion o zona de esa vivienda es una pregunta mas.
 const vendedor = hay(q('q_vivienda_venta')) || esAfirmativo(q('q_necesita_vender'));
+// Tampoco se pregunta cuanto tiempo lleva buscando
 const PREGUNTAS_COMPRA = [
-  ['tiempo_buscando', 'cuanto tiempo lleva buscando para comprar', q('q_tiempo_buscando')],
   ['necesita_vender', 'si necesita vender una vivienda para poder comprar', q('q_necesita_vender')],
   ...(vendedor ? [['vivienda_a_vender', 'direccion o zona de la vivienda que tiene que vender', q('q_vivienda_venta')]] : []),
   ['financiacion', 'como lo va a financiar (hipoteca, recursos propios o hipoteca ya preconcedida)', q('q_financiacion')],

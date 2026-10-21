@@ -74,7 +74,7 @@ def construir_tools(actuales):
     # --- las tres preguntas de compra (las mismas que hace Sara por WhatsApp) ---
     # Viajan con la cita y, si la cita no se cierra, con el aviso a la asesora.
     COMPRA = {
-        "compra_tiempo_buscando": "Cuanto tiempo lleva buscando para comprar, tal y como lo haya dicho el cliente.",
+        "compra_tiempo_buscando": "YA NO SE PREGUNTA: mandalo solo si el cliente cuenta por su cuenta cuanto lleva buscando, con sus palabras. Vacio si no.",
         "compra_necesita_vender": "Si necesita vender una vivienda para poder comprar (si/no y lo que haya contado).",
         "compra_vivienda_venta": "Solo si necesita vender: donde esta esa vivienda, la direccion o la zona.",
         "compra_financiacion": "Como va a financiar la compra: hipoteca, recursos propios o hipoteca ya preconcedida.",
@@ -123,7 +123,7 @@ def construir_tools(actuales):
     props["alquiler_mascotas"] = {"type": "string", "maxLength": 120,
         "description": "Solo en lead_alquiler. Si conviven con mascotas y cuales. Si no lo facilita, pon 'no facilitado'."}
     props["alquiler_entrada"] = {"type": "string", "maxLength": 120,
-        "description": "Solo en lead_alquiler. Para que fecha necesitaria entrar a vivir. Si no lo facilita, pon 'no facilitado'."}
+        "description": "Solo en lead_alquiler. YA NO SE PREGUNTA: mandalo solo si el cliente dice por su cuenta para que fecha necesita entrar. Vacio si no."}
     props.update(COMPRA_PROPS)
     props["alquiler_duracion"] = {"type": "string", "maxLength": 120,
         "description": "Solo en lead_alquiler. Si lo quiere para todo el ano o por temporada, y cuanto tiempo."}

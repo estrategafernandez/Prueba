@@ -200,8 +200,8 @@ const contexto = (filaLead, cartera = REAL) => wa('asistente_contexto.js', inp([
 r = contexto({ telefono_wa: '34600000001', referencia: 'CS-1479-A',
   operacion: 'alquiler', es_alquiler: true, asesora: 'Gisela', portal: 'Idealista',
   enlace: 'https://www.idealista.com/inmueble/1/', q_personas: '3' });
-ck('alquiler: le faltan las otras tres', JSON.stringify(r.preguntas_pendientes) ===
-   JSON.stringify(['ingresos', 'mascotas', 'entrada']), JSON.stringify(r.preguntas_pendientes));
+ck('alquiler: le faltan las otras dos (la fecha de entrada ya no se pregunta)', JSON.stringify(r.preguntas_pendientes) ===
+   JSON.stringify(['ingresos', 'mascotas']), JSON.stringify(r.preguntas_pendientes));
 ck('ve el enlace del anuncio', r.contexto.includes('idealista.com/inmueble'));
 ck('sabe que no se agenda', /No se agenda/.test(r.contexto));
 const pisoVenta = REAL.find(x => x.tipo_transaccion === 'venta' && /piso/i.test(x.tipo_inmueble) && x.descripcion);
@@ -277,18 +277,21 @@ ck('guardarCualificacion: Start -> ResolverReferencia -> Preparar',
    && wfCual.connections.ResolverReferencia.main[0][0].node === 'Preparar'
    && /web_id/.test(wfCual.nodes.find(n => n.name === 'ResolverReferencia').parameters.query));
 {
-  // Alquiler en dos veces: primero tres respuestas (falta la fecha), luego la fecha
+  // Alquiler en dos veces: primero una respuesta (faltan dos), luego el resto
   const prep = wa('cualificar_preparar.js', inp([{ json: { telefono: '+34600000001', referencia: 'CS-1479-A',
     personas: '2', ingresos: 'nomina', mascotas: 'no', resumen: 'Pareja interesada.', conversacion_id: 7 } }]))[0].json;
   const falta = (guardado) => wa('cualificar_falta.js', inp([{}]), nod({ Preparar: prep, GuardarFicha: guardado }))[0].json;
-  let f = falta({ id: 4, q_personas: '2', q_ingresos: 'nomina', q_mascotas: 'no', q_entrada: '', q_actividad: '' });
-  ck('alquiler sin la fecha de entrada: NO pasa al equipo y dice que falta', f.completo === false
-     && f.faltan.join() === 'para que fecha necesitan entrar', f.faltan.join());
+  let f = falta({ id: 4, q_personas: '2', q_ingresos: '', q_mascotas: '', q_entrada: '', q_actividad: '' });
+  ck('alquiler a medias: NO pasa al equipo y dice que falta', f.completo === false
+     && f.faltan.join() === 'si tienen ingresos fijos demostrables,si conviven con mascotas', f.faltan.join());
   const resp = wa('cualificar_respuesta.js', inp([{}]), nod({ Preparar: prep, FaltaAlquiler: f }))[0].json.respuesta;
-  ck('a Sara: que lo pregunte y aun no se despida', /falta para que fecha necesitan entrar/.test(resp) && /Aun no le digas/.test(resp));
-  f = falta({ id: 4, q_personas: '2', q_ingresos: 'nomina', q_mascotas: 'no', q_entrada: '1 de noviembre', q_actividad: '' });
-  ck('con la fecha (guardada despues): completo, y el aviso lleva las cuatro', f.completo === true
-     && ['2', 'nomina', 'no', '1 de noviembre', 'Pareja interesada.'].every(x => f.resumen_aviso.includes(x)), f.resumen_aviso);
+  ck('a Sara: que lo pregunte y aun no se despida', /falta si tienen ingresos fijos demostrables/.test(resp) && /Aun no le digas/.test(resp));
+  f = falta({ id: 4, q_personas: '2', q_ingresos: 'nomina', q_mascotas: 'no', q_entrada: '', q_actividad: '' });
+  ck('con las tres y SIN la fecha de entrada: completo, ya pasa al equipo', f.completo === true
+     && ['2', 'nomina', 'no', 'Pareja interesada.'].every(x => f.resumen_aviso.includes(x)), f.resumen_aviso);
+  const conFecha = falta({ id: 4, q_personas: '2', q_ingresos: 'nomina', q_mascotas: 'no', q_entrada: '1 de noviembre', q_actividad: '' });
+  ck('si el cliente dice la fecha por su cuenta, el aviso la lleva igual', conFecha.completo === true
+     && conFecha.resumen_aviso.includes('1 de noviembre'), conFecha.resumen_aviso);
   // Completo y avisado: Sara nombra a la asesora que ha recibido el aviso (no "alguien del equipo")
   const fin = (para, zona) => wa('cualificar_respuesta.js', inp([{}]), nod({ Preparar: prep, FaltaAlquiler: f,
     PasarAlEquipo: { mensaje_registrado: true, para }, ResolverReferencia: { municipio_cartera: zona } }))[0].json;
@@ -979,6 +982,37 @@ r = lead('web_decidir.js', inp([{}]), nod({ LeerFormulario: { mensaje: 'Factura'
   nombre: 'X', idioma: 'es', email_cliente: 'x@ejemplo.com' }, Clasificar: { choices: [{ message: { content: '{"tipo":"otro"}' } }] },
   LeerInmueble: {} }))[0].json;
 ck('web: lo que no se entiende (revisar) no recibe correo: lo mira una persona', r.accion === 'revisar' && r.por_correo === false);
+{
+  // Caso real: formulario de contacto del 20-10-2026 que se quedo sin contestar.
+  // Con telefono valido tiene que salirle mensaje aunque la clasificacion no sirva.
+  const chiva = wa('web_parsear.js', inp([{ json: correoWeb('Petición de Contacto\n'
+    + 'Origen del contacto: https://www.casagencia.com/contacto\nNombre: José L. Chiva\n'
+    + 'Email: chivamaroto@gmail.com\nTeléfono: 626370066\n'
+    + 'Observaciones: Buenas tardes:\n\nMe pongo en contacto con vosotros porque estoy buscando un piso en '
+    + 'alquiler de larga duración en Castellón de la Plana.\n\nSoy profesor de secundaria, funcionario de '
+    + 'carrera. Mi presupuesto máximo está en torno a los 750 € mensuales.\n\nUn saludo\n'
+    + 'RGPD: Declaro que he leído...\nIP: 88.23.127.220\nUser Agent: Mozilla') }]))[0].json;
+  ck('el formulario de contacto se lee bien (telefono sin prefijo incluido)', chiva.es_de_la_web === true
+     && chiva.nombre === 'José L. Chiva' && chiva.telefono_e164 === '+34626370066'
+     && chiva.se_puede_contactar === true && /profesor de secundaria/.test(chiva.mensaje), JSON.stringify([chiva.nombre, chiva.telefono_e164]));
+  const decidido = (contenido) => lead('web_decidir.js', inp([{}]), nod({ LeerFormulario: chiva,
+    Clasificar: { choices: [{ message: { content: contenido } }] }, LeerInmueble: {} }))[0].json;
+  let w = decidido('{"tipo":"alquiler","resumen_cliente":"un piso de larga duración en Castellón"}');
+  ck('clasificado como alquiler: se le escribe', w.enviar === true && w.accion === 'busqueda'
+     && w.saludo_por_defecto === false, JSON.stringify([w.accion, w.enviar]));
+  w = decidido('{"tipo":"otro"}');
+  ck('clasificado como "otro": ANTES no se le escribia, ahora si (saludo general)',
+     w.enviar === true && w.accion === 'busqueda' && w.saludo_por_defecto === true
+     && /No se ha podido clasificar/.test(w.notas), JSON.stringify([w.accion, w.enviar, w.saludo_por_defecto]));
+  w = decidido('no es json, OpenAI ha fallado');
+  ck('y si OpenAI ni contesta, tambien se le escribe', w.enviar === true && w.accion === 'busqueda'
+     && w.saludo_por_defecto === true, JSON.stringify([w.accion, w.enviar]));
+  ck('con correo ademas del telefono, tambien le llega el correo', w.por_correo === true);
+  w = lead('web_decidir.js', inp([{}]), nod({ LeerFormulario: { ...chiva, nombre: 'Proveedor' },
+    Clasificar: { choices: [{ message: { content: '{"tipo":"vender_su_vivienda"}' } }] }, LeerInmueble: {} }))[0].json;
+  ck('un propietario sigue yendo por su camino, no por el saludo general',
+     w.accion === 'captacion' && w.saludo_por_defecto === false, w.accion);
+}
 
 console.log('\n== 19. eGO: leads de portales, ficha del CRM y notas ==');
 // Nodo que mira varios nodos anteriores, cada uno con su lista de items
@@ -1335,6 +1369,67 @@ console.log('\n== Seguimiento a quien no contesta a la bienvenida ([WA] 10) ==')
        && (w10.connections['GuardarEnMemoriaAgente'].main[0] || []).some(c => c.node === 'MarcarSeguimiento'));
     ck('[WA] 10: una sola vez por bienvenida (wa_avisos) y a la memoria de Sara', /seguimiento_1/.test(n10('ApuntarSeguimiento').parameters.options.queryReplacement)
        && /n8n_chat_histories/.test(n10('GuardarEnMemoriaAgente').parameters.query));
+
+    // =====================================================================
+    console.log('\n== Se queda parado en una pregunta: se le repite a la hora ([WA] 12) ==');
+    // Como las devuelve Chatwoot (GET /conversations?labels[]=2-en_proceso).
+    // Lo ultimo es una pregunta que escribio Sara (usuario 1 del panel).
+    const enProc = (id, o = {}) => ({
+      id, status: 'open', labels: ['2-en_proceso'],
+      meta: { sender: { name: 'Ana Prueba Test', phone_number: '+34600000001', custom_attributes: { bot: 'On' } } },
+      last_non_activity_message: { id: id * 10, message_type: 1, private: false, created_at: seg('2026-10-07T09:30'),
+        sender_type: 'user', sender_id: 1, content: '¿Para cuántas personas sería la vivienda?' },
+      ...o,
+    });
+    const ultimo = (o) => ({ ...enProc(1).last_non_activity_message, ...o });
+    const par = (paginas, iso = '2026-10-07T11:00') => { fijar(iso); return wa('parado_candidatos.js', inp(paginas.map(p => ({ json: p }))), nod({})).map(i => i.json); };
+
+    let q = par([pagina(enProc(30))]);
+    ck('pregunta de Sara sin contestar desde hace 1,5 h: se le repite', q.length === 1 && q[0].conversacion_id === 30
+       && q[0].evento_id === 'parado:300' && q[0].pregunta === '¿Para cuántas personas sería la vivienda?', JSON.stringify(q));
+    ck('a los 59 minutos todavia no', par([pagina(enProc(30))], '2026-10-07T10:29').length === 0);
+    ck('a la hora justa, si', par([pagina(enProc(30))], '2026-10-07T10:30').length === 1);
+    ck('fuera de horario no sale', par([pagina(enProc(30))], '2026-10-07T08:30').length === 0
+       && par([pagina(enProc(30))], '2026-10-07T19:30').length === 0);
+    ck('si lleva parado mas de 20 h ya no (fuera de la ventana de WhatsApp)',
+       par([pagina(enProc(30))], '2026-10-08T09:00').length === 0);
+    ck('si contesto el cliente, no', par([pagina(enProc(31, { last_non_activity_message: ultimo({ message_type: 0 }) }))]).length === 0);
+    ck('si lo ultimo de Sara no es una pregunta, no',
+       par([pagina(enProc(32, { last_non_activity_message: ultimo({ content: 'Te paso con la asesora.' }) }))]).length === 0);
+    ck('si la pregunta la hizo una persona del equipo, no (ya esta encima)',
+       par([pagina(enProc(33, { last_non_activity_message: ultimo({ sender_id: 5 }) }))]).length === 0);
+    ck('una plantilla no cuenta como pregunta',
+       par([pagina(enProc(34, { last_non_activity_message: ultimo({ additional_attributes: { template_params: { name: 'bienvenida_alquiler' } } }) }))]).length === 0);
+    ck('una nota interna tampoco', par([pagina(enProc(35, { last_non_activity_message: ultimo({ private: true }) }))]).length === 0);
+    ck('bot en Off: no', par([pagina(enProc(36, { meta: { sender: { phone_number: '+34600000002', custom_attributes: { bot: 'Off' } } } }))]).length === 0);
+    ck('si ya la lleva una persona (4-intervenir), no', par([pagina(enProc(37, { labels: ['2-en_proceso', '4-intervenir'] }))]).length === 0);
+    ck('si no esta en 2-en_proceso, no', par([pagina(enProc(38, { labels: ['1-bienvenida_ia'] }))]).length === 0);
+    ck('cerrada en el panel pero sin escribirle: se le repite igual',
+       par([pagina(enProc(39, { status: 'resolved' }))]).length === 1);
+
+    // El mensaje: la misma pregunta, en su idioma, sin plantilla de Meta
+    let cm = wa('parado_componer.js', inp([]), nod({ SoloLosNuevos: par([pagina(enProc(30))]) }))[0].json;
+    let cuerpo = JSON.parse(cm.body_mensaje);
+    ck('el mensaje repite la pregunta tal cual, en espanol', cm.idioma === 'es'
+       && /^¿Sigues ahí\? Te repito la pregunta:/.test(cuerpo.content)
+       && cuerpo.content.includes('¿Para cuántas personas sería la vivienda?')
+       && cuerpo.message_type === 'outgoing' && !cuerpo.template_params, cm.body_mensaje);
+    cm = wa('parado_componer.js', inp([]), nod({ SoloLosNuevos: par([pagina(enProc(40, {
+      last_non_activity_message: ultimo({ id: 400, content: 'How many people would be living in the property?' }) }))]) }))[0].json;
+    ck('y en ingles, en ingles', cm.idioma === 'en' && /^Are you still there\?/.test(JSON.parse(cm.body_mensaje).content), cm.contenido);
+
+    const w12 = JSON.parse(fs.readFileSync(B + 'workflows_wa/WA_12_Seguimiento_a_la_hora_al_que_se_queda_parado.json', 'utf8'));
+    const n12 = (n) => w12.nodes.find(x => x.name === n);
+    ck('[WA] 12: cada 15 min de 9:00 a 18:45, hora de Espana', n12('Cada15MinEnHorario').parameters.rule.interval[0].expression === '*/15 9-18 * * *'
+       && w12.settings.timezone === 'Europe/Madrid');
+    ck('[WA] 12: lee las conversaciones con 2-en_proceso', /2-en_proceso/.test(JSON.stringify(n12('EnProceso').parameters.queryParameters)));
+    ck('[WA] 12: tras repetirla, la conversacion pasa a 4-intervenir',
+       /4-intervenir/.test(JSON.stringify(n12('MarcarIntervenir').parameters))
+       && w12.connections.GuardarEnMemoriaAgente.main[0][0].node === 'MarcarIntervenir');
+    ck('[WA] 12: una sola vez por pregunta (wa_avisos) y a la memoria de Sara',
+       /parado_1h/.test(n12('ApuntarParado').parameters.options.queryReplacement)
+       && /n8n_chat_histories/.test(n12('GuardarEnMemoriaAgente').parameters.query));
+    ck('[WA] 12: si no sale, se desapunta y se reintenta', w12.connections['¿Enviado?'].main[1][0].node === 'Desapuntar');
   } finally {
     Settings.now = nowAntes;
   }
@@ -1382,7 +1477,7 @@ console.log('\n== Dos solicitudes de la misma persona por inmuebles distintos ==
   ck('Sara: "HA PEDIDO INFORMACION DE 2 INMUEBLES" con los dos y la ficha del otro', /HA PEDIDO INFORMACION DE 2 INMUEBLES/.test(c.contexto)
      && c.contexto.includes('CS-1479-A') && c.contexto.includes('BN-1528-V') && /FICHA DEL OTRO INMUEBLE QUE PIDIO \(BN-1528-V\)/.test(c.contexto)
      && JSON.stringify(c.otras_referencias) === '["BN-1528-V"]', c.contexto.split('\n').find(l => /VARIOS|INMUEBLES \(/.test(l)));
-  ck('Sara: lo que contesto en la otra solicitud no se le vuelve a preguntar', JSON.stringify(c.preguntas_pendientes) === '["ingresos","entrada"]',
+  ck('Sara: lo que contesto en la otra solicitud no se le vuelve a preguntar', JSON.stringify(c.preguntas_pendientes) === '["ingresos"]',
      JSON.stringify(c.preguntas_pendientes));
   c = contexto({ telefono_wa: '34600000001', referencia: 'CS-1479-A', operacion: 'alquiler', es_alquiler: true,
     otras_solicitudes: JSON.stringify([{ referencia: 'BN-1528-V', enlace: piso.enlace }]) });

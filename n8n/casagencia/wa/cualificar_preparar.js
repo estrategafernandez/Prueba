@@ -1,14 +1,16 @@
 // [WA][SUB] guardarCualificacion · Preparar
 // Guarda lo que el cliente ha contestado y decide que pasa despues:
 //
-//   COMPRA   -> tres preguntas: cuanto tiempo lleva buscando, si necesita
-//               vender para comprar (y si es que si, donde esta esa vivienda:
-//               la conversacion se marca con la etiqueta "vendedor") y como lo
-//               va a financiar. Se guardan y Sara ofrece la visita.
-//   ALQUILER -> las cuatro preguntas del telefono (personas, ingresos,
-//               mascotas y cuando entrar). Se guardan, se avisa al comercial
-//               y la conversacion pasa a una persona: en alquiler la IA no
-//               agenda, decide el equipo.
+//   COMPRA   -> dos preguntas: si necesita vender para comprar (y si es que
+//               si, donde esta esa vivienda: la conversacion se marca con la
+//               etiqueta "vendedor") y como lo va a financiar. Se guardan y
+//               Sara ofrece la visita.
+//   ALQUILER -> tres preguntas: personas, ingresos y mascotas. Se guardan, se
+//               avisa al comercial y la conversacion pasa a una persona: en
+//               alquiler la IA no agenda, decide el equipo.
+// Cuanto lleva buscando y la fecha de entrada ya no se preguntan (las averigua
+// la asesora al llamar), pero los campos siguen: pueden venir del telefono o
+// decirlos el cliente por su cuenta, y entonces se guardan igual.
 // Lo que manda Sara llega por Start; antes pasa por ResolverReferencia, que
 // cambia el numero del enlace de la web (p. ej. "26699629-A") por la referencia
 // de la cartera ("BN-C-126-A"), que es la que decide a que asesora va el aviso.
