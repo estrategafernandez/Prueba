@@ -1535,6 +1535,9 @@ def wf_seguimiento(ids):
 
 ETQ_EN_PROCESO = const_etiqueta("en_proceso")
 SEG_PARADO_TIPO = "parado_1h"
+# Enlace a una conversacion del panel (para las notas que lee el asesor en eGO)
+ENLACE_CONV = ("'%s/app/accounts/%s/conversations/' + (%%s || 0)"
+               % (const("CHATWOOT_URL"), const("CHATWOOT_CUENTA")))
 
 
 def wf_seguimiento_parado(ids):
@@ -2640,6 +2643,19 @@ def wf_leads_ego(ids):
         pg_query("MarcarPlantillaEnviada", SQL_PLANTILLA_Y_ENTRANTE,
                  "={{ [ %s.telefono_wa, $json.conversacion_id || 0, %s.referencia, $('Registrar').item.json.id ] }}"
                  % (d, d), [3040, -220], onError="continueRegularOutput", alwaysOutputData=True),
+        # El asesor mira eGO, no el panel: se le deja ahi la nota de que la IA
+        # ya ha contactado, con el enlace a la conversacion. Si no, el lead
+        # parece sin tratar aunque Sara lo haya llevado hasta la visita.
+        exec_sub("NotaDelContactoEnEgo", ids.get("[EGO][SUB] NotaEnEgo", ""), "[EGO][SUB] NotaEnEgo",
+                 {"telefono": "={{ %s.telefono_e164 }}" % d,
+                  "texto": "={{ 'Contactado por Sara (IA) por WhatsApp el ' + "
+                           "$now.setZone('Europe/Madrid').toFormat('dd/MM/yyyy HH:mm') + '. ' + "
+                           "(%s.accion === 'no_disponible' ? 'Se le ha dicho que el inmueble ya no esta "
+                           "disponible y se le ofrecen parecidos.' : 'Se le ha mandado la bienvenida de ' + "
+                           "(%s.referencia || 'su solicitud') + '.') + ' Lo que conteste se lleva desde el panel: ' "
+                           "+ %s }}" % (d, d, ENLACE_CONV % "$('EnviarPrimerWhatsApp').item.json.conversacion_id"),
+                  "tipo": "whatsapp"},
+                 [3260, -220], onError="continueRegularOutput", alwaysOutputData=True, sin_esperar=True),
         # Ya se le escribio por WhatsApp por este inmueble hace menos de 30 dias
         pg_query("MarcarRepetido", "update leads_entrantes set estado = 'repetido' where id = $1 "
                  "and estado = 'enviando' returning id;", "={{ [ $('Registrar').item.json.id ] }}",
@@ -2673,6 +2689,14 @@ def wf_leads_ego(ids):
                   "pasar_a_humano": False, "etiqueta": "", "origen": "whatsapp"},
                  [3920, -40], {"conversacion_id": "number", "pasar_a_humano": "boolean"},
                  cada_uno=True, onError="continueRegularOutput"),
+        exec_sub("NotaDeLaVueltaEnEgo", ids.get("[EGO][SUB] NotaEnEgo", ""), "[EGO][SUB] NotaEnEgo",
+                 {"telefono": "={{ %s.telefono_e164 }}" % v,
+                  "texto": "={{ 'Ha vuelto a preguntar por ' + (%s.referencia || 'el mismo inmueble') + ' el ' + "
+                           "$now.setZone('Europe/Madrid').toFormat('dd/MM/yyyy HH:mm') + '. Sara (IA) le ha "
+                           "escrito preguntandole en que puede ayudarle. Conversacion: ' + %s }}"
+                           % (v, ENLACE_CONV % "$('EnviarVuelta').item.json.conversacion_id"),
+                  "tipo": "whatsapp"},
+                 [4140, -40], onError="continueRegularOutput", alwaysOutputData=True, sin_esperar=True),
     ] + correo_nodos + [
         nota("NotaCorreo", "## Correo a todo el que deja su email\nTenga telefono o no: con telefono le "
              "sale la bienvenida por WhatsApp **y** el correo; solo con correo, el correo. Va en su idioma "
@@ -2709,7 +2733,9 @@ def wf_leads_ego(ids):
             ("¿Repetido de verdad?", 1, "Alta fallida (se revisa a mano)", 0),
             ("ComponerVuelta", 0, "EnviarVuelta", 0),
             ("EnviarVuelta", 0, "ReabrirConversacion", 0), ("ReabrirConversacion", 0, "AvisoVuelta", 0),
-            ("EnviarPrimerWhatsApp", 0, "MarcarPlantillaEnviada", 0)))
+            ("EnviarPrimerWhatsApp", 0, "MarcarPlantillaEnviada", 0),
+            ("MarcarPlantillaEnviada", 0, "NotaDelContactoEnEgo", 0),
+            ("AvisoVuelta", 0, "NotaDeLaVueltaEnEgo", 0)))
 
 
 def wf_ego_ficha(ids):

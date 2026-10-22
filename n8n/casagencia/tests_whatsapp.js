@@ -1087,6 +1087,22 @@ ck('eGO: en produccion (MODO_LEADS real) se manda la bienvenida', r[0].enviar ==
   ck('[WA] 5: el aviso no se lleva la conversacion a una persona (Sara sigue)',
      /"pasar_a_humano": ?false/.test(aviso) || /pasar_a_humano[^,]*false/.test(aviso), aviso.slice(0, 200));
 
+  // El asesor mira eGO: que ahi quede constancia de que la IA ya ha contactado
+  ck('[WA] 5: tras la bienvenida se deja nota en eGO', c5.MarcarPlantillaEnviada.main[0][0].node === 'NotaDelContactoEnEgo');
+  ck('[WA] 5: y tras el "has vuelto" tambien', c5.AvisoVuelta.main[0][0].node === 'NotaDeLaVueltaEnEgo');
+  {
+    const nota = (n) => w5.nodes.find(x => x.name === n).parameters.workflowInputs.value;
+    const bien = nota('NotaDelContactoEnEgo'), vuelta = nota('NotaDeLaVueltaEnEgo');
+    ck('la nota dice quien ha contactado, cuando y por donde seguir',
+       /Contactado por Sara \(IA\) por WhatsApp/.test(bien.texto) && /dd\/MM\/yyyy HH:mm/.test(bien.texto)
+       && /app\/accounts\/1\/conversations/.test(bien.texto) && bien.tipo === 'whatsapp', bien.texto.slice(0, 120));
+    ck('si el inmueble ya no estaba, la nota lo dice', /ya no esta disponible/.test(bien.texto));
+    ck('la nota de la vuelta cuenta que ha vuelto a preguntar',
+       /Ha vuelto a preguntar por/.test(vuelta.texto) && /app\/accounts\/1\/conversations/.test(vuelta.texto));
+    ck('las dos van por telefono, que es como eGO encuentra al contacto',
+       /telefono_e164/.test(bien.telefono) && /telefono_e164/.test(vuelta.telefono));
+  }
+
   // La regla de los 30 dias: se la salta si el inmueble ha cambiado de estado
   const alta = w5.nodes.find(n => n.name === 'AltaDelLead').parameters.query;
   ck('[WA] 5: el alta guarda el estado del inmueble', /estado_inmueble = excluded\.estado_inmueble/.test(alta)

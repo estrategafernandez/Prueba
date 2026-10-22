@@ -608,6 +608,69 @@
     },
     {
       "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "4WcKHc1s3v3WfqJF",
+          "mode": "list",
+          "cachedResultName": "[EGO][SUB] NotaEnEgo"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "telefono": "={{ $('Decidir').item.json.telefono_e164 }}",
+            "texto": "={{ 'Contactado por Sara (IA) por WhatsApp el ' + $now.setZone('Europe/Madrid').toFormat('dd/MM/yyyy HH:mm') + '. ' + ($('Decidir').item.json.accion === 'no_disponible' ? 'Se le ha dicho que el inmueble ya no esta disponible y se le ofrecen parecidos.' : 'Se le ha mandado la bienvenida de ' + ($('Decidir').item.json.referencia || 'su solicitud') + '.') + ' Lo que conteste se lleva desde el panel: ' + 'https://panel-casa-agencia.serversvisionarius.com/app/accounts/1/conversations/' + ($('EnviarPrimerWhatsApp').item.json.conversacion_id || 0) }}",
+            "tipo": "whatsapp"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "telefono",
+              "displayName": "telefono",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "texto",
+              "displayName": "texto",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "tipo",
+              "displayName": "tipo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {
+          "waitForSubWorkflow": false
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        3260,
+        -220
+      ],
+      "id": "0ef9e916-8a98-592c-a861-98266b4e92cb",
+      "name": "NotaDelContactoEnEgo",
+      "onError": "continueRegularOutput",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
         "operation": "executeQuery",
         "query": "update leads_entrantes set estado = 'repetido' where id = $1 and estado = 'enviando' returning id;",
         "options": {
@@ -1023,6 +1086,69 @@
       "id": "58fa5dfd-465f-5a8e-b2f7-1efa9a2a01c0",
       "name": "AvisoVuelta",
       "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "4WcKHc1s3v3WfqJF",
+          "mode": "list",
+          "cachedResultName": "[EGO][SUB] NotaEnEgo"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "telefono": "={{ $('ComponerVuelta').item.json.telefono_e164 }}",
+            "texto": "={{ 'Ha vuelto a preguntar por ' + ($('ComponerVuelta').item.json.referencia || 'el mismo inmueble') + ' el ' + $now.setZone('Europe/Madrid').toFormat('dd/MM/yyyy HH:mm') + '. Sara (IA) le ha escrito preguntandole en que puede ayudarle. Conversacion: ' + 'https://panel-casa-agencia.serversvisionarius.com/app/accounts/1/conversations/' + ($('EnviarVuelta').item.json.conversacion_id || 0) }}",
+            "tipo": "whatsapp"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "telefono",
+              "displayName": "telefono",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "texto",
+              "displayName": "texto",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "tipo",
+              "displayName": "tipo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {
+          "waitForSubWorkflow": false
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        4140,
+        -40
+      ],
+      "id": "ed244fca-ea84-5e61-a2ae-7508c8e334fa",
+      "name": "NotaDeLaVueltaEnEgo",
+      "onError": "continueRegularOutput",
+      "alwaysOutputData": true
     },
     {
       "parameters": {
@@ -1683,6 +1809,28 @@
         [
           {
             "node": "MarcarPlantillaEnviada",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "MarcarPlantillaEnviada": {
+      "main": [
+        [
+          {
+            "node": "NotaDelContactoEnEgo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AvisoVuelta": {
+      "main": [
+        [
+          {
+            "node": "NotaDeLaVueltaEnEgo",
             "type": "main",
             "index": 0
           }
