@@ -966,9 +966,12 @@ ck('alquiler disponible: bienvenida_alquiler', r.plantilla === 'bienvenida_alqui
 ck('larga duracion: el {{3}} lo dice y no asusta', r.param3 === 'de larga duración (para vivir todo el año)', r.param3);
 r = decide('alquiler', { referencia: 'BN-C-126-A', disponible: true, enlace: 'https://www.casagencia.com/inmueble/y/2',
   modalidad: 'temporal' });
-ck('temporal: TEMPORAL en mayusculas, por paquetes de meses y sin empadronarse',
+ck('temporal: TEMPORAL en mayusculas y por paquetes de meses',
    r.plantilla === 'bienvenida_alquiler' && /TEMPORAL/.test(r.param3) && /octubre a junio/.test(r.param3)
-   && /no es anual/.test(r.param3) && /empadronar/.test(r.param3), r.param3);
+   && /no es un alquiler anual/.test(r.param3), r.param3);
+// Lo del empadronamiento es delicado para un primer mensaje: se dice hablando,
+// no en la plantilla que le llega a quien solo ha pedido informacion
+ck('y el empadronamiento NO va en el primer mensaje', !/empadronar/i.test(r.param3), r.param3);
 r = decide('alquiler', { referencia: 'CS-1479-A', disponible: true, enlace: 'https://www.casagencia.com/inmueble/y/1' });
 ck('sin saber si es temporal o anual NO se manda la bienvenida de alquiler',
    r.plantilla === 'plantilla_abierta' && r.accion === 'alquiler_sin_modalidad'
@@ -2118,7 +2121,8 @@ console.log('\n== Alquiler temporal: que se sepa desde el primer mensaje ==');
     param2: temporal.param2, param3: temporal.param3, referencia: 'BN-C-126-A', operacion: 'alquiler' }, cuerpo);
   ck('a un temporal le sale TEMPORAL en el primer mensaje, en negrita y con sus limites',
      r.ren.contenido.includes('*alquiler TEMPORAL (solo por paquetes de meses, por ejemplo de octubre a junio; '
-       + 'no es anual ni permite empadronarse)*: ' + URL), r.ren.contenido);
+       + 'no es un alquiler anual)*: ' + URL), r.ren.contenido);
+  ck('y en el primer mensaje no se le habla de empadronarse', !/empadronar/i.test(r.ren.contenido), r.ren.contenido);
   ck('y van los tres parametros a Meta', Object.keys(r.params).join(',') === '1,2,3', JSON.stringify(r.params));
 
   const larga = decide('alquiler', { referencia: 'CS-1479-A', disponible: true, enlace: URL,

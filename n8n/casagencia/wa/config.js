@@ -38,12 +38,13 @@ const PLANTILLAS = {
 
 // El {{3}} de bienvenida_alquiler: va dentro de "*alquiler {{3}}*", en negrita.
 // Regla de Paco: que en el PRIMER mensaje quede claro que un temporal no es
-// anual, que va por paquetes de meses y que no da derecho a empadronarse; asi
-// no se gastan diez conversaciones con gente que busca todo el ano.
+// anual y que va por paquetes de meses, y asi no se gastan diez conversaciones
+// con gente que busca todo el ano. Lo del empadronamiento NO va aqui: es
+// delicado para un primer mensaje a quien todavia no ha dicho nada. Sara lo
+// dice en la conversacion (prompt y ficha del inmueble) cuando viene a cuento.
 const MODALIDAD_PLANTILLA = {
   larga_duracion: 'de larga duración (para vivir todo el año)',
-  temporal: 'TEMPORAL (solo por paquetes de meses, por ejemplo de octubre a junio; '
-    + 'no es anual ni permite empadronarse)',
+  temporal: 'TEMPORAL (solo por paquetes de meses, por ejemplo de octubre a junio; no es un alquiler anual)',
 };
 // Ultimo recurso: Meta no acepta un parametro vacio, asi que si alguien manda la
 // bienvenida de alquiler sin saber la modalidad (hoy no pasa: los 22 alquileres
