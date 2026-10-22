@@ -28,13 +28,29 @@ const META_WABA_ID    = '1791979752043585';
 // Plantillas aprobadas. OJO con el idioma: bienvenida_alquiler y plantilla_aviso
 // estan dadas de alta en INGLES ('en') aunque el texto sea en espanol. Meta
 // rechaza el envio si el codigo de idioma no es exactamente el registrado.
-// Todas usan parametros por posicion: {{1}} y {{2}}.
+// Todas usan parametros por posicion: {{1}}, {{2}} y, en alquiler, {{3}}.
 const PLANTILLAS = {
   compra:   { nombre: 'bienvenida_compra',   idioma: 'es' },  // {{1}} nombre, {{2}} enlace del inmueble
-  alquiler: { nombre: 'bienvenida_alquiler', idioma: 'en' },  // {{1}} nombre, {{2}} enlace del inmueble
+  alquiler: { nombre: 'bienvenida_alquiler', idioma: 'en' },  // {{1}} nombre, {{2}} enlace, {{3}} que clase de alquiler
   aviso:    { nombre: 'plantilla_aviso',     idioma: 'en' },  // {{1}} comercial, {{2}} el aviso (una linea)
   abierta:  { nombre: 'plantilla_abierta',   idioma: 'en' },  // {{1}} nombre, {{2}} texto libre (una linea)
 };
+
+// El {{3}} de bienvenida_alquiler: va dentro de "*alquiler {{3}}*", en negrita.
+// Regla de Paco: que en el PRIMER mensaje quede claro que un temporal no es
+// anual, que va por paquetes de meses y que no da derecho a empadronarse; asi
+// no se gastan diez conversaciones con gente que busca todo el ano.
+const MODALIDAD_PLANTILLA = {
+  larga_duracion: 'de larga duración (para vivir todo el año)',
+  temporal: 'TEMPORAL (solo por paquetes de meses, por ejemplo de octubre a junio; '
+    + 'no es anual ni permite empadronarse)',
+};
+// Ultimo recurso: Meta no acepta un parametro vacio, asi que si alguien manda la
+// bienvenida de alquiler sin saber la modalidad (hoy no pasa: los 22 alquileres
+// de la cartera la tienen), se dice que esta por confirmar en vez de afirmar
+// una de las dos. Los leads de verdad no llegan aqui: decidirPrimerMensaje
+// cambia de plantilla antes.
+const MODALIDAD_PLANTILLA_SIN_SABER = '(temporal o de larga duración: te lo confirmo enseguida)';
 
 // Texto exacto de cada plantilla, tal y como esta aprobada en Meta. Solo se usa
 // para que en el panel se lea lo mismo que le ha llegado al cliente.
@@ -42,7 +58,7 @@ const TEXTO_PLANTILLA = {
   bienvenida_compra:
     'Hola *{{1}}*, soy Sara de Casagencia.\nHemos recibido tu solicitud de información por este inmueble de compra: {{2}}\n*Quieres visitar la vivienda?*',
   bienvenida_alquiler:
-    'Hola *{{1}}*, soy Sara de Casagencia.\nHemos recibido tu solicitud de información por este inmueble de alquiler: {{2}}\n*Quieres visitar la vivienda?*',
+    'Hola *{{1}}*, soy Sara de Casagencia.\nHemos recibido tu solicitud de información por este inmueble de *alquiler {{3}}*: {{2}}\n*Quieres visitar la vivienda?*',
   plantilla_aviso:
     'Hola *{{1}}*,\n*{{2}}*\nUn saludo. Tenga un buen día.',
   plantilla_abierta:

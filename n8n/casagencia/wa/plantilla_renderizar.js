@@ -18,9 +18,13 @@ try {
 }
 if (!cuerpo) cuerpo = TEXTO_PLANTILLA[norm.plantilla] || '';
 
-// Los parametros van por posicion, como los numera Meta: {{1}}, {{2}}...
+// Los parametros van por posicion, como los numera Meta: {{1}}, {{2}}, {{3}}...
+// Solo se mandan los que la plantilla tiene de verdad: si se manda uno de mas,
+// Meta rechaza el envio por numero de parametros. El {{3}} (si el alquiler es
+// temporal o de larga duracion) solo esta en la bienvenida de alquiler.
 const params = { 1: norm.param1 };
 if (norm.param2 !== '') params['2'] = norm.param2;
+if (norm.param3 && cuerpo.includes('{{3}}')) params['3'] = norm.param3;
 
 let contenido = cuerpo;
 for (const [clave, valor] of Object.entries(params)) {

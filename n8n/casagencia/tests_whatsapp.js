@@ -959,8 +959,23 @@ const decide = (tipo, extra = {}) => correr(CFG + '\n' + LEADS
 r = decide('compra', { referencia: 'BN-1528-V', disponible: true, enlace: 'https://www.casagencia.com/inmueble/x/25370429' });
 ck('con inmueble disponible: bienvenida_compra con su enlace', r.plantilla === 'bienvenida_compra'
    && r.param2.endsWith('/25370429') && r.param1 === 'Ana' && r.asesora === 'Carmen', JSON.stringify(r));
-r = decide('alquiler', { referencia: 'CS-1479-A', disponible: true, enlace: 'https://www.casagencia.com/inmueble/y/1' });
+r = decide('alquiler', { referencia: 'CS-1479-A', disponible: true, enlace: 'https://www.casagencia.com/inmueble/y/1',
+  modalidad: 'larga_duracion' });
 ck('alquiler disponible: bienvenida_alquiler', r.plantilla === 'bienvenida_alquiler' && r.asesora === 'Gisela');
+// Regla de Paco: la bienvenida de alquiler dice en el {{3}} que clase de alquiler es
+ck('larga duracion: el {{3}} lo dice y no asusta', r.param3 === 'de larga duración (para vivir todo el año)', r.param3);
+r = decide('alquiler', { referencia: 'BN-C-126-A', disponible: true, enlace: 'https://www.casagencia.com/inmueble/y/2',
+  modalidad: 'temporal' });
+ck('temporal: TEMPORAL en mayusculas, por paquetes de meses y sin empadronarse',
+   r.plantilla === 'bienvenida_alquiler' && /TEMPORAL/.test(r.param3) && /octubre a junio/.test(r.param3)
+   && /no es anual/.test(r.param3) && /empadronar/.test(r.param3), r.param3);
+r = decide('alquiler', { referencia: 'CS-1479-A', disponible: true, enlace: 'https://www.casagencia.com/inmueble/y/1' });
+ck('sin saber si es temporal o anual NO se manda la bienvenida de alquiler',
+   r.plantilla === 'plantilla_abierta' && r.accion === 'alquiler_sin_modalidad'
+   && /todo el año o para una temporada/.test(r.param2) && r.param3 === '', JSON.stringify([r.plantilla, r.accion]));
+ck('y esa alternativa lleva el enlace del inmueble igual', /inmueble\/y\/1/.test(r.param2), r.param2);
+r = decide('compra', { referencia: 'BN-1528-V', disponible: true, enlace: 'https://www.casagencia.com/inmueble/x/1' });
+ck('en compra no hay {{3}} que valga', r.param3 === '', r.param3);
 r = decide('compra', { referencia: 'BN-1528-V', disponible: false });
 ck('inmueble que ya no esta: plantilla_abierta diciendo que no esta disponible',
    r.plantilla === 'plantilla_abierta' && r.accion === 'no_disponible' && /ya no está disponible/.test(r.param2) && /BN-1528-V/.test(r.param2));
@@ -1139,7 +1154,8 @@ r = egoDec([{ ok: true, datos: { realestateStatusId: 2 } }, { ok: false, datos: 
   const venta = lead('ego_decidir.js', inp([{}]), nodos({
     SoloNuevos: [{ ...separados[0], referencia: 'BN-C-126-A', operacion: 'venta' }],
     EstadoDelInmueble: [{ ok: true, datos: { realestateStatusId: 2 } }],
-    LaCartera: { filas: [{ ref: 'BN-C-126-A', enlace: 'https://www.casagencia.com/inmueble/x/26699629', tipo_transaccion: 'alquiler' }] } }))[0].json;
+    LaCartera: { filas: [{ ref: 'BN-C-126-A', enlace: 'https://www.casagencia.com/inmueble/x/26699629',
+      tipo_transaccion: 'alquiler', modalidad: 'temporal' }] } }))[0].json;
   ck('eGO: referencia -A marcada "Venta" en eGO -> bienvenida de ALQUILER', venta.plantilla === 'bienvenida_alquiler'
      && venta.operacion === 'alquiler' && venta.es_alquiler === true, venta.plantilla + '/' + venta.operacion);
   ck('alquiler/venta: la referencia manda sobre la operacion', cfg && Function('DateTime', CFG + '\nreturn [esAlquiler("BN-C-126-A", "venta"), esAlquiler("BN-1528-V", "alquiler"), esAlquiler("", "alquiler")];')(DateTime).join() === 'true,false,true');
@@ -1527,7 +1543,8 @@ console.log('\n== Seguimiento a quien no contesta a la bienvenida ([WA] 10) ==')
 console.log('\n== Dos solicitudes de la misma persona por inmuebles distintos ==');
 {
   const URL_B = 'https://www.casagencia.com/inmueble/apartamento-en-alquiler-benicasim/26699629';
-  let d = decide('alquiler', { referencia: 'BN-C-126-A', disponible: true, enlace: URL_B, nombre: 'Yaiza' });
+  let d = decide('alquiler', { referencia: 'BN-C-126-A', disponible: true, enlace: URL_B, nombre: 'Yaiza',
+    modalidad: 'temporal' });
   ck('bienvenida: trae tambien la variante para una segunda solicitud (plantilla abierta)', d.plantilla === 'bienvenida_alquiler'
      && d.plantilla_tambien === 'plantilla_abierta'
      && d.param2_tambien === `También he visto que te has interesado por este otro inmueble: ${URL_B} ¿Lo quieres también visitar?`, d.param2_tambien);
@@ -2076,6 +2093,87 @@ console.log('\n== Mientras una esta de vacaciones, su sustituta lleva las nuevas
   ck('un inmueble de Benicasim: la lleva Carmen salvo que este fuera',
      ctx.asesora === 'Carmen' && ctx.agente_id === agenteDe(fuera && fuera.asesora === 'Carmen' ? fuera.sustituye : 'Carmen'),
      `asesora ${ctx.asesora}, agente ${ctx.agente_id}`);
+}
+
+// ===========================================================================
+console.log('\n== Alquiler temporal: que se sepa desde el primer mensaje ==');
+{
+  const leerWf = (f) => JSON.parse(fs.readFileSync(B + 'workflows_wa/' + f, 'utf8'));
+  const cuerpo = Function('DateTime', CFG + '; return TEXTO_PLANTILLA.bienvenida_alquiler;')(DateTime);
+  ck('la bienvenida de alquiler tiene las tres variables, como esta aprobada en Meta',
+     /\{\{1\}\}/.test(cuerpo) && /\*alquiler \{\{3\}\}\*: \{\{2\}\}/.test(cuerpo), cuerpo);
+
+  // El {{3}} de verdad, del lead al mensaje que sale
+  const render = (start, cuerpoPlantilla, entrada = {}) => {
+    const norm = wa('plantilla_normalizar.js', inp([{ json: entrada }]), nod({ Start: start }))[0].json;
+    const ren = wa('plantilla_renderizar.js', inp([{ json: { data: [{ name: start.plantilla, language: 'en',
+      components: [{ type: 'BODY', text: cuerpoPlantilla }] }] } }]),
+      nod({ Normalizar: norm, ConversacionLista: { conversacion_id: 7 } }))[0].json;
+    return { norm, ren, params: JSON.parse(ren.body_mensaje).template_params.processed_params };
+  };
+  const URL = 'https://www.casagencia.com/inmueble/apartamento-en-alquiler-benicasim/26699629';
+  const temporal = decide('alquiler', { referencia: 'BN-C-126-A', disponible: true, enlace: URL,
+    nombre: 'Yaiza', modalidad: 'temporal' });
+  let r = render({ telefono: '+34600000001', nombre: 'Yaiza', plantilla: temporal.plantilla, param1: temporal.param1,
+    param2: temporal.param2, param3: temporal.param3, referencia: 'BN-C-126-A', operacion: 'alquiler' }, cuerpo);
+  ck('a un temporal le sale TEMPORAL en el primer mensaje, en negrita y con sus limites',
+     r.ren.contenido.includes('*alquiler TEMPORAL (solo por paquetes de meses, por ejemplo de octubre a junio; '
+       + 'no es anual ni permite empadronarse)*: ' + URL), r.ren.contenido);
+  ck('y van los tres parametros a Meta', Object.keys(r.params).join(',') === '1,2,3', JSON.stringify(r.params));
+
+  const larga = decide('alquiler', { referencia: 'CS-1479-A', disponible: true, enlace: URL,
+    nombre: 'Ana', modalidad: 'larga_duracion' });
+  r = render({ telefono: '+34600000001', nombre: 'Ana', plantilla: larga.plantilla, param1: larga.param1,
+    param2: larga.param2, param3: larga.param3, referencia: 'CS-1479-A', operacion: 'alquiler' }, cuerpo);
+  ck('y a uno de larga duracion, que es para todo el ano',
+     /\*alquiler de larga duración \(para vivir todo el año\)\*/.test(r.ren.contenido), r.ren.contenido);
+
+  // Si quien llama no manda el {{3}}, el sub-workflow lo saca de la cartera
+  r = render({ telefono: '+34600000001', nombre: 'Ana', plantilla: 'bienvenida_alquiler', param1: 'Ana',
+    param2: URL, referencia: 'BN-C-126-A', operacion: 'alquiler' }, cuerpo, { enlace: URL, modalidad: 'temporal' });
+  ck('si quien llama no lo manda, sale de wa_cartera', /alquiler TEMPORAL/.test(r.ren.contenido), r.ren.contenido);
+  // Y si no hay forma de saberlo, nunca va vacio: Meta rechaza un parametro en blanco
+  r = render({ telefono: '+34600000001', nombre: 'Ana', plantilla: 'bienvenida_alquiler', param1: 'Ana',
+    param2: URL, referencia: 'XX-0000-A', operacion: 'alquiler' }, cuerpo);
+  ck('sin saberlo no se afirma ninguna de las dos, pero el parametro no va vacio',
+     r.norm.param3 !== '' && /temporal o de larga duración/.test(r.ren.contenido), r.ren.contenido);
+  // La plantilla abierta no tiene {{3}}: mandarselo a Meta seria un envio rechazado
+  const abierto = Function('DateTime', CFG + '; return TEXTO_PLANTILLA.plantilla_abierta;')(DateTime);
+  r = render({ telefono: '+34600000001', nombre: 'Ana', plantilla: 'plantilla_abierta', param1: 'Ana',
+    param2: 'Hola', param3: 'TEMPORAL', referencia: 'BN-C-126-A', operacion: 'alquiler' }, abierto);
+  ck('a una plantilla sin {{3}} no se le manda un tercer parametro',
+     Object.keys(r.params).join(',') === '1,2' && !/TEMPORAL/.test(r.ren.contenido), JSON.stringify(r.params));
+
+  // El sub-workflow lo pide y lo mira en la cartera
+  const sub = leerWf('WA_SUB_EnviarPlantilla.json');
+  const entradas = JSON.stringify(sub.nodes.find(n => n.name === 'Start').parameters);
+  ck('[WA][SUB] EnviarPlantilla acepta param3', /"param3"/.test(entradas));
+  ck('y mira la modalidad del inmueble en la cartera',
+     /select enlace, modalidad from wa_cartera/.test(sub.nodes.find(n => n.name === 'EnlaceDeLaWeb').parameters.query));
+  for (const [f, nodo] of [['WA_5_Leads_de_eGO_portales.json', 'EnviarPrimerWhatsApp'],
+                           ['WA_SUB_LeadDeLaWeb.json', 'EnviarPrimerWhatsApp'],
+                           ['WA_9_Lead_a_mano.json', 'EnviarBienvenida']]) {
+    const w = leerWf(f);
+    const n = w.nodes.find(x => x.name === nodo) || w.nodes.find(x => /EnviarPlantilla|Enviar/.test(x.name));
+    ck(`${f.split('_').slice(0, 2).join(' ')}: pasa el param3`, /param3/.test(JSON.stringify(n.parameters)), n.name);
+  }
+  ck('[WA] 5 lee la modalidad de la cartera',
+     /'modalidad', modalidad/.test(leerWf('WA_5_Leads_de_eGO_portales.json').nodes
+       .find(n => n.name === 'LaCartera').parameters.query));
+
+  // Lo que tiene que hacer Sara en la conversacion
+  const pr = fs.readFileSync(B + 'wa/prompt_asistente.md', 'utf8');
+  ck('el prompt corta el temporal a quien busca todo el ano',
+     /REGLA DURA/.test(pr) && /NO ejecutes `guardarCualificacion`/.test(pr)
+     && /no (permite|da derecho a)\s+empadronar/i.test(pr) && /octubre a junio/.test(pr));
+  ck('y dice que no hay temporales de uno o dos meses', /uno, dos o tres meses/.test(pr));
+  const tel = fs.readFileSync(B + 'retell/general_prompt.md', 'utf8');
+  ck('el telefono lleva la misma regla', /no permite empadronarse/.test(tel) && /octubre a junio/.test(tel));
+  // Y lo que lee en la ficha del inmueble
+  const ficha = Function('DateTime', CFG + '\n' + CARTERA + "; return fichaTexto(limpiarFila({ ref: 'BN-C-126-A', "
+    + "tipo_transaccion: 'alquiler', modalidad: 'temporal', precio: 700, municipio: 'Benicasim' }), {});")(DateTime);
+  ck('la ficha que lee Sara ya avisa de los limites del temporal',
+     /ALQUILER TEMPORAL \(POR PAQUETES DE MESES/.test(ficha) && /EMPADRONAR/.test(ficha), ficha.split('\n')[1]);
 }
 
 // ===========================================================================

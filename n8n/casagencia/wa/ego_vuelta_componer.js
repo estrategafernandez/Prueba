@@ -13,6 +13,8 @@ return [{ json: {
   plantilla: PLANTILLAS.abierta.nombre,
   param1: paramPlantilla(nombre || '\u{1F44B}', 60),
   param2: paramPlantilla(TEXTOS_ABIERTA.vuelve_a_preguntar[idioma](d), 900),
+  // La plantilla abierta no tiene {{3}}
+  param3: '',
   accion: 'vuelve_a_preguntar',
   // Para el aviso a la asesora
   resumen_vuelta: `Ha vuelto a preguntar por ${d.referencia || 'un inmueble'}`

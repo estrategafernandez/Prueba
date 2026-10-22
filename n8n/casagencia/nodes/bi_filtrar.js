@@ -29,8 +29,9 @@ function modalidadPorDescripcion(descripcion) {
   return '';
 }
 const MODALIDAD_HABLADA = {
-  larga_duracion: 'alquiler de larga duración, para todo el año',
-  temporal: 'alquiler temporal, por meses de invierno, no todo el año',
+  larga_duracion: 'alquiler de larga duración, para vivir todo el año',
+  temporal: 'alquiler TEMPORAL, por paquetes de meses de octubre a junio, no es anual, no se alquila '
+    + 'por uno o dos meses sueltos y no permite empadronarse',
 };
 
 // eGO: ref -> modalidad. Si la base de datos falla, se tira de la descripcion.

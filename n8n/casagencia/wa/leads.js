@@ -26,6 +26,15 @@ const TEXTOS_ABIERTA = {
     en: (r) => `I'm Sara, Casagencia's AI. We received the message you left on our website${r.resumen_cliente ? ` about ${r.resumen_cliente}` : ''}. Can I help you here? Tell me what you are looking for and I'll show you what we have.`,
     fr: (r) => `Je suis Sara, l'IA de Casagencia. Nous avons bien reçu votre message sur notre site${r.resumen_cliente ? ` concernant ${r.resumen_cliente}` : ''}. Je peux vous aider ici : dites-moi ce que vous cherchez et je vous montre ce que nous avons.`,
   },
+  // Alquiler del que no sabemos si es temporal o de larga duracion. La bienvenida
+  // de alquiler lleva esa diferencia en el propio texto ({{3}}), asi que sin
+  // saberla NO se manda: antes de decirle algo que puede no ser verdad, se le
+  // escribe sin prometer nada y el equipo lo aclara.
+  alquiler_sin_modalidad: {
+    es: (r) => `Soy Sara, IA de Casagencia. Hemos recibido tu solicitud de información por este inmueble de alquiler: ${r.enlace}. Antes de nada, dime: ¿lo buscas para vivir todo el año o para una temporada de unos meses?`,
+    en: (r) => `I'm Sara, Casagencia's AI. We received your enquiry about this property for rent: ${r.enlace}. First of all: are you looking for a year-round home or for a few months only?`,
+    fr: (r) => `Je suis Sara, l'IA de Casagencia. Nous avons bien reçu votre demande concernant ce bien en location : ${r.enlace}. Avant tout : le cherchez-vous pour vivre à l'année ou pour quelques mois ?`,
+  },
   // Segunda solicitud de la misma persona por OTRO inmueble (en pocos dias): en vez
   // de repetir la bienvenida, la plantilla abierta con este texto. Tiene que empezar
   // por uno de PREFIJOS_OTRO_INMUEBLE (config.js): asi lo reconoce el seguimiento.
@@ -62,21 +71,32 @@ const TIPOS_BUSCA = ['compra', 'alquiler', 'alquiler_temporada', 'sin_mensaje'];
 const TIPOS_PROPIETARIO = ['vender_su_vivienda', 'alquilar_su_vivienda'];
 
 // r: { tipo, referencia, disponible (true/false/null = no se sabe), enlace,
-//      nombre, idioma, resumen_cliente, municipio, operacion }
+//      nombre, idioma, resumen_cliente, municipio, operacion, modalidad }
 function decidirPrimerMensaje(r) {
   const idioma = ['es', 'en', 'fr'].includes(r.idioma) ? r.idioma : 'es';
   const tipo = String(r.tipo || 'otro');
   const asesora = resolverAsesora(r.referencia, r.municipio).destinatario;
   const alquiler = tipo === 'alquiler' || tipo === 'alquiler_temporada' || esAlquiler(r.referencia, r.operacion);
   const nombre = String(r.nombre || '').trim().split(/\s+/)[0] || '';
+  // Que clase de alquiler es: lo dice eGO (wa_cartera.modalidad). Va en la
+  // bienvenida de alquiler, en el {{3}}.
+  const modalidad = String(r.modalidad ?? '').trim();
+  const param3 = MODALIDAD_PLANTILLA[modalidad] || '';
+  // Vacio de verdad si no toca: paramPlantilla('') devuelve '-' y ese guion no
+  // pinta nada en una plantilla que no tiene {{3}}.
   const base = { asesora, es_alquiler: alquiler, operacion: alquiler ? 'alquiler' : 'venta',
+                 modalidad, param3: param3 ? paramPlantilla(param3, 300) : '',
                  param1: paramPlantilla(nombre || '\u{1F44B}', 60) };
   const abierta = (clave, accion) => ({ ...base, accion, plantilla: PLANTILLAS.abierta.nombre,
-    param2: paramPlantilla(TEXTOS_ABIERTA[clave][idioma]({ ...r, asesora }), 900) });
+    param3: '', param2: paramPlantilla(TEXTOS_ABIERTA[clave][idioma]({ ...r, asesora }), 900) });
 
   if (TIPOS_PROPIETARIO.includes(tipo)) return abierta('propietario', 'captacion');
   if (r.referencia && r.disponible === false) return abierta('no_disponible', 'no_disponible');
   if (r.referencia && r.enlace && (TIPOS_BUSCA.includes(tipo) || tipo === 'otro' || !tipo)) {
+    // Regla de Paco: la bienvenida de alquiler DICE si es temporal o de larga
+    // duracion. Si no lo sabemos, no se manda esa plantilla: se le escribe sin
+    // prometer nada y se le pregunta.
+    if (alquiler && !param3) return abierta('alquiler_sin_modalidad', 'alquiler_sin_modalidad');
     const p = alquiler ? PLANTILLAS.alquiler : PLANTILLAS.compra;
     return { ...base, accion: 'bienvenida', plantilla: p.nombre, param2: paramPlantilla(r.enlace, 300),
              // Si ya le escribimos por otro inmueble hace poco, sale esto en su lugar
@@ -84,5 +104,5 @@ function decidirPrimerMensaje(r) {
              param2_tambien: paramPlantilla(TEXTOS_ABIERTA.otro_inmueble[idioma](r), 900) };
   }
   if (TIPOS_BUSCA.includes(tipo)) return abierta('busqueda', 'busqueda');
-  return { ...base, accion: 'revisar', plantilla: '', param2: '' };
+  return { ...base, accion: 'revisar', plantilla: '', param2: '', param3: '' };
 }

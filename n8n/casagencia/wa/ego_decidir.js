@@ -42,6 +42,9 @@ return nuevos.map((n, k) => {
     nombre: b.nombre,
     idioma: idiomaDe(b.mensaje),
     municipio: c.municipio || '',
+    // Larga duracion o temporal: lo pone eGO en el tipo de negocio y [WA] 4 lo
+    // guarda en wa_cartera. Va en el {{3}} de la bienvenida de alquiler.
+    modalidad: c.modalidad || '',
   });
   const asignadoEgo = b.asignado_ids.map(id => EGO_COMERCIALES[id]).filter(Boolean)[0]
     || String(b.asignado_nombres[0] || '').split(' ')[0];

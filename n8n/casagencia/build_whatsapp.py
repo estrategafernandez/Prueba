@@ -1039,10 +1039,11 @@ def wf_plantilla(ids):
                                        "$('LeerConversacion').first().json.meta?.assignee?.id", [3060, 160])
     return reubicar(wf("[WA][SUB] EnviarPlantilla", nodos_asig + [
         trigger_sub([("telefono", "string"), ("nombre", "string"), ("plantilla", "string"),
-                     ("param1", "string"), ("param2", "string"), ("referencia", "string"),
+                     ("param1", "string"), ("param2", "string"), ("param3", "string"),
+                     ("referencia", "string"),
                      ("operacion", "string"), ("portal", "string"), ("conversacion_id", "number"),
                      ("email", "string")]),
-        pg_query("EnlaceDeLaWeb", "select enlace from wa_cartera where upper(ref) = upper($1) limit 1;",
+        pg_query("EnlaceDeLaWeb", "select enlace, modalidad from wa_cartera where upper(ref) = upper($1) limit 1;",
                  "={{ [ String($json.referencia || '') ] }}", [180, 160], alwaysOutputData=True,
                  onError="continueRegularOutput"),
         code_node("Normalizar", code_wa("plantilla_normalizar.js"), [180, 0]),
@@ -1209,7 +1210,8 @@ def wf_lead_web(ids):
     d = "$('Decidir').first().json"
     entradas = {k: "={{ %s.%s }}" % (d, v) for k, v in (
         ("telefono", "telefono_e164"), ("nombre", "nombre"), ("plantilla", "plantilla"),
-        ("param1", "param1"), ("param2", "param2"), ("referencia", "referencia"),
+        ("param1", "param1"), ("param2", "param2"), ("param3", "param3"),
+        ("referencia", "referencia"),
         ("operacion", "operacion"), ("portal", "portal"), ("email", "email_cliente"))}
     entradas.update(plantilla_primer_whatsapp(d))
     entradas["conversacion_id"] = 0
@@ -2593,7 +2595,8 @@ def wf_leads_ego(ids):
     d = "$('Decidir').item.json"
     entradas = {k: "={{ %s.%s }}" % (d, v) for k, v in (
         ("telefono", "telefono_e164"), ("nombre", "nombre"), ("plantilla", "plantilla"),
-        ("param1", "param1"), ("param2", "param2"), ("referencia", "referencia"),
+        ("param1", "param1"), ("param2", "param2"), ("param3", "param3"),
+        ("referencia", "referencia"),
         ("operacion", "operacion"), ("portal", "portal"), ("email", "email_cliente"))}
     entradas.update(plantilla_primer_whatsapp(d))
     entradas["conversacion_id"] = 0
@@ -2602,7 +2605,8 @@ def wf_leads_ego(ids):
     v = "$('ComponerVuelta').item.json"
     vuelta = {k: "={{ %s.%s }}" % (v, x) for k, x in (
         ("telefono", "telefono_e164"), ("nombre", "nombre"), ("plantilla", "plantilla"),
-        ("param1", "param1"), ("param2", "param2"), ("referencia", "referencia"),
+        ("param1", "param1"), ("param2", "param2"), ("param3", "param3"),
+        ("referencia", "referencia"),
         ("operacion", "operacion"), ("portal", "portal"), ("email", "email_cliente"))}
     vuelta["conversacion_id"] = 0
     registro = ("={{ [ 'ego', $json.lead_id, $json.telefono_e164, $json.nombre, $json.referencia, $json.tipo, "
@@ -2638,7 +2642,8 @@ def wf_leads_ego(ids):
         ego("EstadoDelInmueble", ids, "GET", "/realestate/Realestate/GetRealestate", [1280, 0],
             query="={{ JSON.stringify({ realestateId: $json.realestate_id || 0 }) }}", cada_uno=True),
         pg_query("LaCartera", "select coalesce(json_agg(json_build_object('ref', ref, 'enlace', enlace, "
-                 "'tipo_transaccion', tipo_transaccion, 'municipio', municipio)), '[]'::json) as filas "
+                 "'tipo_transaccion', tipo_transaccion, 'municipio', municipio, "
+                 "'modalidad', modalidad)), '[]'::json) as filas "
                  "from wa_cartera where upper(ref) = any(string_to_array(upper($1), ','));",
                  "={{ [ $('SoloNuevos').all().map(i => i.json.referencia).filter(Boolean).join(',') ] }}",
                  [1500, 0], executeOnce=True, alwaysOutputData=True, onError="continueRegularOutput"),
@@ -2871,7 +2876,8 @@ def wf_lead_manual(ids):
     j = "$('PrepararLead').first().json"
     entradas = {k: "={{ %s.%s }}" % (j, v) for k, v in (
         ("telefono", "telefono_e164"), ("nombre", "nombre"), ("plantilla", "plantilla"),
-        ("param1", "param1"), ("param2", "param2"), ("referencia", "referencia"),
+        ("param1", "param1"), ("param2", "param2"), ("param3", "param3"),
+        ("referencia", "referencia"),
         ("operacion", "operacion"), ("portal", "portal"), ("email", "email_cliente"))}
     entradas["conversacion_id"] = 0
     return wf("[WA] 9 · Lead a mano", [

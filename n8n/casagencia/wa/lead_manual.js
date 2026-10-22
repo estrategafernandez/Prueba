@@ -36,6 +36,8 @@ return [{ json: {
   plantilla: plantilla.nombre,
   param1: nombre.split(' ')[0] || '\u{1F44B}',
   param2: enlace || `ref. ${referencia}`,
+  // {{3}} (temporal o larga duracion) lo pone el sub-workflow mirando la cartera
+  param3: '',
   // true = empezar de cero: borra la memoria de la conversacion anterior
   reiniciar: b.reiniciar === true || String(b.reiniciar).toLowerCase() === 'true',
 } }];

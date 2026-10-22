@@ -72,9 +72,12 @@ function modalidadAlquiler(modalidad, descripcion) {
   if (/invierno/.test(d)) return 'temporal';
   return '';
 }
+// Lo que Sara lee en la ficha. El temporal lleva sus limites dentro: es lo que
+// tiene que decirle al cliente antes de que se haga ilusiones con un anual.
 const MODALIDAD_TEXTO = {
-  larga_duracion: 'alquiler de LARGA DURACION (todo el año)',
-  temporal: 'alquiler TEMPORAL (por meses de invierno, no todo el año)',
+  larga_duracion: 'alquiler de LARGA DURACION (para vivir todo el año)',
+  temporal: 'alquiler TEMPORAL (por paquetes de meses, de octubre a junio; NO es anual, NO se alquila '
+    + 'por uno o dos meses sueltos, NO se alquila en verano y NO permite empadronarse)',
 };
 
 function limpiarFila(r) {
