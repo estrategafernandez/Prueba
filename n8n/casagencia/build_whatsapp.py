@@ -1629,6 +1629,16 @@ def asignar(prefijo, conv_expr, agente_expr, asignado_expr, pos, manda_expr=None
 # ===========================================================================
 # [WA] 2 · Asistente de WhatsApp
 # ===========================================================================
+# La fecha de hoy va aqui, en las instrucciones, NO detras del mensaje del
+# cliente: ahi Sara la leia como si se la hubiera dicho el y la comentaba.
+FECHA_EN_INSTRUCCIONES = (
+    "\n\n## QUE DIA ES HOY (dato tuyo, no te lo ha dicho el cliente)\n\n"
+    "Ahora mismo es {{ $('CodeFechaHoraActual').first().json.fecha_hora }}.\n\n"
+    "- Es informacion tuya para calcular fechas. NO la comentes, no le digas que "
+    "tomas nota de la fecha ni la menciones si no viene a cuento de una cita.\n"
+    "- No escribas ninguna fecha anterior a hoy.\n"
+    "- No te inventes fechas de disponibilidad o de entrada que no esten en la ficha.\n")
+
 CTX = "$('ContextoDelLead').first().json"
 TEL_CLIENTE = "={{ %s.telefono_e164 }}" % CTX
 CONV = "={{ %s.conversacion_id }}" % CTX
@@ -1956,15 +1966,13 @@ def wf_asistente(ids):
         # --- 6. Generar respuesta del asistente -------------------------------
         node("Agente", "@n8n/n8n-nodes-langchain.agent", {
             "promptType": "define",
-            # La fecha de hoy, pegada al mensaje y repetida: Sara llego a ofrecer una
-            # visita "a partir del 1 de septiembre" estando a 19 de octubre.
-            "text": "=Datos del cliente:\n{{ $json.contexto }}\n"
-                    "- Fecha y hora actual: {{ $('CodeFechaHoraActual').first().json.fecha_hora }}"
-                    "\n\nMensaje del cliente:\n{{ $json.mensaje }}"
-                    "\n\nRECUERDA: hoy es {{ $('CodeFechaHoraActual').first().json.fecha_hora }}. "
-                    "No escribas ninguna fecha anterior a hoy ni te inventes fechas de "
-                    "disponibilidad o de entrada que no esten en la ficha.",
-            "options": {"systemMessage": "=" + PROMPT, "maxIterations": 12},
+            # El turno del cliente acaba con SU mensaje y nada mas. La fecha de hoy
+            # va en las instrucciones (FECHA_EN_INSTRUCCIONES): cuando se le pegaba
+            # detras del mensaje, Sara la tomaba por algo que habia dicho el cliente
+            # y llego a contestar "Perfecto, tomo nota de la fecha de hoy".
+            "text": "=Datos del cliente:\n{{ $json.contexto }}"
+                    "\n\nMensaje del cliente:\n{{ $json.mensaje }}",
+            "options": {"systemMessage": "=" + PROMPT + FECHA_EN_INSTRUCCIONES, "maxIterations": 12},
         }, [6280, Y], 1.8, onError="continueErrorOutput",
             retryOnFail=True, maxTries=2, waitBetweenTries=5000),
         modelo,

@@ -204,6 +204,27 @@ ck('alquiler: le faltan las otras dos (la fecha de entrada ya no se pregunta)', 
    JSON.stringify(['ingresos', 'mascotas']), JSON.stringify(r.preguntas_pendientes));
 ck('ve el enlace del anuncio', r.contexto.includes('idealista.com/inmueble'));
 ck('sabe que no se agenda', /No se agenda/.test(r.contexto));
+{
+  // Escribe directamente, sin haber pedido ningun inmueble (caso Yanet, 22-10):
+  // Sara le preguntaba por "el inmueble por el que pediste informacion", que no
+  // existe, y la conversacion se le asignaba a Laurence.
+  const suelto = (mensaje) => wa('asistente_contexto.js', inp([{ json: {} }]), nod({
+    JuntarMensajes: { telefono_e164: '+34642451435', telefono_wa: '34642451435', nombre: 'Yanet',
+                      mensaje, conversacion_id: 222, cuenta_id: 1 },
+    EntradaMensaje: { etiquetas: [] }, LeerFichaDelLead: [], LeerCartera: REAL, LeerDirecciones: [],
+  }), true)[0].json;
+  let y = suelto('Buenos diass busco alquiler de piso en castellon de la plana en la Zona de Avenida Alcora');
+  ck('sin inmueble: se le dice a Sara que NO existe y que busque',
+     /NO ha pedido ningun inmueble concreto/.test(y.contexto)
+     && /BUSCALO con buscarInmuebles/.test(y.contexto), y.contexto.split('\n').find(l => /NO ha pedido/.test(l)) || '');
+  ck('dice Castellon: la conversacion es de Gisela, no de Laurence',
+     y.asesora === 'Gisela' && y.agente_id === 4, JSON.stringify([y.asesora, y.agente_id]));
+  y = suelto('Hola, busco un piso de alquiler en Benicasim');
+  ck('dice Benicasim: la lleva Carmen (o quien la sustituya)', ['Carmen', 'Gisela'].includes(y.asesora), y.asesora);
+  y = suelto('Hola, buenos dias');
+  ck('si no dice donde, NO se le endosa a Laurence: se queda sin asignar',
+     y.agente_id === 0, JSON.stringify([y.asesora, y.agente_id]));
+}
 const pisoVenta = REAL.find(x => x.tipo_transaccion === 'venta' && /piso/i.test(x.tipo_inmueble) && x.descripcion);
 r = contexto({ telefono_wa: '34600000001', referencia: pisoVenta.ref, operacion: 'venta',
                q_tiempo_buscando: 'seis meses' });
@@ -1967,12 +1988,17 @@ console.log('\n== Fechas y precios: nada inventado ==');
        pr.slice(pr.indexOf('NO EXPLIQUES DE DÓNDE SALE UN PRECIO'), pr.indexOf('NO EXPLIQUES DE DÓNDE SALE UN PRECIO') + 900)));
   ck('el telefono tiene las dos reglas', /LAS FECHAS NO TE LAS INVENTAS NUNCA/.test(tel)
      && /NO EXPLIQUES DE DÓNDE SALE UN PRECIO/.test(tel));
-  // La fecha de hoy va pegada al mensaje, no solo arriba del todo
+  // La fecha de hoy va en las INSTRUCCIONES, no detras del mensaje del cliente:
+  // ahi Sara la tomaba por algo que el habia dicho ("tomo nota de la fecha de hoy").
   const w = JSON.parse(fs.readFileSync(B + 'workflows_wa/WA_2_Asistente_de_WhatsApp.json', 'utf8'));
-  const texto = w.nodes.find(n => n.name === 'Agente').parameters.text;
-  ck('en cada turno se le repite la fecha de hoy junto al mensaje',
-     (texto.match(/CodeFechaHoraActual/g) || []).length >= 2
-     && /No escribas ninguna fecha anterior a hoy/.test(texto));
+  const agente = w.nodes.find(n => n.name === 'Agente').parameters;
+  const texto = agente.text, instr = agente.options.systemMessage;
+  ck('Sara sabe que dia es hoy', /CodeFechaHoraActual/.test(instr)
+     && /No escribas ninguna fecha anterior a hoy/.test(instr));
+  ck('la fecha NO va detras del mensaje del cliente', !/CodeFechaHoraActual/.test(texto)
+     && texto.trim().endsWith('{{ $json.mensaje }}'), texto.slice(-60));
+  ck('y se le dice que no la comente, que no se la ha dicho el cliente',
+     /no te lo ha dicho el cliente/i.test(instr) && /NO la comentes/.test(instr));
 }
 
 // ===========================================================================

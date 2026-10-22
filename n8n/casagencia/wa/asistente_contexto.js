@@ -42,7 +42,11 @@ otras = [].concat(otras || []).filter(o => o && hay(o.referencia));
 const q = (k) => (hay(fila[k]) ? fila[k] : (otras.find(o => hay(o[k])) || {})[k]);
 
 const esAlq = fila.es_alquiler === true || esAlquiler(fila.referencia, fila.operacion);
-const asesora = hay(fila.asesora) ? fila.asesora : resolverAsesora(fila.referencia).destinatario;
+// Sin referencia no hay prefijo del que deducir la comercial. Antes caia siempre
+// en Laurence; ahora se mira si el cliente ha nombrado alguno de nuestros
+// municipios en lo que escribe (Castellon -> Gisela, Benicasim -> Carmen).
+const asesora = hay(fila.asesora) ? fila.asesora
+  : resolverAsesora(fila.referencia, hay(fila.referencia) ? '' : String(d.mensaje ?? '')).destinatario;
 
 // La fecha de entrada ya no se pregunta: la averigua la asesora en la primera
 // llamada (el campo sigue existiendo por si llega del telefono o de antes).
@@ -74,6 +78,14 @@ const lineas = [
   `- Referencia del inmueble que pidio: ${val(fila.referencia)}`,
   hay(fila.enlace) ? `- Enlace del anuncio: ${fila.enlace}` : '',
   `- Operacion: ${esAlq ? 'ALQUILER' : (hay(fila.operacion) ? 'COMPRA' : 'no lo sabemos')}`,
+  // Si no pidio ningun inmueble, Sara no puede hablar de "el inmueble por el que
+  // pediste informacion": no existe. Tiene que buscar lo que le pida.
+  !hay(fila.referencia)
+    ? '- NO ha pedido ningun inmueble concreto: NO existe "el inmueble por el que pediste informacion", '
+      + 'no le hables de el ni des por hecho que hay uno. Si te dice que busca (zona, alquiler o compra, '
+      + 'precio, tipo), BUSCALO con buscarInmuebles y ensenale lo que haya, sin pedirle la referencia. '
+      + 'Solo si no te ha dicho nada de lo que busca, preguntaselo.'
+    : '',
   `- Comercial que le corresponde: ${asesora}`,
   (() => {
     // Si la comercial de este inmueble esta de vacaciones, las visitas de esos
@@ -132,7 +144,10 @@ return [{
     // pasar por un portal) no la tenian asignada y se la quedaba quien pillara
     // la auto-asignacion de Chatwoot, incluido Paco.
     // Si la de la zona esta de vacaciones, se la queda quien la sustituye.
-    agente_id: agenteDeHoy(asesora),
+    // Solo se asigna a las comerciales. Si no sabemos de quien es, mejor dejarla
+    // sin asignar que cargarsela a Laurence, que no lleva conversaciones.
+    agente_id: ['Carmen', 'Gisela'].includes(quienAtiende(asesora,
+      DateTime.now().setZone(ZONA).toFormat('yyyy-MM-dd'))) ? agenteDeHoy(asesora) : 0,
     telefono_e164: d.telefono_e164,
     telefono_wa: d.telefono_wa,
     nombre: hay(fila.nombre) ? fila.nombre : (d.nombre || ''),
