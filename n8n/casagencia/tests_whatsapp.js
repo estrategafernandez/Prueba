@@ -1996,7 +1996,16 @@ console.log('\n== Fechas y precios: nada inventado ==');
   ck('Sara sabe que dia es hoy', /CodeFechaHoraActual/.test(instr)
      && /No escribas ninguna fecha anterior a hoy/.test(instr));
   ck('la fecha NO va detras del mensaje del cliente', !/CodeFechaHoraActual/.test(texto)
-     && texto.trim().endsWith('{{ $json.mensaje }}'), texto.slice(-60));
+     && /\.mensaje \}\}$/.test(texto.trim()), texto.slice(-60));
+  // Al Agente entran dos ramas: la del IF y AsignarConversacion (la respuesta de
+  // Chatwoot, que no trae ni contexto ni mensaje). Con $json, en las conversaciones
+  // que se reasignan en cada mensaje Sara recibia el turno VACIO: le llegaba
+  // "Datos del cliente:" y "Mensaje del cliente:" en blanco y contestaba "dime que
+  // inmueble quieres ver" a quien le acababa de contar que buscaba un alquiler.
+  ck('el contexto y el mensaje se piden a ContextoDelLead, no a $json',
+     !/\$json\./.test(texto)
+     && texto.includes("{{ $('ContextoDelLead').first().json.contexto }}")
+     && texto.includes("{{ $('ContextoDelLead').first().json.mensaje }}"), texto);
   ck('y se le dice que no la comente, que no se la ha dicho el cliente',
      /no te lo ha dicho el cliente/i.test(instr) && /NO la comentes/.test(instr));
 }

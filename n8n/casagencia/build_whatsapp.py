@@ -1970,8 +1970,14 @@ def wf_asistente(ids):
             # va en las instrucciones (FECHA_EN_INSTRUCCIONES): cuando se le pegaba
             # detras del mensaje, Sara la tomaba por algo que habia dicho el cliente
             # y llego a contestar "Perfecto, tomo nota de la fecha de hoy".
-            "text": "=Datos del cliente:\n{{ $json.contexto }}"
-                    "\n\nMensaje del cliente:\n{{ $json.mensaje }}",
+            # El contexto y el mensaje se piden a ContextoDelLead POR SU NOMBRE, no con
+            # $json: al Agente entran dos ramas y cuando hay que asignar la conversacion
+            # la que entra es AsignarConversacion (la respuesta de Chatwoot, que no trae
+            # ni contexto ni mensaje). Con $json, en esos turnos Sara recibia el turno
+            # VACIO y contestaba "dime que inmueble o que duda quieres que veamos" a
+            # quien le acababa de escribir que buscaba un alquiler.
+            "text": "=Datos del cliente:\n{{ %s.contexto }}"
+                    "\n\nMensaje del cliente:\n{{ %s.mensaje }}" % (CTX, CTX),
             "options": {"systemMessage": "=" + PROMPT + FECHA_EN_INSTRUCCIONES, "maxIterations": 12},
         }, [6280, Y], 1.8, onError="continueErrorOutput",
             retryOnFail=True, maxTries=2, waitBetweenTries=5000),
@@ -3074,7 +3080,53 @@ def construir(ids):
         "[WA] 12 · Seguimiento a la hora al que se queda parado": wf_seguimiento_parado(ids),
     }
     assert list(wfs) == ORDEN
+    comprobar_uniones(wfs)
     return wfs
+
+
+# Nodos a los que entran VARIAS ramas y que leen $json: solo valen si todas las
+# ramas traen ese campo. La lista es la excepcion comprobada a mano.
+UNIONES_REVISADAS = {
+    # Las cuatro Variable* (texto, imagen, audio, otro) dejan siempre `response`
+    "Variable Mensaje": {"response"},
+    # Las dos ramas son la misma llamada a eGO (con cuerpo y sin el), las dos con
+    # fullResponse: las dos traen statusCode
+    "¿Sesion caducada?": {"statusCode"},
+    # Las cuatro ramas (la dada, la elegida, la creada y la nueva) dejan el mismo campo
+    "ConversacionLista": {"conversacion_id"},
+    # Las dos ramas son el mismo envio de Gmail (desde Gisela o desde Carmen) y
+    # `id` es el del correo enviado: sirve de "se ha enviado de verdad"
+    "ApuntarCorreoEnviado": {"id"},
+}
+
+
+def comprobar_uniones(wfs):
+    """Que ningun nodo con varias entradas lea $json de una rama que no lo trae.
+
+    Al Agente de [WA] 2 entran dos ramas: la del IF cuando no hay que asignar la
+    conversacion (trae el contexto) y AsignarConversacion cuando si (trae la
+    respuesta de Chatwoot, que no trae nada). Con `$json.contexto` Sara recibia
+    el turno VACIO en todos los turnos de las conversaciones que se reasignan en
+    cada mensaje, y contestaba "dime que inmueble quieres ver" a quien le acababa
+    de contar lo que buscaba. Se arreglo pidiendo el dato a ContextoDelLead por
+    su nombre; esto evita que vuelva a colarse en cualquier otro nodo.
+    """
+    for nombre, w in wfs.items():
+        entradas = {}
+        for origen, salidas in (w.get("connections") or {}).items():
+            for rama in (salidas.get("main") or []):
+                for c in (rama or []):
+                    entradas.setdefault(c["node"], set()).add(origen)
+        for nodo in w.get("nodes") or []:
+            if len(entradas.get(nodo["name"], ())) < 2:
+                continue
+            campos = set(re.findall(r"\$json\.([A-Za-z_][A-Za-z0-9_]*)",
+                                    json.dumps(nodo.get("parameters") or {})))
+            sobran = campos - UNIONES_REVISADAS.get(nodo["name"], set())
+            assert not sobran, (
+                f"{nombre} · {nodo['name']} recibe {len(entradas[nodo['name']])} ramas y lee "
+                f"$json.{', $json.'.join(sorted(sobran))}: pide el dato al nodo por su nombre "
+                f"($('NodoQueLoTrae').first().json) o anade el nodo a UNIONES_REVISADAS")
 
 
 def api(method, path, payload=None):
