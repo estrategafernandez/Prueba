@@ -545,11 +545,16 @@ on conflict (telefono_wa, referencia) do update set
   asesora     = excluded.asesora,
   operacion   = excluded.operacion,
   es_alquiler = excluded.es_alquiler,
-  estado      = excluded.estado,
+  -- En compra las preguntas van DESPUES de dejarle la visita pre-reservada, asi
+  -- que cualificar no puede borrar que ya tiene cita: si no, Sara se la volveria
+  -- a ofrecer (el contexto se fija en este estado).
+  estado      = case when wa_leads.estado = 'cita_agendada' then wa_leads.estado else excluded.estado end,
   conversacion_id = coalesce(nullif(excluded.conversacion_id, 0), wa_leads.conversacion_id),
   %s,
   actualizado_en = now()
-returning id, q_personas, q_ingresos, q_mascotas, q_entrada, q_actividad;""" % (
+returning id, estado, cita_fecha, cita_hora,
+          q_necesita_vender, q_vivienda_venta, q_financiacion,
+          q_personas, q_ingresos, q_mascotas, q_entrada, q_actividad;""" % (
     ", ".join(_Q),
     ",".join("$%d" % (10 + i) for i in range(len(_Q))),
     ",\n  ".join("%s = case when excluded.%s <> '' then excluded.%s else wa_leads.%s end"
@@ -1006,11 +1011,24 @@ def wf_cualificar(ids):
                       detalle="={{ $('FaltaAlquiler').first().json.detalle_aviso }}"),
                  [1960, -200], {"conversacion_id": "number", "pasar_a_humano": "boolean"},
                  onError="continueRegularOutput", alwaysOutputData=True),
+        # En compra la visita va ANTES que las preguntas, asi que la asesora recibio
+        # la pre-reserva sin estos datos: cuando estan las dos, se le mandan.
+        if_node("¿Visita ya pre-reservada?", None, None, [1300, 100], conds=[
+            ("={{ String($('GuardarFicha').first().json.estado || '') }}", "equals", "cita_agendada", "string"),
+            ("={{ ($('Preparar').first().json.falta_compra || []).length }}", "equals", 0, "number")]),
+        code_node("DatosDeLaVisita", code_wa("cualificar_aviso_visita.js"), [1520, 100]),
+        exec_sub("AvisarDeLaVisita", ids.get("[WA][SUB] AvisoEquipo", ""), "[WA][SUB] AvisoEquipo",
+                 {k: "={{ $('DatosDeLaVisita').first().json.%s }}" % k
+                  for k, _ in AVISO_IN if k not in ("municipio", "origen")},
+                 [1740, 100], {"conversacion_id": "number", "pasar_a_humano": "boolean"},
+                 onError="continueRegularOutput", alwaysOutputData=True),
         code_node("Respuesta", code_wa("cualificar_respuesta.js"), [2180, 0]),
-        nota("Nota", "## Cualificacion\n**Compra**: dos preguntas (si necesita vender para comprar y "
-             "como lo financia). Si tiene que vender, Sara le pide la direccion o zona de esa vivienda y "
-             "la conversacion se marca con la etiqueta **vendedor**. Despues ofrece la "
-             "visita.\n\n**Alquiler**: tres preguntas (personas, ingresos y mascotas). Se "
+        nota("Nota", "## Cualificacion\n**Compra**: primero la visita y DESPUES las dos preguntas (si "
+             "necesita vender para comprar y como lo financia), para que la asesora llegue con contexto. "
+             "Si tiene que vender, Sara le pide la direccion o zona de esa vivienda y la conversacion se "
+             "marca con la etiqueta **vendedor**. Con la visita ya pre-reservada y las dos contestadas, "
+             "se le mandan a la asesora (la pre-reserva le llego sin ellas).\n\n**Alquiler**: tres "
+             "preguntas (personas, ingresos y mascotas). Se "
              "guardan (pueden llegar en varias veces) y, cuando estan las tres, se avisa al comercial por "
              "WhatsApp y la conversacion se marca con *4-intervenir*: "
              "en alquiler la IA no agenda, decide una persona.\n\nCuanto lleva buscando y la fecha de "
@@ -1021,7 +1039,11 @@ def wf_cualificar(ids):
             ("GuardarFicha", 0, "¿Es vendedor?", 0),
             ("¿Es vendedor?", 0, "MarcarVendedor", 0), ("¿Es vendedor?", 1, "¿Es alquiler?", 0),
             ("MarcarVendedor", 0, "¿Es alquiler?", 0),
-            ("¿Es alquiler?", 0, "FaltaAlquiler", 0), ("¿Es alquiler?", 1, "Respuesta", 0),
+            ("¿Es alquiler?", 0, "FaltaAlquiler", 0), ("¿Es alquiler?", 1, "¿Visita ya pre-reservada?", 0),
+            ("¿Visita ya pre-reservada?", 0, "DatosDeLaVisita", 0),
+            ("DatosDeLaVisita", 0, "AvisarDeLaVisita", 0),
+            ("¿Visita ya pre-reservada?", 1, "Respuesta", 0),
+            ("AvisarDeLaVisita", 0, "Respuesta", 0),
             ("FaltaAlquiler", 0, "¿Alquiler completo?", 0),
             ("¿Alquiler completo?", 0, "MarcarPasado", 0), ("¿Alquiler completo?", 1, "Respuesta", 0),
             ("MarcarPasado", 0, "PasarAlEquipo", 0), ("PasarAlEquipo", 0, "Respuesta", 0)))

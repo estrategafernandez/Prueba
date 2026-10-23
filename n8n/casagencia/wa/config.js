@@ -44,7 +44,8 @@ const PLANTILLAS = {
 // dice en la conversacion (prompt y ficha del inmueble) cuando viene a cuento.
 const MODALIDAD_PLANTILLA = {
   larga_duracion: 'de larga duración (para vivir todo el año)',
-  temporal: 'TEMPORAL (solo por paquetes de meses, por ejemplo de octubre a junio; no es un alquiler anual)',
+  temporal: 'SOLO TEMPORAL (únicamente por paquetes de meses, por ejemplo de octubre a junio), '
+    + 'no es un alquiler anual, tampoco por meses sueltos',
 };
 // Ultimo recurso: Meta no acepta un parametro vacio, asi que si alguien manda la
 // bienvenida de alquiler sin saber la modalidad (hoy no pasa: los 22 alquileres

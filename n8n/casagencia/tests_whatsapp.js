@@ -255,10 +255,19 @@ console.log('\n== 6. Cualificacion ==');
 r = wa('cualificar_preparar.js', inp([{ json: { telefono: '+34600000001', nombre: 'Jaime',
   referencia: 'BN-1547-V', operacion: 'venta', tiempo_buscando: 'seis meses', necesita_vender: 'no',
   resumen: 'Le gusta la terraza.', conversacion_id: 1 } }]))[0].json;
-ck('compra: no es alquiler y ofrece la visita', !r.es_alquiler && /ofrecele directamente la visita/i.test(r.respuesta));
+// En compra, lo que Sara tiene que hacer despues lo decide Respuesta, que ya ve
+// la ficha guardada y sabe si la visita esta pre-reservada.
+const cierre = (prep, ficha = {}, aviso = { mensaje_registrado: true }) =>
+  wa('cualificar_respuesta.js', inp([{ json: {} }]),
+     nod({ Preparar: prep, GuardarFicha: ficha, AvisarDeLaVisita: aviso }))[0].json.respuesta;
+ck('compra: no es alquiler', !r.es_alquiler);
+ck('compra: ya NO le ofrece la visita al guardar (va antes)',
+   !/ofrecele directamente la visita/i.test(r.respuesta), r.respuesta);
 ck('compra: guarda las respuestas', r.q_tiempo_buscando === 'seis meses' && r.q_necesita_vender === 'no');
 ck('compra: no vende -> sin etiqueta vendedor', r.es_vendedor === false);
-ck('compra: le falta la financiacion -> que la pregunte', /Falta como lo va a financiar/.test(r.respuesta));
+ck('compra: le falta la financiacion -> que la pregunte',
+   /^como lo va a financiar/.test(r.falta_compra[0] || '') && /Falta como lo va a financiar/.test(cierre(r)),
+   JSON.stringify(r.falta_compra));
 r = wa('cualificar_preparar.js', inp([{ json: { telefono: '+34600000001', nombre: 'Jaime',
   referencia: 'BN-1547-V', operacion: 'venta', tiempo_buscando: 'un ano', necesita_vender: 'si, tengo que vender el mio',
   es_vendedor: true, vivienda_a_vender: 'calle Mayor, Castellon', financiacion: 'hipoteca preconcedida',
@@ -266,11 +275,31 @@ r = wa('cualificar_preparar.js', inp([{ json: { telefono: '+34600000001', nombre
 ck('vendedor: etiqueta "vendedor"', r.es_vendedor === true && r.etiqueta_vendedor === 'vendedor');
 ck('vendedor: guarda la zona y la financiacion', r.q_vivienda_venta === 'calle Mayor, Castellon'
    && r.q_financiacion === 'hipoteca preconcedida');
-ck('con todo contestado: directamente la visita', /Ahora ofrecele directamente la visita/.test(r.respuesta), r.respuesta);
+// Con las dos contestadas, lo que toca depende de si ya tiene la visita
+{
+  const sinCita = cierre(r, { estado: 'cualificado' });
+  ck('con todo contestado y SIN visita: que se la ofrezca, y que no diga que la tiene',
+     /todavia NO tiene visita/.test(sinCita) && /BuscarDisponibilidadCalendario/.test(sinCita), sinCita);
+  const conCita = cierre(r, { estado: 'cita_agendada', cita_fecha: '2026-11-04', cita_hora: '17:00' });
+  ck('con todo contestado y la visita YA pre-reservada: cierra y nombra a la asesora',
+     /pre-reservada/.test(conCita) && /Carmen/.test(conCita) && /confirmarsela/.test(conCita)
+     && !/BuscarDisponibilidadCalendario/.test(conCita), conCita);
+  ck('y le dice que el aviso con los datos ha salido', /mandadas a Carmen/.test(conCita), conCita);
+  const sinAviso = cierre(r, { estado: 'cita_agendada' }, {});
+  ck('si ese aviso no sale, no se lo cuenta', !/mandadas a/.test(sinAviso), sinAviso);
+  // El aviso que recibe la asesora con los datos de despues de la reserva
+  ck('el aviso de compra no interviene la conversacion',
+     r.aviso_compra.pasar_a_humano === false && r.aviso_compra.etiqueta === ''
+     && r.aviso_compra.accion === 'DATOS PARA LA VISITA', JSON.stringify(r.aviso_compra.accion));
+  ck('y lleva las dos respuestas', /hipoteca preconcedida/.test(r.aviso_compra.detalle)
+     && /calle Mayor/.test(r.aviso_compra.detalle), r.aviso_compra.resumen);
+}
 r = wa('cualificar_preparar.js', inp([{ json: { telefono: '+34600000001', referencia: 'BN-1547-V', operacion: 'venta',
   tiempo_buscando: 'un mes', necesita_vender: 'Si', conversacion_id: 1 } }]))[0].json;
 ck('dice que si (aunque Sara no lo marque): vendedor, y pide la zona', r.es_vendedor === true
-   && /direccion o zona de la vivienda que tiene que vender/.test(r.respuesta));
+   && /direccion o zona de la vivienda que tiene que vender/.test(r.falta_compra[0] || ''),
+   JSON.stringify(r.falta_compra));
+ck('y mientras falte algo, no le ofrece otra fecha', /No le vuelvas a ofrecer fecha ni hora/.test(cierre(r)));
 r = wa('cualificar_preparar.js', inp([{ json: { telefono: '+34600000001', nombre: 'Jaime',
   referencia: 'CS-1479-A', personas: '3', ingresos: 'nomina indefinida', mascotas: 'un perro',
   entrada: '1 de noviembre', resumen: 'Pregunta por el piso del centro.', conversacion_id: 7 } }]))[0].json;
@@ -966,9 +995,9 @@ ck('alquiler disponible: bienvenida_alquiler', r.plantilla === 'bienvenida_alqui
 ck('larga duracion: el {{3}} lo dice y no asusta', r.param3 === 'de larga duración (para vivir todo el año)', r.param3);
 r = decide('alquiler', { referencia: 'BN-C-126-A', disponible: true, enlace: 'https://www.casagencia.com/inmueble/y/2',
   modalidad: 'temporal' });
-ck('temporal: TEMPORAL en mayusculas y por paquetes de meses',
-   r.plantilla === 'bienvenida_alquiler' && /TEMPORAL/.test(r.param3) && /octubre a junio/.test(r.param3)
-   && /no es un alquiler anual/.test(r.param3), r.param3);
+ck('temporal: SOLO TEMPORAL, por paquetes de meses, ni anual ni meses sueltos',
+   r.plantilla === 'bienvenida_alquiler' && /SOLO TEMPORAL/.test(r.param3) && /octubre a junio/.test(r.param3)
+   && /no es un alquiler anual/.test(r.param3) && /tampoco por meses sueltos/.test(r.param3), r.param3);
 // Lo del empadronamiento es delicado para un primer mensaje: se dice hablando,
 // no en la plantilla que le llega a quien solo ha pedido informacion
 ck('y el empadronamiento NO va en el primer mensaje', !/empadronar/i.test(r.param3), r.param3);
@@ -2120,8 +2149,8 @@ console.log('\n== Alquiler temporal: que se sepa desde el primer mensaje ==');
   let r = render({ telefono: '+34600000001', nombre: 'Yaiza', plantilla: temporal.plantilla, param1: temporal.param1,
     param2: temporal.param2, param3: temporal.param3, referencia: 'BN-C-126-A', operacion: 'alquiler' }, cuerpo);
   ck('a un temporal le sale TEMPORAL en el primer mensaje, en negrita y con sus limites',
-     r.ren.contenido.includes('*alquiler TEMPORAL (solo por paquetes de meses, por ejemplo de octubre a junio; '
-       + 'no es un alquiler anual)*: ' + URL), r.ren.contenido);
+     r.ren.contenido.includes('*alquiler SOLO TEMPORAL (únicamente por paquetes de meses, por ejemplo de '
+       + 'octubre a junio), no es un alquiler anual, tampoco por meses sueltos*: ' + URL), r.ren.contenido);
   ck('y en el primer mensaje no se le habla de empadronarse', !/empadronar/i.test(r.ren.contenido), r.ren.contenido);
   ck('y van los tres parametros a Meta', Object.keys(r.params).join(',') === '1,2,3', JSON.stringify(r.params));
 
@@ -2135,7 +2164,7 @@ console.log('\n== Alquiler temporal: que se sepa desde el primer mensaje ==');
   // Si quien llama no manda el {{3}}, el sub-workflow lo saca de la cartera
   r = render({ telefono: '+34600000001', nombre: 'Ana', plantilla: 'bienvenida_alquiler', param1: 'Ana',
     param2: URL, referencia: 'BN-C-126-A', operacion: 'alquiler' }, cuerpo, { enlace: URL, modalidad: 'temporal' });
-  ck('si quien llama no lo manda, sale de wa_cartera', /alquiler TEMPORAL/.test(r.ren.contenido), r.ren.contenido);
+  ck('si quien llama no lo manda, sale de wa_cartera', /alquiler SOLO TEMPORAL/.test(r.ren.contenido), r.ren.contenido);
   // Y si no hay forma de saberlo, nunca va vacio: Meta rechaza un parametro en blanco
   r = render({ telefono: '+34600000001', nombre: 'Ana', plantilla: 'bienvenida_alquiler', param1: 'Ana',
     param2: URL, referencia: 'XX-0000-A', operacion: 'alquiler' }, cuerpo);
@@ -2178,6 +2207,72 @@ console.log('\n== Alquiler temporal: que se sepa desde el primer mensaje ==');
     + "tipo_transaccion: 'alquiler', modalidad: 'temporal', precio: 700, municipio: 'Benicasim' }), {});")(DateTime);
   ck('la ficha que lee Sara ya avisa de los limites del temporal',
      /ALQUILER TEMPORAL \(POR PAQUETES DE MESES/.test(ficha) && /EMPADRONAR/.test(ficha), ficha.split('\n')[1]);
+}
+
+// ===========================================================================
+console.log('\n== Compra: primero la visita y despues las dos preguntas ==');
+{
+  const pr = fs.readFileSync(B + 'wa/prompt_asistente.md', 'utf8');
+  ck('el prompt pone la visita primero',
+     /## 8\. COMPRA: PRIMERO LA VISITA, DESPUÉS LAS DOS PREGUNTAS/.test(pr)
+     && /No le hagas ninguna de las dos preguntas antes de tener la visita/.test(pr));
+  ck('y la pre-reserva lleva ya la primera pregunta', /la PRIMERA de las dos preguntas/.test(pr)
+     && /Para que lo tenga todo\npreparado, ¿necesitas vender/.test(pr));
+  ck('con el enfoque de preparar la visita', /para que la\s+asesora vaya a la visita sabiendo/.test(pr)
+     && /ya tiene todo lo que necesita\s+para la visita/.test(pr));
+  ck('y si no hay visita, las preguntas se hacen igual antes de pasarlo',
+     /hazle las dos preguntas igual antes\n  de pasar el caso a la asesora/.test(pr));
+
+  // Cualificar DESPUES de reservar no puede borrar que ya tiene cita
+  const sql = fs.readFileSync(B + 'build_whatsapp.py', 'utf8');
+  ck('cualificar no pisa el estado cita_agendada',
+     /estado\s+= case when wa_leads\.estado = 'cita_agendada' then wa_leads\.estado else excluded\.estado end/.test(sql));
+  const wf = JSON.parse(fs.readFileSync(B + 'workflows_wa/WA_SUB_guardarCualificacion.json', 'utf8'));
+  const nodo = (n) => wf.nodes.find(x => x.name === n) || {};
+  ck('guardarCualificacion devuelve el estado y la cita',
+     /returning id, estado, cita_fecha, cita_hora/.test(nodo('GuardarFicha').parameters.query));
+  ck('la rama de compra pasa por "¿Visita ya pre-reservada?"',
+     wf.connections['¿Es alquiler?'].main[1][0].node === '¿Visita ya pre-reservada?'
+     && wf.connections['¿Visita ya pre-reservada?'].main[0][0].node === 'DatosDeLaVisita'
+     && wf.connections['¿Visita ya pre-reservada?'].main[1][0].node === 'Respuesta'
+     && wf.connections.DatosDeLaVisita.main[0][0].node === 'AvisarDeLaVisita'
+     && wf.connections.AvisarDeLaVisita.main[0][0].node === 'Respuesta');
+  // El aviso dice de que visita habla
+  const avisoVisita = wa('cualificar_aviso_visita.js', inp([{ json: {} }]), nod({
+    Preparar: { aviso_compra: { accion: 'DATOS PARA LA VISITA', destinatario: 'Carmen', resumen: 'x' } },
+    GuardarFicha: { estado: 'cita_agendada', cita_fecha: '2026-11-04', cita_hora: '17:00' } }))[0].json;
+  ck('y lleva el dia y la hora de la visita', /4 de noviembre/.test(avisoVisita.cita)
+     && /17:00/.test(avisoVisita.cita) && avisoVisita.destinatario === 'Carmen', avisoVisita.cita);
+  const cond = JSON.stringify(nodo('¿Visita ya pre-reservada?').parameters);
+  ck('y solo avisa con la cita puesta y nada pendiente',
+     /cita_agendada/.test(cond) && /falta_compra/.test(cond));
+
+  // En el contexto de cada turno, el orden
+  const ctxCompra = wa('asistente_contexto.js', inp([{ json: {} }]), nod({
+    JuntarMensajes: { telefono_e164: '+34600111222', telefono_wa: '34600111222', nombre: 'Luis',
+      mensaje: 'quiero verlo', conversacion_id: 180, cuenta_id: 1 },
+    EntradaMensaje: { etiquetas: [] },
+    LeerFichaDelLead: { telefono_wa: '34600111222', referencia: 'BN-1465-V', operacion: 'venta' },
+    LeerCartera: REAL, LeerDirecciones: [] }), true)[0].json.contexto;
+  ck('el contexto se lo recuerda en cada turno', /ORDEN EN COMPRA: PRIMERO la visita/.test(ctxCompra));
+  const ctxConCita = wa('asistente_contexto.js', inp([{ json: {} }]), nod({
+    JuntarMensajes: { telefono_e164: '+34600111222', telefono_wa: '34600111222', nombre: 'Luis',
+      mensaje: 'gracias', conversacion_id: 180, cuenta_id: 1 },
+    EntradaMensaje: { etiquetas: [] },
+    LeerFichaDelLead: { telefono_wa: '34600111222', referencia: 'BN-1465-V', operacion: 'venta',
+      estado: 'cita_agendada', cita_fecha: '2026-11-04', cita_hora: '17:00' },
+    LeerCartera: REAL, LeerDirecciones: [] }), true)[0].json.contexto;
+  ck('y cuando ya la tiene, deja de recordarselo',
+     !/ORDEN EN COMPRA/.test(ctxConCita) && /VISITA YA REGISTRADA/.test(ctxConCita));
+  // Alquiler sigue como estaba: alli no se agenda
+  const ctxAlq = wa('asistente_contexto.js', inp([{ json: {} }]), nod({
+    JuntarMensajes: { telefono_e164: '+34600111222', telefono_wa: '34600111222', nombre: 'Luis',
+      mensaje: 'hola', conversacion_id: 181, cuenta_id: 1 },
+    EntradaMensaje: { etiquetas: [] },
+    LeerFichaDelLead: { telefono_wa: '34600111222', referencia: 'CS-1479-A', operacion: 'alquiler' },
+    LeerCartera: REAL, LeerDirecciones: [] }), true)[0].json.contexto;
+  ck('en alquiler no se le mete el orden de compra', !/ORDEN EN COMPRA/.test(ctxAlq)
+     && /No se agenda/.test(ctxAlq));
 }
 
 // ===========================================================================

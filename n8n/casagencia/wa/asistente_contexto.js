@@ -103,6 +103,13 @@ const lineas = [
   pendientes.length
     ? `- Te faltan: ${pendientes.map(([, k]) => k).join('; ')}`
     : '- Ya tienes todas las preguntas y estan guardadas: no vuelvas a preguntar ni a ejecutar guardarCualificacion.',
+  // En compra el orden es al reves que en alquiler: la visita primero. Va en el
+  // contexto de cada turno porque es lo que mas se le olvida.
+  !esAlq && pendientes.length && fila.estado !== 'cita_agendada'
+    ? '- ORDEN EN COMPRA: PRIMERO la visita (cuadrarla y dejarla pre-reservada) y DESPUES esas preguntas, '
+      + 'presentandolas como lo que son: para que la asesora prepare la visita. No se las hagas antes ni '
+      + 'se las pongas como condicion para ensenarsela.'
+    : '',
   fila.estado === 'cita_agendada'
     ? `- VISITA YA REGISTRADA${hay(fila.cita_fecha) ? ` el ${fechaLegible(fila.cita_fecha, fila.cita_hora)}` : ''}: `
       + 'no la vuelvas a reservar. Si quiere cambiarla o anularla, avisarEquipo.'

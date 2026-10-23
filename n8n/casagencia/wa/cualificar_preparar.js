@@ -92,20 +92,39 @@ return [{
       pasar_a_humano: true,
       etiqueta: '',
     },
+    // En compra lo que falta y como cerrar lo decide Respuesta, que ya tiene
+    // delante la ficha guardada y sabe si la visita esta pre-reservada.
+    falta_compra: alquiler ? [] : [
+      ...(vendedor && !campos.q_vivienda_venta
+        ? ['la direccion o zona de la vivienda que tiene que vender'] : []),
+      ...(!campos.q_financiacion
+        ? ['como lo va a financiar (hipoteca, recursos propios o hipoteca ya preconcedida)'] : []),
+    ],
+    marcado_vendedor: vendedor,
     respuesta: alquiler
       // (la de alquiler la completa Respuesta con el nombre de la asesora que recibe el aviso)
       ? `Respuestas guardadas. Dile al cliente que le pasas sus datos a ${quienSeEncarga(r.destinatario)} y que se `
         + 'pondra en contacto con el para organizar la visita. No le ofrezcas fecha ni hora.'
-      : 'Respuestas guardadas' + (vendedor ? ' (y la conversacion marcada como vendedor)' : '') + '. '
-        + (vendedor && !campos.q_vivienda_venta
-          ? 'Falta la direccion o zona de la vivienda que tiene que vender: preguntasela antes de seguir y '
-            + 'vuelve a guardarla con guardarCualificacion (solo ese dato). '
-          : '')
-        + (!campos.q_financiacion
-          ? 'Falta como lo va a financiar (hipoteca, recursos propios o hipoteca ya preconcedida): preguntaselo y '
-            + 'guardalo con guardarCualificacion (solo ese dato). Despues, '
-          : 'Ahora ')
-        + 'ofrecele directamente la visita: preguntale que dia y a que hora le viene bien y consulta la agenda '
-        + 'con BuscarDisponibilidadCalendario.',
+      : 'Respuestas guardadas.',
+    // El aviso de compra solo sale cuando la visita YA esta pre-reservada: la
+    // asesora recibio la pre-reserva sin estos datos porque todavia no existian.
+    aviso_compra: {
+      accion: 'DATOS PARA LA VISITA',
+      destinatario: r.destinatario,
+      referencia,
+      cliente_nombre: limpio(j.nombre),
+      cliente_telefono: tel.e164,
+      resumen: ['Datos del cliente para la visita',
+                respuestas.filter(([, v]) => v).map(([k, v]) => `${k}: ${recortar(v, 45)}`).join(' · '),
+                resumen].filter(Boolean).join(' · '),
+      detalle: ['Lead de COMPRA con la visita ya pre-reservada. Estos son los datos que ha dado',
+                'DESPUES de reservarla, para que vayas con contexto.', '',
+                ...respuestas.map(([k, v]) => `${k}: ${v || 'no facilitado'}`), '',
+                `Resumen: ${resumen || 'sin resumen'}`].join('\n'),
+      conversacion_id: Number(j.conversacion_id || 0),
+      // No es una intervencion: la visita sigue su curso y la IA sigue atendiendo
+      pasar_a_humano: false,
+      etiqueta: '',
+    },
   }
 }];
