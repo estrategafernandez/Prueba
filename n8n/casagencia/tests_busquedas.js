@@ -125,7 +125,7 @@ console.log('\n== Telefono · buscarInmuebles: alquiler anual o temporal y presu
   check('anual hasta 800 en Benicasim: ningun temporal', refs(t).length > 0 && refs(t).every(x => MOD[x] === 'larga_duracion'), refs(t).join());
   check('presupuesto no excluyente: el de 1.000 sale, marcado POR ENCIMA', /BN-1291-A[^|]*POR ENCIMA DE SU PRESUPUESTO/.test(t), refs(t).join());
   check('pero no el de 5.500 ni el de 2.000', !refs(t).includes('BN-1555-A') && !refs(t).includes('BN-1559-A'), refs(t).join());
-  check('dice que es de larga duracion y el precio al mes', /larga duración, para todo el año/.test(t) && /1\.?000€ al mes/.test(t));
+  check('dice que es de larga duracion y el precio al mes', /larga duración, para vivir todo el año/.test(t) && /1\.?000€ al mes/.test(t));
   check('a quien busca casa no le salen locales (aunque le den igual las habitaciones)', !/Local comercial|Bar|Office/.test(t), refs(t).join());
 
   t = bi({ municipio: 'Castellón de la Plana / Castelló de la Plana', operacion: 'alquiler', habitaciones: 0, precio_min: 0, precio_max: 1100, modalidad: 'larga_duracion', tipo: 'vivienda' });
@@ -143,11 +143,12 @@ console.log('\n== Telefono · buscarInmuebles: alquiler anual o temporal y presu
 
   t = bi({ municipio: BEN, operacion: 'alquiler', habitaciones: 0, precio_min: 0, precio_max: 0, modalidad: 'temporal' });
   check('temporal: solo temporales, dicho asi', refs(t).length > 0 && refs(t).every(x => MOD[x] === 'temporal')
-    && /alquiler temporal, por meses de invierno/.test(t) && !/larga duración/.test(t), refs(t).join());
+    && /alquiler TEMPORAL, por paquetes de meses de octubre a junio/.test(t)
+    && /no permite empadronarse/.test(t) && !/larga duración/.test(t), refs(t).join());
 
   t = bi({ municipio: 'Oropesa del Mar / Orpesa', operacion: 'alquiler', habitaciones: 0, precio_min: 0, precio_max: 0, modalidad: 'larga_duracion' });
   check('sin anuales en Oropesa: lo dice y avisa de que hay uno temporal', /No hay ningún alquiler de larga duración/.test(t)
-    && /Sí hay 1 de alquiler temporal/.test(t) && /No inventes/.test(t), t.slice(0, 160));
+    && /Sí hay 1 de alquiler TEMPORAL/.test(t) && /No inventes/.test(t), t.slice(0, 160));
 
   t = bi({ municipio: BEN, operacion: 'alquiler', habitaciones: 0, precio_min: 0, precio_max: 300, modalidad: 'larga_duracion' });
   check('nada ni con margen: los mas economicos, diciendo que se pasan', /No hay nada por debajo de 300€/.test(t) && refs(t).length > 0, refs(t).join());

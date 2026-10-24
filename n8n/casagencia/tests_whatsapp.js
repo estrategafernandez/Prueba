@@ -1949,41 +1949,78 @@ console.log('\n== Quien se queda la llamada (la linea del portal NO manda) ==');
 // ===========================================================================
 console.log('\n== Vacaciones: las visitas las coge quien sustituye ==');
 {
-  const { AUSENCIAS, quienAtiende } = Function('DateTime', CFG + '; return { AUSENCIAS, quienAtiende };')(DateTime);
-  const delTel = Function('DateTime', LIB + '; return { AUSENCIAS, quienAtiende };')(DateTime);
+  const { AUSENCIAS } = Function('DateTime', CFG + '; return { AUSENCIAS };')(DateTime);
+  const delTel = Function('DateTime', LIB + '; return { AUSENCIAS };')(DateTime);
   ck('la lista es la misma en el telefono y en WhatsApp',
      JSON.stringify(AUSENCIAS) === JSON.stringify(delTel.AUSENCIAS));
-  const prep = (fecha, ref) => tel('bd_preparar.js', inp([{ json: { body:
+  // Y lo que haya en ella, bien puesto (si no, el dia que alguien se va de
+  // verdad la sustitucion no se aplica y nadie se entera)
+  ck('y lo que haya en ella esta bien puesto', AUSENCIAS.every(a =>
+     ['Carmen', 'Gisela', 'Laurence'].includes(a.asesora) && ['Carmen', 'Gisela'].includes(a.sustituye)
+     && a.asesora !== a.sustituye && /^\d{4}-\d{2}-\d{2}$/.test(a.desde) && /^\d{4}-\d{2}-\d{2}$/.test(a.hasta)
+     && a.desde <= a.hasta && a.motivo), JSON.stringify(AUSENCIAS));
+
+  // El MECANISMO se prueba con una ausencia de mentira, no con la de verdad:
+  // asi sigue cubierto cuando la lista esta vacia (que es lo normal) y no hay
+  // que tocar los tests cada vez que alguien se va o vuelve.
+  // La ventana va SIEMPRE por delante de hoy: con fechas fijas el test caducaba
+  // (la del 20/10 se quedo en el pasado y cc_validar dejo de crear el evento).
+  const fDia = (d) => d.toFormat('yyyy-MM-dd');
+  const noFestivo = (d) => !FESTIVOS.TODOS.includes(fDia(d));
+  const dDesde = DateTime.now().setZone('Europe/Madrid').plus({ days: 2 }).startOf('day');
+  const dHasta = dDesde.plus({ days: 10 });
+  const buscar = (prueba) => {
+    let d = dDesde;
+    while (d <= dHasta && !prueba(d)) d = d.plus({ days: 1 });
+    if (d > dHasta) throw new Error('no hay dia que valga en la ventana');
+    return d;
+  };
+  const LABORAL = buscar(d => d.weekday <= 5 && noFestivo(d));   // para la cita
+  const SABADO = buscar(d => d.weekday === 6);
+  const VIERNES = buscar(d => d.weekday === 5 && noFestivo(d));
+  const AUS = "const AUSENCIAS = [{ asesora: 'Carmen', sustituye: 'Gisela', motivo: 'vacaciones', "
+    + `desde: '${fDia(dDesde)}', hasta: '${fDia(dHasta)}' }];`;
+  const conAusencia = (codigo) => {
+    const cambiado = codigo.replace(/const AUSENCIAS = \[[\s\S]*?\n\];/, AUS);
+    if (cambiado === codigo) throw new Error('no he encontrado AUSENCIAS para sustituirla');
+    return cambiado;
+  };
+  const LIB_A = conAusencia(LIB), CFG_A = conAusencia(CFG);
+  const telA = (f, $input, $) => correr(LIB_A + '\n' + fs.readFileSync(B + 'nodes/' + f, 'utf8'), $input, $);
+  const prep = (fecha, ref) => telA('bd_preparar.js', inp([{ json: { body:
     { referencia: ref || 'BN-1465-V', telefono: '600111222', fecha, hora: '11:00' } } }]), nod({}))[0].json;
-  ck('el 15 (antes de irse) la visita es de Carmen', prep('2026-10-15').asesora === 'Carmen');
-  ck('del 16 al 26 las visitas de Carmen las hace Gisela, en SU agenda',
-     ['2026-10-16', '2026-10-20', '2026-10-24', '2026-10-26'].every(f => {
+  const ANTES = fDia(dDesde.minus({ days: 1 })), DESPUES = fDia(dHasta.plus({ days: 1 }));
+  ck('el dia de antes de irse la visita es de Carmen', prep(ANTES).asesora === 'Carmen', ANTES);
+  ck('mientras esta fuera, las visitas de Carmen las hace Gisela, en SU agenda',
+     [fDia(dDesde), fDia(LABORAL), fDia(dHasta)].every(f => {
        const p = prep(f);
        return p.asesora === 'Gisela' && p.calendario === 'gisela@casagencia.com'
          && p.sustituida && p.asesora_titular === 'Carmen';
-     }));
-  ck('el 27 vuelve a ser de Carmen', prep('2026-10-27').asesora === 'Carmen'
-     && prep('2026-10-27').sustituida === false);
-  ck('los inmuebles de Gisela no cambian', prep('2026-10-20', 'CS-1449-A').asesora === 'Gisela'
-     && prep('2026-10-20', 'CS-1449-A').sustituida === false);
+     }), fDia(dDesde) + '..' + fDia(dHasta));
+  ck('el dia siguiente vuelve a ser de Carmen', prep(DESPUES).asesora === 'Carmen'
+     && prep(DESPUES).sustituida === false, DESPUES);
+  ck('los inmuebles de Gisela no cambian', prep(fDia(LABORAL), 'CS-1449-A').asesora === 'Gisela'
+     && prep(fDia(LABORAL), 'CS-1449-A').sustituida === false);
   // Con Gisela cubriendo no hay sabados (ella no abre) y manda SU horario
-  const { huecosDelDia } = Function('DateTime', LIB + '; return { huecosDelDia };')(DateTime);
-  const AHORA = DateTime.fromISO('2026-10-14T10:00', { zone: 'Europe/Madrid' });
-  ck('el sabado 17 no hay visitas (Gisela no abre sabados)',
-     huecosDelDia('2026-10-17', 'Gisela', 'BN', [], AHORA).length === 0);
-  ck('pero el viernes 16 si, con el horario de Gisela',
-     huecosDelDia('2026-10-16', 'Gisela', 'BN', [], AHORA).length > 0);
+  const { huecosDelDia } = Function('DateTime', LIB_A + '; return { huecosDelDia };')(DateTime);
+  const AHORA = DateTime.now().setZone('Europe/Madrid');
+  ck('los sabados no hay visitas (Gisela no abre sabados)',
+     huecosDelDia(fDia(SABADO), 'Gisela', 'BN', [], AHORA).length === 0, fDia(SABADO));
+  ck('pero los viernes si, con el horario de Gisela',
+     huecosDelDia(fDia(VIERNES), 'Gisela', 'BN', [], AHORA).length > 0, fDia(VIERNES));
   // Lo que ve la asesora en el evento y en el aviso
-  const v = tel('cc_validar.js', inp([]), nod({ PrepararDatos: prep('2026-10-20') }))[0].json;
+  const v = correr(LIB_A + '\n' + fs.readFileSync(B + 'nodes/cc_validar.js', 'utf8'),
+                   inp([]), nod({ PrepararDatos: prep(fDia(LABORAL)) }))[0].json;
   ck('el evento del calendario dice que cubre a Carmen',
      /Inmueble de Carmen; lo lleva Gisela mientras esta de vacaciones/.test(v.descripcion), v.descripcion);
   // Y Sara, por WhatsApp, nombra a la correcta
-  const ctx = wa('asistente_contexto.js', inp([{ json: {} }]), nod({
+  const ctx = correr(CFG_A + '\n' + CARTERA + '\n' + fs.readFileSync(B + 'wa/asistente_contexto.js', 'utf8'),
+    inp([{ json: {} }]), nod({
     JuntarMensajes: { telefono_e164: '+34600111222', telefono_wa: '34600111222', nombre: 'Ana', mensaje: 'hola', conversacion_id: 7, cuenta_id: 1 },
     EntradaMensaje: { etiquetas: [] },
     LeerFichaDelLead: { telefono_wa: '34600111222', referencia: 'BN-1465-V', portal: 'Idealista', operacion: 'venta', es_alquiler: false },
     LeerCartera: REAL, LeerDirecciones: [],
-  }), true)[0].json;
+  }))[0].json;
   ck('Sara sabe que esos dias le llamara Gisela',
      /Carmen esta de vacaciones/.test(ctx.contexto) && /dile al cliente que le llamara Gisela/.test(ctx.contexto));
 }

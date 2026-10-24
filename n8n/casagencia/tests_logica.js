@@ -103,8 +103,13 @@ console.log('\n== El cliente solo puede por la tarde y esa tarde esta llena ==')
   let dia = HOY.plus({ days: 1 });
   while (dia.weekday > 5 || FESTIVOS.TODOS.includes(dia.toFormat('yyyy-MM-dd'))) dia = dia.plus({ days: 1 });
   const f = dia.toFormat('yyyy-MM-dd');
-  const ocupa = (fecha, de, a) => ({ json: { start: { dateTime: `${fecha}T${de}:00+02:00` },
-                                             end: { dateTime: `${fecha}T${a}:00+02:00` } } });
+  // Con el desfase pegado a mano (+02:00) el hueco se corria una hora en cuanto
+  // la fecha caia despues del cambio de hora: la tarde "llena" dejaba libre la
+  // ultima media hora y el test fallaba sin que nada estuviera roto.
+  const enMadrid = (fecha, h) =>
+    DateTime.fromFormat(`${fecha} ${h}`, 'yyyy-MM-dd HH:mm', { zone: 'Europe/Madrid' }).toISO();
+  const ocupa = (fecha, de, a) => ({ json: { start: { dateTime: enMadrid(fecha, de) },
+                                             end: { dateTime: enMadrid(fecha, a) } } });
   const cuerpo = { nombre:'Ana', telefono:'600111222', referencia:'BN-1547-V',
                    tipo_transaccion:'compra', fecha: f, hora: '18:00' };
   const prepT = run(null, 'bd_preparar.js', { $input: inputOf([{ json: { body: cuerpo } }]) })[0].json;

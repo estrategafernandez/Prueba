@@ -3,7 +3,7 @@
   "private": true,
   "description": "Workflows de n8n de Casagencia. luxon lo usan los tests y los nodos Code.",
   "scripts": {
-    "test": "cd n8n/casagencia && node tests_whatsapp.js && node tests_logica.js && node tests_saludo.js && node tests_alquiler.js && node tests_busquedas.js"
+    "test": "cd n8n/casagencia && mal=0; for f in tests_whatsapp.js tests_logica.js tests_saludo.js tests_alquiler.js tests_busquedas.js; do node $f || mal=1; done; exit $mal"
   },
   "dependencies": {
     "luxon": "^3.7.2"

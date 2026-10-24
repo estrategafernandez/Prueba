@@ -78,11 +78,10 @@ const CALENDARIO_POR_DEFECTO = 'gisela@casagencia.com'; // solo para que el nodo
 // quien vaya a estar ese dia.
 // RELLENAR cuando una se vaya de vacaciones, y quitarlo cuando vuelva.
 const AUSENCIAS = [
-  // Carmen, vacaciones: del viernes 16 al domingo 25 de octubre de 2026.
-  // Se incluye el lunes 26 (vuelve) como margen, que lo pidio Paco: ella tiene
-  // los lunes por la manana bloqueados y asi no se le cuela una visita temprana.
-  { asesora: 'Carmen', sustituye: 'Gisela', motivo: 'vacaciones',
-    desde: '2026-10-16', hasta: '2026-10-26' },
+  // Vacia: no hay nadie fuera. Carmen volvio de vacaciones el 24/10/2026.
+  // Ejemplo de como se rellena:
+  //   { asesora: 'Carmen', sustituye: 'Gisela', motivo: 'vacaciones',
+  //     desde: '2026-10-16', hasta: '2026-10-26' },
 ];
 
 // Quien atiende de verdad a esa asesora en esa fecha ('yyyy-MM-dd').
