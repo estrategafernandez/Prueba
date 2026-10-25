@@ -336,12 +336,20 @@ function normalizarTelefono(raw) {
   const teniaMas = s.startsWith('+');
   s = s.replace(/\D/g, '');
   if (!teniaMas && s.startsWith('00')) s = s.slice(2);
+  // Un 0 suelto delante es el prefijo nacional del pais de quien escribe
+  // (0731 468 648 en Rumania, 06... en Italia). En E.164 no existe y en Espana
+  // tampoco se usa, asi que no es nuestro: es de un pais que no sabemos cual es.
+  // Dejarlo da un +0... que Meta rechaza y el lead se pierde sin que nadie se
+  // entere; quitarlo es peor, porque 0731468648 se convertiria en el movil
+  // espanol +34731468648 y le escribiriamos a otra persona. Se marca como no
+  // valido y el lead se va por correo o a revisar, con su numero tal cual.
+  const truncoDesconocido = s.startsWith('0');
   if (/^[6789]\d{8}$/.test(s)) s = '34' + s;
   return {
     e164: s ? '+' + s : '',
     wa_id: s,                                   // como lo quiere Meta: solo digitos
     nacional: s.startsWith('34') ? s.slice(2) : s,
-    valido: s.length >= 8 && s.length <= 15,
+    valido: !truncoDesconocido && s.length >= 8 && s.length <= 15,
   };
 }
 

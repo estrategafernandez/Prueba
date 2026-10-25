@@ -2313,5 +2313,41 @@ console.log('\n== Compra: primero la visita y despues las dos preguntas ==');
 }
 
 // ===========================================================================
+console.log('\n== Telefonos de fuera de Espana ==');
+{
+  const nWa = Function('DateTime', CFG + '; return normalizarTelefono;')(DateTime);
+  const nTel = Function('DateTime', LIB + '; return normalizarTelefono;')(DateTime);
+  const iguales = (t) => nWa(t).e164 === nTel(t).e164 && nWa(t).valido === nTel(t).valido;
+  const casos = [
+    // lo que mandan los portales y eGO, que siempre viene con prefijo de pais
+    ['+40 731 468 648', '+40731468648', true,  'Rumania, como lo escribe idealista'],
+    ['0040731468648',   '+40731468648', true,  'Rumania, como lo manda eGO'],
+    ['+39 06 1234567',  '+39061234567', true,  'Italia'],
+    ['+44 7700 900123', '+447700900123', true, 'Reino Unido'],
+    ['+34 600 11 22 33', '+34600112233', true, 'Espana con prefijo'],
+    ['0034600112233',   '+34600112233', true,  'Espana como la manda eGO'],
+    ['600112233',       '+34600112233', true,  'Espana sin prefijo'],
+    // el 0 nacional de otro pais: no se puede saber de cual, asi que no se manda
+    ['0731468648',      '+0731468648',  false, 'sin prefijo de pais: no se sabe de donde es'],
+    ['06 1234567',      '+061234567',   false, 'idem, y NO se convierte en espanol'],
+    ['', '', false, 'vacio'],
+  ];
+  for (const [entrada, e164, valido, que] of casos) {
+    const r = nWa(entrada);
+    ck(`${que}: ${JSON.stringify(entrada)}`, r.e164 === e164 && r.valido === valido && iguales(entrada),
+       `${r.e164} valido=${r.valido}`);
+  }
+  // Lo importante del 0 suelto: que NO acabe escribiendole a un espanol
+  ck('un 0 delante nunca se convierte en un movil espanol',
+     nWa('0731468648').e164 !== '+34731468648' && nWa('0600112233').e164 !== '+34600112233');
+  // Y que un lead asi no se intente mandar: se va por correo o a revisar
+  const d = correr(CFG + '\n' + LEADS + "\nreturn decidirPrimerMensaje({ tipo: 'compra', referencia: 'CS-1565-V', "
+    + "disponible: true, enlace: 'https://www.casagencia.com/inmueble/x/1', nombre: 'Vladislav', idioma: 'es' });",
+    inp([{}]), nod({}));
+  ck('con telefono malo la bienvenida se compone igual (la manda quien pueda)',
+     d.plantilla === 'bienvenida_compra', d.plantilla);
+}
+
+// ===========================================================================
 console.log(fallos ? `\n${fallos} FALLOS` : '\nTodo correcto');
 process.exit(fallos ? 1 : 0);
