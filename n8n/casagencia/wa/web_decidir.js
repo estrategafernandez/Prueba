@@ -11,8 +11,12 @@ let inmueble = {};
 try { inmueble = $('LeerInmueble').first().json || {}; } catch (e) { inmueble = {}; }
 
 const referencia = String(f.referencia || c.referencia || '').toUpperCase();
-// Sin mensaje pero con telefono puede ser un cliente de verdad: saludo general
-const tipo = !String(f.mensaje || '').trim() && f.se_puede_contactar ? 'sin_mensaje' : (c.tipo || 'otro');
+// Sin mensaje pero con telefono puede ser un cliente de verdad: saludo general.
+// Si viene de un portal, el tipo lo dice el propio portal (compra o alquiler) y
+// no la clasificacion: el correo lleva mucha morralla del portal y pedirle a
+// OpenAI que adivine ahi es jugarsela a que salga "otro" o "captacion".
+const tipo = f.tipo_forzado
+  || (!String(f.mensaje || '').trim() && f.se_puede_contactar ? 'sin_mensaje' : (c.tipo || 'otro'));
 const enCartera = !!inmueble.ref;
 const argumentos = {
   tipo,

@@ -16,7 +16,7 @@
         },
         "simple": false,
         "filters": {
-          "q": "from:websites.egorealestate.com"
+          "q": "from:(websites.egorealestate.com OR idealista.com OR fotocasa.es OR habitaclia.com)"
         },
         "options": {
           "downloadAttachments": false

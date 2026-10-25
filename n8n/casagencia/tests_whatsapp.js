@@ -14,6 +14,10 @@ const correr = (codigo, $input, $) =>
 // Nodo propio de WhatsApp (config [+ cartera])
 const wa = (f, $input, $, cartera = false) =>
   correr(CFG + (cartera ? '\n' + CARTERA : '') + '\n' + fs.readFileSync(B + 'wa/' + f, 'utf8'), $input, $);
+// Nodo que lee correos de entrada: lleva ademas el lector de portales
+const PORTAL = fs.readFileSync(B + 'wa/portal_correo.js', 'utf8');
+const waCorreo = (f, $input, $) =>
+  correr(CFG + '\n' + PORTAL + '\n' + fs.readFileSync(B + 'wa/' + f, 'utf8'), $input, $);
 // Nodo del telefono reutilizado tal cual (libreria del telefono)
 const tel = (f, $input, $) => correr(LIB + '\n' + fs.readFileSync(B + 'nodes/' + f, 'utf8'), $input, $);
 
@@ -32,7 +36,7 @@ const cfg = Function('DateTime', CFG + '; return { ETIQUETAS, EQUIPO, PLANTILLAS
 
 // ===========================================================================
 console.log('== 1. Correos de los portales ==');
-let r = wa('parsear_email.js', inp([{ json: {
+let r = waCorreo('parsear_email.js', inp([{ json: {
   subject: 'Tienes un nuevo contacto para tu anuncio CS-1479-A',
   from: { value: [{ address: 'no-reply@contacto.idealista.com' }] },
   html: '<p>Nombre: Ana Belen Marti Telefono: 600 11 22 33</p><p>Email: ana.marti@gmail.com</p>' +
@@ -49,7 +53,7 @@ ck('idealista: {{2}} = enlace de la FICHA, sin parametros ni el de darse de baja
    r.param2 === 'https://www.idealista.com/inmueble/109876543/', r.param2);
 ck('idealista: la comercial por la referencia', r.asesora === 'Gisela', r.asesora);
 
-r = wa('parsear_email.js', inp([{ json: {
+r = waCorreo('parsear_email.js', inp([{ json: {
   subject: 'Nueva peticion de informacion - Fotocasa', from: { text: 'avisos@fotocasa.es' },
   text: 'Contacto: Jose Luis Ferrer Movil: +34 666777888 Ref: BN-1547-V Quiere comprar.',
 } }]))[0].json;
@@ -58,7 +62,7 @@ ck('fotocasa: venta -> bienvenida_compra en espanol',
 ck('fotocasa: sin enlace, {{2}} lleva la referencia', r.param2 === 'ref. BN-1547-V', r.param2);
 ck('fotocasa: Carmen', r.asesora === 'Carmen', r.asesora);
 
-r = wa('parsear_email.js', inp([{ json: {
+r = waCorreo('parsear_email.js', inp([{ json: {
   subject: 'Contacto web', from: { text: 'web@casagencia.com' }, text: 'Email: pedro.gil@gmail.com Ref: OR-1313-V',
 } }]))[0].json;
 ck('sin telefono no se contacta', r.se_puede_contactar === false);
@@ -960,27 +964,27 @@ const LEADS = fs.readFileSync(B + 'wa/leads.js', 'utf8');
 const lead = (f, $input, $) => correr(CFG + '\n' + LEADS + '\n' + fs.readFileSync(B + 'wa/' + f, 'utf8'), $input, $);
 const correoWeb = (texto, extra = {}) => ({ id: 'm1', date: '2026-10-01T10:00:00Z', subject: 'Contacto del WebSite',
   from: { text: 'web@websites.egorealestate.com' }, text: texto, ...extra });
-r = wa('web_parsear.js', inp([{ json: correoWeb('Petición de Contacto\nOrigen del contacto: https://www.casagencia.com/contacto\n'
+r = waCorreo('web_parsear.js', inp([{ json: correoWeb('Petición de Contacto\nOrigen del contacto: https://www.casagencia.com/contacto\n'
   + 'Nombre: Ana Pruebas\nEmail: ana@ejemplo.com\nTeléfono: 600 11 22 33\nObservaciones: Busco un piso de unos 75 metros en '
   + 'Voramar, presupuesto 330.000\nRGPD: Declaro que he leído...\nIP: 1.2.3.4\nUser Agent: Mozilla') }]))[0].json;
 ck('web: es de la web y saca los campos', r.es_de_la_web && r.nombre === 'Ana Pruebas' && r.email_cliente === 'ana@ejemplo.com'
    && r.telefono_e164 === '+34600112233' && r.idioma === 'es', JSON.stringify(r).slice(0, 200));
 const r1 = r;
-r = wa('web_parsear.js', inp([{ json: { correo: JSON.stringify(correoWeb('Petición de Contacto\nNombre: Ana Pruebas\n'
+r = waCorreo('web_parsear.js', inp([{ json: { correo: JSON.stringify(correoWeb('Petición de Contacto\nNombre: Ana Pruebas\n'
   + 'Teléfono: 600 11 22 33\nObservaciones: Hola')) } }]))[0].json;
 ck('web: llega de [WA] 1 como texto (un correo cada vez) y se lee igual', r.es_de_la_web && r.telefono_e164 === '+34600112233');
 r = r1;
 ck('web: el mensaje sin el RGPD ni la IP', r.mensaje === 'Busco un piso de unos 75 metros en Voramar, presupuesto 330.000', r.mensaje);
-r = wa('web_parsear.js', inp([{ json: correoWeb('Contact Form Contact Source : https://www.casagencia.com/en-gb/contacts '
+r = waCorreo('web_parsear.js', inp([{ json: correoWeb('Contact Form Contact Source : https://www.casagencia.com/en-gb/contacts '
   + 'Name: John Test Email: john@example.com Phone: +44 7700 900123 Remarks: Looking for a villa in Benicassim RGPD: ok',
   { subject: 'Contact from Website' }) }]))[0].json;
 ck('web en ingles: idioma y telefono extranjero', r.idioma === 'en' && r.telefono_e164 === '+447700900123'
    && r.mensaje === 'Looking for a villa in Benicassim', JSON.stringify([r.idioma, r.telefono_e164, r.mensaje]));
-r = wa('web_parsear.js', inp([{ json: correoWeb('Demande de contact Origine du contact: https://www.casagencia.com/fr-fr/contacts '
+r = waCorreo('web_parsear.js', inp([{ json: correoWeb('Demande de contact Origine du contact: https://www.casagencia.com/fr-fr/contacts '
   + 'Nom et Prénom: Julie Test E-mail: julie@example.fr Téléphone: +33 6 12 34 56 78 Remarques: Je veux louer mon appartement',
   { subject: 'Contact du site' }) }]))[0].json;
 ck('web en frances', r.idioma === 'fr' && r.nombre === 'Julie Test' && r.telefono_e164 === '+33612345678', JSON.stringify([r.idioma, r.nombre]));
-r = wa('web_parsear.js', inp([{ json: { ...correoWeb('Nuevo contacto...'), from: { text: 'forward@egorealestate.com' } } }]))[0].json;
+r = waCorreo('web_parsear.js', inp([{ json: { ...correoWeb('Nuevo contacto...'), from: { text: 'forward@egorealestate.com' } } }]))[0].json;
 ck('un correo de un portal NO es de la web', r.es_de_la_web === false);
 
 const decide = (tipo, extra = {}) => correr(CFG + '\n' + LEADS
@@ -1053,7 +1057,7 @@ ck('web: lo que no se entiende (revisar) no recibe correo: lo mira una persona',
 {
   // Caso real: formulario de contacto del 20-10-2026 que se quedo sin contestar.
   // Con telefono valido tiene que salirle mensaje aunque la clasificacion no sirva.
-  const chiva = wa('web_parsear.js', inp([{ json: correoWeb('Petición de Contacto\n'
+  const chiva = waCorreo('web_parsear.js', inp([{ json: correoWeb('Petición de Contacto\n'
     + 'Origen del contacto: https://www.casagencia.com/contacto\nNombre: José L. Chiva\n'
     + 'Email: chivamaroto@gmail.com\nTeléfono: 626370066\n'
     + 'Observaciones: Buenas tardes:\n\nMe pongo en contacto con vosotros porque estoy buscando un piso en '
@@ -2346,6 +2350,88 @@ console.log('\n== Telefonos de fuera de Espana ==');
     inp([{}]), nod({}));
   ck('con telefono malo la bienvenida se compone igual (la manda quien pueda)',
      d.plantilla === 'bienvenida_compra', d.plantilla);
+}
+
+// ===========================================================================
+console.log('\n== Los mensajes del chat de idealista tambien entran ==');
+{
+  // El correo de Vladislav, tal y como llega: el telefono suelto (sin etiqueta y
+  // de Rumania), el nombre con la banderita y "Codigo del anuncio" detras de la
+  // referencia de verdad. Ese lead no entro por ningun lado.
+  const correoIdealista = (extra = {}) => ({
+    // La fecha, relativa a hoy: con una fija el test caducaria a los 7 dias
+    id: '19a2f0c0b1', date: DateTime.now().minus({ hours: 12 }).toISO(),
+    subject: 'Tienes un nuevo mensaje que espera tu respuesta',
+    from: { text: 'no-reply@idealista.com' },
+    html: '<h1>Tienes un nuevo mensaje que espera tu respuesta</h1>'
+      + '<p>\u{1F1F7}\u{1F1FA} Vladislav Racicovschii</p>'
+      + '<p><a href="tel:+40731468648">+40 731 468 648</a></p>'
+      + '<p><a href="mailto:rachkovskiy.va@gmail.com">rachkovskiy.va@gmail.com</a></p>'
+      + '<p>Buenas noches. ¿Podría enviarme un plano del apartamento? ¿El trastero está en el sótano?</p>'
+      + '<p><a href="https://www.idealista.com/tools">Responder desde idealista/tools</a></p>'
+      + '<p>Piso en Avenida d\'Almassora</p><p>Ref. CS-1565-V</p>'
+      + '<p>Código del anuncio: 112890</p><p>149.000 €</p>',
+    ...extra,
+  });
+  let f = waCorreo('web_parsear.js', inp([{ json: { correo: JSON.stringify(correoIdealista()) } }]), nod({}))[0].json;
+  ck('un mensaje de idealista se entiende y entra', f.procesable === true && f.fuente === 'portal'
+     && f.portal === 'Idealista', JSON.stringify([f.procesable, f.fuente, f.portal]));
+  ck('con el telefono rumano aunque vaya suelto', f.telefono_e164 === '+40731468648'
+     && f.se_puede_contactar === true, f.telefono_e164);
+  ck('con su correo', f.email_cliente === 'rachkovskiy.va@gmail.com', f.email_cliente);
+  ck('y con la referencia buena, no el codigo del anuncio', f.referencia === 'CS-1565-V', f.referencia);
+  ck('el tipo lo dice el portal, no la clasificacion', f.tipo_forzado === 'compra', f.tipo_forzado);
+
+  // De ahi sale la bienvenida de compra, como cualquier otro lead
+  const dec = lead('web_decidir.js', inp([{}]), nod({ LeerFormulario: f,
+    Clasificar: { choices: [{ message: { content: '{"tipo":"otro"}' } }] },
+    LeerInmueble: { ref: 'CS-1565-V', enlace: 'https://www.casagencia.com/inmueble/x/26846963',
+                    tipo_transaccion: 'venta', municipio: 'Castellón' } }))[0].json;
+  ck('y le toca la bienvenida de compra con su enlace, aunque OpenAI diga "otro"',
+     dec.plantilla === 'bienvenida_compra' && dec.param2.endsWith('/26846963') && dec.tipo === 'compra',
+     JSON.stringify([dec.plantilla, dec.tipo]));
+  ck('y se registra como del portal, no como de la web', dec.fuente === 'portal', dec.fuente);
+
+  // Un correo viejo no se atiende: si el buzon vuelve a leer atras, no se le
+  // escribe otra vez a quien se atendio hace meses
+  const viejo = waCorreo('web_parsear.js', inp([{ json: { correo: JSON.stringify(
+    correoIdealista({ date: DateTime.now().minus({ days: 60 }).toISO() })) } }]), nod({}))[0].json;
+  ck('un mensaje de hace meses no se atiende', viejo.procesable === false, viejo.fecha);
+  const sinFecha = waCorreo('web_parsear.js', inp([{ json: { correo: JSON.stringify(
+    correoIdealista({ date: undefined })) } }]), nod({}))[0].json;
+  ck('pero si no trae fecha, se atiende igual (mejor eso que perderlo)',
+     sinFecha.procesable === true);
+
+  // Lo que NO debe entrar: lo demas que manda un portal
+  const boletin = correoIdealista({ subject: 'Tu resumen semanal de idealista',
+    html: '<p>Estas son tus estadisticas. Contacta en soporte@idealista.com</p>' });
+  f = waCorreo('web_parsear.js', inp([{ json: { correo: JSON.stringify(boletin) } }]), nod({}))[0].json;
+  ck('un boletin del portal (sin inmueble) se queda fuera', f.procesable === false, JSON.stringify(f.referencia));
+  // Y el formulario de la web sigue igual
+  f = waCorreo('web_parsear.js', inp([{ json: { correo: JSON.stringify({ id: 'x', subject: 'Contacto del WebSite',
+    from: { text: 'web@websites.egorealestate.com' },
+    text: 'Petición de Contacto Origen del contacto: https://www.casagencia.com/contacto Nombre: Ana '
+      + 'Email: ana@ejemplo.com Teléfono: 600112233 Observaciones: Busco piso RGPD: ok' }) } }]), nod({}))[0].json;
+  ck('el formulario de la web no cambia', f.procesable === true && f.fuente === 'web'
+     && f.telefono_e164 === '+34600112233' && f.tipo_forzado === '', JSON.stringify([f.fuente, f.telefono_e164]));
+  // Y un correo que no es ni de la web ni de un portal, fuera
+  f = waCorreo('web_parsear.js', inp([{ json: { correo: JSON.stringify({ id: 'y', subject: 'Factura',
+    from: { text: 'facturas@proveedor.com' }, text: 'Adjuntamos la factura' }) } }]), nod({}))[0].json;
+  ck('un correo cualquiera no entra', f.procesable === false && f.fuente === 'web');
+
+  // El buzon tiene que traerlos: si no, nada de esto se entera
+  const w1 = JSON.parse(fs.readFileSync(B + 'workflows_wa/WA_1_Leads_de_la_web_correo.json', 'utf8'));
+  const q = w1.nodes.find(n => n.name === 'CorreoDeLaWeb').parameters.filters.q;
+  ck('[WA] 1 mira tambien el correo de los portales',
+     /websites\.egorealestate\.com/.test(q) && /idealista\.com/.test(q)
+     && /fotocasa\.es/.test(q) && /habitaclia\.com/.test(q), q);
+  const sub = JSON.parse(fs.readFileSync(B + 'workflows_wa/WA_SUB_LeadDeLaWeb.json', 'utf8'));
+  ck('y la guardia ya no es "de la web" sino "lo entendemos"',
+     !!sub.nodes.find(n => n.name === '¿Lo entendemos?')
+     && sub.connections['¿Lo entendemos?'].main[0][0].node === 'Clasificar');
+  ck('el alta apunta de donde viene (web y portal no se pisan)',
+     /\$\('Decidir'\)\.first\(\)\.json\.fuente/.test(
+       sub.nodes.find(n => n.name === 'Registrar').parameters.options.queryReplacement));
 }
 
 // ===========================================================================

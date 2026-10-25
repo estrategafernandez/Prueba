@@ -120,6 +120,12 @@ def code_leads(fname):
                         (WA / fname).read_text(encoding="utf-8")])
 
 
+def code_correo_portal(fname):
+    """Nodo que lee correos de entrada = config + el lector de portales + el cuerpo."""
+    return "\n\n".join([CONFIG, (WA / "portal_correo.js").read_text(encoding="utf-8"),
+                        (WA / fname).read_text(encoding="utf-8")])
+
+
 def code_correo(fname):
     """Nodo que compone correos = config + plantilla de correo (correo_lead.js) + el cuerpo."""
     return "\n\n".join([CONFIG, (WA / "correo_lead.js").read_text(encoding="utf-8"),
@@ -1213,7 +1219,7 @@ def wf_leads(ids):
         node("CorreoDeLaWeb", "n8n-nodes-base.gmailTrigger", {
             "pollTimes": {"item": [{"mode": "everyMinute"}]},
             "simple": False,
-            "filters": {"q": "from:websites.egorealestate.com"},
+            "filters": {"q": "from:(websites.egorealestate.com OR idealista.com OR fotocasa.es OR habitaclia.com)"},
             "options": {"downloadAttachments": False},
         }, [-40, 0], 1.2, credentials=CRED_FORMULARIO),
         exec_sub("CadaCorreo", ids.get("[WA][SUB] LeadDeLaWeb", ""), "[WA][SUB] LeadDeLaWeb",
@@ -1237,7 +1243,7 @@ def wf_lead_web(ids):
         ("operacion", "operacion"), ("portal", "portal"), ("email", "email_cliente"))}
     entradas.update(plantilla_primer_whatsapp(d))
     entradas["conversacion_id"] = 0
-    registro = ("={{ [ 'web', %s.mensaje_id, %s.telefono_e164, %s.nombre, %s.referencia, %s.tipo, %s.accion, "
+    registro = ("={{ [ %s.fuente, %s.mensaje_id, %s.telefono_e164, %s.nombre, %s.referencia, %s.tipo, %s.accion, "
                 "%s.plantilla, %s.param2, %s.asesora, %s.se_puede_contactar ? "
                 "(%s.enviar ? 'enviando' : 'preparado') : (%s.por_correo ? 'correo_preparado' : 'sin_telefono'), "
                 "JSON.stringify({ origen: %s.origen_url, idioma: %s.idioma, municipio: %s.municipio, email: %s.email_cliente, "
@@ -1251,9 +1257,9 @@ def wf_lead_web(ids):
     correo_nodos, correo_conns = rama_correo(1720, 420)
     return wf("[WA][SUB] LeadDeLaWeb", [
         trigger_sub([("correo", "string")]),
-        code_node("LeerFormulario", code_wa("web_parsear.js"), [180, 0]),
-        if_node("¿Es de la web?", "={{ $json.es_de_la_web }}", "true", [400, 0]),
-        noop("NoEsDeLaWeb", [620, 200]),
+        code_node("LeerFormulario", code_correo_portal("web_parsear.js"), [180, 0]),
+        if_node("¿Lo entendemos?", "={{ $json.procesable }}", "true", [400, 0]),
+        noop("NiDeLaWebNiDeUnPortal", [620, 200]),
         http("Clasificar", "POST", "https://api.openai.com/v1/chat/completions", [620, 0], cred=CRED_OPENAI,
              body="={{ JSON.stringify({ model: 'gpt-4.1-mini', temperature: 0, response_format: { type: "
                   "'json_object' }, messages: [ { role: 'system', content: %s }, { role: 'user', content: "
@@ -1307,8 +1313,8 @@ def wf_lead_web(ids):
         nota("Nota3", "## Modo: %s\nCon MODO_LEADS = 'preparado' (wa/config.js) se decide y se apunta, pero "
              "**no se manda nada**. Con 'real', se da de alta el lead y sale el WhatsApp (sin repetir: 30 "
              "dias por telefono e inmueble). A los telefonos de prueba se les manda siempre." % const("MODO_LEADS"), [1720, -480], 460, 220),
-    ], conn(("LeerFormulario", 0, "¿Es de la web?", 0),
-            ("Start", 0, "LeerFormulario", 0), ("¿Es de la web?", 0, "Clasificar", 0), ("¿Es de la web?", 1, "NoEsDeLaWeb", 0),
+    ], conn(("LeerFormulario", 0, "¿Lo entendemos?", 0),
+            ("Start", 0, "LeerFormulario", 0), ("¿Lo entendemos?", 0, "Clasificar", 0), ("¿Lo entendemos?", 1, "NiDeLaWebNiDeUnPortal", 0),
             ("Clasificar", 0, "LeerInmueble", 0), ("LeerInmueble", 0, "Decidir", 0),
             ("Decidir", 0, "Registrar", 0), ("Registrar", 0, "¿Es nuevo?", 0),
             ("¿Es nuevo?", 0, "¿Se manda?", 0), ("¿Es nuevo?", 1, "YaEstabaApuntado", 0),

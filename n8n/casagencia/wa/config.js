@@ -223,6 +223,10 @@ const BUZON_LEADS = 'formularioscasagencia@gmail.com';
 // manda nada. 'real': manda la plantilla. Se cambia aqui y se vuelve a desplegar.
 // En produccion desde el 6-10-2026.
 const MODO_LEADS = 'real';
+// Un mensaje de un portal mas viejo que esto no se atiende: si el buzon vuelve
+// a leer correo antiguo, no se le escribe a quien ya se atendio hace meses.
+const DIAS_CORREO_PORTAL = 7;
+
 const PORTALES = [
   { nombre: 'Idealista',  de: /idealista\.com/i,   asunto: /idealista/i },
   { nombre: 'Fotocasa',   de: /fotocasa\.es/i,     asunto: /fotocasa/i },
