@@ -2510,6 +2510,14 @@ console.log('\n== Y se les contesta a lo que preguntan ==');
   const cond = JSON.stringify(sub.nodes.find(n => n.name === '¿Trae pregunta?').parameters);
   ck('y solo con mensaje de portal, mensaje y ficha',
      /portal/.test(cond) && /mensaje/.test(cond) && /\$json\.ref/.test(cond));
+  // El cuerpo que se le manda a OpenAI es una expresion de n8n: un salto de
+  // linea de verdad dentro de {{ }} rompe el JavaScript y el nodo contesta
+  // {"error":"invalid syntax"} EN EJECUCION, no al guardar. Paso de verdad.
+  const cuerpoIA = sub.nodes.find(n => n.name === 'ResponderPregunta').parameters.jsonBody;
+  ck('el cuerpo de la llamada no lleva saltos de linea dentro de {{ }}',
+     !(cuerpoIA.match(/\{\{([\s\S]*?)\}\}/g) || []).some(t => t.includes('\n')));
+  ck('y la ficha va dentro de la pregunta', /FICHA DEL INMUEBLE/.test(cuerpoIA)
+     && /LO QUE PREGUNTA EL CLIENTE/.test(cuerpoIA));
   const ia = JSON.stringify(sub.nodes.find(n => n.name === 'ResponderPregunta').parameters);
   ck('a la IA se le da la ficha y se le prohibe inventar',
      /LeerInmueble/.test(ia) && /no te lo inventes/.test(ia) && /no lo se/.test(ia));

@@ -1285,8 +1285,8 @@ def wf_lead_web(ids):
         http("ResponderPregunta", "POST", "https://api.openai.com/v1/chat/completions", [1280, -180],
              cred=CRED_OPENAI,
              body="={{ JSON.stringify({ model: 'gpt-4.1-mini', temperature: 0.2, messages: [ "
-                  "{ role: 'system', content: %s }, { role: 'user', content: 'FICHA DEL INMUEBLE:\n' + "
-                  "JSON.stringify($('LeerInmueble').first().json) + '\n\nLO QUE PREGUNTA EL CLIENTE:\n' + "
+                  "{ role: 'system', content: %s }, { role: 'user', content: 'FICHA DEL INMUEBLE: ' + "
+                  "JSON.stringify($('LeerInmueble').first().json) + ' --- LO QUE PREGUNTA EL CLIENTE: ' + "
                   "$('LeerFormulario').first().json.mensaje } ] }) }}" % json.dumps(PROMPT_RESPONDER_PORTAL),
              onError="continueRegularOutput", alwaysOutputData=True),
         code_node("RespuestaALaPregunta", code_wa("portal_responder.js"), [1500, -180]),
@@ -3138,7 +3138,42 @@ def construir(ids):
     }
     assert list(wfs) == ORDEN
     comprobar_uniones(wfs)
+    comprobar_expresiones(wfs)
     return wfs
+
+
+def comprobar_expresiones(wfs):
+    """Que ninguna expresion de n8n lleve un salto de linea de verdad.
+
+    Un '\\n' que se escapa de menos acaba siendo un salto REAL dentro de una
+    cadena de JavaScript, y eso no es un error de n8n al guardar: el nodo
+    devuelve {"error":"invalid syntax"} en ejecucion y, con onError continue,
+    el flujo sigue como si la llamada hubiera contestado vacio. Paso con el
+    cuerpo de ResponderPregunta y no lo vio nadie hasta probarlo contra la API.
+    """
+    def mirar(v, camino, nombre, nodo):
+        if isinstance(v, str):
+            # Fuera de {{ }} el salto es texto normal (el turno del Agente, sin ir
+            # mas lejos). Solo molesta DENTRO del codigo.
+            dentro = [t for t in re.findall(r"\{\{(.*?)\}\}", v, re.S) if "\n" in t]
+            if v.startswith("=") and dentro:
+                raise AssertionError(
+                    f"{nombre} · {nodo} · {camino}: la expresion lleva un salto de linea de verdad "
+                    f"dentro de {{{{ }}}}. En una cadena de JS rompe la sintaxis; usa ' --- ' o escapalo bien")
+        elif isinstance(v, dict):
+            for k, x in v.items():
+                mirar(x, f"{camino}.{k}" if camino else k, nombre, nodo)
+        elif isinstance(v, list):
+            for i, x in enumerate(v):
+                mirar(x, f"{camino}[{i}]", nombre, nodo)
+
+    for nombre, w in wfs.items():
+        for nodo in w.get("nodes") or []:
+            # Los Code llevan el programa entero: ahi los saltos son lo normal
+            if nodo["type"].endswith(".code") or nodo["type"].endswith(".stickyNote"):
+                continue
+            for k, v in (nodo.get("parameters") or {}).items():
+                mirar(v, k, nombre, nodo["name"])
 
 
 # Nodos a los que entran VARIAS ramas y que leen $json: solo valen si todas las
