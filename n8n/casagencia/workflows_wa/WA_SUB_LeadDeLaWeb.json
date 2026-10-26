@@ -85,6 +85,77 @@
     },
     {
       "parameters": {
+        "operation": "executeQuery",
+        "query": "select id from leads_entrantes where fuente = $1 and id_origen = $2 limit 1;",
+        "options": {
+          "queryReplacement": "={{ [ $json.fuente, String($json.mensaje_id || '') ] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        620,
+        0
+      ],
+      "id": "d6396f8a-10f5-5ad8-95d8-d2e32a48bf1e",
+      "name": "YaApuntado",
+      "credentials": {
+        "postgres": {
+          "id": "yvym0TdlOebNMzsm",
+          "name": "Postgres account"
+        }
+      },
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "fc6e1d8d-df17-58b5-9fd5-4f1303596003",
+              "leftValue": "={{ $json.id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "number",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        840,
+        0
+      ],
+      "id": "3d3d7652-fc89-5860-b3a7-f48a449add55",
+      "name": "¿Ya lo teniamos?"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        1060,
+        200
+      ],
+      "id": "9536454d-feb4-5c8a-9c89-768107e6fc99",
+      "name": "Ese correo ya se atendio"
+    },
+    {
+      "parameters": {
         "method": "POST",
         "url": "https://api.openai.com/v1/chat/completions",
         "options": {},
@@ -101,12 +172,12 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ model: 'gpt-4.1-mini', temperature: 0, response_format: { type: 'json_object' }, messages: [ { role: 'system', content: \"Una persona ha dejado este mensaje en el formulario de contacto de la web de Casagencia, una inmobiliaria de Benicassim y Castellon. Clasificalo. Responde SOLO con JSON: {\\\"tipo\\\": \\\"\\\", \\\"municipio\\\": \\\"\\\", \\\"referencia\\\": \\\"\\\", \\\"idioma\\\": \\\"\\\", \\\"resumen\\\": \\\"\\\", \\\"resumen_cliente\\\": \\\"\\\"}. tipo: compra (quiere comprar), alquiler (quiere alquilar para vivir), alquiler_temporada (vacaciones, unas semanas o meses), vender_su_vivienda o alquilar_su_vivienda (es PROPIETARIO y quiere que la agencia le venda o alquile su casa), otro (cualquier otra cosa: proveedores, empleo, publicidad, spam). municipio: el que mencione, o vacio. referencia: si cita una referencia de inmueble (como BN-1528-V), o vacio. idioma: es, en o fr segun en que escribe. resumen: una linea en espanol para la asesora. resumen_cliente: lo que busca en pocas palabras, en SU idioma y dirigido a el (segunda persona: 'tu familia', no 'mi familia'), para completar la frase 'hemos recibido tu mensaje sobre ...' (por ejemplo: un piso de unos 75 m2 en Voramar). No inventes.\" }, { role: 'user', content: $json.mensaje || '(sin mensaje)' } ] }) }}"
+        "jsonBody": "={{ JSON.stringify({ model: 'gpt-4.1-mini', temperature: 0, response_format: { type: 'json_object' }, messages: [ { role: 'system', content: \"Una persona ha dejado este mensaje en el formulario de contacto de la web de Casagencia, una inmobiliaria de Benicassim y Castellon. Clasificalo. Responde SOLO con JSON: {\\\"tipo\\\": \\\"\\\", \\\"municipio\\\": \\\"\\\", \\\"referencia\\\": \\\"\\\", \\\"idioma\\\": \\\"\\\", \\\"resumen\\\": \\\"\\\", \\\"resumen_cliente\\\": \\\"\\\"}. tipo: compra (quiere comprar), alquiler (quiere alquilar para vivir), alquiler_temporada (vacaciones, unas semanas o meses), vender_su_vivienda o alquilar_su_vivienda (es PROPIETARIO y quiere que la agencia le venda o alquile su casa), otro (cualquier otra cosa: proveedores, empleo, publicidad, spam). municipio: el que mencione, o vacio. referencia: si cita una referencia de inmueble (como BN-1528-V), o vacio. idioma: es, en o fr segun en que escribe. resumen: una linea en espanol para la asesora. resumen_cliente: lo que busca en pocas palabras, en SU idioma y dirigido a el (segunda persona: 'tu familia', no 'mi familia'), para completar la frase 'hemos recibido tu mensaje sobre ...' (por ejemplo: un piso de unos 75 m2 en Voramar). No inventes.\" }, { role: 'user', content: $('LeerFormulario').first().json.mensaje || '(sin mensaje)' } ] }) }}"
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        620,
+        1060,
         0
       ],
       "id": "8bae3a23-575a-5d2f-aa5b-18ce503db91d",
@@ -1175,7 +1246,7 @@
       "main": [
         [
           {
-            "node": "Clasificar",
+            "node": "YaApuntado",
             "type": "main",
             "index": 0
           }
@@ -1183,6 +1254,35 @@
         [
           {
             "node": "NiDeLaWebNiDeUnPortal",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "YaApuntado": {
+      "main": [
+        [
+          {
+            "node": "¿Ya lo teniamos?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Ya lo teniamos?": {
+      "main": [
+        [
+          {
+            "node": "Ese correo ya se atendio",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Clasificar",
             "type": "main",
             "index": 0
           }

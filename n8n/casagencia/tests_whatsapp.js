@@ -2428,7 +2428,29 @@ console.log('\n== Los mensajes del chat de idealista tambien entran ==');
   const sub = JSON.parse(fs.readFileSync(B + 'workflows_wa/WA_SUB_LeadDeLaWeb.json', 'utf8'));
   ck('y la guardia ya no es "de la web" sino "lo entendemos"',
      !!sub.nodes.find(n => n.name === '¿Lo entendemos?')
-     && sub.connections['¿Lo entendemos?'].main[0][0].node === 'Clasificar');
+     && sub.connections['¿Lo entendemos?'].main[0][0].node === 'YaApuntado'
+     && sub.connections['¿Ya lo teniamos?'].main[1][0].node === 'Clasificar');
+  // Un correo que ya se apunto se para ANTES de gastar llamadas a OpenAI: es lo
+  // que hace que el repaso del buzon sea gratis y no le vuelva a escribir a nadie
+  ck('un correo ya apuntado se para antes de gastar nada',
+     sub.connections['¿Ya lo teniamos?'].main[0][0].node === 'Ese correo ya se atendio'
+     && /from leads_entrantes where fuente = \$1 and id_origen = \$2/.test(
+          sub.nodes.find(n => n.name === 'YaApuntado').parameters.query));
+  ck('y la clasificacion no depende de por donde haya entrado',
+     !/\$json\.mensaje/.test(sub.nodes.find(n => n.name === 'Clasificar').parameters.jsonBody));
+  // [WA] 1: ademas del aviso, el repaso de los ultimos dias
+  const dias = Function('DateTime', CFG + '; return DIAS_CORREO_PORTAL;')(DateTime);
+  const repaso = w1.nodes.find(n => n.name === 'CorreosDeEstosDias');
+  ck('[WA] 1 repasa el buzon cada hora por si alguno se escapo',
+     !!w1.nodes.find(n => n.name === 'CadaHora') && !!repaso
+     && repaso.parameters.filters.q.includes(`newer_than:${dias}d`)
+     && w1.connections.CadaHora.main[0][0].node === 'CorreosDeEstosDias'
+     && w1.connections.CorreosDeEstosDias.main[0][0].node === 'CadaCorreo',
+     repaso && repaso.parameters.filters.q);
+  ck('y se puede lanzar a mano', !!w1.nodes.find(n => n.name === 'RepasarAhora')
+     && w1.connections.RepasarAhora.main[0][0].node === 'CorreosDeEstosDias');
+  ck('el repaso mira el mismo buzon que el aviso',
+     repaso.parameters.filters.q.startsWith(w1.nodes.find(n => n.name === 'CorreoDeLaWeb').parameters.filters.q));
   ck('el alta apunta de donde viene (web y portal no se pisan)',
      /\$\('Decidir'\)\.first\(\)\.json\.fuente/.test(
        sub.nodes.find(n => n.name === 'Registrar').parameters.options.queryReplacement));

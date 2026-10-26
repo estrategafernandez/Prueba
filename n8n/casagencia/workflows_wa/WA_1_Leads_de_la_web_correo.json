@@ -39,6 +39,68 @@
     },
     {
       "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 1
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -40,
+        220
+      ],
+      "id": "84de0641-0425-58cf-b05a-b0e696fb8929",
+      "name": "CadaHora"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -40,
+        420
+      ],
+      "id": "47b0d3ea-4ef7-582e-a3da-d26ac1c77551",
+      "name": "RepasarAhora"
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "getAll",
+        "returnAll": false,
+        "limit": 50,
+        "simple": false,
+        "filters": {
+          "q": "from:(websites.egorealestate.com OR idealista.com OR fotocasa.es OR habitaclia.com) newer_than:7d"
+        },
+        "options": {
+          "downloadAttachments": false
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        200,
+        320
+      ],
+      "id": "de2bacfa-4588-5acc-95f3-9242f132ed75",
+      "name": "CorreosDeEstosDias",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "V5ZZzoVhgTTledWB",
+          "name": "Correo Formulario"
+        }
+      },
+      "onError": "continueRegularOutput",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
         "workflowId": {
           "__rl": true,
           "value": "zTnXD5qBWB7BB1RE",
@@ -73,7 +135,7 @@
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.2,
       "position": [
-        200,
+        420,
         0
       ],
       "id": "dfb8df0d-f481-59f0-97a2-864d1a9c595a",
@@ -82,8 +144,8 @@
     },
     {
       "parameters": {
-        "content": "## Solo los formularios de la WEB\nBuzon *formularioscasagencia@gmail.com* (credencial *Correo Formulario*): solo los correos de **web@websites.egorealestate.com** (\"Contacto del WebSite\"). Los de Idealista, Fotocasa... son las mismas solicitudes que entran en eGO: esas salen de [WA] 5.\n\nCada correo se trata por separado en *[WA][SUB] LeadDeLaWeb*.",
-        "height": 260,
+        "content": "## Los correos que traen lead\nBuzon *formularioscasagencia@gmail.com* (credencial *Correo Formulario*): el formulario de la web (**web@websites.egorealestate.com**) y los MENSAJES de los portales (el chat de idealista y compania), que no crean lead en eGO y si no entraran por aqui no entrarian por ningun lado. Las solicitudes normales de los portales siguen saliendo de eGO, en [WA] 5.\n\nDos entradas: el aviso de Gmail en cuanto llega uno, y un **repaso cada hora** de los ultimos 7 dias por si alguno se escapo (n8n caido, correo ya leido...). Lo que ya se apunto se para en *¿Ya lo teniamos?*, antes de gastar nada.\n\nCada correo se trata por separado en *[WA][SUB] LeadDeLaWeb*.",
+        "height": 300,
         "width": 520
       },
       "type": "n8n-nodes-base.stickyNote",
@@ -98,6 +160,39 @@
   ],
   "connections": {
     "CorreoDeLaWeb": {
+      "main": [
+        [
+          {
+            "node": "CadaCorreo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CadaHora": {
+      "main": [
+        [
+          {
+            "node": "CorreosDeEstosDias",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "RepasarAhora": {
+      "main": [
+        [
+          {
+            "node": "CorreosDeEstosDias",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CorreosDeEstosDias": {
       "main": [
         [
           {

@@ -1211,6 +1211,13 @@ PROMPT_CLASIFICAR_WEB = (
     "tu mensaje sobre ...' (por ejemplo: un piso de unos 75 m2 en Voramar). No inventes.")
 
 
+# De quien se leen correos: el formulario de la web y los mensajes de los
+# portales. DIAS_CORREO_PORTAL sale de wa/config.js, que es quien decide
+# hasta cuando se atiende un mensaje.
+CORREO_PORTALES = "from:(websites.egorealestate.com OR idealista.com OR fotocasa.es OR habitaclia.com)"
+DIAS_CORREO_PORTAL = int(const("DIAS_CORREO_PORTAL", "7"))
+
+
 def wf_leads(ids):
     """Leads del FORMULARIO DE LA WEB (por correo). Los de portales vienen de eGO ([WA] 5).
     El trigger de Gmail puede traer varios correos a la vez: cada uno va por separado
@@ -1219,18 +1226,40 @@ def wf_leads(ids):
         node("CorreoDeLaWeb", "n8n-nodes-base.gmailTrigger", {
             "pollTimes": {"item": [{"mode": "everyMinute"}]},
             "simple": False,
-            "filters": {"q": "from:(websites.egorealestate.com OR idealista.com OR fotocasa.es OR habitaclia.com)"},
+            "filters": {"q": CORREO_PORTALES},
             "options": {"downloadAttachments": False},
         }, [-40, 0], 1.2, credentials=CRED_FORMULARIO),
+        # El aviso de Gmail solo trae lo que llega A PARTIR de ahora: los correos
+        # que ya estaban en el buzon (leidos, o de cuando n8n estaba caido) no
+        # los ve nadie. De ahi que a Vladislav y a Iuliana hubiera que
+        # escribirles a mano. Este repaso vuelve a mirar los ultimos dias y deja
+        # pasar solo lo que no se apunto nunca; lo demas se para en seco en
+        # ¿Ya lo teniamos? antes de gastar una sola llamada.
+        node("CadaHora", "n8n-nodes-base.scheduleTrigger",
+             {"rule": {"interval": [{"field": "hours", "hoursInterval": 1}]}}, [-40, 220], 1.2),
+        node("RepasarAhora", "n8n-nodes-base.manualTrigger", {}, [-40, 420], 1),
+        node("CorreosDeEstosDias", "n8n-nodes-base.gmail", {
+            "resource": "message", "operation": "getAll", "returnAll": False, "limit": 50,
+            "simple": False,
+            "filters": {"q": "%s newer_than:%dd" % (CORREO_PORTALES, DIAS_CORREO_PORTAL)},
+            "options": {"downloadAttachments": False},
+        }, [200, 320], 2.1, credentials=CRED_FORMULARIO,
+            onError="continueRegularOutput", alwaysOutputData=True),
         exec_sub("CadaCorreo", ids.get("[WA][SUB] LeadDeLaWeb", ""), "[WA][SUB] LeadDeLaWeb",
-                 {"correo": "={{ JSON.stringify($json) }}"}, [200, 0], cada_uno=True,
+                 {"correo": "={{ JSON.stringify($json) }}"}, [420, 0], cada_uno=True,
                  onError="continueRegularOutput"),
-        nota("Nota", "## Solo los formularios de la WEB\nBuzon *formularioscasagencia@gmail.com* (credencial "
-             "*Correo Formulario*): solo los correos de **web@websites.egorealestate.com** (\"Contacto del "
-             "WebSite\"). Los de Idealista, Fotocasa... son las mismas solicitudes que entran en eGO: esas "
-             "salen de [WA] 5.\n\nCada correo se trata por separado en *[WA][SUB] LeadDeLaWeb*.",
-             [-40, -320], 520, 260),
-    ], conn(("CorreoDeLaWeb", 0, "CadaCorreo", 0)))
+        nota("Nota", "## Los correos que traen lead\nBuzon *formularioscasagencia@gmail.com* (credencial "
+             "*Correo Formulario*): el formulario de la web (**web@websites.egorealestate.com**) y los "
+             "MENSAJES de los portales (el chat de idealista y compania), que no crean lead en eGO y si no "
+             "entraran por aqui no entrarian por ningun lado. Las solicitudes normales de los portales "
+             "siguen saliendo de eGO, en [WA] 5.\n\nDos entradas: el aviso de Gmail en cuanto llega uno, y "
+             "un **repaso cada hora** de los ultimos %d dias por si alguno se escapo (n8n caido, correo ya "
+             "leido...). Lo que ya se apunto se para en *¿Ya lo teniamos?*, antes de gastar nada.\n\nCada "
+             "correo se trata por separado en *[WA][SUB] LeadDeLaWeb*." % DIAS_CORREO_PORTAL,
+             [-40, -320], 520, 300),
+    ], conn(("CorreoDeLaWeb", 0, "CadaCorreo", 0),
+            ("CadaHora", 0, "CorreosDeEstosDias", 0), ("RepasarAhora", 0, "CorreosDeEstosDias", 0),
+            ("CorreosDeEstosDias", 0, "CadaCorreo", 0)))
 
 
 PROMPT_RESPONDER_PORTAL = (
@@ -1265,10 +1294,19 @@ def wf_lead_web(ids):
         code_node("LeerFormulario", code_correo_portal("web_parsear.js"), [180, 0]),
         if_node("¿Lo entendemos?", "={{ $json.procesable }}", "true", [400, 0]),
         noop("NiDeLaWebNiDeUnPortal", [620, 200]),
-        http("Clasificar", "POST", "https://api.openai.com/v1/chat/completions", [620, 0], cred=CRED_OPENAI,
+        # Antes de gastar nada: si este correo ya se apunto, no hay nada que hacer.
+        # Es lo que hace que el repaso del buzon de [WA] 1 sea gratis y no vuelva
+        # a escribirle a nadie.
+        pg_query("YaApuntado", "select id from leads_entrantes where fuente = $1 and id_origen = $2 limit 1;",
+                 "={{ [ $json.fuente, String($json.mensaje_id || '') ] }}", [620, 0],
+                 alwaysOutputData=True, onError="continueRegularOutput"),
+        if_node("¿Ya lo teniamos?", "={{ $json.id }}", "exists", [840, 0], tipo="number"),
+        noop("Ese correo ya se atendio", [1060, 200]),
+        http("Clasificar", "POST", "https://api.openai.com/v1/chat/completions", [1060, 0], cred=CRED_OPENAI,
              body="={{ JSON.stringify({ model: 'gpt-4.1-mini', temperature: 0, response_format: { type: "
                   "'json_object' }, messages: [ { role: 'system', content: %s }, { role: 'user', content: "
-                  "$json.mensaje || '(sin mensaje)' } ] }) }}" % json.dumps(PROMPT_CLASIFICAR_WEB),
+                  "$('LeerFormulario').first().json.mensaje || '(sin mensaje)' } ] }) }}"
+                  % json.dumps(PROMPT_CLASIFICAR_WEB),
              onError="continueRegularOutput", alwaysOutputData=True),
         pg_query("LeerInmueble", "select * from wa_cartera where upper(ref) = upper($1) "
                  "or ($2 <> '' and enlace like '%/' || $2) limit 1;",
@@ -1334,7 +1372,10 @@ def wf_lead_web(ids):
              "**no se manda nada**. Con 'real', se da de alta el lead y sale el WhatsApp (sin repetir: 30 "
              "dias por telefono e inmueble). A los telefonos de prueba se les manda siempre." % const("MODO_LEADS"), [1720, -480], 460, 220),
     ], conn(("LeerFormulario", 0, "¿Lo entendemos?", 0),
-            ("Start", 0, "LeerFormulario", 0), ("¿Lo entendemos?", 0, "Clasificar", 0), ("¿Lo entendemos?", 1, "NiDeLaWebNiDeUnPortal", 0),
+            ("Start", 0, "LeerFormulario", 0),
+            ("¿Lo entendemos?", 0, "YaApuntado", 0), ("¿Lo entendemos?", 1, "NiDeLaWebNiDeUnPortal", 0),
+            ("YaApuntado", 0, "¿Ya lo teniamos?", 0),
+            ("¿Ya lo teniamos?", 0, "Ese correo ya se atendio", 0), ("¿Ya lo teniamos?", 1, "Clasificar", 0),
             ("Clasificar", 0, "LeerInmueble", 0), ("LeerInmueble", 0, "¿Trae pregunta?", 0),
             ("¿Trae pregunta?", 0, "ResponderPregunta", 0), ("¿Trae pregunta?", 1, "SinPreguntaQueContestar", 0),
             ("ResponderPregunta", 0, "RespuestaALaPregunta", 0),
