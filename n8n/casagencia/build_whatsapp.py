@@ -1233,6 +1233,11 @@ def wf_leads(ids):
     ], conn(("CorreoDeLaWeb", 0, "CadaCorreo", 0)))
 
 
+PROMPT_RESPONDER_PORTAL = (
+    "Eres Sara, la IA de Casagencia (inmobiliaria de Benicassim y Castellon). Una persona ha escrito por un portal preguntando por un inmueble y le vas a mandar el PRIMER mensaje de WhatsApp. Contestale a lo que pregunta usando SOLO los datos de la ficha que te paso. Reglas: (1) si el dato que pide esta en la ficha, daselo en una frase corta y clara; (2) si NO esta, no te lo inventes ni lo deduzcas: contesta exactamente \"no lo se\" y nada mas; (3) no saludes ni te presentes, que eso ya lo lleva el mensaje; (4) no pongas el enlace ni la referencia; (5) acaba preguntandole si quiere visitar la vivienda; (6) maximo 2 frases, en el idioma en el que escribe el cliente, de usted no, de tu; (7) texto plano, sin saltos de linea ni listas. Responde SOLO con el mensaje."
+)
+
+
 def wf_lead_web(ids):
     """Un formulario de la web: que es, que se le manda y, si toca, se le manda."""
     d = "$('Decidir').first().json"
@@ -1271,7 +1276,22 @@ def wf_lead_web(ids):
                  "$json.choices[0].message.content).referencia || '' } catch (e) { return '' } })(), "
                  "$('LeerFormulario').first().json.id_web ] }}", [840, 0],
                  alwaysOutputData=True, onError="continueRegularOutput"),
-        code_node("Decidir", code_leads("web_decidir.js"), [1060, 0]),
+        # Lo que ha preguntado, contestado con la ficha delante. Solo para los
+        # mensajes de un portal que traen pregunta y de un inmueble que tenemos.
+        if_node("¿Trae pregunta?", None, None, [1060, 0], conds=[
+            ("={{ $('LeerFormulario').first().json.fuente }}", "equals", "portal", "string"),
+            ("={{ String($('LeerFormulario').first().json.mensaje || '').trim() }}", "notEmpty", None, "string"),
+            ("={{ String($json.ref || '') }}", "notEmpty", None, "string")]),
+        http("ResponderPregunta", "POST", "https://api.openai.com/v1/chat/completions", [1280, -180],
+             cred=CRED_OPENAI,
+             body="={{ JSON.stringify({ model: 'gpt-4.1-mini', temperature: 0.2, messages: [ "
+                  "{ role: 'system', content: %s }, { role: 'user', content: 'FICHA DEL INMUEBLE:\n' + "
+                  "JSON.stringify($('LeerInmueble').first().json) + '\n\nLO QUE PREGUNTA EL CLIENTE:\n' + "
+                  "$('LeerFormulario').first().json.mensaje } ] }) }}" % json.dumps(PROMPT_RESPONDER_PORTAL),
+             onError="continueRegularOutput", alwaysOutputData=True),
+        code_node("RespuestaALaPregunta", code_wa("portal_responder.js"), [1500, -180]),
+        noop("SinPreguntaQueContestar", [1280, 180]),
+        code_node("Decidir", code_leads("web_decidir.js"), [1720, 0]),
         pg_query("Registrar", SQL_REGISTRAR_ENTRANTE, registro, [1280, 0], alwaysOutputData=True),
         if_node("¿Es nuevo?", "={{ $json.id }}", "exists", [1500, 0], tipo="number"),
         noop("YaEstabaApuntado", [1720, 200]),
@@ -1315,7 +1335,10 @@ def wf_lead_web(ids):
              "dias por telefono e inmueble). A los telefonos de prueba se les manda siempre." % const("MODO_LEADS"), [1720, -480], 460, 220),
     ], conn(("LeerFormulario", 0, "¿Lo entendemos?", 0),
             ("Start", 0, "LeerFormulario", 0), ("¿Lo entendemos?", 0, "Clasificar", 0), ("¿Lo entendemos?", 1, "NiDeLaWebNiDeUnPortal", 0),
-            ("Clasificar", 0, "LeerInmueble", 0), ("LeerInmueble", 0, "Decidir", 0),
+            ("Clasificar", 0, "LeerInmueble", 0), ("LeerInmueble", 0, "¿Trae pregunta?", 0),
+            ("¿Trae pregunta?", 0, "ResponderPregunta", 0), ("¿Trae pregunta?", 1, "SinPreguntaQueContestar", 0),
+            ("ResponderPregunta", 0, "RespuestaALaPregunta", 0),
+            ("RespuestaALaPregunta", 0, "Decidir", 0), ("SinPreguntaQueContestar", 0, "Decidir", 0),
             ("Decidir", 0, "Registrar", 0), ("Registrar", 0, "¿Es nuevo?", 0),
             ("¿Es nuevo?", 0, "¿Se manda?", 0), ("¿Es nuevo?", 1, "YaEstabaApuntado", 0),
             ("¿Es nuevo?", 0, "¿Por correo?", 0), *correo_conns,

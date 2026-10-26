@@ -70,9 +70,13 @@ function leerCorreoDePortal(msg) {
     'c[oó]digo|mensaje|comentario|observaciones|direcci[oó]n|inmueble|anuncio|zona|precio|' +
     'operaci[oó]n|fecha)\\b.*$', 'i');
 
-  const nombre = buscar(
+  const nombre = (buscar(
     /(?:nombre|contacto|de parte de|cliente)\s*[:\-]\s*([A-Za-zÁÉÍÓÚÑáéíóúñ][\wÁÉÍÓÚÑáéíóúñ'’.\- ]{1,60})/i
-  ).replace(SIGUIENTE_ETIQUETA, '').replace(/\s{2,}/g, ' ').replace(/[\s:\-]+$/, '').trim();
+  // En el chat de idealista no hay etiqueta: el nombre va suelto justo delante
+  // del telefono ("Iuliana 617 34 32 25"). Se coge lo que haya pegado a el.
+  ) || buscar(
+    /([A-ZÁÉÍÓÚÑ][a-záéíóúñ'’.\-]+(?:\s+[A-ZÁÉÍÓÚÑ][a-záéíóúñ'’.\-]+){0,3})\s+(?:\+?\d[\d\s().-]{7,}\d)/
+  )).replace(SIGUIENTE_ETIQUETA, '').replace(/\s{2,}/g, ' ').replace(/[\s:\-]+$/, '').trim();
 
   const email = buscar(/([\w.+-]+@[\w-]+\.[\w.]{2,})/);
 
@@ -109,6 +113,45 @@ function leerCorreoDePortal(msg) {
     if (u) { enlace = u.split('?')[0]; break; }
   }
 
+  // --- Lo que ha escrito el cliente -----------------------------------------
+  // En los mensajes del chat de idealista el correo trae, por este orden: el
+  // nombre suelto, el telefono, el correo, LO QUE HA ESCRITO y un bloque
+  // "Contacto +" con lo que ha ido contestando en el portal. Eso es lo que hay
+  // que contestarle: si se tira a la basura, le llega una bienvenida generica
+  // que no tiene nada que ver con lo que ha preguntado.
+  const ETIQUETAS_PORTAL = ['Interesado en comprar', 'Interesado en alquilar', 'Quiere información de',
+    'Quiere informacion de', 'Quiere visitar el inmueble', 'Tiene pensado comprar en',
+    'Tiene pensado alquilar en', 'Forma de pago', 'Necesita financiación', 'Necesita financiacion'];
+  const esc = (x) => x.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  // Donde acaba el valor de un campo: en cuanto asoma el siguiente, el boton de
+  // responder o el bloque del inmueble.
+  const CORTE_SRC = '(?=\\s*(?:' + ETIQUETAS_PORTAL.map(esc).join('|')
+    + '|Contacto\\s*\\+|Responder desde|Ref\\.|C[oó]digo del anuncio|Piso en |Casa en |Chalet en )|$)';
+  const CORTE = new RegExp(CORTE_SRC, 'i');
+
+  // Cada "Etiqueta: valor" del bloque Contacto +
+  const respuestas_portal = [];
+  for (const et of ETIQUETAS_PORTAL) {
+    // La misma etiqueta sale varias veces ("Interesado en comprar" es a la vez
+    // el si/no y "1a vivienda"), asi que se cogen todas y no solo la primera.
+    for (const m of cuerpo.matchAll(new RegExp(esc(et) + '\\s*:\\s*(.{1,160}?)' + CORTE_SRC, 'gi'))) {
+      const valor = m[1].trim().replace(/[\s:·-]+$/, '');
+      const linea = `${et}: ${valor}`;
+      if (valor && !respuestas_portal.includes(linea)) respuestas_portal.push(linea);
+    }
+  }
+  // Lo que pregunta en concreto ("Quiere información de: a que planta es")
+  const preguntaPortal = (respuestas_portal.find(x => /^Quiere informaci/i.test(x)) || '')
+    .replace(/^[^:]+:\s*/, '');
+
+  // El mensaje libre: va entre su correo y el bloque de respuestas
+  let mensajeCliente = '';
+  if (email) {
+    const tras = cuerpo.slice(cuerpo.indexOf(email) + email.length);
+    mensajeCliente = tras.split(CORTE)[0].trim().replace(/^[\s:·-]+/, '');
+    if (mensajeCliente.length > 400) mensajeCliente = '';   // no era el mensaje, era el correo entero
+  }
+
   // Nombre para el saludo: el del formulario y, si no hay, el del email.
   const delEmail = (email.split('@')[0] || '').split(/[._\-\d]/)[0];
   const saludo = nombre.split(' ')[0]
@@ -137,6 +180,10 @@ function leerCorreoDePortal(msg) {
       // a la comercial y no se intenta mandar nada.
     se_puede_contactar: tel.valido,
     cuerpo_recortado: cuerpo.slice(0, 1500),
+    // Lo que ha escrito y lo que ya ha contestado en el portal
+    mensaje_cliente: mensajeCliente.slice(0, 600),
+    pregunta: preguntaPortal.slice(0, 300),
+    respuestas_portal,
       // La plantilla de bienvenida: {{1}} el nombre, {{2}} el enlace del anuncio
     plantilla: plantilla.nombre,
     idioma: plantilla.idioma,

@@ -9,6 +9,10 @@ try {
 } catch (e) { c = {}; }
 let inmueble = {};
 try { inmueble = $('LeerInmueble').first().json || {}; } catch (e) { inmueble = {}; }
+// La respuesta a lo que pregunto en el portal (solo existe si venia con pregunta)
+let respuesta_pregunta = '';
+try { respuesta_pregunta = String($('RespuestaALaPregunta').first().json.respuesta_pregunta || ''); }
+catch (e) { respuesta_pregunta = ''; }
 
 const referencia = String(f.referencia || c.referencia || '').toUpperCase();
 // Sin mensaje pero con telefono puede ser un cliente de verdad: saludo general.
@@ -29,6 +33,7 @@ const argumentos = {
   idioma: f.idioma !== 'es' ? f.idioma : (c.idioma || 'es'),
   resumen_cliente: String(c.resumen_cliente || '').slice(0, 160),
   municipio: String(c.municipio || inmueble.municipio || ''),
+  respuesta_pregunta,
 };
 let d = decidirPrimerMensaje(argumentos);
 // A TODO el que entra por el formulario de la web y deja un telefono se le
@@ -54,6 +59,13 @@ return [{ json: {
   // Con correo, ademas (o en vez de WhatsApp si no dejo telefono), el correo.
   // Lo que no se entiende (revisar) no: lo mira una persona.
   por_correo: /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(String(f.email_cliente || '')) && d.accion !== 'revisar',
-  notas: `Formulario de la web (${f.origen_url || 'casagencia.com'}): ${f.mensaje}`.slice(0, 1500)
+  respuesta_pregunta,
+  // Lo que ha escrito y lo que ya ha contestado en el portal: Sara lo tiene
+  // delante en cada turno, asi que no se lo vuelve a preguntar.
+  notas: (f.fuente === 'portal'
+    ? [`Mensaje por ${f.portal}: ${f.mensaje_cliente || f.mensaje}`,
+       ...(f.respuestas_portal || []).map(x => `- ${x}`),
+       respuesta_pregunta ? `[Ya se le ha contestado: ${respuesta_pregunta}]` : ''].filter(Boolean).join('\n')
+    : `Formulario de la web (${f.origen_url || 'casagencia.com'}): ${f.mensaje}`).slice(0, 1500)
     + (saludo_por_defecto ? `\n[No se ha podido clasificar el mensaje (tipo: ${tipo}): se le ha mandado el saludo general.]` : ''),
 } }];

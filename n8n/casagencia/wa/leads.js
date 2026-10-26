@@ -26,6 +26,15 @@ const TEXTOS_ABIERTA = {
     en: (r) => `I'm Sara, Casagencia's AI. We received the message you left on our website${r.resumen_cliente ? ` about ${r.resumen_cliente}` : ''}. Can I help you here? Tell me what you are looking for and I'll show you what we have.`,
     fr: (r) => `Je suis Sara, l'IA de Casagencia. Nous avons bien reçu votre message sur notre site${r.resumen_cliente ? ` concernant ${r.resumen_cliente}` : ''}. Je peux vous aider ici : dites-moi ce que vous cherchez et je vous montre ce que nous avons.`,
   },
+  // Ha escrito por el chat de un portal preguntando algo concreto. En vez de la
+  // bienvenida de siempre (que no tiene hueco para contestarle) va la plantilla
+  // abierta con la respuesta, sacada de la ficha. Si no hay respuesta buena, no
+  // se usa esto: se cae a la bienvenida normal.
+  respuesta_a_su_pregunta: {
+    es: (r) => `Soy Sara, IA de Casagencia. Me preguntabas por este inmueble: ${r.enlace} ${r.respuesta_pregunta}`,
+    en: (r) => `I'm Sara, Casagencia's AI. You asked about this property: ${r.enlace} ${r.respuesta_pregunta}`,
+    fr: (r) => `Je suis Sara, l'IA de Casagencia. Vous demandiez pour ce bien : ${r.enlace} ${r.respuesta_pregunta}`,
+  },
   // Alquiler del que no sabemos si es temporal o de larga duracion. La bienvenida
   // de alquiler lleva esa diferencia en el propio texto ({{3}}), asi que sin
   // saberla NO se manda: antes de decirle algo que puede no ser verdad, se le
@@ -92,6 +101,10 @@ function decidirPrimerMensaje(r) {
 
   if (TIPOS_PROPIETARIO.includes(tipo)) return abierta('propietario', 'captacion');
   if (r.referencia && r.disponible === false) return abierta('no_disponible', 'no_disponible');
+  // Si pregunto algo y sabemos contestarle, eso manda sobre la bienvenida
+  if (r.referencia && r.enlace && String(r.respuesta_pregunta || '').trim()) {
+    return abierta('respuesta_a_su_pregunta', 'respuesta_a_su_pregunta');
+  }
   if (r.referencia && r.enlace && (TIPOS_BUSCA.includes(tipo) || tipo === 'otro' || !tipo)) {
     // Regla de Paco: la bienvenida de alquiler DICE si es temporal o de larga
     // duracion. Si no lo sabemos, no se manda esa plantilla: se le escribe sin

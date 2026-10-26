@@ -47,7 +47,13 @@ if (!esDeLaWeb && PORTALES_CORREO.includes(detectarPortal(de, asunto))) {
     telefono_e164: p.telefono_e164,
     telefono_wa: p.telefono_wa,
     se_puede_contactar: p.se_puede_contactar,
-    mensaje: String(p.cuerpo_recortado || '').slice(0, 1500),
+    // Lo que ha escrito EL, no el correo entero con la morralla del portal: es
+    // lo que hay que contestarle y lo unico que debe ver la clasificacion.
+    mensaje: [p.mensaje_cliente, p.pregunta && `Pregunta: ${p.pregunta}`]
+      .filter(Boolean).join(' ').slice(0, 600),
+    mensaje_cliente: p.mensaje_cliente,
+    pregunta: p.pregunta,
+    respuestas_portal: p.respuestas_portal || [],
     referencia: p.referencia,
     id_web: '',
     portal: p.portal,
@@ -93,6 +99,9 @@ return [{
     es_de_la_web: esDeLaWeb,
     fuente: 'web',
     tipo_forzado: '',
+    mensaje_cliente: '',
+    pregunta: '',
+    respuestas_portal: [],
     mensaje_id: j.id ?? '',
     fecha: j.date ?? '',
     origen_url: origen,

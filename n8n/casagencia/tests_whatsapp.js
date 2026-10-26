@@ -2435,5 +2435,88 @@ console.log('\n== Los mensajes del chat de idealista tambien entran ==');
 }
 
 // ===========================================================================
+console.log('\n== Y se les contesta a lo que preguntan ==');
+{
+  // El correo de Iuliana, con su mensaje y el bloque "Contacto +"
+  const correo = {
+    id: 'm2', date: DateTime.now().minus({ hours: 3 }).toISO(),
+    subject: 'Tienes un nuevo mensaje que espera tu respuesta',
+    from: { text: 'no-reply@idealista.com' },
+    html: '<h1>Tienes un nuevo mensaje que espera tu respuesta</h1><p>Iuliana</p>'
+      + '<p><a href="tel:617343225">617 34 32 25</a></p>'
+      + '<p><a href="mailto:iuly_libertina@yahoo.es">iuly_libertina@yahoo.es</a></p>'
+      + '<p>Hola, me interesa esta propiedad.</p><p>Contacto +</p>'
+      + '<ul><li>Interesado en comprar: Sí</li><li>Quiere información de: Ta que planta es</li>'
+      + '<li>Quiere visitar el inmueble: No, de momento no</li>'
+      + '<li>Tiene pensado comprar en: Necesito más tiempo</li>'
+      + '<li>Interesado en comprar: 1ª vivienda</li></ul>'
+      + '<a href="https://www.idealista.com/tools">Responder desde idealista/tools</a>'
+      + '<p>Piso en Avenida d Almassora</p><p>Ref. CS-1565-V</p>'
+      + '<p>Código del anuncio: 112892440</p><p>105.000 €</p>',
+  };
+  const f = waCorreo('web_parsear.js', inp([{ json: { correo: JSON.stringify(correo) } }]), nod({}))[0].json;
+  ck('el nombre va suelto delante del telefono y se coge igual', f.nombre === 'Iuliana', f.nombre);
+  ck('y su telefono espanol sin prefijo', f.telefono_e164 === '+34617343225', f.telefono_e164);
+  ck('se guarda lo que ha escrito', f.mensaje_cliente === 'Hola, me interesa esta propiedad.', f.mensaje_cliente);
+  ck('y lo que pregunta en concreto', f.pregunta === 'Ta que planta es', f.pregunta);
+  ck('y las cinco respuestas del bloque Contacto +', f.respuestas_portal.length === 5
+     && f.respuestas_portal.some(x => /1ª vivienda/.test(x))
+     && f.respuestas_portal.some(x => /No, de momento no/.test(x)), JSON.stringify(f.respuestas_portal));
+  ck('a la clasificacion le llega SU mensaje, no el correo entero',
+     /Hola, me interesa esta propiedad/.test(f.mensaje) && /Ta que planta es/.test(f.mensaje)
+     && !/idealista\/tools/.test(f.mensaje) && f.mensaje.length < 200, f.mensaje);
+
+  // La respuesta que compone el nodo con la ficha delante
+  const resp = (contenido, ref = 'CS-1565-V') => wa('portal_responder.js',
+    inp([{ json: { choices: [{ message: { content: contenido } }] } }]),
+    nod({ LeerFormulario: f, LeerInmueble: ref ? { ref } : {} }))[0].json;
+  ck('una respuesta buena se queda', /planta 3/.test(resp('Está en la planta 3. ¿Quieres visitarla?').respuesta_pregunta));
+  ck('si no lo sabe, no se usa (mejor la bienvenida de siempre)',
+     resp('No lo sé, no consta en la ficha.').respuesta_pregunta === '');
+  ck('una parrafada tampoco', resp('x'.repeat(900)).respuesta_pregunta === '');
+  ck('y nunca lleva saltos de linea (Meta rechaza la plantilla)',
+     !/\n/.test(resp('Está en la planta 3.\n¿Quieres verla?').respuesta_pregunta));
+
+  // De ahi sale la plantilla abierta CON la respuesta, en vez de la bienvenida
+  const URL = 'https://www.casagencia.com/inmueble/piso-en-venta-castellon/26846963';
+  const conResp = decide('compra', { referencia: 'CS-1565-V', disponible: true, enlace: URL,
+    nombre: 'Iuliana', respuesta_pregunta: 'Está en la planta 3. ¿Quieres verla?' });
+  ck('le contesta a lo que pregunto, no la bienvenida generica',
+     conResp.plantilla === 'plantilla_abierta' && conResp.accion === 'respuesta_a_su_pregunta'
+     && /planta 3/.test(conResp.param2) && conResp.param2.includes(URL), conResp.param2);
+  const sinResp = decide('compra', { referencia: 'CS-1565-V', disponible: true, enlace: URL, nombre: 'Iuliana' });
+  ck('y si no se le sabe contestar, la bienvenida de siempre',
+     sinResp.plantilla === 'bienvenida_compra', sinResp.plantilla);
+
+  // Lo que queda en la ficha para cuando conteste
+  const dec = lead('web_decidir.js', inp([{}]), nod({ LeerFormulario: f,
+    Clasificar: { choices: [{ message: { content: '{"tipo":"compra"}' } }] },
+    LeerInmueble: { ref: 'CS-1565-V', enlace: URL, tipo_transaccion: 'venta', municipio: 'Castellón' },
+    RespuestaALaPregunta: { respuesta_pregunta: 'Está en la planta 3. ¿Quieres verla?' } }))[0].json;
+  ck('en las notas queda lo que pregunto y lo que ya contesto en el portal',
+     /Hola, me interesa esta propiedad/.test(dec.notas) && /1ª vivienda/.test(dec.notas)
+     && /No, de momento no/.test(dec.notas) && /Ya se le ha contestado/.test(dec.notas), dec.notas.slice(0, 120));
+
+  // El cableado: la pregunta solo se contesta si la hay y si tenemos la ficha
+  const sub = JSON.parse(fs.readFileSync(B + 'workflows_wa/WA_SUB_LeadDeLaWeb.json', 'utf8'));
+  const c = sub.connections;
+  ck('el flujo pasa por "¿Trae pregunta?" antes de decidir',
+     c.LeerInmueble.main[0][0].node === '¿Trae pregunta?'
+     && c['¿Trae pregunta?'].main[0][0].node === 'ResponderPregunta'
+     && c['¿Trae pregunta?'].main[1][0].node === 'SinPreguntaQueContestar'
+     && c.ResponderPregunta.main[0][0].node === 'RespuestaALaPregunta'
+     && c.RespuestaALaPregunta.main[0][0].node === 'Decidir'
+     && c.SinPreguntaQueContestar.main[0][0].node === 'Decidir');
+  const cond = JSON.stringify(sub.nodes.find(n => n.name === '¿Trae pregunta?').parameters);
+  ck('y solo con mensaje de portal, mensaje y ficha',
+     /portal/.test(cond) && /mensaje/.test(cond) && /\$json\.ref/.test(cond));
+  const ia = JSON.stringify(sub.nodes.find(n => n.name === 'ResponderPregunta').parameters);
+  ck('a la IA se le da la ficha y se le prohibe inventar',
+     /LeerInmueble/.test(ia) && /no te lo inventes/.test(ia) && /no lo se/.test(ia));
+  ck('y si falla, el lead sigue su camino',
+     sub.nodes.find(n => n.name === 'ResponderPregunta').onError === 'continueRegularOutput');
+}
+
+// ===========================================================================
 console.log(fallos ? `\n${fallos} FALLOS` : '\nTodo correcto');
 process.exit(fallos ? 1 : 0);
