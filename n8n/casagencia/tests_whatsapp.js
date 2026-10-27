@@ -2548,5 +2548,51 @@ console.log('\n== Y se les contesta a lo que preguntan ==');
 }
 
 // ===========================================================================
+console.log('\n== Dos visitas pisandose: el hueco ofrecido no queda apartado ==');
+{
+  // Lo que denuncio Paco el 27/10: Gisela tenia visita de 17 a 18 y la IA
+  // "ofrecio" las 17:30. Lo que de verdad paso es que cuando se consulto la
+  // agenda esa visita AUN NO EXISTIA (se creo 18 minutos despues, a mano).
+  // Aqui se fija lo que si depende de nosotros: que una visita de una hora
+  // tape la media hora siguiente, y que Sara sepa que el hueco no esta apartado.
+  const { estaLibre, rangosOcupados, huecosDelDia } =
+    Function('DateTime', LIB + '; return { estaLibre, rangosOcupados, huecosDelDia };')(DateTime);
+  const DIA = '2026-10-27';
+  const ev = (de, a, extra = {}) => ({ json: {
+    summary: 'Visita', status: 'confirmed',
+    start: { dateTime: DateTime.fromFormat(`${DIA} ${de}`, 'yyyy-MM-dd HH:mm', { zone: 'Europe/Madrid' }).toISO() },
+    end: { dateTime: DateTime.fromFormat(`${DIA} ${a}`, 'yyyy-MM-dd HH:mm', { zone: 'Europe/Madrid' }).toISO() },
+    ...extra } });
+  const ocupados = rangosOcupados([ev('17:00', '18:00')]);
+  ck('una visita de 17 a 18 tapa las 17:30', estaLibre(DIA, '17:30', ocupados) === false);
+  ck('y tambien las 16:30 (la visita dura una hora)', estaLibre(DIA, '16:30', ocupados) === false);
+  ck('pero a las 18:00 ya se puede', estaLibre(DIA, '18:00', ocupados) === true);
+  ck('con la agenda vacia, las 17:30 estan libres', estaLibre(DIA, '17:30', rangosOcupados([])) === true);
+  // Y en la lista de huecos del dia no asoma ninguno que se pise
+  const ahora = DateTime.fromFormat(`${DIA} 08:00`, 'yyyy-MM-dd HH:mm', { zone: 'Europe/Madrid' });
+  const huecos = huecosDelDia(DIA, 'Gisela', 'CS', ocupados, ahora);
+  ck('no se ofrece ningun hueco que se pise con esa visita',
+     !huecos.includes('17:00') && !huecos.includes('17:30') && !huecos.includes('16:30'), huecos.join(' '));
+
+  // La herramienta avisa de que el hueco no queda apartado
+  const bd = fs.readFileSync(B + 'nodes/bd_calcular.js', 'utf8');
+  ck('la herramienta avisa de que el hueco NO queda reservado',
+     /NO queda reservado hasta que crees la cita/.test(bd) && /vuelve a consultar la agenda/.test(bd));
+  // Y el prompt manda reconsultar si el "si" llega tarde
+  const pr = fs.readFileSync(B + 'wa/prompt_asistente.md', 'utf8');
+  ck('el prompt manda volver a mirar si el cliente tarda en decir que si',
+     /El hueco que te dice la herramienta NO queda apartado/.test(pr)
+     && /vuelve a ejecutar `BuscarDisponibilidadCalendario` con esa misma\s+hora ANTES de crear la cita/.test(pr));
+  ck('y ya no dice "no vuelvas a consultar" a secas', !/\(no vuelvas a consultar\)/.test(pr));
+  ck('si ya no esta libre, no le dice que se la reservo',
+     /no le digas que se la reservaste/.test(pr));
+  // El segundo cortafuegos sigue en su sitio: sin el, lo de arriba no basta
+  const cc = fs.readFileSync(B + 'nodes/cc_validar.js', 'utf8');
+  ck('y antes de escribir en la agenda se vuelve a comprobar la ocupacion',
+     /const ocupados = rangosOcupados\(\$input\.all\(\)\)/.test(cc)
+     && /rechazo\('ocupado'/.test(cc));
+}
+
+// ===========================================================================
 console.log(fallos ? `\n${fallos} FALLOS` : '\nTodo correcto');
 process.exit(fallos ? 1 : 0);

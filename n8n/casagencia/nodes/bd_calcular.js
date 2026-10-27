@@ -33,7 +33,13 @@ if (v.valido && libre) {
   return salida({
     disponible: true, motivo: 'ok', asesora: d.asesora,
     fecha: d.fecha, hora: d.hora, dia: nombreDia(d.fecha),
-    mensaje_para_sara: `Hay hueco el ${nombreDia(d.fecha)} a las ${d.hora}. Confirmalo con el cliente y, si acepta, crea la cita.`
+    // El hueco NO queda apartado: entre que se ofrece y el cliente dice que si,
+    // la asesora puede meter algo a mano en su agenda (paso el 26/10: se le
+    // ofrecio las 17:30 y 18 minutos despues Gisela se puso una visita de 17 a
+    // 18). Si el cliente tarda en contestar hay que volver a mirarlo.
+    mensaje_para_sara: `Hay hueco el ${nombreDia(d.fecha)} a las ${d.hora}. Confirmalo con el cliente y, `
+      + 'si acepta, crea la cita. OJO: este hueco NO queda reservado hasta que crees la cita; si el cliente '
+      + 'tarda en contestarte, vuelve a consultar la agenda antes de darlo por bueno.'
   });
 }
 
