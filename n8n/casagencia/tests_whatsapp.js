@@ -2594,5 +2594,34 @@ console.log('\n== Dos visitas pisandose: el hueco ofrecido no queda apartado =='
 }
 
 // ===========================================================================
+console.log('\n== Un enlace de un portal es NUESTRO, no motivo para rechazar ==');
+{
+  // Caso de Miglena (#277): mando un enlace de idealista de un piso nuestro y
+  // Sara le contesto "es de Idealista y no es de la cartera de Casa Agencia,
+  // asi que no puedo organizarte la visita". La clienta se fue.
+  const pr = fs.readFileSync(B + 'wa/prompt_asistente.md', 'utf8');
+  ck('el prompt dice que los anuncios de los portales son nuestros',
+     /publica su cartera en esos portales/.test(pr) && /UNO DE NUESTROS INMUEBLES/.test(pr));
+  ck('y prohibe la frase que solto', /PROHIBIDO\*\* decirle que el inmueble "es de Idealista"/.test(pr)
+     && /no es de la\s+cartera de Casa Agencia/.test(pr));
+  ck('tambien prohibe ofrecerle "algo parecido" como si no fuera nuestro',
+     /Tampoco le ofrezcas "algo parecido"/.test(pr));
+  ck('esta entre las reglas obligatorias, no escondido en un flujo',
+     /Nunca le digas a un cliente que un inmueble no es de Casa Agencia/.test(pr));
+  ck('le dice que el numero de la URL no es una referencia',
+     /es el código del anuncio en el portal, no la nuestra/.test(pr)
+     && /No lo uses en las herramientas/.test(pr));
+  ck('y le da la receta: precio y zona, y a buscar',
+     /pregúntale en UNA frase lo que pone el anuncio/.test(pr)
+     && /`buscarInmuebles`/.test(pr.slice(pr.indexOf('Si te manda un enlace de un portal'))));
+  ck('si no lo encuentra, a la asesora y nunca un "no es nuestro"',
+     /no le cierres la puerta/.test(pr) && /`avisarEquipo` con el enlace/.test(pr)
+     && /Nunca le\s+digas que no es nuestro/.test(pr));
+  const tel = fs.readFileSync(B + 'retell/general_prompt.md', 'utf8');
+  ck('el telefono lleva la misma regla',
+     /Nunca digas que un inmueble no es de Casagencia/.test(tel) && /No lo descartes tu/.test(tel));
+}
+
+// ===========================================================================
 console.log(fallos ? `\n${fallos} FALLOS` : '\nTodo correcto');
 process.exit(fallos ? 1 : 0);
