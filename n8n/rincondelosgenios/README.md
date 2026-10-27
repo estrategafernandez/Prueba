@@ -16,7 +16,8 @@ informe para la clienta se manda **a las 13:30**.
 
 | Workflow | ID | Estado | Qué es |
 |---|---|---|---|
-| Envío de Plantillas | `GZLn2dFb0CAXwWRP` | **ACTIVO** | El de producción, ya con los cambios |
+| Envío de Plantillas | `GZLn2dFb0CAXwWRP` | **ACTIVO** | El de producción (10:00) |
+| Reintento de cumpleaños fallidos | `1QcXQTNrJX3Co6zA` | **ACTIVO** | Rescata los fallos del día (10:30, 11:30 y 12:30) |
 | Envío de Plantillas — ORIGINAL (copia de seguridad 2026-09-08) | `Gd249dBM4YDhzTSb` | parado | Copia intacta de la versión anterior, para revertir |
 | Informe diario de cumpleaños | `CbGZ0vP7icXNmNVH` | parado | Informe por email con Resend. **Falta la API key** |
 
@@ -152,6 +153,82 @@ Clonado en un workflow temporal con webhook, sustituyendo solo MySQL y PrestaSho
 Comprueba también que una **nota privada no cuenta como envío**, así que si algún
 día se volviera al método antiguo el informe lo marcaría como no enviado.
 
+## El incidente del 8, 26 y 27 de octubre
+
+Tres días en los que **todos** los envíos del lote fallaron. Chatwoot guardaba
+el error genérico `2: Service temporarily unavailable`, pero en una de las
+muestras Meta lo concretó en **`131053: Media upload error`**.
+
+La causa: la plantilla lleva la imagen **por enlace**, así que Meta tiene que
+descargarla de `elrincondelosgenios.com` **una vez por cada mensaje**. Cuando esa
+descarga le falla, el mensaje entero se cae — y como todos los del día comparten
+la misma imagen, se cae el lote completo. De ahí que sea siempre todo o nada.
+
+Se cerró con un experimento, no con una suposición. Misma plantilla, mismo
+destinatario, mismos minutos, cambiando solo el host de la imagen:
+
+| Imagen servida desde | Resultado |
+|---|---|
+| `elrincondelosgenios.com` | `failed` · `131053` (3 repeticiones) |
+| URL inexistente (control negativo) | `failed` · `131053` |
+| CDN externo (control positivo) | **entregado** |
+| Copia alojada en el propio Chatwoot | **entregado** |
+
+El fichero es válido —Meta lo acepta si se le sube directamente— y la URL
+responde HTTP 200 a todo el mundo **menos a los servidores de Meta**.
+
+### Arreglo aplicado
+
+`Prepara Plantilla` y `Prepara Plantilla1` ya no apuntan a la web de la tienda,
+sino a una copia de `cumple.jpeg` alojada como adjunto dentro de Chatwoot.
+
+> **Es provisional.** La imagen cuelga de un mensaje concreto: si alguien borra
+> esa nota interna o se purgan conversaciones antiguas, vuelve a romperse todo.
+> Lo correcto es servirla desde un CDN (Vercel) y cambiar esa URL.
+
+## Reintento automático
+
+`Reintento de cumpleaños fallidos` (`1QcXQTNrJX3Co6zA`) corre a las **10:30,
+11:30 y 12:30**. No se coordina con el workflow de envío: **reconstruye todo
+leyendo Chatwoot**, así que también cubre envíos hechos a mano.
+
+```
+Conversaciones con actividad de hoy
+  └─ Leer sus mensajes
+     └─ Plantillas de hoy en "failed"
+        ├─ agrupadas por cupón (cada cupón = una clienta)
+        ├─ madre, peque y cupón se extraen del propio texto del mensaje
+        └─ Reenviar con el MISMO cupón y la imagen buena
+```
+
+Las reglas de seguridad son lo importante:
+
+- **No duplica.** Si ya existe un envío vivo con ese cupón, no se toca. Un
+  `sent` cuenta como vivo: puede estar pendiente de que la clienta encienda el
+  móvil.
+- **No reintenta errores de destinatario**, porque reintentar no cambiaría nada:
+  `131026` (no es usuario de WhatsApp), `131050` (baja de marketing), `131047`,
+  `131049`, `131051`, `130472` y las familias `132xxx` y `133xxx`.
+- **Margen de 5 minutos**: ignora fallos recién creados, para no pisarse con el
+  envío de las 10:00.
+- **Tope de 3 envíos** por clienta y día.
+
+### Probado (2026-10-27)
+
+Clonado en un workflow temporal por webhook, provocando un fallo real (plantilla
+apuntando a una imagen inexistente):
+
+| Comprobación | Resultado |
+|---|---|
+| Conversaciones revisadas | 16 |
+| Detectados para reintentar | **1** — solo el fallo provocado |
+| Los 15 envíos correctos del día | **intactos**, no los tocó |
+| El rescate | reenviado y **entregado** |
+
+La segunda fila es la que importa: en esas mismas conversaciones había 15
+mensajes fallidos de la mañana, y no reintentó ninguno porque todos tenían ya un
+envío correcto con el mismo cupón.
+
 ## Cómo revertir
 
 Si algo va mal, en n8n:
@@ -164,6 +241,8 @@ es el mismo contenido en fichero.
 
 ## Pendiente / recomendado
 
+- **Subir `cumple.jpeg` a un CDN (Vercel)** y apuntar ahí los dos nodos
+  `Prepara Plantilla`. Es el único arreglo definitivo del incidente de octubre.
 - **Rotar los tokens.** El de Chatwoot y el permanente de Meta están escritos a
   mano en las cabeceras de más de diez nodos en vez de estar en credenciales de
   n8n, y quedan expuestos en el JSON y en los datos de cada ejecución.

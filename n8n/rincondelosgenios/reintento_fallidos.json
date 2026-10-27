@@ -1,0 +1,272 @@
+{
+  "name": "Reintento de cumpleaños fallidos",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "30 10,11,12 * * *"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -460,
+        300
+      ],
+      "id": "trg",
+      "name": "10:30, 11:30 y 12:30"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Ventana: solo se miran los envíos de HOY.\nconst ahora = new Date();\nconst medianoche = Math.floor(\n  new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate()).getTime() / 1000);\n\n// Las conversaciones vienen ordenadas por actividad reciente, así que las de\n// hoy están en las primeras páginas. 4 páginas = 100 conversaciones.\nconst salida = [];\nfor (let p = 1; p <= 4; p++) salida.push({ json: { page: p, hoy_medianoche: medianoche } });\nreturn salida;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -250,
+        300
+      ],
+      "id": "fec",
+      "name": "Ventana de hoy"
+    },
+    {
+      "parameters": {
+        "url": "=https://chatwoot-rincondelosgenios.serversvisionarius.com/api/v1/accounts/1/conversations?status=all&page={{ $json.page }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "api_access_token",
+              "value": "__CHATWOOT_API_ACCESS_TOKEN__"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -40,
+        300
+      ],
+      "id": "lst",
+      "name": "Listar conversaciones",
+      "retryOnFail": true,
+      "onError": "continueRegularOutput",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const t0 = $('Ventana de hoy').first().json.hoy_medianoche;\nconst vistos = new Set();\nconst salida = [];\nfor (const item of $input.all()) {\n  const pay = (item.json && item.json.data && item.json.data.payload) || [];\n  for (const c of pay) {\n    if ((c.last_activity_at || 0) >= t0 && !vistos.has(c.id)) {\n      vistos.add(c.id);\n      salida.push({ json: { conversation_id: c.id } });\n    }\n  }\n}\nreturn salida;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        170,
+        300
+      ],
+      "id": "cand",
+      "name": "Conversaciones de hoy"
+    },
+    {
+      "parameters": {
+        "url": "=https://chatwoot-rincondelosgenios.serversvisionarius.com/api/v1/accounts/1/conversations/{{ $json.conversation_id }}/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "api_access_token",
+              "value": "__CHATWOOT_API_ACCESS_TOKEN__"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        380,
+        300
+      ],
+      "id": "msg",
+      "name": "Mensajes",
+      "retryOnFail": true,
+      "onError": "continueRegularOutput",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const t0 = $('Ventana de hoy').first().json.hoy_medianoche;\nconst ahora = Math.floor(Date.now() / 1000);\n\nconst IMG = 'https://chatwoot-rincondelosgenios.serversvisionarius.com/rails/active_storage/blobs/redirect/eyJfcmFpbHMiOnsibWVzc2FnZSI6IkJBaHBMQT09IiwiZXhwIjpudWxsLCJwdXIiOiJibG9iX2lkIn19--b572b6dd47abf2301a3b30ccfd51603c6f194536/cumple.jpeg';\nconst MAX_INTENTOS = 3;    // como mucho 3 envíos por clienta y día\nconst MARGEN_SEG   = 300;  // no tocar un fallo de hace menos de 5 min\n\n// Errores que NO se reintentan: son del destinatario o de la plantilla, y\n// reintentar no cambiaría nada. Todo lo demás (caídas, 131053 de imagen,\n// errores genéricos de plataforma) sí se reintenta.\nconst PERMANENTES = /^(131026|131047|131049|131050|131051|130472|132\\d+|133\\d+)/;\n\nconst salida = [];\nfor (const item of $input.all()) {\n  const msgs = (item.json && item.json.payload) || [];\n\n  const plantillas = msgs.filter(m =>\n    m.message_type === 1 && !m.private && m.created_at >= t0 &&\n    String(m.content || '').includes('Se acerca el cumple de'));\n  if (!plantillas.length) continue;\n\n  // Se agrupa por cupón: cada cupón es una clienta concreta de hoy.\n  const porCupon = {};\n  for (const m of plantillas) {\n    const c = String(m.content || '').match(/Código de descuento:\\s*([A-Z0-9]{4,15})/);\n    if (!c) continue;\n    if (!porCupon[c[1]]) porCupon[c[1]] = [];\n    porCupon[c[1]].push(m);\n  }\n\n  for (const cupon of Object.keys(porCupon)) {\n    const lista = porCupon[cupon].sort((a, b) => b.created_at - a.created_at);\n\n    // Si ya hay un envío vivo con ese cupón, no se duplica. 'sent' cuenta como\n    // vivo: puede estar pendiente de que la clienta encienda el móvil.\n    if (lista.some(m => ['sent', 'delivered', 'read'].includes(m.status))) continue;\n    if (lista.length >= MAX_INTENTOS) continue;\n\n    const ultimo = lista[0];\n    if (ultimo.status !== 'failed') continue;\n    if (ahora - ultimo.created_at < MARGEN_SEG) continue;\n\n    const err = String((ultimo.content_attributes || {}).external_error || '');\n    if (PERMANENTES.test(err)) continue;\n\n    const txt   = String(ultimo.content || '');\n    const padre = (txt.match(/^Hola (.+?),/) || [])[1];\n    const hijo  = (txt.match(/Se acerca el cumple de (.+?)\\n/) || [])[1];\n    if (!padre || !hijo) continue;\n\n    salida.push({ json: {\n      conversation_id: ultimo.conversation_id,\n      cupon, padre, hijo,\n      intento: lista.length + 1,\n      error_previo: err || '(sin detalle)',\n      cw_body: {\n        content: txt,\n        message_type: 'outgoing',\n        private: false,\n        template_params: {\n          name: 'descuento_2', language: 'es',\n          processed_params: {\n            header:  { media_url: IMG, media_type: 'image' },\n            body:    { '1': padre, '2': hijo, '3': cupon },\n            buttons: [ { type: 'hueco' }, { type: 'copy_code', parameter: cupon } ]\n          }\n        }\n      }\n    }});\n  }\n}\nreturn salida;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        590,
+        300
+      ],
+      "id": "det",
+      "name": "Detecta fallos reintentables"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://chatwoot-rincondelosgenios.serversvisionarius.com/api/v1/accounts/1/conversations/{{ $json.conversation_id }}/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "api_access_token",
+              "value": "__CHATWOOT_API_ACCESS_TOKEN__"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.cw_body) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        800,
+        300
+      ],
+      "id": "snd",
+      "name": "Reenviar plantilla",
+      "retryOnFail": true,
+      "onError": "continueRegularOutput",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Deja constancia de lo reintentado para poder verlo en el historial de n8n.\nconst det = $('Detecta fallos reintentables').all();\nconst res = $input.all();\nconst filas = det.map((d, i) => ({\n  clienta: d.json.padre, peque: d.json.hijo, cupon: d.json.cupon,\n  intento: d.json.intento, error_previo: d.json.error_previo,\n  nuevo_mensaje: (res[i] && res[i].json && res[i].json.id) || null,\n}));\nreturn [{ json: { reintentados: filas.length, detalle: filas } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1010,
+        300
+      ],
+      "id": "res",
+      "name": "Resumen"
+    },
+    {
+      "parameters": {
+        "content": "## Reintento de cumpleaños fallidos\n\nSe ejecuta a las **10:30, 11:30 y 12:30**, después del envío de las 10:00.\n\nBusca los envíos de hoy que estén en `failed` por un error **de plataforma** y los reenvía con el mismo cupón.\n\n**No reintenta nunca** los errores de destinatario (`131026` sin WhatsApp, `131050` baja de marketing, …) ni los mensajes que ya tengan un envío vivo con el mismo cupón, para no duplicar.\n\nMáximo 3 envíos por clienta y día.",
+        "height": 300,
+        "width": 420,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        560,
+        -80
+      ],
+      "id": "nota",
+      "name": "Nota"
+    }
+  ],
+  "connections": {
+    "10:30, 11:30 y 12:30": {
+      "main": [
+        [
+          {
+            "node": "Ventana de hoy",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ventana de hoy": {
+      "main": [
+        [
+          {
+            "node": "Listar conversaciones",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Listar conversaciones": {
+      "main": [
+        [
+          {
+            "node": "Conversaciones de hoy",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Conversaciones de hoy": {
+      "main": [
+        [
+          {
+            "node": "Mensajes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mensajes": {
+      "main": [
+        [
+          {
+            "node": "Detecta fallos reintentables",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Detecta fallos reintentables": {
+      "main": [
+        [
+          {
+            "node": "Reenviar plantilla",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reenviar plantilla": {
+      "main": [
+        [
+          {
+            "node": "Resumen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Europe/Madrid",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  }
+}
