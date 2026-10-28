@@ -145,7 +145,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const apuntados = new Set($input.all().map(i => i.json && i.json.evento_id).filter(Boolean));\nreturn $('BuscarFallos').all().filter(i => apuntados.has(i.json.evento_id));"
+        "jsCode": "const apuntados = new Set($input.all().map(i => i.json && i.json.evento_id).filter(Boolean));\nconst vistos = new Set();\nreturn $('BuscarFallos').all().filter(i => apuntados.has(i.json.evento_id) && !vistos.has(i.json.evento_id) && !!vistos.add(i.json.evento_id));"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,

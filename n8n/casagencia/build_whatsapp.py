@@ -2223,9 +2223,13 @@ def wf_envios_fallidos(ids):
         code_node("BuscarFallos", code_wa("fallo_buscar.js"), [840, 0]),
         pg_query("Apuntar", SQL_APUNTAR_FALLO, "={{ [ $json.evento_id ] }}", [1060, 0],
                  alwaysOutputData=True, onError="continueRegularOutput"),
+        # Un mismo cliente puede tener varias fichas (un inmueble cada una) con la
+        # MISMA conversacion: el fallo es uno solo y el aviso tambien.
         code_node("SoloLosNuevos", "const apuntados = new Set($input.all()"
                   ".map(i => i.json && i.json.evento_id).filter(Boolean));\n"
-                  "return $('BuscarFallos').all().filter(i => apuntados.has(i.json.evento_id));", [1280, 0]),
+                  "const vistos = new Set();\n"
+                  "return $('BuscarFallos').all().filter(i => apuntados.has(i.json.evento_id)"
+                  " && !vistos.has(i.json.evento_id) && !!vistos.add(i.json.evento_id));", [1280, 0]),
         if_node("¿Hay alguno?", "={{ $json.evento_id }}", "exists", [1500, 0], tipo="string"),
         noop("Todo ha llegado", [1720, 200]),
         code_node("ComponerAviso", code_wa("fallo_componer.js"), [1720, 0]),

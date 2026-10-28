@@ -2698,6 +2698,18 @@ console.log('\n== Los mensajes que WhatsApp no entrega ==');
      /estado = 'envio_fallido'/.test(n13('MarcarLaFicha').parameters.query));
   ck('y no vuelve a mirar los que ya marco',
      /estado <> 'envio_fallido'/.test(n13('LeadsConEnvio').parameters.query));
+  // Un cliente con varias fichas (un inmueble cada una) comparte conversacion:
+  // el fallo es uno y el aviso tambien. Sin esto a Wagner le llegaban tres.
+  const solo = n13('SoloLosNuevos').parameters.jsCode;
+  ck('un mismo fallo no avisa dos veces aunque el cliente tenga varias fichas',
+     /vistos/.test(solo) && /!vistos\.has\(i\.json\.evento_id\)/.test(solo));
+  {
+    const correr2 = (c, $input, $) => Function('$input', '$', 'DateTime', '"use strict";' + c)($input, $, DateTime);
+    const tres = [1, 2, 3].map(() => ({ json: { evento_id: 'fallo:9', nombre: 'Wagner' } }));
+    const r = correr2(solo, inp([{ json: { evento_id: 'fallo:9' } }, { json: {} }, { json: {} }]),
+                      nod({ BuscarFallos: tres.map(t => t.json) }));
+    ck('y de tres fichas sale un solo aviso', r.length === 1, String(r.length));
+  }
 }
 
 // ===========================================================================
