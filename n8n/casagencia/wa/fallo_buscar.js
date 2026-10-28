@@ -33,6 +33,9 @@ for (let k = 0; k < leads.length; k++) {
     motivo: motivo.que,
     hay_que_llamar: motivo.llamar,
     cuantos_fallos: fallidos.length,
+    // Este intento (el que viene ahora) y si con el se agotan
+    intento: Number(l.reintentos || 0) + 1,
+    ultimo_intento: Number(l.reintentos || 0) + 1 >= REINTENTOS_ENVIO,
     texto_fallido: String(ultimo.content ?? '').replace(/\s+/g, ' ').slice(0, 120),
   } });
 }

@@ -431,6 +431,8 @@ create table if not exists wa_avisos (
 );
 create unique index if not exists wa_avisos_unico on wa_avisos (evento_id, tipo);
 alter table wa_leads add column if not exists estado_inmueble text not null default '';
+-- Cuantas veces se ha reintentado mandarle la plantilla (la primera no cuenta)
+alter table wa_leads add column if not exists reintentos integer not null default 0;
 """ % "\n".join("alter table wa_leads add column if not exists %s text not null default '';" % q
                 for q in _Q + _CITA_COLS)
 
@@ -2185,30 +2187,51 @@ def wf_asistente(ids):
 
 
 # ===========================================================================
-# CONTACTO Y CONVERSACION EN EL PANEL (lo usan las llamadas del telefono)
+# LOS ENVIOS QUE NO LLEGAN: SE LE VUELVE A MANDAR LA PLANTILLA
 # ===========================================================================
+REINTENTOS_ENVIO = int(const("REINTENTOS_ENVIO", "4"))
+
 SQL_LEADS_CON_ENVIO = """
 select telefono_wa, telefono_e164, coalesce(nombre, '') as nombre,
        coalesce(referencia, '') as referencia, coalesce(asesora, '') as asesora,
-       conversacion_id, coalesce(email_cliente, '') as email_cliente
+       conversacion_id, coalesce(email_cliente, '') as email_cliente,
+       coalesce(plantilla, '') as plantilla, coalesce(enlace, '') as enlace,
+       coalesce(operacion, '') as operacion, coalesce(portal, '') as portal,
+       coalesce(reintentos, 0) as reintentos
   from wa_leads
  where conversacion_id > 0
    and actualizado_en > now() - interval '3 days'
    and estado <> 'envio_fallido'
+   and coalesce(reintentos, 0) < %d
+   -- Los intentos se espacian: 1 h desde el envio, 2 h desde el primer
+   -- reintento, 3 h desde el segundo... Si no, se le machacaria cada 15 minutos.
+   and actualizado_en < now() - interval '1 hour' * (coalesce(reintentos, 0) + 1)
  order by actualizado_en desc
- limit 60;"""
+ limit 60;""" % REINTENTOS_ENVIO
 
 SQL_APUNTAR_FALLO = """insert into wa_avisos (evento_id, tipo) values ($1, 'envio_fallido')
 on conflict (evento_id, tipo) do nothing
 returning evento_id;"""
 
+SQL_AGOTADO = ("update wa_leads set estado = 'envio_fallido', actualizado_en = now(), "
+               "notas = left(coalesce(notas, '') || case when coalesce(notas, '') = '' then '' else E'\\n' end "
+               "|| 'NO le llega el WhatsApp despues de ' || $2 || ' intentos: ' || $3, 1500) "
+               "where telefono_wa = $1 and conversacion_id = $4;")
+
 
 def wf_envios_fallidos(ids):
-    """Los mensajes que Meta no ha entregado. Meta lo dice DESPUES, por webhook,
-    asi que al mandarlos todo parecia bien: sin esto se quedan con "Error al
-    enviar" en el panel y no se entera nadie."""
-    j = "$('SoloLosNuevos').first().json"
-    a = "$('ComponerAviso').first().json.aviso"
+    """Los mensajes que Meta no ha entregado: se le vuelve a mandar la plantilla.
+
+    Meta avisa del fallo DESPUES, por webhook, asi que al mandarlo todo parecia
+    correcto. Aqui se mira si llego y, si no, se le manda otra vez la misma
+    plantilla a la misma conversacion, espaciando los intentos. Al agotarlos la
+    conversacion queda en 4-intervenir para que se vea en el panel.
+    """
+    entradas = {k: "={{ $json.%s }}" % k for k in (
+        "telefono", "nombre", "plantilla", "param1", "param2", "param3",
+        "referencia", "operacion", "portal", "email")}
+    # A la MISMA conversacion: no se le abre otra
+    entradas["conversacion_id"] = "={{ Number($json.conversacion_id) }}"
     return wf("[WA] 13 · Envios que no llegan", [
         node("Cada15Minutos", "n8n-nodes-base.scheduleTrigger",
              {"rule": {"interval": [{"field": "minutes", "minutesInterval": 15}]}}, [-40, 0], 1.2),
@@ -2224,41 +2247,70 @@ def wf_envios_fallidos(ids):
         pg_query("Apuntar", SQL_APUNTAR_FALLO, "={{ [ $json.evento_id ] }}", [1060, 0],
                  alwaysOutputData=True, onError="continueRegularOutput"),
         # Un mismo cliente puede tener varias fichas (un inmueble cada una) con la
-        # MISMA conversacion: el fallo es uno solo y el aviso tambien.
+        # MISMA conversacion: el fallo es uno solo y el reintento tambien.
         code_node("SoloLosNuevos", "const apuntados = new Set($input.all()"
                   ".map(i => i.json && i.json.evento_id).filter(Boolean));\n"
                   "const vistos = new Set();\n"
                   "return $('BuscarFallos').all().filter(i => apuntados.has(i.json.evento_id)"
                   " && !vistos.has(i.json.evento_id) && !!vistos.add(i.json.evento_id));", [1280, 0]),
         if_node("¿Hay alguno?", "={{ $json.evento_id }}", "exists", [1500, 0], tipo="string"),
-        noop("Todo ha llegado", [1720, 200]),
-        code_node("ComponerAviso", code_wa("fallo_componer.js"), [1720, 0]),
-        pg_query("MarcarLaFicha",
-                 "update wa_leads set estado = 'envio_fallido', "
-                 "notas = left(coalesce(notas, '') || case when coalesce(notas, '') = '' then '' else E'\\n' end "
-                 "|| 'NO le llego el WhatsApp: ' || $2, 1500), actualizado_en = now() "
-                 "where telefono_wa = $1 and conversacion_id = $3;",
-                 "={{ [ %s.telefono_wa, %s.motivo, Number(%s.conversacion_id) ] }}" % (j, j, j), [1940, 0],
+        noop("Todo ha llegado", [1720, 220]),
+        code_node("PrepararReenvio", code_wa("fallo_reenviar.js"), [1720, 0]),
+        # El intento se apunta ANTES de mandarlo: si algo revienta por el camino, no
+        # se queda reintentando lo mismo cada cuarto de hora.
+        pg_query("ApuntarElIntento",
+                 "update wa_leads set reintentos = coalesce(reintentos, 0) + 1, actualizado_en = now() "
+                 "where telefono_wa = $1 and conversacion_id = $2;",
+                 "={{ [ $json.telefono_wa, Number($json.conversacion_id) ] }}", [1940, 0],
                  alwaysOutputData=True, onError="continueRegularOutput"),
-        exec_sub("AvisarALaComercial", ids.get("[WA][SUB] AvisoEquipo", ""), "[WA][SUB] AvisoEquipo",
-                 {k: "={{ %s.%s }}" % (a, k) for k, _ in AVISO_IN
-                  if k not in ("municipio", "cita", "origen")},
-                 [2160, 0], {"conversacion_id": "number", "pasar_a_humano": "boolean"},
+        # El UPDATE no devuelve los datos del reenvio: se recuperan de PrepararReenvio
+        code_node("DatosDelReenvio", "return $('PrepararReenvio').all();", [2160, 0]),
+        exec_sub("VolverAMandar", ids.get("[WA][SUB] EnviarPlantilla", ""), "[WA][SUB] EnviarPlantilla",
+                 entradas, [2380, 0], {"conversacion_id": "number"}, cada_uno=True,
                  onError="continueRegularOutput", alwaysOutputData=True),
+        code_node("LosQueSeAgotan",
+                  "return $('DatosDelReenvio').all().filter(i => i.json.ultimo_intento);", [2600, 0]),
+        if_node("¿Agotados los intentos?", "={{ $json.evento_id }}", "exists", [2820, 0], tipo="string"),
+        noop("Se reintentara", [3040, 220]),
+        # Agotados: no se le persigue mas y la conversacion queda marcada en el panel.
+        pg_query("MarcarLaFicha", SQL_AGOTADO,
+                 "={{ [ $json.telefono_wa, Number($json.intento), $json.motivo, "
+                 "Number($json.conversacion_id) ] }}", [3040, 0],
+                 alwaysOutputData=True, onError="continueRegularOutput"),
+        code_node("VolverALosAgotados", "return $('LosQueSeAgotan').all();", [3260, 0]),
+        exec_sub("MarcarParaQueSeVea", ids.get("[WA][SUB] Etiquetar", ""), "[WA][SUB] Etiquetar",
+                 {"conversacion_id": "={{ Number($json.conversacion_id) }}",
+                  "etiquetas": const_etiqueta("intervenir")}, [3480, 0], {"conversacion_id": "number"},
+                 cada_uno=True, onError="continueRegularOutput", alwaysOutputData=True),
         nota("Nota", "## Los mensajes que no llegan\nWhatsApp avisa del fallo **despues**, por webhook: al "
              "mandar la plantilla todo parece correcto y el mensaje se queda en el panel con *Error al "
-             "enviar*. Sin esto no se entera nadie, y encima el seguimiento de las 12 h vuelve a "
-             "intentarlo.\n\nCada 15 minutos se miran los leads de los ultimos 3 dias: si su mensaje no "
-             "llego, se avisa a la comercial con el motivo en cristiano (*wa/config.js*, MOTIVOS_FALLO), la "
-             "conversacion pasa a **4-intervenir** y la ficha queda en *envio_fallido* (asi el seguimiento "
-             "ya no le persigue).\n\nOJO: 131026 es que no tiene WhatsApp; 130472 y 131049 son limites de "
-             "Meta y el cliente SI lo tiene.", [180, -340], 560, 320),
+             "enviar*. Sin esto no se entera nadie y el cliente se pierde.\n\nCada 15 minutos se miran los "
+             "leads de los ultimos 3 dias y, si su mensaje no llego, **se le vuelve a mandar la misma "
+             "plantilla a la misma conversacion**. Los intentos se espacian (1 h, 2 h, 3 h...) y son %d "
+             "como mucho; al agotarlos la ficha queda en *envio_fallido* y la conversacion con "
+             "**4-intervenir**, para que se vea en el panel.\n\nOJO: hay fallos que no se arreglan "
+             "reintentando. 131026 es que ese numero no tiene WhatsApp; 130472 y 131049 son limites de "
+             "Meta para mensajes de MARKETING y ahi el cliente SI lo tiene (ver MOTIVOS_FALLO en "
+             "*wa/config.js*).\n\nSi despues del fallo el cliente ha escrito, no se reintenta: ya hay "
+             "conversacion. Una vez por mensaje fallido, via wa_avisos." % REINTENTOS_ENVIO,
+             [180, -400], 580, 380),
     ], conn(("Cada15Minutos", 0, "LeadsConEnvio", 0), ("RevisarAhora", 0, "LeadsConEnvio", 0),
             ("LeadsConEnvio", 0, "UnoPorLead", 0), ("UnoPorLead", 0, "MensajesDeLaConversacion", 0),
             ("MensajesDeLaConversacion", 0, "BuscarFallos", 0), ("BuscarFallos", 0, "Apuntar", 0),
             ("Apuntar", 0, "SoloLosNuevos", 0), ("SoloLosNuevos", 0, "¿Hay alguno?", 0),
-            ("¿Hay alguno?", 0, "ComponerAviso", 0), ("¿Hay alguno?", 1, "Todo ha llegado", 0),
-            ("ComponerAviso", 0, "MarcarLaFicha", 0), ("MarcarLaFicha", 0, "AvisarALaComercial", 0)))
+            ("¿Hay alguno?", 0, "PrepararReenvio", 0), ("¿Hay alguno?", 1, "Todo ha llegado", 0),
+            ("PrepararReenvio", 0, "ApuntarElIntento", 0), ("ApuntarElIntento", 0, "DatosDelReenvio", 0),
+            ("DatosDelReenvio", 0, "VolverAMandar", 0), ("VolverAMandar", 0, "LosQueSeAgotan", 0),
+            ("LosQueSeAgotan", 0, "¿Agotados los intentos?", 0),
+            ("¿Agotados los intentos?", 0, "MarcarLaFicha", 0),
+            ("¿Agotados los intentos?", 1, "Se reintentara", 0),
+            ("MarcarLaFicha", 0, "VolverALosAgotados", 0),
+            ("VolverALosAgotados", 0, "MarcarParaQueSeVea", 0)))
+
+
+# ===========================================================================
+# CONTACTO Y CONVERSACION EN EL PANEL (lo usan las llamadas del telefono)
+# ===========================================================================
 
 
 def wf_conversacion_contacto():

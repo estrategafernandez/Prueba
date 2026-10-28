@@ -2665,19 +2665,36 @@ console.log('\n== Los mensajes que WhatsApp no entrega ==');
   ck('con varios leads, el fallo se le pega al que es', r.length === 1 && r[0].nombre === 'Otro'
      && r[0].conversacion_id === 285, JSON.stringify(r.map(x => x.nombre)));
 
-  // El aviso que le llega a la comercial
-  const av = wa('fallo_componer.js', inp([{ json: {} }]), nod({
-    SoloLosNuevos: { ...lead(284), motivo: 'ese numero no tiene WhatsApp o no admite mensajes',
-                     codigo: '131026', hay_que_llamar: true } }))[0].json.aviso;
-  ck('el aviso dice a quien, por que y por donde contactarle',
-     /NO le ha llegado/.test(av.detalle) && /no tiene WhatsApp/.test(av.detalle)
-     && /\+380508020513/.test(av.detalle) && /alona@ejemplo\.com/.test(av.detalle), av.resumen);
-  ck('va a su comercial y pasa la conversacion a una persona',
-     av.destinatario === 'Carmen' && av.pasar_a_humano === true && av.etiqueta === '4-intervenir');
-  ck('si el fallo es nuestro, no se le manda llamar',
-     !/Contactale tu/.test(wa('fallo_componer.js', inp([{ json: {} }]), nod({
-       SoloLosNuevos: { ...lead(284), motivo: 'la plantilla se mando mal', codigo: '132000',
-                        hay_que_llamar: false } }))[0].json.aviso.detalle));
+  // Los intentos se cuentan en la ficha y se agotan
+  const reint = Function('DateTime', CFG + '; return REINTENTOS_ENVIO;')(DateTime);
+  const fallo = (l) => buscar([l], [{ payload: [msg(1, 'failed', 1, { error: '131049: x' })] }])[0];
+  ck('el primer reenvio es el intento 1 y todavia queda cuerda',
+     fallo(lead(284)).intento === 1 && fallo(lead(284)).ultimo_intento === false);
+  ck('al llegar al tope, ese es el ultimo intento',
+     fallo(lead(284, { reintentos: reint - 1 })).intento === reint
+     && fallo(lead(284, { reintentos: reint - 1 })).ultimo_intento === true, 'tope ' + reint);
+
+  // El reenvio: la MISMA plantilla, a la MISMA conversacion
+  const reenviar = (...ls) => wa('fallo_reenviar.js', inp(ls.map(j => ({ json: j }))), nod({}))
+    .map(i => i.json);
+  let v = reenviar({ ...lead(284), plantilla: 'bienvenida_alquiler', operacion: 'alquiler',
+                     enlace: 'https://casagencia.com/x' })[0];
+  ck('se le vuelve a mandar su misma plantilla, a su mismo telefono',
+     v.plantilla === 'bienvenida_alquiler' && v.telefono === '+380508020513', v.telefono);
+  ck('y a la MISMA conversacion, sin abrirle otra', v.conversacion_id === 284);
+  ck('con su nombre de pila en el {{1}} y el enlace en el {{2}}',
+     v.param1 === 'Alona' && v.param2 === 'https://casagencia.com/x');
+  ck('el {{3}} no se inventa aqui: lo saca EnviarPlantilla de la cartera', v.param3 === '');
+  ck('y va el correo, por si hay que apuntarlo en el contacto', v.email === 'alona@ejemplo.com');
+  v = reenviar({ ...lead(284), nombre: '', enlace: '' })[0];
+  ck('sin nombre guardado, el {{1}} no se queda vacio (Meta lo rechaza)',
+     v.param1 === '\u{1F44B}', v.param1);
+  ck('sin enlace, el {{2}} lo rellena EnviarPlantilla con la cartera', v.param2 === '');
+  // La plantilla abierta lleva texto libre en el {{2}} y la ficha no lo guarda
+  v = reenviar({ ...lead(284), plantilla: cfg.PLANTILLAS.abierta.nombre, operacion: 'alquiler' })[0];
+  ck('lo que no se puede repetir (plantilla abierta) sale como bienvenida', v.plantilla === '');
+  ck('con varios fallos a la vez se reenvian todos, no solo el primero',
+     reenviar(lead(284), lead(285), lead(286)).length === 3);
 
   // Y el seguimiento deja en paz a quien no le llego nada
   const seg = fs.readFileSync(B + 'wa/seguimiento_candidatos.js', 'utf8');
@@ -2691,24 +2708,49 @@ console.log('\n== Los mensajes que WhatsApp no entrega ==');
   ck('[WA] 13 mira cada 15 minutos y tambien a mano',
      !!n13('Cada15Minutos') && !!n13('RevisarAhora')
      && w13.connections.Cada15Minutos.main[0][0].node === 'LeadsConEnvio');
-  ck('solo avisa una vez por mensaje (wa_avisos)',
+  ck('solo reintenta una vez por mensaje fallido (wa_avisos)',
      /insert into wa_avisos/.test(n13('Apuntar').parameters.query)
      && /on conflict \(evento_id, tipo\) do nothing/.test(n13('Apuntar').parameters.query));
-  ck('deja la ficha en envio_fallido para que el seguimiento no vuelva',
-     /estado = 'envio_fallido'/.test(n13('MarcarLaFicha').parameters.query));
+  // Lo que pidio Jaime: al cliente se le manda la plantilla, no se avisa a nadie
+  const vm = n13('VolverAMandar');
+  ck('lo que hace es volver a mandarle la plantilla',
+     vm.parameters.workflowId.cachedResultName === '[WA][SUB] EnviarPlantilla'
+     && vm.parameters.workflowInputs.value.plantilla === '={{ $json.plantilla }}');
+  ck('a la misma conversacion y uno por uno',
+     vm.parameters.workflowInputs.value.conversacion_id === '={{ Number($json.conversacion_id) }}'
+     && vm.parameters.mode === 'each');
+  ck('ya no se avisa a la comercial en su lugar',
+     !w13.nodes.some(x => /Avisar|AvisoEquipo/.test(x.name)
+       || /AvisoEquipo/.test(x.parameters?.workflowId?.cachedResultName || '')));
+  ck('el intento se apunta en la ficha ANTES de mandarlo',
+     /reintentos = coalesce\(reintentos, 0\) \+ 1/.test(n13('ApuntarElIntento').parameters.query)
+     && w13.connections.PrepararReenvio.main[0][0].node === 'ApuntarElIntento'
+     && w13.connections.ApuntarElIntento.main[0][0].node === 'DatosDelReenvio');
+  ck('no se reintenta sin fin: hay tope',
+     new RegExp('coalesce\\(reintentos, 0\\) < ' + reint).test(n13('LeadsConEnvio').parameters.query),
+     'tope ' + reint);
+  ck('y los intentos se espacian (1 h, 2 h, 3 h...)',
+     /interval '1 hour' \* \(coalesce\(reintentos, 0\) \+ 1\)/
+       .test(n13('LeadsConEnvio').parameters.query));
+  ck('solo al agotarlos deja la ficha en envio_fallido',
+     /estado = 'envio_fallido'/.test(n13('MarcarLaFicha').parameters.query)
+     && w13.connections['¿Agotados los intentos?'].main[0][0].node === 'MarcarLaFicha'
+     && w13.connections['¿Agotados los intentos?'].main[1][0].node === 'Se reintentara');
+  ck('y entonces la conversacion se marca 4-intervenir',
+     n13('MarcarParaQueSeVea').parameters.workflowInputs.value.etiquetas === '4-intervenir');
   ck('y no vuelve a mirar los que ya marco',
      /estado <> 'envio_fallido'/.test(n13('LeadsConEnvio').parameters.query));
   // Un cliente con varias fichas (un inmueble cada una) comparte conversacion:
-  // el fallo es uno y el aviso tambien. Sin esto a Wagner le llegaban tres.
+  // el fallo es uno y el reenvio tambien. Sin esto a Wagner le salian tres.
   const solo = n13('SoloLosNuevos').parameters.jsCode;
-  ck('un mismo fallo no avisa dos veces aunque el cliente tenga varias fichas',
+  ck('un mismo fallo no se reenvia dos veces aunque el cliente tenga varias fichas',
      /vistos/.test(solo) && /!vistos\.has\(i\.json\.evento_id\)/.test(solo));
   {
     const correr2 = (c, $input, $) => Function('$input', '$', 'DateTime', '"use strict";' + c)($input, $, DateTime);
     const tres = [1, 2, 3].map(() => ({ json: { evento_id: 'fallo:9', nombre: 'Wagner' } }));
     const r = correr2(solo, inp([{ json: { evento_id: 'fallo:9' } }, { json: {} }, { json: {} }]),
                       nod({ BuscarFallos: tres.map(t => t.json) }));
-    ck('y de tres fichas sale un solo aviso', r.length === 1, String(r.length));
+    ck('y de tres fichas sale un solo reenvio', r.length === 1, String(r.length));
   }
 }
 
