@@ -31,6 +31,8 @@ for (const c of convs) {
 
   const m = c.last_non_activity_message || {};
   if (m.message_type !== 1 || m.private) continue;
+  // Si esa pregunta no le llego, repetirsela tampoco va a llegar
+  if (m.status === 'failed') continue;
   // Tiene que haberla escrito Sara: si fue una persona del equipo, ya esta
   // encima de la conversacion y no pintamos nada
   const quien = String(m.sender_type ?? m.sender?.type ?? '').toLowerCase();

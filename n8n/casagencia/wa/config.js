@@ -234,6 +234,30 @@ const PORTALES = [
   { nombre: 'Web',        de: /casagencia\.com/i,  asunto: /formulario|contacto/i },
 ];
 
+// --- Envios que no llegan ----------------------------------------------------
+// Meta avisa del fallo DESPUES, por webhook, asi que al mandar la plantilla todo
+// parece correcto: el mensaje se queda en el panel con "Error al enviar" y, si
+// no lo mira nadie, el lead se pierde en silencio (y encima el seguimiento de
+// las 12 h vuelve a intentarlo y vuelve a fallar).
+// Lo que dice cada codigo de Meta, en cristiano, para el aviso a la comercial.
+const MOTIVOS_FALLO = [
+  { codigo: '131026', que: 'ese numero no tiene WhatsApp o no admite mensajes', llamar: true },
+  { codigo: '130472', que: 'WhatsApp no ha dejado entregar el mensaje (el numero esta en un experimento '
+      + 'de Meta). SI tiene WhatsApp: no es que no lo tenga', llamar: true },
+  { codigo: '131049', que: 'WhatsApp ha frenado el envio por su limite de mensajes comerciales. SI tiene '
+      + 'WhatsApp', llamar: true },
+  { codigo: '131047', que: 'han pasado mas de 24 h desde su ultimo mensaje y hacia falta una plantilla',
+    llamar: false },
+  { codigo: '132000', que: 'la plantilla se mando mal (numero de parametros): es cosa nuestra', llamar: false },
+  { codigo: '132018', que: 'la plantilla se mando mal (parametros): es cosa nuestra', llamar: false },
+  { codigo: '131000', que: 'WhatsApp ha dado un error temporal', llamar: false },
+];
+function motivoDelFallo(error) {
+  const t = String(error ?? '').trim();
+  const m = MOTIVOS_FALLO.find(x => t.includes(x.codigo));
+  return m ? { ...m, texto: t } : { codigo: '', que: t || 'WhatsApp no ha podido entregarlo', llamar: true, texto: t };
+}
+
 // --- Etiquetas de Chatwoot ---------------------------------------------------
 // Las mismas que Blue, creadas ya en el panel. Las cuatro primeras son el estado
 // de la conversacion (solo una a la vez y nunca hacia atras); 4-intervenir se

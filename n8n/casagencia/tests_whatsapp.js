@@ -2623,5 +2623,83 @@ console.log('\n== Un enlace de un portal es NUESTRO, no motivo para rechazar =='
 }
 
 // ===========================================================================
+console.log('\n== Los mensajes que WhatsApp no entrega ==');
+{
+  // Caso de Alona (#284, numero ucraniano): la bienvenida y el seguimiento se
+  // quedaron en "Error al enviar" y no se entero nadie hasta que Paco lo vio.
+  // Su error NO era "no tiene WhatsApp": era 130472, un limite de Meta.
+  const motivo = Function('DateTime', CFG + '; return motivoDelFallo;')(DateTime);
+  ck('130472 no es que no tenga WhatsApp', motivo("130472: User's number is part of an experiment").codigo === '130472'
+     && /SI tiene WhatsApp/.test(motivo("130472: User's number is part of an experiment").que));
+  ck('131026 si lo es', /no tiene WhatsApp/.test(motivo('131026: Message undeliverable').que)
+     && motivo('131026: Message undeliverable').llamar === true);
+  ck('131049 es un freno de Meta, no del cliente', /SI tiene WhatsApp/.test(motivo('131049: ecosystem').que));
+  ck('los de plantilla mal mandada son cosa nuestra y no se le llama',
+     motivo('(#132000) Number of parameters').llamar === false
+     && /cosa nuestra/.test(motivo('(#132018) algo').que));
+  ck('un error que no conocemos no se traga: se avisa igual',
+     motivo('vete a saber').llamar === true && motivo('vete a saber').que === 'vete a saber');
+  ck('y sin error tampoco se queda callado', motivo('').llamar === true && !!motivo('').que);
+
+  // Buscar fallos: empareja cada lead con su conversacion
+  const lead = (conv, extra = {}) => ({ telefono_wa: '380508020513', telefono_e164: '+380508020513',
+    nombre: 'Alona', referencia: 'BN-C-126-A', asesora: 'Carmen', conversacion_id: conv,
+    email_cliente: 'alona@ejemplo.com', ...extra });
+  const msg = (id, estado, tipo = 1, extra = {}) => ({ id, status: estado, message_type: tipo,
+    private: false, created_at: 1000 + id, content: 'Hola', external_error: extra.error || '', ...extra });
+  const buscar = (leads, pagos) => wa('fallo_buscar.js', inp([{ json: {} }]), nod({
+    UnoPorLead: leads, MensajesDeLaConversacion: pagos })).map(i => i.json);
+
+  let r = buscar([lead(284)], [{ payload: [msg(1, 'failed', 1, { error: '130472: experiment' })] }]);
+  ck('un envio fallido sale, con su motivo', r.length === 1 && r[0].codigo === '130472'
+     && r[0].evento_id === 'fallo:1' && r[0].conversacion_id === 284, JSON.stringify(r[0] || {}).slice(0, 90));
+  r = buscar([lead(284)], [{ payload: [msg(1, 'sent'), msg(2, 'read')] }]);
+  ck('si todo llego, no sale nada', r.length === 0);
+  r = buscar([lead(284)], [{ payload: [msg(1, 'failed', 1, { error: '131026: x' }), msg(2, 'sent', 0)] }]);
+  ck('si despues del fallo el cliente ha escrito, no se avisa (ya hay conversacion)', r.length === 0);
+  r = buscar([lead(284)], [{ payload: [msg(1, 'failed', 1, { private: true, error: 'x' })] }]);
+  ck('una nota interna fallida no cuenta', r.length === 0);
+  // Varios leads a la vez: cada uno con SU conversacion
+  r = buscar([lead(284), lead(285, { nombre: 'Otro' })],
+             [{ payload: [msg(1, 'sent')] }, { payload: [msg(9, 'failed', 1, { error: '131026: x' })] }]);
+  ck('con varios leads, el fallo se le pega al que es', r.length === 1 && r[0].nombre === 'Otro'
+     && r[0].conversacion_id === 285, JSON.stringify(r.map(x => x.nombre)));
+
+  // El aviso que le llega a la comercial
+  const av = wa('fallo_componer.js', inp([{ json: {} }]), nod({
+    SoloLosNuevos: { ...lead(284), motivo: 'ese numero no tiene WhatsApp o no admite mensajes',
+                     codigo: '131026', hay_que_llamar: true } }))[0].json.aviso;
+  ck('el aviso dice a quien, por que y por donde contactarle',
+     /NO le ha llegado/.test(av.detalle) && /no tiene WhatsApp/.test(av.detalle)
+     && /\+380508020513/.test(av.detalle) && /alona@ejemplo\.com/.test(av.detalle), av.resumen);
+  ck('va a su comercial y pasa la conversacion a una persona',
+     av.destinatario === 'Carmen' && av.pasar_a_humano === true && av.etiqueta === '4-intervenir');
+  ck('si el fallo es nuestro, no se le manda llamar',
+     !/Contactale tu/.test(wa('fallo_componer.js', inp([{ json: {} }]), nod({
+       SoloLosNuevos: { ...lead(284), motivo: 'la plantilla se mando mal', codigo: '132000',
+                        hay_que_llamar: false } }))[0].json.aviso.detalle));
+
+  // Y el seguimiento deja en paz a quien no le llego nada
+  const seg = fs.readFileSync(B + 'wa/seguimiento_candidatos.js', 'utf8');
+  const par = fs.readFileSync(B + 'wa/parado_candidatos.js', 'utf8');
+  ck('el seguimiento de 12 h no persigue un envio fallido', /m\.status === 'failed'/.test(seg));
+  ck('ni el de la hora', /m\.status === 'failed'/.test(par));
+
+  // El workflow
+  const w13 = JSON.parse(fs.readFileSync(B + 'workflows_wa/WA_13_Envios_que_no_llegan.json', 'utf8'));
+  const n13 = (n) => w13.nodes.find(x => x.name === n);
+  ck('[WA] 13 mira cada 15 minutos y tambien a mano',
+     !!n13('Cada15Minutos') && !!n13('RevisarAhora')
+     && w13.connections.Cada15Minutos.main[0][0].node === 'LeadsConEnvio');
+  ck('solo avisa una vez por mensaje (wa_avisos)',
+     /insert into wa_avisos/.test(n13('Apuntar').parameters.query)
+     && /on conflict \(evento_id, tipo\) do nothing/.test(n13('Apuntar').parameters.query));
+  ck('deja la ficha en envio_fallido para que el seguimiento no vuelva',
+     /estado = 'envio_fallido'/.test(n13('MarcarLaFicha').parameters.query));
+  ck('y no vuelve a mirar los que ya marco',
+     /estado <> 'envio_fallido'/.test(n13('LeadsConEnvio').parameters.query));
+}
+
+// ===========================================================================
 console.log(fallos ? `\n${fallos} FALLOS` : '\nTodo correcto');
 process.exit(fallos ? 1 : 0);
