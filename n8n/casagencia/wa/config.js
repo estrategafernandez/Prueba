@@ -239,14 +239,17 @@ const PORTALES = [
 // parece correcto: el mensaje se queda en el panel con "Error al enviar" y, si
 // no lo mira nadie, el lead se pierde en silencio (y encima el seguimiento de
 // las 12 h vuelve a intentarlo y vuelve a fallar).
-// Lo que dice cada codigo de Meta, en cristiano, para el aviso a la comercial.
-// Cuantas veces se vuelve a intentar un envio que no llego, y cuanto se espera
-// entre intentos (la espera crece: 1 h, 2 h, 3 h...). Con 4 son unas 10 horas.
+// CUANTOS ENVIOS como mucho por cliente, contando el primero: con 4 son el
+// original y tres reenvios. La espera crece y se mide desde el ultimo fallo
+// (1 h tras el primero, 2 h tras el segundo, 3 h tras el tercero): unas 6 horas.
+// Cuantos van no se guarda en ninguna columna: se cuentan los mensajes fallidos
+// de la conversacion ([WA] 13, wa/fallo_buscar.js).
 // OJO: hay fallos que no se arreglan reintentando (131026 es que ese numero no
 // tiene WhatsApp); se reintenta igual porque distinguirlo de un corte temporal
-// no es fiable, y al agotar los intentos la conversacion queda marcada.
+// no es fiable, y al agotarlos la conversacion queda marcada 4-intervenir.
 const REINTENTOS_ENVIO = 4;
 
+// Lo que dice cada codigo de Meta, en cristiano, para la nota de la ficha.
 const MOTIVOS_FALLO = [
   { codigo: '131026', que: 'ese numero no tiene WhatsApp o no admite mensajes', llamar: true },
   { codigo: '130472', que: 'WhatsApp no ha dejado entregar el mensaje (el numero esta en un experimento '

@@ -2665,14 +2665,27 @@ console.log('\n== Los mensajes que WhatsApp no entrega ==');
   ck('con varios leads, el fallo se le pega al que es', r.length === 1 && r[0].nombre === 'Otro'
      && r[0].conversacion_id === 285, JSON.stringify(r.map(x => x.nombre)));
 
-  // Los intentos se cuentan en la ficha y se agotan
+  // Los intentos NO salen de ninguna columna: se cuentan los mensajes fallidos
   const reint = Function('DateTime', CFG + '; return REINTENTOS_ENVIO;')(DateTime);
-  const fallo = (l) => buscar([l], [{ payload: [msg(1, 'failed', 1, { error: '131049: x' })] }])[0];
-  ck('el primer reenvio es el intento 1 y todavia queda cuerda',
-     fallo(lead(284)).intento === 1 && fallo(lead(284)).ultimo_intento === false);
-  ck('al llegar al tope, ese es el ultimo intento',
-     fallo(lead(284, { reintentos: reint - 1 })).intento === reint
-     && fallo(lead(284, { reintentos: reint - 1 })).ultimo_intento === true, 'tope ' + reint);
+  const haceHoras = (h) => Math.floor(Date.now() / 1000) - Math.round(h * 3600);
+  // n fallos, el ultimo hace `h` horas
+  const falla = (n, h) => buscar([lead(284)], [{ payload: Array.from({ length: n }, (_, i) =>
+    msg(i + 1, 'failed', 1, { error: '131049: x', created_at: haceHoras(h + (n - 1 - i)) })) }])[0];
+  ck('con un envio fallido, el que sale ahora es el segundo y queda cuerda',
+     falla(1, 2).intento === 2 && falla(1, 2).ultimo_intento === false
+     && falla(1, 2).cuantos_fallos === 1, JSON.stringify(falla(1, 2).intento));
+  ck('al llegar al tope de envios, ese es el ultimo',
+     falla(reint - 1, 5).intento === reint && falla(reint - 1, 5).ultimo_intento === true,
+     'tope ' + reint);
+  ck('agotados los envios ya no se le manda nada mas', falla(reint, 20) === undefined);
+  // La espera crece desde el ultimo fallo: 1 h tras el primero, 2 h tras el segundo
+  ck('no se le machaca: tras el primer fallo se espera una hora',
+     falla(1, 0.25) === undefined && !!falla(1, 1.1));
+  ck('y tras el segundo, dos', falla(2, 1.5) === undefined && !!falla(2, 2.2));
+  // Si el reenvio anterior SI llego, no hay nada que reintentar
+  r = buscar([lead(284)], [{ payload: [msg(1, 'failed', 1, { error: '131049: x', created_at: haceHoras(5) }),
+                                       msg(2, 'sent', 1, { created_at: haceHoras(3) })] }]);
+  ck('si despues del fallo le salio algo que SI llego, no se reintenta', r.length === 0);
 
   // El reenvio: la MISMA plantilla, a la MISMA conversacion
   const reenviar = (...ls) => wa('fallo_reenviar.js', inp(ls.map(j => ({ json: j }))), nod({}))
@@ -2708,9 +2721,6 @@ console.log('\n== Los mensajes que WhatsApp no entrega ==');
   ck('[WA] 13 mira cada 15 minutos y tambien a mano',
      !!n13('Cada15Minutos') && !!n13('RevisarAhora')
      && w13.connections.Cada15Minutos.main[0][0].node === 'LeadsConEnvio');
-  ck('solo reintenta una vez por mensaje fallido (wa_avisos)',
-     /insert into wa_avisos/.test(n13('Apuntar').parameters.query)
-     && /on conflict \(evento_id, tipo\) do nothing/.test(n13('Apuntar').parameters.query));
   // Lo que pidio Jaime: al cliente se le manda la plantilla, no se avisa a nadie
   const vm = n13('VolverAMandar');
   ck('lo que hace es volver a mandarle la plantilla',
@@ -2722,16 +2732,14 @@ console.log('\n== Los mensajes que WhatsApp no entrega ==');
   ck('ya no se avisa a la comercial en su lugar',
      !w13.nodes.some(x => /Avisar|AvisoEquipo/.test(x.name)
        || /AvisoEquipo/.test(x.parameters?.workflowId?.cachedResultName || '')));
-  ck('el intento se apunta en la ficha ANTES de mandarlo',
-     /reintentos = coalesce\(reintentos, 0\) \+ 1/.test(n13('ApuntarElIntento').parameters.query)
-     && w13.connections.PrepararReenvio.main[0][0].node === 'ApuntarElIntento'
-     && w13.connections.ApuntarElIntento.main[0][0].node === 'DatosDelReenvio');
-  ck('no se reintenta sin fin: hay tope',
-     new RegExp('coalesce\\(reintentos, 0\\) < ' + reint).test(n13('LeadsConEnvio').parameters.query),
-     'tope ' + reint);
-  ck('y los intentos se espacian (1 h, 2 h, 3 h...)',
-     /interval '1 hour' \* \(coalesce\(reintentos, 0\) \+ 1\)/
-       .test(n13('LeadsConEnvio').parameters.query));
+  ck('no hace falta columna nueva: el tope y la espera salen de los fallos',
+     !/reintentos/.test(n13('LeadsConEnvio').parameters.query)
+     && /fallidos\.length >= REINTENTOS_ENVIO/.test(n13('BuscarFallos').parameters.jsCode)
+     && /horas < fallidos\.length/.test(n13('BuscarFallos').parameters.jsCode));
+  ck('ni se toca actualizado_en al aparcar la ficha (lo miran otros flujos)',
+     !/actualizado_en/.test(n13('MarcarLaFicha').parameters.query));
+  ck('un mismo fallo no se reenvia dos veces aunque el cliente tenga varias fichas',
+     /vistos\.has\(evento_id\)/.test(n13('BuscarFallos').parameters.jsCode));
   ck('solo al agotarlos deja la ficha en envio_fallido',
      /estado = 'envio_fallido'/.test(n13('MarcarLaFicha').parameters.query)
      && w13.connections['¿Agotados los intentos?'].main[0][0].node === 'MarcarLaFicha'
@@ -2740,18 +2748,6 @@ console.log('\n== Los mensajes que WhatsApp no entrega ==');
      n13('MarcarParaQueSeVea').parameters.workflowInputs.value.etiquetas === '4-intervenir');
   ck('y no vuelve a mirar los que ya marco',
      /estado <> 'envio_fallido'/.test(n13('LeadsConEnvio').parameters.query));
-  // Un cliente con varias fichas (un inmueble cada una) comparte conversacion:
-  // el fallo es uno y el reenvio tambien. Sin esto a Wagner le salian tres.
-  const solo = n13('SoloLosNuevos').parameters.jsCode;
-  ck('un mismo fallo no se reenvia dos veces aunque el cliente tenga varias fichas',
-     /vistos/.test(solo) && /!vistos\.has\(i\.json\.evento_id\)/.test(solo));
-  {
-    const correr2 = (c, $input, $) => Function('$input', '$', 'DateTime', '"use strict";' + c)($input, $, DateTime);
-    const tres = [1, 2, 3].map(() => ({ json: { evento_id: 'fallo:9', nombre: 'Wagner' } }));
-    const r = correr2(solo, inp([{ json: { evento_id: 'fallo:9' } }, { json: {} }, { json: {} }]),
-                      nod({ BuscarFallos: tres.map(t => t.json) }));
-    ck('y de tres fichas sale un solo reenvio', r.length === 1, String(r.length));
-  }
 }
 
 // ===========================================================================

@@ -44,8 +44,8 @@ for (const c of convs) {
   // disponible") no se persiguen: el seguimiento no tendria sentido
   if (m.message_type !== 1 || m.private || !(esBienvenida || esWeb)) continue;
   // Si la bienvenida NO llego (numero sin WhatsApp, limite de Meta...), perseguir
-  // con otra plantilla es tirar otro envio a la basura: de eso se encarga [WA] 13,
-  // que avisa a la comercial para que le llame.
+  // con OTRA plantilla es tirar un envio a la basura: de eso se encarga [WA] 13,
+  // que le vuelve a mandar la que no llego.
   if (m.status === 'failed') continue;
   const horas = (ahoraSeg - Number(m.created_at || 0)) / 3600;
   if (horas < conf.horas || horas > conf.max_horas) continue;
