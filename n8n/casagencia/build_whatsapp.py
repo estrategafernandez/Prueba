@@ -945,7 +945,7 @@ def wf_etiquetar():
             ("={{ %s.hay_algo }}" % p, "true", None, "boolean")]),
         noop("NadaQueHacer", [640, 220]),
         if_node("¿Trae referencia?", "={{ %s.etiqueta_referencia }}" % p, "notEmpty", [640, 0], tipo="string"),
-        # La etiqueta del inmueble: si no esta en la cuenta, se crea (oculta)
+        # La etiqueta del inmueble: si no esta en la cuenta, se crea
         http("EtiquetasDeLaCuenta", "GET", CW_API + "/labels", [860, -180], cred=CRED_CHATWOOT,
              onError="continueRegularOutput", alwaysOutputData=True),
         code_node("BuscarEtiqueta", code_wa("etiquetas_buscar.js"), [1080, -180]),
@@ -972,7 +972,7 @@ def wf_etiquetar():
              "2-en_proceso y mientras este no se vuelve a poner (si la pone una persona a mano, lo hace la "
              "automatizacion de Chatwoot).\n\n**La del inmueble**: con `referencia` se pone tambien la "
              "de su referencia de eGO (*bn-1563-v*: Chatwoot las pasa a minusculas; la exacta va en la "
-             "descripcion). Si no existe en la cuenta se crea, **oculta en la barra lateral**. Lo que no "
+             "descripcion). Si no existe en la cuenta se crea, **visible en la barra lateral**. Lo que no "
              "es una referencia de eGO (el numero de la web...) no se convierte en etiqueta.\n\nChatwoot "
              "SUSTITUYE la lista entera, asi que primero se leen las que hay y se manda la union; si no "
              "se han podido leer, no se escribe. Las de estado van de una en una y nunca hacia atras.",

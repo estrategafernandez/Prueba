@@ -2754,8 +2754,9 @@ console.log('\n== Los mensajes que WhatsApp no entrega ==');
 console.log('\n== La etiqueta del inmueble (su referencia de eGO) ==');
 {
   // Paco y Jaime: cada conversacion, con la etiqueta de la referencia por la que
-  // pregunta, la misma de eGO; creada al vuelo si no existe y oculta en la barra
-  // lateral. Chatwoot las guarda en minusculas (comprobado: BN-1563-V -> bn-1563-v).
+  // pregunta, la misma de eGO; creada al vuelo si no existe y visible en la barra
+  // lateral (al principio iban ocultas). Chatwoot las guarda en minusculas
+  // (comprobado: BN-1563-V -> bn-1563-v).
   const F = Function('DateTime', CFG + '; return { etiquetaDeReferencia, datosEtiquetaReferencia };')(DateTime);
   ck('BN-1563-V -> bn-1563-v (Chatwoot las pasa a minusculas)', F.etiquetaDeReferencia('BN-1563-V') === 'bn-1563-v');
   ck('tambien las de letra en medio: BN-C-107-V', F.etiquetaDeReferencia('BN-C-107-V') === 'bn-c-107-v');
@@ -2770,7 +2771,7 @@ console.log('\n== La etiqueta del inmueble (su referencia de eGO) ==');
 
   const d = F.datosEtiquetaReferencia('BN-1563-V', { tipo_inmueble: 'Villa', zona: 'Benicasim Golf',
     municipio: 'Benicasim', precio: 450000, tipo_transaccion: 'venta' });
-  ck('la etiqueta se crea OCULTA en la barra lateral', d.show_on_sidebar === false);
+  ck('la etiqueta se crea VISIBLE en la barra lateral', d.show_on_sidebar === true);
   ck('con la referencia exacta de eGO en la descripcion', d.title === 'bn-1563-v'
      && d.description.startsWith('Referencia de eGO: BN-1563-V'), d.description);
   ck('y que inmueble es', d.description === 'Referencia de eGO: BN-1563-V · Villa en Benicasim Golf · venta 450.000 €',
@@ -2802,7 +2803,7 @@ console.log('\n== La etiqueta del inmueble (su referencia de eGO) ==');
   const nueva = wa('etiquetas_nueva.js', inp([{ json: { tipo_inmueble: 'Dúplex', zona: 'Els Terrers',
     municipio: 'Benicasim', precio: 240000, tipo_transaccion: 'venta' } }]),
     nod({ Preparar: { referencia: 'BN-C-107-V' } }))[0].json.etiqueta;
-  ck('la nueva sale de su ficha', nueva.title === 'bn-c-107-v' && nueva.show_on_sidebar === false
+  ck('la nueva sale de su ficha', nueva.title === 'bn-c-107-v' && nueva.show_on_sidebar === true
      && /Dúplex en Els Terrers/.test(nueva.description) && /BN-C-107-V/.test(nueva.description), nueva.description);
   const sinFicha = wa('etiquetas_nueva.js', inp([{ json: {} }]), nod({ Preparar: { referencia: 'CS-1449-A' } }))[0].json.etiqueta;
   ck('y sin ficha tambien se crea', sinFicha.title === 'cs-1449-a' && sinFicha.description === 'Referencia de eGO: CS-1449-A');

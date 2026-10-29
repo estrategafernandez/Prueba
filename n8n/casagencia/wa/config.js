@@ -293,10 +293,13 @@ const ETIQUETA_LLAMADA  = '0-llamada_telefonica';   // la conversacion tiene lla
 // cuenta, se crea al momento ([WA][SUB] Etiquetar con referencia).
 // OJO: Chatwoot guarda SIEMPRE las etiquetas en minusculas (BN-1563-V queda
 // bn-1563-v) y eso no se puede cambiar; la referencia exacta, en mayusculas, va
-// en la descripcion de la etiqueta. Se crean ocultas en la barra lateral (son
-// muchas) pero sirven igual para filtrar y buscar.
+// en la descripcion de la etiqueta.
 const REFERENCIA_EGO = /^[A-Z]{2}-(?:[A-Z]-)?\d{1,6}-[A-Z]$/;   // BN-1563-V, BN-C-107-V
 const COLOR_REFERENCIA = { V: '#34495E', A: '#16A085' };       // venta, alquiler
+// Si salen en la barra lateral del panel. Al principio iban ocultas; Jaime pidio
+// que se vean TODAS (29/10/2026). Cambiarlo aqui solo afecta a las que se creen
+// a partir de entonces: las que ya existen hay que cambiarlas en el panel.
+const REFERENCIA_EN_BARRA_LATERAL = true;
 
 // El nombre de la etiqueta de una referencia de eGO, o '' si no lo es (un numero
 // de la web, una referencia cortada...): mejor sin etiqueta que con una mala.
@@ -319,7 +322,7 @@ function datosEtiquetaReferencia(ref, ficha) {
     title: r.toLowerCase(),
     description: ['Referencia de eGO: ' + r, que, cuanto].filter(Boolean).join(' · ').slice(0, 255),
     color: COLOR_REFERENCIA[r.slice(-1)] || COLOR_REFERENCIA.V,
-    show_on_sidebar: false,
+    show_on_sidebar: REFERENCIA_EN_BARRA_LATERAL,
   };
 }
 
