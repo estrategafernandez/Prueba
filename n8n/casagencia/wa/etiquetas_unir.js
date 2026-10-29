@@ -8,9 +8,19 @@
 // no la devuelve a "en proceso". 4-intervenir se suma a la que haya, pero
 // quita 2-en_proceso: la conversacion la lleva ya una persona (y mientras tenga
 // 4-intervenir no se vuelve a poner).
-const actuales = ($input.first().json.payload ?? []).map(String);
+//
+// Si NO se han podido leer las que tiene, no se escribe nada: como Chatwoot
+// sustituye la lista entera, se borrarian todas (las de las personas incluidas).
+const leido = $input.first().json || {};
+if (!Array.isArray(leido.payload)) return [{ json: { labels: [], cambia: false, sin_leer: true } }];
+const actuales = leido.payload.map(String);
 const pedidas = String($('Start').first().json.etiquetas ?? '')
   .split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
+// La del inmueble, si ha llegado referencia: se suma como una mas (no es de
+// estado, asi que ninguna otra la quita)
+let deReferencia = '';
+try { deReferencia = String($('Preparar').first().json.etiqueta_referencia || ''); } catch (e) {}
+if (deReferencia && !pedidas.includes(deReferencia)) pedidas.push(deReferencia);
 
 const rango = (e) => ESTADOS.indexOf(e);          // -1 si no es de estado
 const estadoActual = actuales.filter(e => rango(e) >= 0).sort((a, b) => rango(b) - rango(a))[0] || '';

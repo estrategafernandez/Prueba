@@ -12,7 +12,9 @@ const limpio = (v) => {
   return s && !/^(null|undefined|desconocido|no lo dice|sara)$/i.test(s) ? s : '';
 };
 const referencia = limpio(extraido.referencia).toUpperCase();
-const ref = /^[A-Z]{2}-\d{3,5}-[A-Z]$/.test(referencia) ? referencia : '';
+// La misma regla que la cartera (REFERENCIA_EGO): antes se perdian las del tipo
+// BN-C-107-V, que son la tercera parte de los inmuebles.
+const ref = etiquetaDeReferencia(referencia) ? referencia : '';
 
 // QUIEN SE QUEDA LA CONVERSACION, por este orden:
 //  1. Si el cliente marco el movil de una comercial, es suya.

@@ -288,6 +288,41 @@ const ESTADOS = [ETIQUETAS.bienvenida, ETIQUETAS.seguimiento, ETIQUETAS.en_proce
 const ETIQUETA_VENDEDOR = 'vendedor';               // el comprador tiene que vender una vivienda
 const ETIQUETA_LLAMADA  = '0-llamada_telefonica';   // la conversacion tiene llamadas del asistente telefonico
 
+// La etiqueta del INMUEBLE: cada conversacion lleva una por cada inmueble por el
+// que ha preguntado el cliente, con su referencia de eGO. Si no existe en la
+// cuenta, se crea al momento ([WA][SUB] Etiquetar con referencia).
+// OJO: Chatwoot guarda SIEMPRE las etiquetas en minusculas (BN-1563-V queda
+// bn-1563-v) y eso no se puede cambiar; la referencia exacta, en mayusculas, va
+// en la descripcion de la etiqueta. Se crean ocultas en la barra lateral (son
+// muchas) pero sirven igual para filtrar y buscar.
+const REFERENCIA_EGO = /^[A-Z]{2}-(?:[A-Z]-)?\d{1,6}-[A-Z]$/;   // BN-1563-V, BN-C-107-V
+const COLOR_REFERENCIA = { V: '#34495E', A: '#16A085' };       // venta, alquiler
+
+// El nombre de la etiqueta de una referencia de eGO, o '' si no lo es (un numero
+// de la web, una referencia cortada...): mejor sin etiqueta que con una mala.
+function etiquetaDeReferencia(ref) {
+  const r = String(ref ?? '').trim().toUpperCase();
+  return REFERENCIA_EGO.test(r) ? r.toLowerCase() : '';
+}
+
+// La etiqueta nueva tal cual se crea en Chatwoot. `ficha` es su fila de
+// wa_cartera, si la hay (un inmueble ya vendido puede no estar).
+function datosEtiquetaReferencia(ref, ficha) {
+  const r = String(ref ?? '').trim().toUpperCase();
+  const f = ficha || {};
+  const que = [f.tipo_inmueble, f.zona || f.municipio].map(x => String(x ?? '').trim())
+    .filter(Boolean).join(' en ');
+  const precio = Math.round(Number(f.precio || 0));
+  const op = /alquil/i.test(String(f.tipo_transaccion ?? '')) || r.endsWith('-A') ? 'alquiler' : 'venta';
+  const cuanto = precio ? `${op} ${String(precio).replace(/\B(?=(\d{3})+(?!\d))/g, '.')} €` : '';
+  return {
+    title: r.toLowerCase(),
+    description: ['Referencia de eGO: ' + r, que, cuanto].filter(Boolean).join(' · ').slice(0, 255),
+    color: COLOR_REFERENCIA[r.slice(-1)] || COLOR_REFERENCIA.V,
+    show_on_sidebar: false,
+  };
+}
+
 // --- Enlaces que el telefono manda por WhatsApp -------------------------------
 // En una llamada NO se puede dictar una direccion web: se manda por WhatsApp con
 // la plantilla abierta. Los enlaces salen de wa_cartera, nunca del modelo.

@@ -2751,5 +2751,129 @@ console.log('\n== Los mensajes que WhatsApp no entrega ==');
 }
 
 // ===========================================================================
+console.log('\n== La etiqueta del inmueble (su referencia de eGO) ==');
+{
+  // Paco y Jaime: cada conversacion, con la etiqueta de la referencia por la que
+  // pregunta, la misma de eGO; creada al vuelo si no existe y oculta en la barra
+  // lateral. Chatwoot las guarda en minusculas (comprobado: BN-1563-V -> bn-1563-v).
+  const F = Function('DateTime', CFG + '; return { etiquetaDeReferencia, datosEtiquetaReferencia };')(DateTime);
+  ck('BN-1563-V -> bn-1563-v (Chatwoot las pasa a minusculas)', F.etiquetaDeReferencia('BN-1563-V') === 'bn-1563-v');
+  ck('tambien las de letra en medio: BN-C-107-V', F.etiquetaDeReferencia('BN-C-107-V') === 'bn-c-107-v');
+  ck('da igual como llegue escrita', F.etiquetaDeReferencia('  cs-g-402-v ') === 'cs-g-402-v');
+  ck('el numero de la web no es una referencia', F.etiquetaDeReferencia('26699629-A') === ''
+     && F.etiquetaDeReferencia('26699629') === '');
+  ck('una referencia cortada tampoco', F.etiquetaDeReferencia('BN-1563') === '' && F.etiquetaDeReferencia('') === '');
+  ck('ni lo que se colaba del correo ("DELANUNCIO")', F.etiquetaDeReferencia('DELANUNCIO') === '');
+  const malas = REAL.map(r => r.ref).filter(r => !F.etiquetaDeReferencia(r));
+  ck('TODAS las referencias de la cartera de verdad valen', REAL.length === 93 && malas.length === 0,
+     malas.join(', ') || REAL.length + ' de ' + REAL.length);
+
+  const d = F.datosEtiquetaReferencia('BN-1563-V', { tipo_inmueble: 'Villa', zona: 'Benicasim Golf',
+    municipio: 'Benicasim', precio: 450000, tipo_transaccion: 'venta' });
+  ck('la etiqueta se crea OCULTA en la barra lateral', d.show_on_sidebar === false);
+  ck('con la referencia exacta de eGO en la descripcion', d.title === 'bn-1563-v'
+     && d.description.startsWith('Referencia de eGO: BN-1563-V'), d.description);
+  ck('y que inmueble es', d.description === 'Referencia de eGO: BN-1563-V · Villa en Benicasim Golf · venta 450.000 €',
+     d.description);
+  const a = F.datosEtiquetaReferencia('CS-1449-A', null);
+  ck('si ya no esta en la cartera, solo la referencia', a.description === 'Referencia de eGO: CS-1449-A');
+  ck('color de venta y de alquiler', d.color !== a.color && /^#[0-9A-F]{6}$/i.test(a.color));
+
+  // Preparar
+  const prep = (start) => wa('etiquetas_preparar.js', inp([{ json: {} }]), nod({ Start: start }))[0].json;
+  let p = prep({ conversacion_id: 286, referencia: 'BN-1563-V' });
+  ck('con solo la referencia ya hay algo que poner', p.hay_algo === true && p.etiqueta_referencia === 'bn-1563-v'
+     && p.etiquetas === '');
+  p = prep({ conversacion_id: 286, etiquetas: '1-bienvenida_ia', referencia: '26699629-A' });
+  ck('una referencia que no vale no estropea las demas', p.hay_algo === true && p.etiqueta_referencia === ''
+     && p.referencia === '' && p.etiquetas === '1-bienvenida_ia');
+  ck('sin etiquetas ni referencia, nada', prep({ conversacion_id: 286 }).hay_algo === false);
+
+  // ¿Existe ya en la cuenta?
+  const busca = (lista) => wa('etiquetas_buscar.js', inp([{ json: lista }]),
+    nod({ Preparar: { etiqueta_referencia: 'bn-1563-v' } }))[0].json;
+  ck('si ya existe, no se crea otra', busca({ payload: [{ title: '4-intervenir' }, { title: 'bn-1563-v' }] }).existe === true);
+  ck('se compara sin mayusculas', busca({ payload: [{ title: 'BN-1563-V' }] }).existe === true);
+  ck('si no existe, se crea', busca({ payload: [{ title: 'bn-1564-v' }] }).existe === false);
+  ck('si no se ha podido leer la lista, se intenta crear igual', busca({ error: 'x' }).existe === false
+     && busca({ error: 'x' }).leida === false);
+
+  // La nueva, desde su ficha de la cartera
+  const nueva = wa('etiquetas_nueva.js', inp([{ json: { tipo_inmueble: 'Dúplex', zona: 'Els Terrers',
+    municipio: 'Benicasim', precio: 240000, tipo_transaccion: 'venta' } }]),
+    nod({ Preparar: { referencia: 'BN-C-107-V' } }))[0].json.etiqueta;
+  ck('la nueva sale de su ficha', nueva.title === 'bn-c-107-v' && nueva.show_on_sidebar === false
+     && /Dúplex en Els Terrers/.test(nueva.description) && /BN-C-107-V/.test(nueva.description), nueva.description);
+  const sinFicha = wa('etiquetas_nueva.js', inp([{ json: {} }]), nod({ Preparar: { referencia: 'CS-1449-A' } }))[0].json.etiqueta;
+  ck('y sin ficha tambien se crea', sinFicha.title === 'cs-1449-a' && sinFicha.description === 'Referencia de eGO: CS-1449-A');
+
+  // Unir: la del inmueble se suma y ninguna otra la quita
+  const unirR = (actuales, pedidas, ref, forzar) => wa('etiquetas_unir.js', inp([{ json: actuales }]),
+    nod({ Start: { etiquetas: pedidas, forzar }, Preparar: { etiqueta_referencia: ref } }))[0].json;
+  let u = unirR({ payload: ['vip'] }, '1-bienvenida_ia', 'bn-1563-v');
+  ck('la bienvenida pone su estado y la del inmueble', u.labels.join() === 'vip,1-bienvenida_ia,bn-1563-v', u.labels.join());
+  u = unirR({ payload: ['bn-1563-v', '1-bienvenida_ia'] }, '2-en_proceso', '');
+  ck('al cambiar de estado, la del inmueble se queda', u.labels.join() === 'bn-1563-v,2-en_proceso', u.labels.join());
+  u = unirR({ payload: ['bn-1563-v', '2-en_proceso'] }, '4-intervenir', '');
+  ck('y con 4-intervenir tambien', u.labels.join() === 'bn-1563-v,4-intervenir', u.labels.join());
+  u = unirR({ payload: ['bn-1563-v', '3-agendada_ia', '4-intervenir'] }, '1-bienvenida_ia', '', 'true');
+  ck('el reinicio a mano tampoco la quita', u.labels.includes('bn-1563-v') && u.labels.includes('1-bienvenida_ia')
+     && !u.labels.includes('3-agendada_ia'), u.labels.join());
+  u = unirR({ payload: ['bn-1563-v'] }, '', 'bn-c-107-v');
+  ck('un segundo inmueble se suma al primero', u.labels.join() === 'bn-1563-v,bn-c-107-v' && u.cambia === true);
+  u = unirR({ payload: ['2-en_proceso', 'bn-1563-v'] }, '', 'bn-1563-v');
+  ck('si ya la tenia, no se escribe nada', u.cambia === false);
+  u = unirR({ error: 'timeout' }, '1-bienvenida_ia', 'bn-1563-v');
+  ck('si no se han podido leer las que tiene, NO se escribe (se borrarian todas)',
+     u.cambia === false && u.sin_leer === true);
+
+  // El sub
+  const sub = JSON.parse(fs.readFileSync(B + 'workflows_wa/WA_SUB_Etiquetar.json', 'utf8'));
+  const sn = (n) => sub.nodes.find(x => x.name === n);
+  const sc = sub.connections;
+  ck('[WA][SUB] Etiquetar admite la referencia',
+     sn('Start').parameters.workflowInputs.values.some(v => v.name === 'referencia'));
+  ck('mira si existe y, si no, la crea en la cuenta',
+     /\/labels$/.test(sn('EtiquetasDeLaCuenta').parameters.url) && sn('CrearEtiqueta').parameters.method === 'POST'
+     && /\/labels$/.test(sn('CrearEtiqueta').parameters.url)
+     && sc['¿Ya existe?'].main[0][0].node === 'LeerEtiquetas' && sc['¿Ya existe?'].main[1][0].node === 'FichaDelInmueble');
+  ck('y solo escribe si cambia algo', sc['UnirEtiquetas'].main[0][0].node === '¿Cambia algo?'
+     && sc['¿Cambia algo?'].main[0][0].node === 'GuardarEtiquetas');
+
+  // Quien le pasa la referencia
+  const W = (f) => JSON.parse(fs.readFileSync(B + 'workflows_wa/' + f, 'utf8'));
+  const ref = (w, n) => w.nodes.find(x => x.name === n)?.parameters?.workflowInputs?.value?.referencia || '';
+  ck('la bienvenida (eGO, portales, web, a mano, telefono...)',
+     /Normalizar.*referencia/.test(ref(W('WA_SUB_EnviarPlantilla.json'), 'MarcarBienvenida')));
+  ck('los avisos al equipo (visitas, llamadas, pasar a una persona)',
+     /referencia/.test(ref(W('WA_SUB_AvisoEquipo.json'), 'Etiquetar')));
+  const cu = W('WA_SUB_guardarCualificacion.json');
+  ck('la cualificacion, con la referencia ya resuelta, y en linea (no cambia la respuesta a Sara)',
+     /Preparar.*referencia/.test(ref(cu, 'EtiquetaDelInmueble'))
+     && cu.connections.GuardarFicha.main[0][0].node === 'EtiquetaDelInmueble'
+     && cu.connections.EtiquetaDelInmueble.main[0][0].node === '¿Es vendedor?');
+  ck('las llamadas del telefono', /DatosDelCliente.*referencia/.test(ref(W('TEL_Llamada_al_panel.json'), 'EtiquetaLlamada')));
+  const te = W('TEL_EnviarPorWhatsApp.json');
+  const ten = te.nodes.find(x => x.name === 'EtiquetasDeLosInmuebles');
+  ck('y cada inmueble que el telefono manda por WhatsApp, despues de contestar a la llamada',
+     ten.parameters.mode === 'each' && te.connections.RespuestaOK.main[0][0].node === 'UnaPorInmueble');
+
+  // La llamada perdia las referencias con letra en medio
+  const llam = (extraido) => {
+    const llamada = { call_id: 'c1', from_number: '+34642683504', direction: 'inbound',
+      start_timestamp: Date.now() - 600000, duration_ms: 90000, disconnection_reason: 'user_hangup',
+      custom_sip_headers: {}, call_analysis: { call_summary: 'Pregunta por un piso.', user_sentiment: 'Neutral',
+        custom_analysis_data: {} } };
+    const l = wa('llamada_preparar.js', inp([{ json: {} }]), nod({ Start: { llamada } }))[0].json;
+    return wa('llamada_nombre.js', inp([{ json: {} }]), nod({ LeerLlamada: l,
+      NombreEnLaTranscripcion: { choices: [{ message: { content: JSON.stringify(extraido) } }] } }))[0].json;
+  };
+  ck('una llamada por un BN-C-107-V ya no pierde la referencia', llam({ referencia: 'BN-C-107-V' }).referencia === 'BN-C-107-V',
+     llam({ referencia: 'BN-C-107-V' }).referencia);
+  ck('la de siempre sigue igual', llam({ referencia: 'bn-1563-v' }).referencia === 'BN-1563-V');
+  ck('y lo que no es una referencia se descarta', llam({ referencia: '26699629' }).referencia === '');
+}
+
+// ===========================================================================
 console.log(fallos ? `\n${fallos} FALLOS` : '\nTodo correcto');
 process.exit(fallos ? 1 : 0);

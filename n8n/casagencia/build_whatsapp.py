@@ -901,7 +901,8 @@ def wf_aviso(ids):
         if_node("¿Hay conversacion?", "={{ Number(%s.conversacion_id || 0) }}" % p, "gt", [1520, 0], der=0,
                 tipo="number"),
         exec_sub("Etiquetar", ids.get("[WA][SUB] Etiquetar", ""), "[WA][SUB] Etiquetar",
-                 {"conversacion_id": "={{ %s.conversacion_id }}" % p, "etiquetas": "={{ %s.etiquetas }}" % p},
+                 {"conversacion_id": "={{ %s.conversacion_id }}" % p, "etiquetas": "={{ %s.etiquetas }}" % p,
+                  "referencia": "={{ %s.referencia }}" % p},
                  [1520, -200], {"conversacion_id": "number"},
                  onError="continueRegularOutput", alwaysOutputData=True),
         http("LeerAsignacion", "GET", "=" + CW_API + "/conversations/{{ Number(%s.conversacion_id || 0) }}" % p,
@@ -931,29 +932,61 @@ def wf_aviso(ids):
 
 
 def wf_etiquetar():
-    url = "=" + CW_API + "/conversations/{{ $('Start').first().json.conversacion_id }}/labels"
+    """Pone etiquetas a una conversacion. Con `referencia`, ademas la del inmueble
+    (su referencia de eGO), que se crea en la cuenta si todavia no existe."""
+    p = "$('Preparar').first().json"
+    url = "=" + CW_API + "/conversations/{{ %s.conversacion_id }}/labels" % p
     return wf("[WA][SUB] Etiquetar", [
-        trigger_sub([("conversacion_id", "number"), ("etiquetas", "string"), ("forzar", "boolean")]),
-        if_node("¿Hay algo que poner?", None, None, [200, 0], conds=[
-            ("={{ Number($json.conversacion_id || 0) }}", "gt", 0, "number"),
-            ("={{ String($json.etiquetas || '') }}", "notEmpty", None, "string")]),
-        noop("NadaQueHacer", [420, 160]),
-        http("LeerEtiquetas", "GET", url, [420, -40], cred=CRED_CHATWOOT,
+        trigger_sub([("conversacion_id", "number"), ("etiquetas", "string"), ("forzar", "boolean"),
+                     ("referencia", "string")]),
+        code_node("Preparar", code_wa("etiquetas_preparar.js"), [200, 0]),
+        if_node("¿Hay algo que poner?", None, None, [420, 0], conds=[
+            ("={{ %s.conversacion_id }}" % p, "gt", 0, "number"),
+            ("={{ %s.hay_algo }}" % p, "true", None, "boolean")]),
+        noop("NadaQueHacer", [640, 220]),
+        if_node("¿Trae referencia?", "={{ %s.etiqueta_referencia }}" % p, "notEmpty", [640, 0], tipo="string"),
+        # La etiqueta del inmueble: si no esta en la cuenta, se crea (oculta)
+        http("EtiquetasDeLaCuenta", "GET", CW_API + "/labels", [860, -180], cred=CRED_CHATWOOT,
              onError="continueRegularOutput", alwaysOutputData=True),
-        code_node("UnirEtiquetas", code_wa("etiquetas_unir.js"), [640, -40]),
-        http("GuardarEtiquetas", "POST", url, [860, -40], cred=CRED_CHATWOOT,
+        code_node("BuscarEtiqueta", code_wa("etiquetas_buscar.js"), [1080, -180]),
+        if_node("¿Ya existe?", "={{ $json.existe }}", "true", [1300, -180]),
+        pg_query("FichaDelInmueble", "select tipo_inmueble, municipio, zona, precio, tipo_transaccion "
+                 "from wa_cartera where upper(ref) = upper($1) limit 1;",
+                 "={{ [ %s.referencia ] }}" % p, [1520, -340], alwaysOutputData=True,
+                 onError="continueRegularOutput"),
+        code_node("DatosDeLaEtiqueta", code_wa("etiquetas_nueva.js"), [1740, -340]),
+        http("CrearEtiqueta", "POST", CW_API + "/labels", [1960, -340], cred=CRED_CHATWOOT,
+             body="={{ JSON.stringify($json.etiqueta) }}", onError="continueRegularOutput",
+             alwaysOutputData=True),
+        http("LeerEtiquetas", "GET", url, [2180, 0], cred=CRED_CHATWOOT,
+             onError="continueRegularOutput", alwaysOutputData=True),
+        code_node("UnirEtiquetas", code_wa("etiquetas_unir.js"), [2400, 0]),
+        # Sin cambios (o sin haber podido leer las que tiene) no se escribe
+        if_node("¿Cambia algo?", "={{ $json.cambia }}", "true", [2620, 0]),
+        noop("Ya las tenia", [2840, 200]),
+        http("GuardarEtiquetas", "POST", url, [2840, 0], cred=CRED_CHATWOOT,
              body="={{ JSON.stringify({ labels: $json.labels }) }}", onError="continueRegularOutput"),
         nota("Nota", "## Etiquetas del panel (las de Blue)\n**1-bienvenida_ia** plantilla enviada · "
              "**2-en_proceso** el cliente ha contestado · **3-agendada_ia** visita agendada de "
              "verdad · **4-intervenir** tiene que entrar una persona (la IA sigue contestando); quita "
              "2-en_proceso y mientras este no se vuelve a poner (si la pone una persona a mano, lo hace la "
-             "automatizacion de Chatwoot).\n\nChatwoot "
-             "SUSTITUYE la lista entera, asi que primero se leen las que hay y se manda la union. "
-             "Las de estado van de una en una y nunca hacia atras.", [200, -330], 500, 260),
-    ], conn(("Start", 0, "¿Hay algo que poner?", 0),
-            ("¿Hay algo que poner?", 0, "LeerEtiquetas", 0),
+             "automatizacion de Chatwoot).\n\n**La del inmueble**: con `referencia` se pone tambien la "
+             "de su referencia de eGO (*bn-1563-v*: Chatwoot las pasa a minusculas; la exacta va en la "
+             "descripcion). Si no existe en la cuenta se crea, **oculta en la barra lateral**. Lo que no "
+             "es una referencia de eGO (el numero de la web...) no se convierte en etiqueta.\n\nChatwoot "
+             "SUSTITUYE la lista entera, asi que primero se leen las que hay y se manda la union; si no "
+             "se han podido leer, no se escribe. Las de estado van de una en una y nunca hacia atras.",
+             [200, -460], 560, 340),
+    ], conn(("Start", 0, "Preparar", 0), ("Preparar", 0, "¿Hay algo que poner?", 0),
+            ("¿Hay algo que poner?", 0, "¿Trae referencia?", 0),
             ("¿Hay algo que poner?", 1, "NadaQueHacer", 0),
-            ("LeerEtiquetas", 0, "UnirEtiquetas", 0), ("UnirEtiquetas", 0, "GuardarEtiquetas", 0)))
+            ("¿Trae referencia?", 0, "EtiquetasDeLaCuenta", 0), ("¿Trae referencia?", 1, "LeerEtiquetas", 0),
+            ("EtiquetasDeLaCuenta", 0, "BuscarEtiqueta", 0), ("BuscarEtiqueta", 0, "¿Ya existe?", 0),
+            ("¿Ya existe?", 0, "LeerEtiquetas", 0), ("¿Ya existe?", 1, "FichaDelInmueble", 0),
+            ("FichaDelInmueble", 0, "DatosDeLaEtiqueta", 0), ("DatosDeLaEtiqueta", 0, "CrearEtiqueta", 0),
+            ("CrearEtiqueta", 0, "LeerEtiquetas", 0),
+            ("LeerEtiquetas", 0, "UnirEtiquetas", 0), ("UnirEtiquetas", 0, "¿Cambia algo?", 0),
+            ("¿Cambia algo?", 0, "GuardarEtiquetas", 0), ("¿Cambia algo?", 1, "Ya las tenia", 0)))
 
 
 # La referencia que manda Sara, comprobada en la cartera. Si lo que llega es el
@@ -1000,6 +1033,14 @@ def wf_cualificar(ids):
         code_node("Preparar", code_wa("cualificar_preparar.js"), [200, 0]),
         pg_query("GuardarFicha", SQL_CUALIFICAR, valores, [420, 0],
                  onError="continueRegularOutput", alwaysOutputData=True),
+        # La etiqueta del inmueble por el que se le cualifica: puede no ser el de la
+        # bienvenida (uno que ha salido en la conversacion). Va EN LINEA y no en
+        # paralelo: asi no cambia lo que este sub le devuelve a Sara.
+        exec_sub("EtiquetaDelInmueble", ids.get("[WA][SUB] Etiquetar", ""), "[WA][SUB] Etiquetar",
+                 {"conversacion_id": "={{ $('Preparar').first().json.conversacion_id }}",
+                  "referencia": "={{ $('Preparar').first().json.referencia }}"},
+                 [530, -160], {"conversacion_id": "number"}, onError="continueRegularOutput",
+                 alwaysOutputData=True),
         if_node("¿Es vendedor?", "={{ $('Preparar').first().json.es_vendedor }}", "true", [640, 0]),
         exec_sub("MarcarVendedor", ids.get("[WA][SUB] Etiquetar", ""), "[WA][SUB] Etiquetar",
                  {"conversacion_id": "={{ $('Preparar').first().json.conversacion_id }}",
@@ -1043,7 +1084,7 @@ def wf_cualificar(ids):
              "guardan igual y salen en el aviso.", [200, -330], 520, 290),
     ], conn(("Start", 0, "ResolverReferencia", 0), ("ResolverReferencia", 0, "Preparar", 0),
             ("Preparar", 0, "GuardarFicha", 0),
-            ("GuardarFicha", 0, "¿Es vendedor?", 0),
+            ("GuardarFicha", 0, "EtiquetaDelInmueble", 0), ("EtiquetaDelInmueble", 0, "¿Es vendedor?", 0),
             ("¿Es vendedor?", 0, "MarcarVendedor", 0), ("¿Es vendedor?", 1, "¿Es alquiler?", 0),
             ("MarcarVendedor", 0, "¿Es alquiler?", 0),
             ("¿Es alquiler?", 0, "FaltaAlquiler", 0), ("¿Es alquiler?", 1, "¿Visita ya pre-reservada?", 0),
@@ -1137,9 +1178,11 @@ def wf_plantilla(ids):
                  "$('RenderizarTexto').first().json.contenido, tool_calls: [], additional_kwargs: {}, "
                  "response_metadata: {}, invalid_tool_calls: [] }) ] }}" % norm,
                  [3940, 0], onError="continueRegularOutput", alwaysOutputData=True),
+        # 1-bienvenida_ia y la etiqueta del inmueble por el que pregunta
         exec_sub("MarcarBienvenida", ids.get("[WA][SUB] Etiquetar", ""), "[WA][SUB] Etiquetar",
                  {"conversacion_id": "={{ $('ConversacionLista').first().json.conversacion_id }}",
-                  "etiquetas": ETQ_BIENVENIDA}, [4160, 0], {"conversacion_id": "number"},
+                  "etiquetas": ETQ_BIENVENIDA, "referencia": "={{ %s.referencia }}" % norm},
+                 [4160, 0], {"conversacion_id": "number"},
                  onError="continueRegularOutput", alwaysOutputData=True),
         set_node("Resultado", {
             "resultado": ("string", "Plantilla enviada"),
@@ -2383,7 +2426,7 @@ returning call_id;"""
 PROMPT_NOMBRE = (
     "Te paso la transcripcion de una llamada a una inmobiliaria. 'Agent' es Sara, IA de Casagencia: NO es el "
     "cliente. Saca el nombre del CLIENTE que llama (nombre y apellido si los dice) y la referencia del "
-    "inmueble si la menciona (formato como BN-1528-V). Responde solo con JSON: "
+    "inmueble si la menciona (formato como BN-1528-V o BN-C-107-V). Responde solo con JSON: "
     '{"nombre": "", "referencia": ""}. Si no lo dice, deja la cadena vacia. No inventes.')
 
 
@@ -2420,7 +2463,8 @@ def wf_llamada_panel(ids):
                  "[WA][SUB] ConversacionDelContacto",
                  {"telefono": "={{ $json.telefono_e164 }}", "nombre": "={{ $json.nombre }}"}, [1540, 0]),
         exec_sub("EtiquetaLlamada", ids.get("[WA][SUB] Etiquetar", ""), "[WA][SUB] Etiquetar",
-                 {"conversacion_id": "={{ $json.conversacion_id }}", "etiquetas": const("ETIQUETA_LLAMADA")},
+                 {"conversacion_id": "={{ $json.conversacion_id }}", "etiquetas": const("ETIQUETA_LLAMADA"),
+                  "referencia": "={{ $('DatosDelCliente').first().json.referencia }}"},
                  [1760, 0], {"conversacion_id": "number"}, onError="continueRegularOutput", alwaysOutputData=True),
         node("DescargarGrabacion", "n8n-nodes-base.httpRequest", {
             "url": "={{ %s.grabacion }}" % l,
@@ -2560,6 +2604,14 @@ def wf_tel_enlaces(ids):
         node("RespuestaOK", "n8n-nodes-base.respondToWebhook", {
             "respondWith": "json", "responseBody": "={{ %s.respuesta }}" % c,
             "options": {"responseCode": 200}}, [1720, -80], 1.5),
+        # Una etiqueta por cada inmueble mandado (la bienvenida solo pone la del
+        # primero). DESPUES de contestar al telefono: la llamada no espera por esto.
+        code_node("UnaPorInmueble", "return $('FilasDeLosInmuebles').all();", [1940, -80]),
+        exec_sub("EtiquetasDeLosInmuebles", ids.get("[WA][SUB] Etiquetar", ""), "[WA][SUB] Etiquetar",
+                 {"conversacion_id": "={{ Number($('MandarPorWhatsApp').first().json.conversacion_id || 0) }}",
+                  "referencia": "={{ $json.referencia }}"},
+                 [2160, -80], {"conversacion_id": "number"}, cada_uno=True,
+                 onError="continueRegularOutput", alwaysOutputData=True),
         node("RespuestaNoEnviado", "n8n-nodes-base.respondToWebhook", {
             "respondWith": "json", "responseBody": "={{ %s.respuesta }}" % c,
             "options": {"responseCode": 200}}, [1060, 160], 1.5),
@@ -2579,7 +2631,8 @@ def wf_tel_enlaces(ids):
             ("¿Se puede mandar?", 1, "RespuestaNoEnviado", 0),
             ("MandarPorWhatsApp", 0, "FilasDeLosInmuebles", 0),
             ("FilasDeLosInmuebles", 0, "GuardarFichas", 0),
-            ("GuardarFichas", 0, "RespuestaOK", 0)))
+            ("GuardarFichas", 0, "RespuestaOK", 0), ("RespuestaOK", 0, "UnaPorInmueble", 0),
+            ("UnaPorInmueble", 0, "EtiquetasDeLosInmuebles", 0)))
 
 
 # El unico cambio en el telefono: al terminar cada llamada, [TEL]
