@@ -3,7 +3,7 @@
 //
 //   COMPRA   -> dos preguntas: si necesita vender para comprar (y si es que
 //               si, donde esta esa vivienda: la conversacion se marca con la
-//               etiqueta "vendedor") y como lo va a financiar. Se guardan y
+//               etiqueta "7-vendedor") y como lo va a financiar. Se guardan y
 //               Sara ofrece la visita.
 //   ALQUILER -> tres preguntas: personas, ingresos y mascotas. Se guardan, se
 //               avisa al comercial y la conversacion pasa a una persona: en

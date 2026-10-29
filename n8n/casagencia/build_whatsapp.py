@@ -1074,7 +1074,7 @@ def wf_cualificar(ids):
         nota("Nota", "## Cualificacion\n**Compra**: primero la visita y DESPUES las dos preguntas (si "
              "necesita vender para comprar y como lo financia), para que la asesora llegue con contexto. "
              "Si tiene que vender, Sara le pide la direccion o zona de esa vivienda y la conversacion se "
-             "marca con la etiqueta **vendedor**. Con la visita ya pre-reservada y las dos contestadas, "
+             "marca con la etiqueta **7-vendedor**. Con la visita ya pre-reservada y las dos contestadas, "
              "se le mandan a la asesora (la pre-reserva le llego sin ellas).\n\n**Alquiler**: tres "
              "preguntas (personas, ingresos y mascotas). Se "
              "guardan (pueden llegar en varias veces) y, cuando estan las tres, se avisa al comercial por "

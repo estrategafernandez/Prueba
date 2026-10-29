@@ -285,7 +285,9 @@ const ETIQUETAS = {
 // conversacion pueda volver hacia atras.
 const ESTADOS = [ETIQUETAS.bienvenida, ETIQUETAS.seguimiento, ETIQUETAS.en_proceso, ETIQUETAS.agendada];
 // Etiquetas que se SUMAN a las de estado (no cuentan como estado):
-const ETIQUETA_VENDEDOR = 'vendedor';               // el comprador tiene que vender una vivienda
+// El nombre es el del panel: el equipo la renombro de vendedor a 7-vendedor (29/10/2026).
+// Aunque empiece por numero NO es de estado: se suma a las demas y no quita ninguna.
+const ETIQUETA_VENDEDOR = '7-vendedor';             // el comprador tiene que vender una vivienda
 const ETIQUETA_LLAMADA  = '0-llamada_telefonica';   // la conversacion tiene llamadas del asistente telefonico
 
 // La etiqueta del INMUEBLE: cada conversacion lleva una por cada inmueble por el

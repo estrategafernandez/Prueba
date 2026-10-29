@@ -276,7 +276,8 @@ r = wa('cualificar_preparar.js', inp([{ json: { telefono: '+34600000001', nombre
   referencia: 'BN-1547-V', operacion: 'venta', tiempo_buscando: 'un ano', necesita_vender: 'si, tengo que vender el mio',
   es_vendedor: true, vivienda_a_vender: 'calle Mayor, Castellon', financiacion: 'hipoteca preconcedida',
   conversacion_id: 1 } }]))[0].json;
-ck('vendedor: etiqueta "vendedor"', r.es_vendedor === true && r.etiqueta_vendedor === 'vendedor');
+ck('vendedor: etiqueta "7-vendedor" (el nombre que tiene ahora en el panel)',
+   r.es_vendedor === true && r.etiqueta_vendedor === '7-vendedor', r.etiqueta_vendedor);
 ck('vendedor: guarda la zona y la financiacion', r.q_vivienda_venta === 'calle Mayor, Castellon'
    && r.q_financiacion === 'hipoteca preconcedida');
 // Con las dos contestadas, lo que toca depende de si ya tiene la visita
@@ -448,6 +449,11 @@ ck('4-intervenir con otros estados: se suma (y respeta las de las personas)',
 ck('con 4-intervenir puesto, 2-en_proceso no vuelve', JSON.stringify(unir(['4-intervenir'], '2-en_proceso')) === '["4-intervenir"]'
    && JSON.stringify(unir(['1-bienvenida_ia', '4-intervenir'], '2-en_proceso')) === '["4-intervenir"]', JSON.stringify(unir(['1-bienvenida_ia', '4-intervenir'], '2-en_proceso')));
 ck('respeta las que pone una persona', unir(['vip', '1-bienvenida_ia'], '3-agendada_ia').join() === 'vip,3-agendada_ia');
+ck('7-vendedor NO es de estado aunque empiece por numero: se suma y no quita en proceso',
+   unir(['2-en_proceso'], '7-vendedor').join() === '2-en_proceso,7-vendedor', unir(['2-en_proceso'], '7-vendedor').join());
+ck('y cuando cambia el estado, 7-vendedor se queda', unir(['7-vendedor', '2-en_proceso'], '3-agendada_ia').join() === '7-vendedor,3-agendada_ia'
+   && unir(['7-vendedor', '2-en_proceso'], '4-intervenir').join() === '7-vendedor,4-intervenir',
+   unir(['7-vendedor', '2-en_proceso'], '3-agendada_ia').join());
 ck('seguimiento: 1-bienvenida_ia pasa a 5-seguimiento_1', JSON.stringify(unir(['1-bienvenida_ia', 'vip'], '5-seguimiento_1')) === '["vip","5-seguimiento_1"]',
    JSON.stringify(unir(['1-bienvenida_ia', 'vip'], '5-seguimiento_1')));
 ck('seguimiento: si contesta, pasa a 2-en_proceso', JSON.stringify(unir(['5-seguimiento_1'], '2-en_proceso')) === '["2-en_proceso"]');
