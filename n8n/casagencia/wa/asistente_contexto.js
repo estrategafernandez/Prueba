@@ -72,6 +72,9 @@ const lineas = [
   `- Telefono (ya lo tienes, no lo pidas): ${d.telefono_e164}`,
   `- Como ha llegado: ${String(fila.portal ?? '') === 'telefono'
       ? 'ha llamado por telefono y le atendiste TU (el resumen de la llamada esta en tu memoria): no le vuelvas a preguntar lo que ya te conto'
+      // Su ficha la dio de alta [WA] 2 al escribir una referencia nuestra: no hubo bienvenida
+      : String(fila.portal ?? '') === 'whatsapp'
+        ? 'ha escrito el directamente por WhatsApp preguntando por este inmueble (no le mandamos ninguna plantilla)'
       : hay(fila.telefono_wa) ? 'solicitud de un portal (ya le mandamos la plantilla de bienvenida)'
       : 'ha escrito el directamente, sin solicitud previa'}`,
   `- Portal: ${val(fila.portal)}`,

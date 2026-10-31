@@ -2882,5 +2882,68 @@ console.log('\n== La etiqueta del inmueble (su referencia de eGO) ==');
 }
 
 // ===========================================================================
+console.log('\n== Quien escribe directo con una referencia: su ficha, y su comercial ==');
+{
+  // Anna (conversacion 319, 31/10): escribio "Hola, me interesa el inmueble ref.
+  // BN-C-127-A (Piso en Benicassim)". La conversacion se asigno bien a Carmen, pero
+  // la referencia solo quedaba en el texto: no habia ficha. Nueve horas despues
+  // Sara llamo a la cualificacion sin referencia y el aviso se fue a Laurence.
+  const cualifica = (refDelLead) => wa('cualificar_preparar.js', inp([{ json: {} }]), nod({
+    Start: { telefono: '+34673989383', nombre: 'Anna', referencia: '', operacion: 'alquiler',
+             personas: '4 personas', ingresos: 'Contrato indefinido', mascotas: 'No', conversacion_id: 319 },
+    ResolverReferencia: { ref_cartera: '', municipio_cartera: '', ref_del_lead: refDelLead } }))[0].json;
+  ck('ASI PASO: sin ficha y sin referencia, el aviso caia en Laurence', cualifica('').asesora === 'Laurence');
+  const ahora = cualifica('BN-C-127-A');
+  ck('con la ficha de lo que escribio, aunque Sara no pase la referencia, es de Carmen',
+     ahora.asesora === 'Carmen' && ahora.referencia === 'BN-C-127-A', ahora.asesora + ' / ' + ahora.referencia);
+
+  // El contexto que lee Sara en cada turno, con esa ficha (sin asesora: sale del prefijo)
+  const fila = { telefono_wa: '34673989383', referencia: 'BN-C-127-A', operacion: 'alquiler', es_alquiler: true,
+                 asesora: '', portal: 'whatsapp', estado: 'escribio_directo', nombre: 'Anna' };
+  const c = contexto(fila);
+  ck('Sara ve la referencia en cada turno', /Referencia del inmueble que pidio: BN-C-127-A/.test(c.contexto)
+     && c.referencia === 'BN-C-127-A');
+  ck('y la comercial es Carmen, tambien para asignar la conversacion', c.asesora === 'Carmen'
+     && c.agente_id === 5, c.asesora + ' / ' + c.agente_id);
+  ck('no le cuenta que le mandamos una bienvenida que no existio',
+     /escrito el directamente por WhatsApp preguntando por este inmueble/.test(c.contexto)
+     && !/ya le mandamos la plantilla de bienvenida/.test(c.contexto));
+
+  // El asistente: la ficha se apunta ANTES de leerla, y la etiqueta despues de contestar
+  const w2 = JSON.parse(fs.readFileSync(B + 'workflows_wa/WA_2_Asistente_de_WhatsApp.json', 'utf8'));
+  const n2 = (n) => w2.nodes.find(x => x.name === n);
+  const c2 = w2.connections;
+  const destinos = (n) => (c2[n]?.main || []).flat().map(d => d.node);
+  ck('[WA] 2 apunta la ficha de lo que escribe antes de leer las fichas',
+     destinos('CodeFechaHoraActual').join() === 'FichaDeLoQueEscribe'
+     && destinos('FichaDeLoQueEscribe').includes('LeerFichaDelLead'));
+  const f = n2('FichaDeLoQueEscribe');
+  ck('y aunque no nombre ninguna (o falle), el asistente sigue: siempre una fila',
+     f.alwaysOutputData === true && f.onError === 'continueRegularOutput'
+     && /select coalesce\(json_agg\(referencia\), '\[\]'::json\) as nombradas/.test(f.parameters.query));
+  const q = f.parameters.query;
+  ck('mira SOLO lo que escribe el cliente (no lo que recomienda Sara)',
+     /\$\('JuntarMensajes'\)\.first\(\)\.json\.mensaje/.test(f.parameters.options.queryReplacement));
+  ck('reconoce la referencia con o sin guiones y el enlace de nuestra web',
+     /regexp_replace\(upper\(c\.ref\), '\[\^A-Z0-9\]', '', 'g'\)/.test(q)
+     && q.includes("casagencia\\.com/inmueble/\\S*[^0-9]' || c.web_id"));
+  ck('solo da de alta inmuebles de la cartera, sin asesora (sale del prefijo) y como escribio_directo',
+     /from wa_cartera c/.test(q) && /'escribio_directo'/.test(q) && !/asesora/.test(q.split('apuntadas as')[1]));
+  ck('si ya tenia esa ficha no la pisa: solo le pone la conversacion si le faltaba',
+     /on conflict \(telefono_wa, referencia\) do update\s+set conversacion_id = coalesce\(wa_leads\.conversacion_id, excluded\.conversacion_id\)/.test(q));
+  // n8n ejecuta antes la rama de ARRIBA: la etiqueta, debajo, va despues de que Sara conteste
+  ck('la etiqueta va en una rama aparte, despues de que Sara conteste',
+     destinos('FichaDeLoQueEscribe').includes('¿Nombra algun inmueble?')
+     && n2('¿Nombra algun inmueble?').position[1] > n2('LeerFichaDelLead').position[1]
+     && n2('EtiquetaDeLoQueEscribe').parameters.mode === 'each'
+     && destinos('EtiquetaDeLoQueEscribe').length === 0);
+  // Y a Sara se le dice que no deje la referencia vacia
+  const tools = JSON.stringify(w2.nodes.filter(x => /toolWorkflow/.test(x.type)));
+  ck('a Sara: nunca la referencia vacia si sabe de que inmueble hablan', /NUNCA la dejes vacia si sabes de que inmueble hablais/.test(tools));
+  ck('y en la cualificacion, que vacia el aviso se va a Laurence y que vale el enlace',
+     /vacia, el aviso se va a Laurence/.test(tools) && /pasa el enlace: se traduce solo/.test(tools));
+}
+
+// ===========================================================================
 console.log(fallos ? `\n${fallos} FALLOS` : '\nTodo correcto');
 process.exit(fallos ? 1 : 0);

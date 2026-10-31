@@ -518,6 +518,42 @@ SQL_PLANTILLA_Y_ENTRANTE = """with w as (
 update leads_entrantes set estado = 'enviado' where id = $4
 returning id;"""
 
+# El cliente que escribe directo ("Hola, me interesa el inmueble ref. BN-C-127-A",
+# el boton de la web) no pasa por ningun portal, asi que no tenia ficha: la
+# referencia solo quedaba en el texto de ese mensaje. En el turno siguiente ya no
+# la tenia nadie, y la cualificacion le pasaba el aviso a Laurence en vez de a la
+# comercial del inmueble (Anna, conversacion 319, 31/10/2026).
+# Aqui se da de alta la ficha en cuanto escribe una referencia de la cartera (con
+# o sin guiones) o un enlace de nuestra web. Sin asesora: sale del prefijo de la
+# referencia, como en todo lo demas. Devuelve SIEMPRE una fila, para que el
+# asistente siga aunque no haya ninguna.
+SQL_FICHA_DE_LO_QUE_ESCRIBE = r"""with x as (
+  select regexp_replace(upper(coalesce($2::text, '')), '[^A-Z0-9]', '', 'g') as junto,
+         coalesce($2::text, '') as crudo
+), nombradas as (
+  select c.ref, coalesce(c.enlace, '') as enlace,
+         case when c.tipo_transaccion ilike '%alquil%' then 'alquiler' else 'venta' end as operacion
+    from wa_cartera c, x
+   where x.junto like '%' || regexp_replace(upper(c.ref), '[^A-Z0-9]', '', 'g') || '%'
+      or (coalesce(c.web_id, '') <> ''
+          and x.crudo ~* ('casagencia\.com/inmueble/\S*[^0-9]' || c.web_id || '([^0-9]|$)'))
+), apuntadas as (
+  insert into wa_leads (telefono_wa, telefono_e164, referencia, nombre, portal, operacion, es_alquiler,
+                        enlace, conversacion_id, estado)
+  select $1::text, $3::text, n.ref, case when coalesce($4::text, '') ~ '^[+0-9 ]*$' then '' else $4::text end, 'whatsapp',
+         n.operacion, n.operacion = 'alquiler', n.enlace, nullif(nullif($5::text, ''), '0')::bigint,
+         'escribio_directo'
+    from nombradas n
+   where coalesce($1::text, '') <> ''
+  on conflict (telefono_wa, referencia) do update
+     set conversacion_id = coalesce(wa_leads.conversacion_id, excluded.conversacion_id),
+         actualizado_en = now()
+  returning referencia, (xmax = 0) as nueva
+)
+select coalesce(json_agg(referencia), '[]'::json) as nombradas,
+       coalesce(json_agg(referencia) filter (where nueva), '[]'::json) as nuevas
+  from apuntadas;"""
+
 SQL_FICHA = """select l.*,
        -- Si ha pedido informacion de varios inmuebles, todos (Sara los tiene presentes)
        coalesce((select json_agg(to_jsonb(o) - 'notas' order by o.actualizado_en desc)
@@ -1803,8 +1839,13 @@ def herramienta(nombre, ids, desc, valores, pos, tipos=None):
     }, pos, 2.2)
 
 
-REF_DESC = ("Referencia del inmueble tal y como la tengas (la de Datos del cliente o la que diga el "
-            "cliente), con todas sus letras y numeros. Ejemplo: BN-1547-V.")
+REF_DESC = ("Referencia del inmueble del que estais hablando, con todas sus letras y numeros (ejemplo: "
+            "BN-1547-V): la de Datos del cliente, la que escribio el cliente o la de un inmueble que le "
+            "has encontrado tu. NUNCA la dejes vacia si sabes de que inmueble hablais.")
+# En la cualificacion, ademas: de la referencia sale la comercial que recibe el
+# aviso, y su resolutor SI entiende el numero del enlace de la web (los demas no).
+REF_CUALIFICAR = (REF_DESC + " De ella sale la comercial que recibe el aviso: vacia, el aviso se va a "
+                  "Laurence. Si solo tienes el enlace de casagencia.com, pasa el enlace: se traduce solo.")
 
 
 def herramientas(ids, x=1900, y=360):
@@ -1900,7 +1941,7 @@ def herramientas(ids, x=1900, y=360):
             "conversacion a una persona.",
             {"telefono": TEL_CLIENTE, "conversacion_id": CONV,
              "nombre": de_la_ia("nombre", "Nombre del cliente. Vacio si no lo sabes."),
-             "referencia": de_la_ia("referencia", REF_DESC),
+             "referencia": de_la_ia("referencia", REF_CUALIFICAR),
              "operacion": de_la_ia("operacion", "venta o alquiler."),
              "tiempo_buscando": de_la_ia("tiempo_buscando", "Solo compra. YA NO SE PREGUNTA: mandalo solo si el cliente lo dice por su cuenta. Vacio si no."),
              "necesita_vender": de_la_ia("necesita_vender", "Solo compra. Si necesita vender para comprar, con sus palabras. Vacio si no aplica."),
@@ -2071,6 +2112,25 @@ def wf_asistente(ids):
                   "  fecha_hora: ahora.toFormat('cccc dd/MM/yyyy HH:mm'),\n"
                   "  hoy: ahora.toISODate(),\n"
                   "} }];", [4980, Y]),
+        # Si el cliente escribe una referencia nuestra, su ficha, ANTES de leerla:
+        # asi Sara la tiene ya en este turno y la cualificacion encuentra la comercial
+        pg_query("FichaDeLoQueEscribe", SQL_FICHA_DE_LO_QUE_ESCRIBE,
+                 "={{ [ %s.telefono_wa, %s.mensaje, %s.telefono_e164, %s.nombre, %s.conversacion_id ] }}"
+                 % (("$('JuntarMensajes').first().json",) * 5), [5090, Y - 140],
+                 alwaysOutputData=True, onError="continueRegularOutput"),
+        # La etiqueta de cada inmueble que nombra. Va DEBAJO de LeerFichaDelLead a
+        # proposito: n8n hace antes la rama de arriba, asi que se pone despues de que
+        # Sara conteste y no la retrasa.
+        if_node("¿Nombra algun inmueble?", "={{ ($json.nombradas || []).length }}", "gt", [5200, Y + 200],
+                der=0, tipo="number"),
+        code_node("UnaPorReferencia",
+                  "return [].concat($('FichaDeLoQueEscribe').first().json.nombradas || [])"
+                  ".map(r => ({ json: { referencia: r } }));", [5420, Y + 200]),
+        exec_sub("EtiquetaDeLoQueEscribe", ids.get("[WA][SUB] Etiquetar", ""), "[WA][SUB] Etiquetar",
+                 {"conversacion_id": "={{ Number($('JuntarMensajes').first().json.conversacion_id || 0) }}",
+                  "referencia": "={{ $json.referencia }}"},
+                 [5640, Y + 200], {"conversacion_id": "number"}, cada_uno=True,
+                 onError="continueRegularOutput", alwaysOutputData=True),
         pg_query("LeerFichaDelLead", SQL_FICHA, "={{ [ $('JuntarMensajes').first().json.telefono_wa ] }}",
                  [5200, Y], alwaysOutputData=True, onError="continueRegularOutput"),
         # La ficha completa del inmueble del lead va en el contexto de cada turno
@@ -2213,7 +2273,11 @@ def wf_asistente(ids):
         ("JuntarMensajes", 0, "CorreoDelLead", 0), ("CorreoDelLead", 0, "¿Poner correo?", 0),
         ("¿Poner correo?", 0, "PonerCorreo", 0),
         ("EstadoEnProceso", 0, "¿Marcar en proceso?", 0), ("¿Marcar en proceso?", 0, "MarcarEnProceso", 0),
-        ("CodeFechaHoraActual", 0, "LeerFichaDelLead", 0),
+        ("CodeFechaHoraActual", 0, "FichaDeLoQueEscribe", 0),
+        ("FichaDeLoQueEscribe", 0, "LeerFichaDelLead", 0),
+        ("FichaDeLoQueEscribe", 0, "¿Nombra algun inmueble?", 0),
+        ("¿Nombra algun inmueble?", 0, "UnaPorReferencia", 0),
+        ("UnaPorReferencia", 0, "EtiquetaDeLoQueEscribe", 0),
         ("LeerFichaDelLead", 0, "LeerCartera", 0), ("LeerCartera", 0, "LeerDirecciones", 0),
         ("LeerDirecciones", 0, "ContextoDelLead", 0),
         ("ContextoDelLead", 0, "¿AsignarConversacion?", 0),
