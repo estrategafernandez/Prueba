@@ -238,6 +238,8 @@ PRONUNCIACION = [
 ]
 
 AGENTE = {
+    # Hablaba demasiado deprisa (Paco, 01/11/2026). 1.0 es la velocidad normal.
+    "voice_speed": 1.1,              # antes 1.32
     "pronunciation_dictionary": PRONUNCIACION,
     "begin_message_delay_ms": 3500,
     "responsiveness": 0.55,          # antes 0.85: arrancaba antes de que el cliente terminara
@@ -285,7 +287,8 @@ def main():
     av = ag["version"]
     print(f"  Agente actualizado -> version {av}")
 
-    call("POST", f"/publish-agent/{AGENT_ID}", {"version": av})
+    # Retell quito /publish-agent el 20/07/2026: ahora es /publish-agent-version
+    call("POST", f"/publish-agent-version/{AGENT_ID}", {"version": av})
     print(f"  Agente PUBLICADO -> version {av} (el numero de telefono usa 'latest_published')")
 
 

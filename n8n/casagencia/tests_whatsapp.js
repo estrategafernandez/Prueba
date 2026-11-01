@@ -1911,11 +1911,13 @@ console.log('\n== El telefono hace las tres preguntas de compra ==');
 console.log('\n== Como se presenta Sara ==');
 {
   const prompt = fs.readFileSync(B + 'retell/general_prompt.md', 'utf8');
-  ck('el prompt del telefono dice "Sara, IA de la oficina" y prohibe "la IA"',
-     /"Sí, soy Sara, IA de la oficina"/.test(prompt) && /Nunca "la IA"/.test(prompt));
-  ck('y pide que IA se diga rapido, no deletreado', /IA se dice rápido/.test(prompt));
+  ck('el prompt del telefono dice "Sara, ia de casa agencia" y prohibe "la ia"',
+     /"Sí, soy Sara, ia de casa agencia"/.test(prompt) && /Nunca "la ia"/.test(prompt));
+  ck('y pide escribir "ia" en minusculas (en mayusculas la voz lo dice como sigla)',
+     /"ia" en minúsculas y "casa agencia" separado/.test(prompt));
   const sal = fs.readFileSync(B + 'nodes/sal_datos.js', 'utf8');
-  ck('ningun saludo dice "la IA"', !/\bla IA\b/.test(sal.split('\n').filter(l => /saludo:|const CORTO/.test(l)).join('\n')));
+  ck('ningun saludo dice "la ia" ni "IA" en mayusculas',
+     !/\bla ia\b|\bIA\b/i.test(sal.split('\n').filter(l => /saludo:|const CORTO/.test(l)).join('\n').replace(/\bia\b/g, 'x')));
 }
 
 // ===========================================================================

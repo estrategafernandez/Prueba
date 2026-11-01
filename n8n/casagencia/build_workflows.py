@@ -653,11 +653,9 @@ def wf_saludo(orig):
             code_node("ComponerSaludo", "sal_datos.js", [200, 0]),
             node("Respond to Webhook", "n8n-nodes-base.respondToWebhook", {
                 "respondWith": "json",
-                "responseBody": '={\n  "dynamic_variables": {\n'
-                                '    "saludovariable": "{{ $json.saludo }}",\n'
-                                '    "telefono_cliente": "{{ $json.telefono_cliente }}",\n'
-                                '    "telefono_cliente_hablado": "{{ $json.telefono_cliente_hablado }}"\n'
-                                '  }\n}',
+                # El objeto entero lo arma ComponerSaludo (formato call_inbound de
+                # Retell): asi siempre es JSON valido, sin plantillas a mano.
+                "responseBody": "={{ JSON.stringify($json.respuesta) }}",
                 "options": {"responseCode": 200},
             }, [440, 0], 1.5),
             node("Nota", "n8n-nodes-base.stickyNote", {"content":
@@ -666,7 +664,9 @@ def wf_saludo(orig):
                  "despues. Hay que quedarse con el ultimo; si no, todas las llamadas suenan a "
                  "'general' y el saludo de cada comercial no se usa nunca.\n\n"
                  "Aqui tambien se recoge el telefono del cliente, para que Sara lo confirme en vez "
-                 "de pedirlo cifra a cifra.",
+                 "de pedirlo cifra a cifra.\n\nY cuanto espera Sara para saludar: 0,8 s en las lineas "
+                 "directas (si espera, el cliente dice \"¿Si?\" y le tapa el saludo) y 3,5 s en las de "
+                 "portal, que traen un aviso grabado.",
                  "height": 260, "width": 430}, [200, -300], 1),
         ],
         "connections": conn(
