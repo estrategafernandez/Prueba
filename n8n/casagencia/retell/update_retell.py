@@ -88,7 +88,7 @@ def construir_tools(actuales):
     for t in out:
         if t.get("name") == "BuscarDisponibilidadCalendario":
             t["description"] = (
-                "Comprueba si se puede hacer una visita de una hora a un inmueble en una fecha y hora "
+                "Comprueba si se puede hacer una visita de 45 minutos a un inmueble en una fecha y hora "
                 "concretas. Valida el horario de oficina, los festivos y la agenda real de la asesora. "
                 "Usala solo cuando el cliente haya elegido un inmueble y ya sepas su nombre, telefono, la "
                 "referencia, el tipo de transaccion y una fecha y hora concretas. Solo consulta: no crea la "

@@ -2561,8 +2561,8 @@ console.log('\n== Dos visitas pisandose: el hueco ofrecido no queda apartado =='
   // Lo que denuncio Paco el 27/10: Gisela tenia visita de 17 a 18 y la IA
   // "ofrecio" las 17:30. Lo que de verdad paso es que cuando se consulto la
   // agenda esa visita AUN NO EXISTIA (se creo 18 minutos despues, a mano).
-  // Aqui se fija lo que si depende de nosotros: que una visita de una hora
-  // tape la media hora siguiente, y que Sara sepa que el hueco no esta apartado.
+  // Aqui se fija lo que si depende de nosotros: que una visita ya puesta tape
+  // los huecos que se le meten encima, y que Sara sepa que el hueco no esta apartado.
   const { estaLibre, rangosOcupados, huecosDelDia } =
     Function('DateTime', LIB + '; return { estaLibre, rangosOcupados, huecosDelDia };')(DateTime);
   const DIA = '2026-10-27';
@@ -2573,7 +2573,7 @@ console.log('\n== Dos visitas pisandose: el hueco ofrecido no queda apartado =='
     ...extra } });
   const ocupados = rangosOcupados([ev('17:00', '18:00')]);
   ck('una visita de 17 a 18 tapa las 17:30', estaLibre(DIA, '17:30', ocupados) === false);
-  ck('y tambien las 16:30 (la visita dura una hora)', estaLibre(DIA, '16:30', ocupados) === false);
+  ck('y tambien las 16:30 (la visita dura 45 minutos y se meteria en la de las 17)', estaLibre(DIA, '16:30', ocupados) === false);
   ck('pero a las 18:00 ya se puede', estaLibre(DIA, '18:00', ocupados) === true);
   ck('con la agenda vacia, las 17:30 estan libres', estaLibre(DIA, '17:30', rangosOcupados([])) === true);
   // Y en la lista de huecos del dia no asoma ninguno que se pise

@@ -11,8 +11,17 @@
 
 const ZONA = 'Europe/Madrid';
 
+// --- Cuanto dura una visita y cada cuanto se ofrecen huecos ----------------
+// Paco (02/11/2026): de media en media hora iba muy justo. La visita dura 45
+// minutos y los huecos se proponen cada 45 desde que abre cada bloque (09:00,
+// 09:45, 10:30...). La cita que se crea en el calendario dura lo mismo: los
+// builds leen VISITA_MINUTOS de aqui. Si el cliente pide otra hora (las 10:00),
+// vale igual si cabe y esta libre: la rejilla es solo para proponer.
+const VISITA_MINUTOS = 45;
+const PASO_HUECOS_MINUTOS = 45;
+
 // --- Horario de oficina de cada asesora ------------------------------------
-// La visita dura 1 hora y tiene que caber ENTERA dentro de un bloque.
+// La visita (VISITA_MINUTOS) tiene que caber ENTERA dentro de un bloque.
 const HORARIOS = {
   Carmen: { lv: [['09:30', '14:00'], ['16:00', '19:30']], sab: [['10:00', '14:00']], dom: null },
   Gisela: { lv: [['09:00', '14:00'], ['16:00', '19:00']], sab: null,                 dom: null }
@@ -203,7 +212,7 @@ function validarFranja(fecha, hora, asesora, prefijo, ahora) {
   const bloques = bloquesDelDia(fecha, asesora);
   if (!bloques || !bloques.length) return { valido: false, motivo: 'cerrado' };
 
-  const fin = ini.plus({ hours: 1 });
+  const fin = ini.plus({ minutes: VISITA_MINUTOS });
   const cabe = bloques.some(([a, b]) => {
     const ba = DateTime.fromFormat(`${fecha} ${a}`, 'yyyy-MM-dd HH:mm', { zone: ZONA });
     const bb = DateTime.fromFormat(`${fecha} ${b}`, 'yyyy-MM-dd HH:mm', { zone: ZONA });
@@ -247,7 +256,7 @@ function rangosOcupados(items) {
 
 function estaLibre(fecha, hora, ocupados) {
   const ini = DateTime.fromFormat(`${fecha} ${hora}`, 'yyyy-MM-dd HH:mm', { zone: ZONA });
-  const fin = ini.plus({ hours: 1 });
+  const fin = ini.plus({ minutes: VISITA_MINUTOS });
   return !ocupados.some(o => ini < o.end && fin > o.start);
 }
 
@@ -260,11 +269,11 @@ function huecosDelDia(fecha, asesora, prefijo, ocupados, ahora) {
   for (const [a, b] of bloques) {
     let cursor = DateTime.fromFormat(`${fecha} ${a}`, 'yyyy-MM-dd HH:mm', { zone: ZONA });
     const finBloque = DateTime.fromFormat(`${fecha} ${b}`, 'yyyy-MM-dd HH:mm', { zone: ZONA });
-    while (cursor.plus({ hours: 1 }) <= finBloque) {
+    while (cursor.plus({ minutes: VISITA_MINUTOS }) <= finBloque) {
       if (cursor >= ahora && estaLibre(fecha, cursor.toFormat('HH:mm'), ocupados)) {
         huecos.push(cursor.toFormat('HH:mm'));
       }
-      cursor = cursor.plus({ minutes: 30 });
+      cursor = cursor.plus({ minutes: PASO_HUECOS_MINUTOS });
     }
   }
   return huecos;

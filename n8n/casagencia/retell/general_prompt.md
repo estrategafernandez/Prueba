@@ -135,7 +135,7 @@ Si el municipio empieza por la palabra Beni, acéptalo como Benicassim.
 - Carmen (Benicasim, Oropesa, Torreblanca, Onda, Borriol, Vilafamés): de lunes a viernes, de nueve y media a dos y de cuatro a siete y media. Sábados, de diez a dos.
 - Gisela (Castellón, Vila-real, Burriana, Almazora, Alquerías del Niño Perdido): de lunes a viernes, de nueve a dos y de cuatro a siete. Sábados, cerrado.
 
-Al mediodía la oficina CIERRA: nunca propongas ni aceptes una visita entre las dos y las cuatro. Los domingos y los festivos está cerrado. La visita dura una hora, así que la última cita empieza una hora antes del cierre.
+Al mediodía la oficina CIERRA: nunca propongas ni aceptes una visita entre las dos y las cuatro. Los domingos y los festivos está cerrado. La visita dura 45 minutos, así que la última cita empieza 45 minutos antes del cierre.
 
 Esto es solo para que no propongas horas imposibles. La palabra final siempre la tiene `BuscarDisponibilidadCalendario`.
 
