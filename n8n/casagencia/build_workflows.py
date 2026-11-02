@@ -6,7 +6,7 @@
 
 La API key se lee de la variable de entorno N8N_API_KEY.
 """
-import json, os, re, sys, uuid, pathlib, urllib.request
+import json, os, sys, uuid, pathlib, urllib.request
 
 BASE = pathlib.Path(__file__).parent
 N8N = "https://n8n-casagencia.serversvisionarius.com"
@@ -20,8 +20,6 @@ SETTINGS_OK = {"saveExecutionProgress", "saveManualExecutions", "saveDataErrorEx
                "timezone", "executionOrder"}
 
 LIB = (BASE / "lib" / "casagencia_comun.js").read_text(encoding="utf-8")
-# Lo que dura la cita que se crea en el calendario: lo decide la libreria comun
-VISITA_MIN = int(re.search(r"^const VISITA_MINUTOS = (\d+);", LIB, re.M).group(1))
 # --sin-email: despliega ConfirmarCita y registrarMensaje sin el aviso (solo para pruebas)
 SIN_EMAIL = "--sin-email" in sys.argv
 
@@ -182,7 +180,7 @@ def wf_confirmar(orig):
             node("InsertarEnAgenda", "n8n-nodes-base.googleCalendar", {
                 "calendar": {"__rl": True, "value": "={{ $json.calendario }}", "mode": "id"},
                 "start": "={{ %s.toISO() }}" % ini,
-                "end": "={{ %s.plus({minutes:%d}).toISO() }}" % (ini, VISITA_MIN),
+                "end": "={{ %s.plus({hours:1}).toISO() }}" % ini,
                 # Verde (Albahaca), como lo que agenda la IA por WhatsApp
                 "additionalFields": {"summary": "={{ $json.titulo }}",
                                      "description": "={{ $json.descripcion }}", "color": "10"},

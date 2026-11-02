@@ -71,8 +71,6 @@ else:
     PRUEBAS_ACTIVAS = 0
 CARTERA = (WA / "cartera.js").read_text(encoding="utf-8")
 LIB = (BASE / "lib" / "casagencia_comun.js").read_text(encoding="utf-8")
-# Lo que dura la cita que se crea en el calendario: lo decide la libreria comun
-VISITA_MIN = int(re.search(r"^const VISITA_MINUTOS = (\d+);", LIB, re.M).group(1))
 PROMPT = (WA / "prompt_asistente.md").read_text(encoding="utf-8")
 
 
@@ -808,7 +806,7 @@ def wf_confirmar(ids):
         node("InsertarEnAgenda", "n8n-nodes-base.googleCalendar", {
             "calendar": {"__rl": True, "value": "={{ $json.calendario }}", "mode": "id"},
             "start": "={{ %s.toISO() }}" % ini,
-            "end": "={{ %s.plus({minutes:%d}).toISO() }}" % (ini, VISITA_MIN),
+            "end": "={{ %s.plus({hours:1}).toISO() }}" % ini,
             # PRE-RESERVA: bloquea el hueco (nadie mas puede coger esa hora) y la
             # asesora la confirma llamando al cliente, o la mueve. El resto del
             # titulo es el de las citas del telefono (asi buscarCitaPorTelefono

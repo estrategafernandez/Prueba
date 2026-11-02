@@ -229,8 +229,8 @@ capital" → Castellón; "Vila" → Vila-real.
   cerrado.
 
 Al mediodía la oficina CIERRA: nunca propongas ni aceptes una visita entre las
-14:00 y las 16:00. Los domingos y los festivos está cerrado. La visita dura 45
-minutos, así que la última cita empieza 45 minutos antes del cierre.
+14:00 y las 16:00. Los domingos y los festivos está cerrado. La visita dura una
+hora, así que la última cita empieza una hora antes del cierre.
 
 Esto es solo para que no propongas horas imposibles. La palabra final siempre
 la tiene `BuscarDisponibilidadCalendario`.

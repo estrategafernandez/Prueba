@@ -206,43 +206,5 @@ check('"VACACIONES" SI bloquea el dia entero', rr(vaca).disponible === false, `m
 check('una reunion a esa hora bloquea la hora', rr(reu).disponible === false);
 check('evento marcado "Libre" no bloquea', rr(libre).disponible === true);
 
-// ---------- Visitas de 45 minutos, huecos cada 45 (Paco, 02/11/2026) ----------
-console.log('\n== Visitas de 45 minutos y huecos cada 45 ==');
-{
-  const L = Function('DateTime', LIB + '; return { VISITA_MINUTOS, PASO_HUECOS_MINUTOS, huecosDelDia, estaLibre, rangosOcupados };')(DateTime);
-  check('la visita dura 45 minutos y los huecos van cada 45', L.VISITA_MINUTOS === 45 && L.PASO_HUECOS_MINUTOS === 45);
-  const antes = DateTime.fromFormat(`${JUEVES} 07:00`, 'yyyy-MM-dd HH:mm', { zone: 'Europe/Madrid' });
-  const gisela = L.huecosDelDia(JUEVES, 'Gisela', 'CS', [], antes);
-  check('Gisela: 09:00, 09:45, 10:30... (ya no de media en media hora)',
-    gisela.join(' ') === '09:00 09:45 10:30 11:15 12:00 12:45 16:00 16:45 17:30 18:15', gisela.join(' '));
-  const carmen = L.huecosDelDia(JUEVES, 'Carmen', 'BN', [], antes);
-  check('Carmen: 09:30, 10:15, 11:00... hasta las 13:15, que acaba justo a las 14:00',
-    carmen.join(' ') === '09:30 10:15 11:00 11:45 12:30 13:15 16:00 16:45 17:30 18:15', carmen.join(' '));
-  // Lo que ocupa la visita: 45 minutos, ni uno mas
-  const D = (h) => DateTime.fromFormat(`${JUEVES} ${h}`, 'yyyy-MM-dd HH:mm', { zone: 'Europe/Madrid' }).toISO();
-  const ocup = L.rangosOcupados([{ json: { summary: 'Visita', status: 'confirmed',
-    start: { dateTime: D('17:00') }, end: { dateTime: D('18:00') } } }]);
-  check('con una visita de 17 a 18, las 16:15 caben (acaban a las 17:00)', L.estaLibre(JUEVES, '16:15', ocup) === true);
-  check('las 16:30 no (se meterian en la de las 17)', L.estaLibre(JUEVES, '16:30', ocup) === false);
-  // Al final de la manana y de la tarde: ahora cabe un cuarto de hora mas
-  for (const [h, ref, esp, desc] of [
-    ['13:15', 'CS-1479-V', true,  '13:15 Gisela: ahora cabe, acaba a las 14:00'],
-    ['13:30', 'CS-1479-V', false, '13:30 Gisela: no, se saldria de las 14:00'],
-    ['18:45', 'BN-1547-V', true,  '18:45 Carmen: ahora cabe, acaba a las 19:30'],
-    ['19:00', 'BN-1547-V', false, '19:00 Carmen: no, se saldria de las 19:30'],
-  ]) {
-    const pp = run(null, 'bd_preparar.js', { $input: inputOf([{ json: { body: { ...bodyCompra, fecha: JUEVES, hora: h, referencia: ref } } }]) })[0].json;
-    const rq = run(null, 'bd_calcular.js', { $input: inputOf([]), $: nodeOf({ PrepararDatos: pp }) })[0].json.respuesta;
-    check(desc, rq.disponible === esp, `disponible=${rq.disponible} motivo=${rq.motivo}`);
-  }
-  // Y la cita que se crea en el calendario dura lo mismo, por WhatsApp y por telefono
-  const fin = (f) => JSON.stringify(JSON.parse(fs.readFileSync(B + f, 'utf8')).nodes
-    .find(n => n.name === 'InsertarEnAgenda').parameters.end);
-  check('la cita de WhatsApp se crea de 45 minutos', /plus\(\{minutes:45\}\)/.test(fin('workflows_wa/WA_SUB_confirmarCitaCalendario.json')),
-    fin('workflows_wa/WA_SUB_confirmarCitaCalendario.json'));
-  check('y la del telefono tambien', /plus\(\{minutes:45\}\)/.test(fin('workflows/ConfirmarCitaCalendario.json')),
-    fin('workflows/ConfirmarCitaCalendario.json'));
-}
-
 console.log('\n' + (fallos ? `*** ${fallos} FALLOS ***` : '*** TODOS LOS TESTS OK ***'));
 process.exit(fallos ? 1 : 0);
