@@ -659,8 +659,9 @@ NOTA_CARTERA = (
     "## La cartera\nSale de la tabla *wa_cartera*, que [WA] 4 rellena cada hora desde el MISMO "
     "feed de eGO que usa el telefono, pero COMPLETA: descripcion entera (la hoja del telefono la "
     "corta a 500 caracteres), superficie, caracteristicas en espanol y el enlace de la web.\n\n"
-    "La pestana *Direcciones* del Google Sheet la rellena la agencia a mano: si un inmueble tiene "
-    "su calle ahi, Sara puede darla.")
+    "La pestana *Direcciones* del Google Sheet tiene la calle de cada inmueble: el cacheo del "
+    "telefono la completa cada hora con la que da eGO y respeta lo puesto a mano. Si un inmueble "
+    "tiene su calle ahi, Sara puede darla.")
 
 
 def wf_cartera(nombre, entradas, fichero, nodo_final, texto_nota, tipos_extra=None):

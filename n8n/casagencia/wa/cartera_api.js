@@ -123,6 +123,14 @@ const filas = lista.map(p => {
     ? `https://feedmedia.egorealestate.com/Zfeed/S5/C4338/P${p.id}/Tphoto/ID${media.uid}${media.format || '.jpg'}`
     : '';
 
+  // La calle. La API la da (address + buildingNumber) y la web y el feed no.
+  // A veces el numero ya viene dentro ("Carrer de Perez Dolz, 12" + "12"):
+  // entonces no se repite.
+  const calle = String(p.address ?? '').replace(/\s+/g, ' ').trim().replace(/[\s,]+$/, '');
+  const numero = String(p.buildingNumber ?? '').trim();
+  const yaLleva = numero && new RegExp('(^|[\\s,])' + numero.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '$').test(calle);
+  const direccion = calle && numero && !yaLleva ? `${calle}, ${numero}` : calle;
+
   const descripcion = es(p.description).replace(/\r/g, '');
   // Alquiler de larga duracion o temporal: lo dice el tipo de negocio y, si no
   // es un alquiler conocido, la descripcion (como antes)
@@ -150,6 +158,10 @@ const filas = lista.map(p => {
     // Solo las usa la hoja del telefono (wa_cartera no tiene estas columnas)
     latitud: p.gpsLat == null ? '' : String(p.gpsLat),
     longitud: p.gpsLon == null ? '' : String(p.gpsLon),
+    // Solo las usa la pestana Direcciones (la completa el cacheo del telefono)
+    direccion,
+    numero: direccion ? numero : '',
+    cp: String(p.zipCode ?? '').trim(),
   };
 });
 

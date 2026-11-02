@@ -250,7 +250,8 @@ def wf_direccion():
         "name": "BuscarPorDireccion",
         "settings": SETTINGS,
         "nodes": [
-            webhook("Webhook", "buscarpordireccion", [-40, 0]),
+            # el webhookId del que esta en marcha: si no, cada build sale distinto
+            webhook("Webhook", "buscarpordireccion", [-40, 0], "fbdc215e-98ba-4668-99d7-5ce916fcb859"),
             node("LeerInmuebles", "n8n-nodes-base.googleSheets", {
                 "documentId": {"__rl": True, "value": SHEET_ID, "mode": "id"},
                 "sheetName": {"__rl": True, "value": "gid=0", "mode": "id"},
@@ -264,9 +265,9 @@ def wf_direccion():
             respond("Respond to Webhook", [860, 0]),
             node("Nota", "n8n-nodes-base.stickyNote", {"content":
                  "## Busqueda por calle\nNi eGO ni la web de Casagencia publican la calle en el listado.\n\n"
-                 "Fuentes, de mas a menos peso:\n1. Pestana *Direcciones* de la hoja (a mano, la rellena "
-                 "la agencia; el cacheo no la toca).\n2. Zona del CRM.\n3. Vias mencionadas en la "
-                 "descripcion.\n\nSi no hay coincidencia clara devuelve 'no encontrado' a proposito, "
+                 "Fuentes, de mas a menos peso:\n1. Pestana *Direcciones* de la hoja (la calle de eGO, que "
+                 "el cacheo completa cada hora, y lo puesto a mano).\n2. Zona del CRM.\n3. Vias "
+                 "mencionadas en la descripcion.\n\nSi no hay coincidencia clara devuelve 'no encontrado' a proposito, "
                  "para que Sara no suelte un listado generico.",
                  "height": 280, "width": 430}, [200, -320], 1),
         ],
@@ -432,6 +433,11 @@ Q_LUGARES_TEL = ("={{ JSON.stringify({ locationIds: [...new Set(($('ZonasEgo').f
                  ".flatMap(z => [z.level3, z.level4]).filter(Boolean))] }) }}")
 
 
+# Las columnas de la pestana Direcciones (fila 1), en su orden
+COLUMNAS_DIRECCIONES = ["ref", "direccion", "numero", "cp", "origen",
+                        "municipio", "zona", "tipo", "operacion", "precio"]
+
+
 def wf_cartera_telefono(orig):
     """La hoja "Inmuebles" que usan las tres busquedas del telefono, llenada
     desde la API de eGO. Antes venia del feed XML de Janela, que ademas cortaba
@@ -458,14 +464,41 @@ def wf_cartera_telefono(orig):
             "}\n"
             "return [{ json: { total: j.total } }];")}, [1540, 0], 2),
         node("FilasParaLaHoja", "n8n-nodes-base.code", {"jsCode": code("cartera_hoja.js")}, [1980, 0], 2),
+        # La pestana Direcciones: se completa con la calle que da eGO. Va DESPUES
+        # de escribir los inmuebles, para que si falla esto la cartera ya este al dia.
+        node("LeerDirecciones", "n8n-nodes-base.googleSheets", {
+            "documentId": {"__rl": True, "value": SHEET_ID, "mode": "id"},
+            "sheetName": {"__rl": True, "value": "Direcciones", "mode": "name"},
+            "options": {}}, [2420, 0], 4.7, credentials=CRED_SHEETS,
+            alwaysOutputData=True, executeOnce=True, onError="continueRegularOutput"),
+        code_node("DireccionesQueFaltan", "dir_sincronizar.js", [2640, 0]),
+        node("GuardarDirecciones", "n8n-nodes-base.googleSheets", {
+            "operation": "appendOrUpdate",
+            "documentId": {"__rl": True, "value": SHEET_ID, "mode": "id"},
+            "sheetName": {"__rl": True, "value": "Direcciones", "mode": "name"},
+            "columns": {
+                "mappingMode": "defineBelow",
+                "value": {c: "={{ $json.%s }}" % c for c in COLUMNAS_DIRECCIONES},
+                "matchingColumns": ["ref"],
+                "schema": [{"id": c, "displayName": c, "required": False, "defaultMatch": False,
+                            "display": True, "type": "string", "canBeUsedToMatch": True}
+                           for c in COLUMNAS_DIRECCIONES]},
+            "options": {}}, [2860, 0], 4.7, credentials=CRED_SHEETS),
         node("NotaCartera", "n8n-nodes-base.stickyNote", {"content":
             "## La cartera, de la API de eGO\nCada hora pide a eGO los inmuebles disponibles y rellena la "
             "hoja *Inmuebles* que leen buscarInmuebles, buscarPorReferencia y BuscarPorDireccion.\n\n"
             "Es el MISMO codigo que usa WhatsApp (wa/cartera_api.js), asi que los dos asistentes dicen lo "
             "mismo: tipos y caracteristicas en espanol, superficie construida y la descripcion entera.\n\n"
             "Orden: pedir -> comprobar -> vaciar -> escribir. Si la API falla, salta el error y la hoja se "
-            "queda como estaba.\n\nLa pestana *Direcciones* la rellena la agencia a mano y aqui no se toca.",
+            "queda como estaba.",
             "height": 300, "width": 460}, [440, -360], 1),
+        node("NotaDirecciones", "n8n-nodes-base.stickyNote", {"content":
+            "## La pestana Direcciones\nDe aqui sacan la calle las busquedas por direccion del telefono y "
+            "de WhatsApp. Cada hora se completa con la calle que da eGO (origen *eGO API*): el inmueble "
+            "nuevo o sin calle se pone, y lo que puso este nodo se corrige si eGO lo cambia.\n\n"
+            "Lo cargado del CRM (*eGO CRM*) y lo puesto a mano NO se toca nunca. Si no se puede leer la "
+            "pestana, no se escribe nada.",
+            "height": 300, "width": 460}, [2420, -360], 1),
     ]
     for n in nodes:
         if n["name"] == "Schedule Trigger":
@@ -485,7 +518,10 @@ def wf_cartera_telefono(orig):
         ("Mapear", 0, "ComprobarCartera", 0),
         ("ComprobarCartera", 0, "Clear sheet", 0),
         ("Clear sheet", 0, "FilasParaLaHoja", 0),
-        ("FilasParaLaHoja", 0, "EscribirInmuebles", 0))
+        ("FilasParaLaHoja", 0, "EscribirInmuebles", 0),
+        ("EscribirInmuebles", 0, "LeerDirecciones", 0),
+        ("LeerDirecciones", 0, "DireccionesQueFaltan", 0),
+        ("DireccionesQueFaltan", 0, "GuardarDirecciones", 0))
     s = {k: v for k, v in (orig.get("settings") or {}).items() if k in SETTINGS_OK}
     s["timezone"] = "Europe/Madrid"
     s["executionOrder"] = "v1"

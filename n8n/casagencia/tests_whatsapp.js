@@ -671,6 +671,22 @@ ck('venta y alquiler bien marcados', mapApi.filas.find(x => x.ref === 'BN-1537-V
   ck('zona como la de siempre, y la fina tambien se puede buscar', cs.zona === 'Centro'
      && /Hospital - Plaza del Real/.test(cs.caracteristicas), `${cs.zona} | ${cs.caracteristicas.slice(0, 60)}`);
 }
+{
+  // La calle (para la pestana Direcciones): eGO la da en address + buildingNumber
+  const conCalle = API.inmuebles.map(x => x.reference === 'BN-1291-A'
+      ? { ...x, address: 'Calle Peñiscola ', buildingNumber: '3', zipCode: '12003' }
+    : x.reference === 'BN-632-A' ? { ...x, address: 'Carrer de Pérez Dolz, 12', buildingNumber: '12', zipCode: 12003 }
+    : x.reference === 'BN-1537-V' ? { ...x, address: 'Avenida Alcora', buildingNumber: '', zipCode: '' }
+    : x);
+  const f = carteraApi(conCalle).filas;
+  const de = (ref) => f.find(x => x.ref === ref);
+  ck('la calle de eGO con su numero', de('BN-1291-A').direccion === 'Calle Peñiscola, 3' && de('BN-1291-A').numero === '3'
+     && de('BN-1291-A').cp === '12003', JSON.stringify([de('BN-1291-A').direccion, de('BN-1291-A').cp]));
+  ck('si el numero ya viene en la calle no se repite', de('BN-632-A').direccion === 'Carrer de Pérez Dolz, 12' && de('BN-632-A').cp === '12003',
+     de('BN-632-A').direccion);
+  ck('calle sin numero, tal cual', de('BN-1537-V').direccion === 'Avenida Alcora' && de('BN-1537-V').numero === '');
+  ck('sin calle en eGO, vacia', de('CS-G-272-A').direccion === '' && de('CS-G-272-A').numero === '');
+}
 ck('si la API falla, no se toca la tabla', carteraApi([]).ok === false);
 
 const enteros = REAL.filter(x => x.enlace && /\/\d{6,}$/.test(x.enlace)).length;

@@ -85,6 +85,52 @@ r = run('dir_emparejar.js', inputOf(avenida.map(f=>({json:f}))),
 check('pero el municipio sigue filtrando lo que solo casa por la descripcion', !(r.coincidencias || []).some(c => c.ref === 'CS-1531-V') || r.encontrado === false,
   JSON.stringify((r.coincidencias || []).map(c => c.ref)));
 
+// La llamada del 2-11 (conversacion 335): "calle Peniscola numero tres, bajo"
+// no salio porque el CS-G-406-V habia entrado despues de cargar la pestana
+// Direcciones y su descripcion no nombra la calle. Ahora el cacheo completa la
+// pestana con la calle de eGO (dir_sincronizar.js) y se encuentra.
+{
+  const bajo = { ref:'CS-G-406-V', municipio:'Castellón de la Plana / Castelló de la Plana', zona:'Este',
+    tipo_inmueble:'Planta baja - piso', habitaciones:2, precio:210000, tipo_transaccion:'venta',
+    descripcion:'Planta baja reformada con patio, cerca de todos los servicios.' };
+  const cartera = [...filas, bajo];
+  const pide = (direccion, direcciones) => run('dir_emparejar.js', inputOf(cartera.map(f=>({json:f}))),
+    nodeOf({ Webhook: { body: { args: { direccion, municipio: 'Castellón de la Plana / Castelló de la Plana', operacion: 'venta' } } },
+             LeerInmuebles: cartera, LeerDirecciones: direcciones }))[0].json.respuesta;
+  r = pide('calle Peñíscola número tres, bajo', []);
+  check('2-11: sin la calle en la pestana no salia (lo que paso)', r.encontrado === false && r.motivo === 'sin_coincidencias');
+  const sinc = (mapear, leidas) => run('dir_sincronizar.js', inputOf([]),
+    nodeOf({ Mapear: { filas: mapear }, LeerDirecciones: leidas })).map(i => i.json);
+  const deEgo = { ...bajo, direccion:'Calle Peñiscola, 3', numero:'3', cp:'12003' };
+  const nuevas = sinc([deEgo], [{ ref:'CS-1531-V', direccion:'Calle Ceram Godofr Buenosaires, 26', origen:'eGO CRM' }]);
+  check('el cacheo anade a la pestana el inmueble que no tenia calle', nuevas.length === 1 && nuevas[0].ref === 'CS-G-406-V'
+    && nuevas[0].direccion === 'Calle Peñiscola, 3' && nuevas[0].origen === 'eGO API' && nuevas[0].cp === '12003'
+    && nuevas[0].municipio === 'Castellón de la Plana' && nuevas[0].operacion === 'venta', JSON.stringify(nuevas[0]));
+  r = pide('calle Peñíscola número tres, bajo', [{ ref:'CS-1531-V', direccion:'Calle Ceram Godofr Buenosaires, 26' }, ...nuevas]);
+  check('2-11: con la calle de eGO en la pestana, sale el CS-G-406-V a la primera',
+    r.encontrado && r.coincidencias[0].ref === 'CS-G-406-V' && r.fiabilidad === 'alta' && r.coincidencias.length === 1,
+    JSON.stringify((r.coincidencias || []).map(c => c.ref)) + ' ' + (r.fiabilidad || r.motivo));
+  check('  y Sara puede confirmarle la direccion', /Calle Peñiscola, 3/.test(r.mensaje_para_sara || ''), (r.mensaje_para_sara || '').slice(0, 90));
+  r = pide('calle Península número tres, bajo', nuevas);
+  check('lo que entendio mal ("Peninsula") sigue sin casar: no se inventa', r.encontrado === false);
+
+  // Lo que NO se toca
+  const conCrm = sinc([{ ...deEgo, ref:'CS-1531-V', direccion:'Calle Ceramista Godofredo Buenosaires, 26' }],
+    [{ ref:'CS-1531-V', direccion:'Calle Ceram Godofr Buenosaires, 26', origen:'eGO CRM' }]);
+  check('lo cargado del CRM no se pisa aunque eGO lo escriba distinto', conCrm.length === 0, JSON.stringify(conCrm));
+  const aMano = sinc([deEgo], [{ ref:'CS-G-406-V', direccion:'C/ Peñíscola 3, bajo izquierda', origen:'' }]);
+  check('lo apuntado a mano no se pisa', aMano.length === 0, JSON.stringify(aMano));
+  const vacia = sinc([deEgo], [{ ref:'CS-G-406-V', direccion:'', origen:'' }]);
+  check('una fila sin calle se completa', vacia.length === 1 && vacia[0].direccion === 'Calle Peñiscola, 3');
+  const igual = sinc([deEgo], [{ ref:'CS-G-406-V', direccion:'Calle Peñiscola, 3', origen:'eGO API' }]);
+  const cambio = sinc([{ ...deEgo, direccion:'Calle Peñiscola, 5', numero:'5' }], [{ ref:'CS-G-406-V', direccion:'Calle Peñiscola, 3', origen:'eGO API' }]);
+  check('lo que puso el cacheo: igual no se reescribe, cambiado en eGO se corrige',
+    igual.length === 0 && cambio.length === 1 && cambio[0].direccion === 'Calle Peñiscola, 5');
+  check('un inmueble sin calle en eGO no escribe nada', sinc([{ ...deEgo, direccion:'' }], []).length === 0);
+  check('si no se ha podido leer la pestana, no se escribe nada', sinc([deEgo], [{ error: 'Sheet not found' }]).length === 0);
+  check('pestana vacia: se anaden todos', sinc([deEgo, { ...deEgo, ref:'CS-G-407-V', direccion:'Calle Euterpe, 3' }], [{}]).length === 2);
+}
+
 console.log('\n== Consultar cita por telefono (nuevo) ==');
 const norm = run('tel_normalizar.js', inputOf([{ json:{ body:{ telefono:'643 97 43 53' } } }]))[0].json;
 check('normaliza a nacional para la busqueda q', norm.telefono_nacional === '643974353', norm.telefono_nacional);

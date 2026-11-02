@@ -95,7 +95,7 @@
     },
     {
       "parameters": {
-        "content": "## Ficha completa del inmueble\nTodo lo que hay de ese inmueble en la cartera, incluida la descripcion entera del anuncio, para que Sara resuelva cualquier duda sin inventar. Tolera la referencia con o sin guiones.\n\n## La cartera\nSale de la tabla *wa_cartera*, que [WA] 4 rellena cada hora desde el MISMO feed de eGO que usa el telefono, pero COMPLETA: descripcion entera (la hoja del telefono la corta a 500 caracteres), superficie, caracteristicas en espanol y el enlace de la web.\n\nLa pestana *Direcciones* del Google Sheet la rellena la agencia a mano: si un inmueble tiene su calle ahi, Sara puede darla.",
+        "content": "## Ficha completa del inmueble\nTodo lo que hay de ese inmueble en la cartera, incluida la descripcion entera del anuncio, para que Sara resuelva cualquier duda sin inventar. Tolera la referencia con o sin guiones.\n\n## La cartera\nSale de la tabla *wa_cartera*, que [WA] 4 rellena cada hora desde el MISMO feed de eGO que usa el telefono, pero COMPLETA: descripcion entera (la hoja del telefono la corta a 500 caracteres), superficie, caracteristicas en espanol y el enlace de la web.\n\nLa pestana *Direcciones* del Google Sheet tiene la calle de cada inmueble: el cacheo del telefono la completa cada hora con la que da eGO y respeta lo puesto a mano. Si un inmueble tiene su calle ahi, Sara puede darla.",
         "height": 270,
         "width": 480
       },

@@ -77,10 +77,19 @@ solo municipio, zona, código postal y coordenadas. **Pero el CRM de eGO sí la
 tiene, y para los 93 inmuebles de la cartera.**
 
 Están volcadas en la pestaña **Direcciones** de la hoja *Inmuebles*
-(`ref`, `direccion`, `numero`, `cp`, `origen`, …), que el cacheo nunca toca.
-`BuscarPorDireccion` la lee y le da el peso más alto.
+(`ref`, `direccion`, `numero`, `cp`, `origen`, …). `BuscarPorDireccion` (y el
+de WhatsApp) la lee y le da el peso más alto.
 
-Para refrescarlas cuando entre cartera nueva:
+**Se completa sola.** La API de eGO también da la calle (`address` +
+`buildingNumber`), así que el *Cartera (cacheo)* del teléfono, cada hora,
+después de escribir los inmuebles, añade a la pestaña los que no tienen calle
+(origen `eGO API`) y corrige los que puso él si eGO los cambia. Lo cargado del
+CRM (`eGO CRM`) y lo apuntado a mano no se toca nunca (`nodes/dir_sincronizar.js`).
+Antes había que relanzar el script a mano y no se hizo: la llamada del 2-11 no
+encontró el bajo de la calle Peñíscola 3 (CS-G-406-V) porque había entrado
+después de la carga.
+
+La carga inicial, desde la ficha del CRM, se hizo con:
 
 ```bash
 python3 ego_direcciones.py     # lee eGO y reescribe la pestaña Direcciones
@@ -782,9 +791,8 @@ ningún caso se le lee al cliente un listado que no ha pedido.
   > Cuidado al actualizar el año: las tres de marzo **cambian de fecha** porque
   > dependen de la Pascua. Copiar las del año anterior es un error. Hay un test
   > en `tests_logica.js` que compara la lista contra las 12 oficiales.
-- **Direcciones de la cartera nueva.** Las 93 actuales están cargadas desde
-  eGO. Cuando entren inmuebles nuevos hay que volver a lanzar
-  `ego_direcciones.py`, o apuntar la dirección a mano en la pestaña.
+- ~~**Direcciones de la cartera nueva.**~~ Resuelto el 2-11: el cacheo del
+  teléfono completa la pestaña cada hora con la calle que da la API de eGO.
 - **Qué es el número 864870288.** Aparece en 2 llamadas, siempre con aviso de
   portal y entrando por el móvil de Gisela. Recibe el saludo genérico, que es
   lo razonable, pero conviene que Paco confirme de qué portal es.
