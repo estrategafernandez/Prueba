@@ -276,6 +276,15 @@ def main():
         print("\n(sin --apply: no se ha tocado nada)")
         return
 
+    # Lo publicado no se puede tocar ("Cannot update published LLM"): si la ultima
+    # version del agente ya esta publicada, primero se abre un borrador a partir
+    # de ella. Retell abre a la vez el del LLM, que es el que se edita debajo.
+    ag0 = call("GET", f"/get-agent/{AGENT_ID}")
+    if ag0.get("is_published"):
+        borrador = call("POST", f"/create-agent-version/{AGENT_ID}", {"base_version": ag0["version"]})
+        print(f"\n  borrador nuevo -> agente v{borrador['version']}, "
+              f"LLM v{(borrador.get('response_engine') or {}).get('version')}")
+
     nuevo_llm = call("PATCH", f"/update-retell-llm/{LLM_ID}",
                      {"general_prompt": prompt, "general_tools": tools,
                       "begin_message": BEGIN_MESSAGE})
