@@ -176,10 +176,11 @@ def construir_tools(actuales):
     # --- NUEVA: busqueda por direccion --------------------------------------
     out.append(tool_http(
         "buscarPorDireccion", "buscarpordireccion",
-        "Busca un inmueble a partir de la direccion o la calle que dice el cliente. Usala cuando el cliente "
-        "identifique el inmueble por una calle, plaza, avenida o direccion Y ya le hayas preguntado UNA vez "
-        "por la referencia del anuncio sin que la tenga. La referencia es exacta y la direccion es "
-        "aproximada, asi que la referencia siempre va primero. Devuelve 'encontrado', 'fiabilidad' y "
+        "Busca un inmueble a partir de la direccion o la calle que dice el cliente. Usala EN CUANTO el "
+        "cliente identifique el inmueble por una calle, plaza, avenida o direccion, sin preguntarle nada "
+        "antes: ni la referencia, ni si es para comprar o alquilar, ni el municipio, ni si quiere que lo "
+        "busques. El resultado ya dice si es de venta o de alquiler. Si no aparece, pidele entonces la "
+        "referencia del anuncio, una sola vez. Devuelve 'encontrado', 'fiabilidad' y "
         "'mensaje_para_sara'. Si 'encontrado' es false, NO le leas al cliente un listado de inmuebles.",
         {"direccion": {"type": "string", "minLength": 2, "maxLength": 200,
                        "description": "La direccion tal y como la ha dicho el cliente, con el numero si lo ha dado. Ejemplo: calle del Mestre Falla 39."},

@@ -39,7 +39,7 @@ respuesta vacía**, así que Sara confirmaba citas sin saber si se habían cread
 | 9 | Borrados los nodos sobrantes de otro cliente (Club Pilates) | `FinalizarLlamadaRetell` |
 | 10 | Teléfonos normalizados a E.164 | `normalizarTelefono()` |
 | 11 | Consultar una cita ya concertada por teléfono | `BuscarCitaPorTelefono` (nuevo) |
-| 13 | La referencia se pide siempre antes de una búsqueda aproximada | `retell/general_prompt.md` |
+| 13 | La referencia se pide siempre antes de una búsqueda aproximada (por características; si el cliente da la calle, desde el 2-11 se busca primero por la calle, sin preguntar nada, y la referencia solo se pide si no aparece) | `retell/general_prompt.md` |
 | 14 | `buscarInmuebles` devolvía una respuesta VACÍA cuando no había resultados | `buscarInmuebles` |
 | 15 | El cacheo vaciaba la hoja antes de tener los datos | `Cartera (cacheo)` |
 | 16 | Direcciones reales de los 93 inmuebles, sacadas de eGO | pestaña *Direcciones* |
