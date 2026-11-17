@@ -243,3 +243,19 @@ especial de Rama B y el orden de los campos del resumen del aviso. Solicitudes d
 Si responde que necesita vender (o lo menciona por su cuenta): tras `Etiquetar`, una sola pregunta sutil sobre en qué
 zona (o dirección) tiene esa vivienda; sin insistir ni reformular. Responda o no, sigue con el flujo normal. La zona
 pasa al resumen del aviso ("Necesita vender: sí (zona …)").
+
+## 17/11 — Identidad de María y petición de llamada (pendiente de subir a n8n)
+
+Prompts de Instagram y de solicitudes:
+- **¿Quién eres? / ¿eres humana? / ¿eres un bot?** → "Soy María, IA de Biban Inmobiliaria" y retoma la conversación.
+  La presentación del primer mensaje (Instagram) sigue igual.
+- **Nueva sección "SI EL CLIENTE PIDE HABLAR POR TELÉFONO"**: si pide que le llamen (o pregunta si puede llamar), primero
+  aviso con `tipo_aviso` = `"llamada"` (`aviso_insta` en Instagram, `Aviso` en Mobilia), con un motivo que empieza por
+  `QUIERE QUE LE LLAMEN` y lleva el resumen recogido hasta ese momento. Después le dice que avisa al equipo para
+  coordinar una llamada (y, si no la dio, le pregunta qué franja le va mejor). Es una excepción a "un solo aviso" y a
+  "gestión cerrada", y se lanza una sola vez por conversación.
+
+Pendiente en n8n (estaba caído, 503, a las 00:20 del 17/11):
+- Subir los dos prompts.
+- `Aviso_insta` y `Aviso`: que un aviso `llamada` no lo bloquee un aviso anterior de otro tipo, y que no se repita.
+- Descripciones de las tools.
