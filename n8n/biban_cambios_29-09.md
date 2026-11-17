@@ -244,7 +244,7 @@ Si responde que necesita vender (o lo menciona por su cuenta): tras `Etiquetar`,
 zona (o dirección) tiene esa vivienda; sin insistir ni reformular. Responda o no, sigue con el flujo normal. La zona
 pasa al resumen del aviso ("Necesita vender: sí (zona …)").
 
-## 17/11 — Identidad de María y petición de llamada (pendiente de subir a n8n)
+## 17/11 — Identidad de María y petición de llamada (subido 17/11 11:12)
 
 Prompts de Instagram y de solicitudes:
 - **¿Quién eres? / ¿eres humana? / ¿eres un bot?** → "Soy María, IA de Biban Inmobiliaria" y retoma la conversación.
@@ -255,7 +255,12 @@ Prompts de Instagram y de solicitudes:
   coordinar una llamada (y, si no la dio, le pregunta qué franja le va mejor). Es una excepción a "un solo aviso" y a
   "gestión cerrada", y se lanza una sola vez por conversación.
 
-Pendiente en n8n (estaba caído, 503, a las 00:20 del 17/11):
-- Subir los dos prompts.
-- `Aviso_insta` y `Aviso`: que un aviso `llamada` no lo bloquee un aviso anterior de otro tipo, y que no se repita.
-- Descripciones de las tools.
+Subido a n8n el 17/11 a las 11:12 (n8n estuvo caído, con error 503, del 16/11 ~23:00 al 17/11 ~11:00):
+- **Agente AT** (`9l8UOsqXN3Bn53ao`): los dos prompts. `prompt solicitudes` se ha montado sobre la versión que había en n8n,
+  que ya tenía los arreglos de octubre que faltaban en el repo; el fichero del repo queda sincronizado.
+  Tools `Aviso_insta` y `Aviso`: la descripción y el `tipo_aviso` admiten `"llamada"`.
+- **Aviso_insta** (`8zxiYZJE3BIHePAN`): `¿Aviso ya enviado?` deduplica por tipo. Un aviso `llamada` mira
+  `aviso_insta_llamada_ref` y el resto, `aviso_insta_ref`, así que un aviso de llamada no queda bloqueado por el de
+  cualificación ni se repite. `Marcar aviso enviado` guarda `aviso_insta_llamada_ref`/`_fecha` en los de llamada.
+- **Aviso** (`jjJkk3l6Z6fzW64u`): `Filter` deja pasar `tipo_aviso` = `llamada` aunque el contacto tenga `aviso` = `si`.
+  La deduplicación por tipo (`aviso_mobilia_llamada`) ya existía.
